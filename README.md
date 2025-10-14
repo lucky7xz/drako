@@ -120,6 +120,12 @@ interactive = true
 -   **The Power of TUI Decks:** For those who wish to build true terminal cathedrals, `drako` serves as the gateway to `para13`, a `TUI-Deck` build with seamless integration into `drako`. More will be revealed in time. Stay tuned
 
 
+## ⚠️ Safety First
+
+- Only run commands you understand. Some entries perform system changes (e.g., package updates, Docker operations).
+- Review commands: press `e` to open the command description and read every command.
+- When unsure, consult documentation or ask a trusted friend/colleague.
+
 ---
 
 ## 🤝 Contribution
