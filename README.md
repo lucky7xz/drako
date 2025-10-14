@@ -22,7 +22,14 @@ go install github.com/lucky/drako/drako@latest  # install drako
 Note that it will install `drako` to your `$GOPATH/bin` directory. If you don't have a `$GOPATH`, you can set it to your `$HOME/go` directory via:
 
 ```bash
+# Golang environment variables
+export GOROOT=/usr/local/go
 export GOPATH=$HOME/go
+export PATH=$PATH:/usr/local/go/bin
+
+# Update PATH to include GOPATH and GOROOT binaries
+export PATH=$GOPATH/bin:$GOROOT/bin:$HOME/.local/bin:$PATH
+
 ```
 
 ### Install Go
