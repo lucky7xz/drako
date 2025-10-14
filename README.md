@@ -16,7 +16,13 @@ The terminal is a realm of immense power, but also of entropy. Commands are forg
 `drako` is forged in Go for speed and simplicity. If go is installed, installing `drako` is a single command.
 
 ```bash
-go install github.com/lucky/drako
+go install github.com/lucky/drako/drako@latest  # install drako
+```
+
+Note that it will install `drako` to your `$GOPATH/bin` directory. If you don't have a `$GOPATH`, you can set it to your `$HOME/go` directory via:
+
+```bash
+export GOPATH=$HOME/go
 ```
 
 ### Install Go

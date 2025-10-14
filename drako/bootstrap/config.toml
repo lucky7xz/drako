@@ -84,9 +84,9 @@ row = 0
 interactive = true
 
 [[commands]]
-name = "🔎 Code Search (regex)"
-description = "Another one! This is a major key. With regex, you can find things you don't even know the exact name of. It uses a legendary tool called 'grep' to search *inside* every file for whatever text you tell it. You wrote a note and can't find it? We gon' find it. You need to see where you used a variable? We gon' find it. They don't want you to have a search this powerful. So we made sure you have a search this powerful."
-command = "read -p 'Enter search term: ' term && grep -r -n \"$term\" ."
+name = " Open .bashrc"
+description = "This is where all your terminal customizations live. The .bashrc file loads every time you open a terminal and controls your aliases, environment variables, and prompt appearance. It's like the settings panel for your command line experience. I open this file whenever I want to add a new shortcut or tweak how my terminal behaves."
+command = "micro ~/.bashrc"
 col = "B"
 row = 1
 interactive = false
