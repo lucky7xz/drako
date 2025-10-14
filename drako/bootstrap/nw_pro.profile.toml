@@ -1,0 +1,53 @@
+# nw101.profile.toml
+
+# ┌─ Grid Dimensions ──────────────────────────────┐
+x = 2
+y = 2
+# └────────────────────────────────────────────────┘
+
+# ┌─ Networking 101 Profile ───────────────────────┐
+# │ A beginner's toolkit for exploring the network.
+# └──────────────────────────────────────────────────┘
+
+# --- Column 0, Row 0: Local Network Exploration ---
+[[commands]]
+name = "📡 Network Discovery ⋮ "
+col = "A"
+row = 0
+items = [
+    { name = "👀 Find Devices", description = "This is your network radar. It automatically finds your local network address and sends out a signal to ask all devices to announce themselves. It's the perfect first step to see what's connected to your WiFi or local network.", command = "sudo nmap -sn $(ip -o -f inet addr show | awk '/scope global/ {print $4}')", interactive = true },
+    { name = "👋 Ping a Device", description = "This is like shouting 'Marco!' and waiting for a 'Polo!'. You send a small packet to a specific address, and if it's online, it sends one back. It's the simplest way to check if a computer is reachable. You'll be prompted for the IP address to ping.", command = "read -p 'Enter IP to ping: ' ip && ping -c 4 $ip", interactive = true },
+    { name = "🚪 Check Common Ports", description = "Imagine a device has thousands of doors (ports), but only a few are open for services like websites. This command checks the most common 1,000 doors on a device to see which are open. It's a quick way to guess what a device is doing.", command = "read -p 'Enter IP to scan: ' ip && nmap $ip", interactive = true }
+]
+
+# --- Column 1, Row 0: DNS & Domain Intel ---
+[[commands]]
+name = "🤔 DNS & Domains ⋮ "
+col = "B"
+row = 0
+items = [
+    { name = "🌍 DNS Lookup (A Record)", description = "Computers use numbers (IP addresses), but we use names (like google.com). DNS is the internet's phonebook that translates names to numbers. This command asks the phonebook for the main 'A' record of a website.", command = "read -p 'Enter domain: ' domain && dig A $domain", interactive = false },
+    { name = "📬 DNS Lookup (MX Record)", description = "Domains have special records for different services. 'MX' records point to the mail servers. This command asks the DNS phonebook where to send emails for a domain. It's how your email finds its way across the world.", command = "read -p 'Enter domain: ' domain && dig MX $domain", interactive = false },
+    { name = "👤 Who owns this domain?", description = "Every domain name is registered to someone. This 'whois' command is like looking up the title deed for a website. It shows you public info about the owner of a domain, their contact info, and when it expires. A bit like digital detective work.", command = "read -p 'Enter domain: ' domain && whois $domain", interactive = true }
+]
+
+# --- Column 0, Row 1: Your Computer's Network ---
+[[commands]]
+name = "💻 My Device ⋮ "
+col = "A"
+row = 1
+items = [
+    { name = "🆔 My IP Address", description = "This command shows you all the network 'cards' (interfaces) your computer has, both real and virtual. More importantly, it shows you the IP address for each one. This is your computer's address on the local network, like its house number.", command = "ip a", interactive = false },
+    { name = "👂 Listening Ports", description = "Your computer 'listens' for incoming connections on specific ports. This command shows all the TCP and UDP ports that are open and waiting for a connection. It's a great way to see what services are running on your own machine. A key step in securing your device!", command = "ss -tulwn", interactive = false },
+    { name = "🗺️ My Routing Table", description = "When your computer sends data, how does it know where to go? It checks its routing table, which is like a set of simple directions. This command displays that table. You'll usually see a 'default' route, which is where all internet traffic goes first (your router!).", command = "ip route", interactive = false }
+]
+
+# --- Column 1, Row 1: Internet Path ---
+[[commands]]
+name = "🛤️ Trace the Path ⋮ "
+col = "B"
+row = 1
+items = [
+    { name = "📍 Trace to Google", description = "Ever wonder how your data gets from your computer to Google's servers? This command shows you every 'hop' it takes along the way. It's like getting a turn-by-turn map of your data's journey across the internet. MTR keeps running to show you the connection quality live.", command = "mtr google.com", interactive = true },
+    { name = "🌐 Trace to Cloudflare DNS", description = "Cloudflare runs one of the fastest DNS services at 1.1.1.1. Tracing the path to it is another good way to check your internet connection's health and see the route your data takes to a different major part of the internet backbone.", command = "mtr 1.1.1.1", interactive = true }
+]

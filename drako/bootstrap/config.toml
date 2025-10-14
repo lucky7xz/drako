@@ -1,0 +1,145 @@
+# dR4ko - TUI Mask Configuration (Generic Ubuntu Desktop)
+
+# ┌─ Project Path ─────────────────────────────────────────────┐
+# │ Base path for dR4ko project - other tools can inherit this
+# └────────────────────────────────────────────────────────────┘
+dR4ko_path = "/home/$USER/dotfiles/scripts/drako"
+
+# ┌─ Grid Dimensions ──────────────────────────────┐
+x = 3
+y = 4
+# └────────────────────────────────────────────────┘
+
+#theme = "everforest"
+#theme = "nord"
+#theme = "orasaka" #!
+theme = "dracula"
+#theme = "dracula2"
+#theme = "jade"
+
+
+
+[behavior]
+exit_confirmation = false
+auto_save = true
+
+# ┌─ Commands ───────────────────────────────────────────────┐
+# │ A clean, generic layout for any Ubuntu desktop.
+# └──────────────────────────────────────────────────────────┘
+
+#==========================================
+# ┌─ Column 0: System & Security ──────────┐
+# └────────────────────────────────────────┘
+[[commands]]
+name = "⬆️ System Update"
+description = "This is like checking for app updates on your phone, but for your whole system. It first asks the official software kitchens (repositories) what's new, then it installs the latest versions. I get a little thrill seeing all the packages update—it feels so fresh. It's good to run this regularly to keep things secure. BTW!! This is the only command where hold_after = true. Interactive commands usually exit automatically. Check the drako configs at the end for mor intel. If you entered this menu by accident, you probably pressed 'E'."
+#command = "sudo apt update && sudo apt upgrade -y"
+command = "sudo apt update && sudo apt upgrade"
+col = "A"
+row = 0
+interactive = true
+hold_after = true
+
+[[commands]]
+name = "🧹 Clean Packages"
+description = "This is my digital decluttering button. When you update software, old, unneeded bits can get left behind. This command tidies them up. It reminds me of Marie Kondo, a Japanese organizing expert who helps people tidy their homes. I find it deeply satisfying, like cleaning out a closet you've been ignoring. A clean system is a happy system!"
+command = "sudo apt autoremove"
+col = "A"
+row = 1
+interactive = false
+
+[[commands]]
+name = "👀 Process Monitor"
+description = "This is like opening the hood of your car while the engine is running. It shows you everything that's happening in real-time. It looks a bit intense, I know, but it's fascinating. I like to watch it sometimes just to see all the little digital cogs turning. It's perfect for when you want to know, 'What is my computer even DOING right now?'"
+command = "btop"
+col = "A"
+row = 2
+interactive = true
+
+[[commands]]
+name = "🛡️ Virus Scan (Home)"
+description = "Okay, so Linux is pretty secure, but it's never a bad idea to be careful. This first updates the list of known digital cooties, then it carefully checks your personal files for anything suspicious. I don't expect it to find anything, but it gives me peace of mind, like locking the door at night even though you live two levels under the ground."
+command = "sudo freshclam && clamscan -r --bell -i /home/$USER"
+col = "A"
+row = 3
+interactive = true
+
+#[[commands]]
+#name = "Live Logs"
+#description = "Shows a live stream of system logs."
+#command = "journalctl -f"
+#col = "A"
+#row = 4
+#interactive = true
+
+#==========================================
+# ┌─ Column 1: Files & Info ───────────────┐
+# └────────────────────────────────────────┘
+[[commands]]
+name = " 🔎 File Finder"
+description = "I love this one. It's like a super-powered search bar for your files. You start typing and it instantly filters the list. It feels a bit like magic. I wish I had this for my own memory banks sometimes. It's perfect for when you know the file is *somewhere* but you can't remember exactly where."
+command = "find . -type f | fzf"
+col = "B"
+row = 0
+interactive = true
+
+[[commands]]
+name = "🔎 Code Search (regex)"
+description = "Another one! This is a major key. With regex, you can find things you don't even know the exact name of. It uses a legendary tool called 'grep' to search *inside* every file for whatever text you tell it. You wrote a note and can't find it? We gon' find it. You need to see where you used a variable? We gon' find it. They don't want you to have a search this powerful. So we made sure you have a search this powerful."
+command = "read -p 'Enter search term: ' term && grep -r -n \"$term\" ."
+col = "B"
+row = 1
+interactive = false
+
+[[commands]]
+name = "💾 Disk Usage"
+description = "Ever wonder where all your free space went? Me too. All the time. This command gives you a neat, colorful report of all your drives and how much space is being used. It's like a health checkup for your storage. Very handy for figuring out it's time to delete that 50GB game you haven't played in a year."
+command = "baobab"
+col = "B"
+row = 2
+interactive = false
+
+[[commands]]
+name = " ℹ️  System Info"
+description = "This is your computer's trading card. It shows a cool logo of your Linux distro and all the nerdy details like your kernel version, uptime, and hardware. It's mostly for showing off, but I have to admit, it looks pretty cool. It's a rite of passage for every new Linux user to run this and post a screenshot."
+command = "neofetch"
+col = "B"
+row = 3
+interactive = false
+
+#==========================================
+# ┌─ Column 2: Network & Web ──────────────┐
+# └────────────────────────────────────────┘
+[[commands]]
+name = " 📦 Install Dependencies"
+description = "Bundled up all the little tools that this menu uses, just in case you don't have them. It's like getting all the batteries and accessories included for once. This makes sure all the other buttons here will work as expected. I like to be prepared, you know?"
+command = "sudo apt install micro btop neofetch clamav duf fzf bmon"
+col = "C"
+row = 0
+interactive = true
+
+[[commands]]
+name = "🌐 Bandwidth (bmon)"
+description = "Curious how much internet you're using right now? This opens up a little dashboard showing data going in and out. I find it mesmerizing to watch the numbers jump when I'm downloading a big file. It's the perfect tool for figuring out if it's your internet that's slow, or if your computer is just having a moment."
+command = "bmon"
+col = "C"
+row = 1
+interactive = true
+
+[[commands]]
+name = "🌦️ Weather"
+description = "Because who has time to open a web browser? This gives you a quick, no-nonsense weather report right here in the terminal. I can't feel the rain, obviously, but I can at least tell you if you need an umbrella. It's surprisingly handy."
+command = "curl wttr.in"
+col = "C"
+row = 2
+interactive = false
+
+[[commands]]
+name = "  🐉 dr4ko Config ⋮ "
+col = "Z"
+row = -1
+items = [
+    { name = "⚙️ Edit config.toml", description = "This is the command center, the cockpit, the big red button. It opens up the very file you're reading right now, so you can tweak and tune dR4ko to your heart's content. Want to change a command? A description? The theme? This is the place. It's like being handed the keys to the whole operation. A little bit of power is a fun thing, isn't it? Never be afraid to break stuff. Read the next description to see why.", command = "micro ~/.config/drako/config.toml", interactive = true },
+    { name = "📁 Browse config dir", description = "Welcome to the rabbit hole. In Linux, many of your configurations live in hidden folders, like this `.config` directory. It's a bit of a secret clubhouse for your apps. This command opens up the `drako` folder inside, where all its settings live. We've set you up with some sensible defaults, but the real magic is making it your own. Go ahead, poke around, make some changes. That's the whole point! You can even save your custom setups and reuse them. It's your system, your rules. Welcome to the world of dotfiles.", command = "yazi ~/.config/drako/", interactive = true }
+]
+

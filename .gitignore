@@ -1,0 +1,24 @@
+.cache/
+# Binaries for programs and plugins
+#*.exe
+#*.exe~
+#*.dll
+#*.so
+#*.dylib
+#
+## Test binary, built with `go test -c`
+#*.test
+#
+## Output of the go coverage tool, specifically when run with the -o flag
+#*.out
+#
+## Go workspace file
+#go.work
+#
+## Drako-specific
+#
+## Log files
+#*.log
+#
+## Compiled binary if it's in the root
+#drako

@@ -1,0 +1,85 @@
+# networking.profile.toml
+
+# ┌─ Grid Dimensions ──────────────────────────────┐
+x = 3
+y = 3
+# └────────────────────────────────────────────────┘
+
+# ┌─ Core Networking Profile ──────────────────────┐
+# │ Workflow: External -> Local -> Live Monitor
+# └──────────────────────────────────────────────────┘
+
+# --- Row 0: External Network Diagnostics ---
+[[commands]]
+name = "🗺️ Discover Hosts"
+description = "Discovers active hosts on the local network."
+command = "nmap -sn 192.168.178.0/24"
+col = "A"
+row = 0
+interactive = false
+
+[[commands]]
+name = " Check Connection"
+description = "Pings a public DNS server to check internet connectivity."
+command = "ping 8.8.8.8"
+col = "B"
+row = 0
+interactive = true
+
+[[commands]]
+name = "🛤️ Trace Route"
+description = "Traces the network path to a remote host."
+command = "mtr google.com"
+col = "C"
+row = 0
+interactive = true
+
+# --- Row 1: Local Services & DNS ---
+[[commands]]
+name = "🔌 Open Ports"
+description = "Lists all open network ports on the system."
+command = "ss -tulwn"
+col = "A"
+row = 1
+interactive = false
+
+[[commands]]
+name = "❓ Check DNS"
+description = "Performs a DNS lookup for a given domain."
+command = "dig google.com"
+col = "B"
+row = 1
+interactive = false
+
+[[commands]]
+name = "🚦 Live Traffic"
+description = "Displays a real-time network traffic monitor."
+command = "sudo iptraf-ng"
+col = "C"
+row = 1
+interactive = true
+
+# --- Row 2: Local Interface & Route Info ---
+[[commands]]
+name = "🖥️ Show Interfaces"
+description = "Shows all network interfaces and their IP addresses."
+command = "ip a"
+col = "A"
+row = 2
+interactive = false
+
+[[commands]]
+name = "🛣️ Show Route"
+description = "Displays the system's IP routing table."
+command = "ip route"
+col = "B"
+row = 2
+interactive = false
+
+[[commands]]
+name = "🤝 Show Neighbors"
+description = "Shows the system's ARP table."
+command = "ip neigh"
+col = "C"
+row = 2
+interactive = false

@@ -1,0 +1,53 @@
+# dock_emo.profile.toml
+
+# ┌─ Grid Dimensions ──────────────────────────────┐
+x = 2
+y = 2
+# └────────────────────────────────────────────────┘
+
+# ┌─ Docker Learning Profile ──────────────────────┐
+# │ A beginner's toolkit for exploring Docker.
+# └──────────────────────────────────────────────────┘
+
+# --- Column 0, Row 0: Container Lifecycle ---
+[[commands]]
+name = "🚢 Containers"
+col = "A"
+row = 0
+items = [
+    { name = "✅ Running Now", description = "This is mission control. It shows the containers currently running. They aren't tiny computers; they're just isolated processes, tricked into thinking they have a whole OS to themselves. This is where you check what's currently... well, not on fire.", command = "sudo docker ps", interactive = false },
+    { name = "📋 List All", description = "Shows every container you've ever asked Docker to create, running or stopped. It's less a 'logbook of tasks' and more an evidence locker of all your past experiments and the ones that exited unexpectedly. You know, for the post-mortem.", command = "sudo docker ps -a", interactive = false },
+    { name = "📊 Live Stats", description = "A live feed of how much CPU and memory your isolated processes are hogging. It's like a vital signs monitor, perfect for figuring out which container is having a panic attack and eating all the resources. The numbers don't lie.", command = "sudo docker stats", interactive = true },
+    { name = "📜 Follow Logs", description = "Containers are black boxes by design. Their logs are the only unfiltered truth you'll get from them. This command streams a container's standard output, which is a fancy way of saying you get to watch what it's thinking, or more often, what it's complaining about.", command = "read -p 'Enter container name/ID: ' container && sudo docker logs -f $container", interactive = true },
+    { name = "🤿 Go Inside", description = "This opens a shell inside a running container's namespace. It's not magic, you're just entering its little bubble. From here you can poke around its filesystem and processes. It's the closest you'll get to being 'in the Matrix'.", command = "read -p 'Enter container name/ID: ' container && sudo docker exec -it $container /bin/bash", interactive = true }
+]
+
+# --- Column 1, Row 0: Images & Blueprints ---
+[[commands]]
+name = "🖼️ Images"
+col = "B"
+row = 0
+items = [
+    { name = "📚 My Image Library", description = "Images are the read-only templates, the genetic code for your containers. This lists the blueprints you've hoarded locally. Each one is a snapshot of a filesystem, waiting to be brought to life as a running process.", command = "sudo docker images", interactive = false },
+    { name = "📥 Download an Image", description = "Fetches a new blueprint from a registry, usually Docker Hub. You're not really 'downloading an app,' you're pulling a tarball of a layered filesystem. But 'downloading' sounds cooler and requires less explanation at parties.", command = "read -p 'Enter image to pull: ' image && sudo docker pull $image", interactive = false },
+    { name = "🗑️ Remove an Image", description = "Deletes a blueprint from your local library to free up disk space. It's just good digital hygiene. No point in keeping templates for projects you've... 'moved on' from. Especially the failed ones.", command = "read -p 'Enter image to remove: ' image && sudo docker rmi $image", interactive = false }
+]
+
+# --- Column 0, Row 1: System & Storage ---
+[[commands]]
+name = "⚙️ System"
+col = "A"
+row = 1
+items = [
+    { name = "🧹 Clean Up", description = "Docker loves leaving stuff behind. This command is the janitor. It finds and removes stopped containers, dangling images, and unused networks. It's not 'magic,' it's just a script that's better at tidying up than you are. Run it. You'll feel better.", command = "sudo docker system prune", interactive = true },
+    { name = "💾 List Volumes", description = "Containers are ephemeral and forget everything when they're gone. Volumes are the opposite. They're Docker's way of giving a container a persistent chunk of the host's filesystem to store data, so it doesn't get amnesia. This lists those chunks.", command = "sudo docker volume ls", interactive = false }
+]
+
+# --- Column 1, Row 1: The Easy Way ---
+[[commands]]
+name = "🚀 Docker TUI"
+description = "Launches 'lazydocker,' a Terminal User Interface (TUI). It's not quite a GUI, it's for people who love the terminal but are tired of typing 'docker ps' for the 80th time today. It gives you a dashboard to see everything at once. A crutch? Maybe. A useful one? Absolutely."
+command = "lazydocker"
+col = "B"
+row = 1
+interactive = true
