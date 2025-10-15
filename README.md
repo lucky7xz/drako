@@ -46,7 +46,7 @@ Run `drako`. On its first execution, it will construct your configuration file a
 ## Navigation
 
 - **Grid Navigation:** Use w/a/s/d/arrow keys or vim keys (h, j, k, l) to move around the grid. 
-- **Switch Profile:** Use number keys (`1`-`9`) to switch directly to a profile. Use backtick (`) to cycle to the next profile.
+- **Switch Profile:** Use `Shift` + number keys (`1`-`9`) to switch directly to a profile. Use `Shift` + backtick (`) to cycle to the next profile.
 - **Prifile Inventory:** Use `i` to open the profile inventory to add/remove profiles from your rotation.
 - **Lock Current Profile:** Press `r` to lock or unlock the current profile.
 - **Tab:** Press `tab` to switch from grid mode to directory mode, or vice versa.

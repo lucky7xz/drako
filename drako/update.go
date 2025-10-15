@@ -57,11 +57,31 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmd := m.toggleProfileLock()
 			return m, cmd
 		}
-		// Profile switching only in grid or child mode
+		// Profile switching with Shift + Number or Shift + Backtick
 		if m.mode == gridMode || m.mode == childMode {
 			switch key {
-			case "1", "2", "3", "4", "5", "6", "7", "8", "9":
-				target := int(key[0] - '1') // 1->Default (0), 2->overlay 1, ...
+			case "!", "@", "#", "$", "%", "^", "&", "*", "(":
+				var target int
+				switch key {
+				case "!":
+					target = 0
+				case "@":
+					target = 1
+				case "#":
+					target = 2
+				case "$":
+					target = 3
+				case "%":
+					target = 4
+				case "^":
+					target = 5
+				case "&":
+					target = 6
+				case "*":
+					target = 7
+				case "(":
+					target = 8
+				}
 				if target < len(m.profiles) {
 					if updated, cmd, ok := m.switchToProfileIndex(target); ok {
 						m = updated
@@ -69,7 +89,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				}
 				return m, nil
-			case "`":
+			case "~": // Shift + `
 				return m.handleProfileCycle()
 			}
 		}
