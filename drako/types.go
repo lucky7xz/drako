@@ -53,15 +53,14 @@ type Command struct {
 }
 
 type Config struct {
-
-	DR4koPath string              `toml:"dR4ko_path"`
-	Theme     string              `toml:"theme"`
-	Behavior  DracoBehaviorConfig `toml:"behavior"`
-	X         int                 `toml:"x"`
-	Y         int                 `toml:"y"`
-	Profile   string              `toml:"profile"`
-	Commands  []Command           `toml:"commands"`
-
+	DR4koPath    string              `toml:"dR4ko_path"`
+	Theme        string              `toml:"theme"`
+	NumbModifier string              `toml:"numb_modifier"`
+	Behavior     DracoBehaviorConfig `toml:"behavior"`
+	X            int                 `toml:"x"`
+	Y            int                 `toml:"y"`
+	Profile      string              `toml:"profile"`
+	Commands     []Command           `toml:"commands"`
 }
 
 type ProfileInfo struct {
@@ -95,11 +94,12 @@ type behaviorOverlay struct {
 }
 
 type profileOverlay struct {
-	DR4koPath *string          `toml:"dR4ko_path"`
-	X         *int             `toml:"x"`
-	Y         *int             `toml:"y"`
-	Theme     *string          `toml:"theme"`
-	Behavior  *behaviorOverlay `toml:"behavior"`
-	Commands  *[]Command       `toml:"commands"`
+	DR4koPath    *string          `toml:"dR4ko_path"`
+	X            *int             `toml:"x"`
+	Y            *int             `toml:"y"`
+	Theme        *string          `toml:"theme"`
+	NumbModifier *string          `toml:"numb_modifier"`
+	Behavior     *behaviorOverlay `toml:"behavior"`
+	Commands     *[]Command       `toml:"commands"`
 }
 

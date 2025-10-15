@@ -151,6 +151,10 @@ func applyProfileOverlay(base Config, overlay profileOverlay) Config {
 		cfg.Theme = *overlay.Theme
 	}
 
+	if overlay.NumbModifier != nil {
+		cfg.NumbModifier = *overlay.NumbModifier
+	}
+
 	if overlay.Behavior != nil {
 
 		if overlay.Behavior.ExitConfirmation != nil {
@@ -349,6 +353,9 @@ func loadConfig(profileOverride *string) configBundle {
 		configString := os.ExpandEnv(string(configBytes))
 		if _, err := toml.Decode(configString, &base); err != nil {
 			log.Fatalf("could not decode config file: %v", err)
+		}
+		if strings.TrimSpace(base.NumbModifier) == "" {
+			base.NumbModifier = "alt"
 		}
 		log.Printf("Loaded config: X=%d, Y=%d, Commands=%d", base.X, base.Y, len(base.Commands))
 	}

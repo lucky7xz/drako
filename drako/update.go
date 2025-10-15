@@ -53,43 +53,28 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		key := msg.String()
+		log.Printf("Key pressed: %q", key)
 		if key == "r" {
 			cmd := m.toggleProfileLock()
 			return m, cmd
 		}
-		// Profile switching with Shift + Number or Shift + Backtick
+		// Profile switching with configurable modifier + Number or ~ (Shift + `)
 		if m.mode == gridMode || m.mode == childMode {
-			switch key {
-			case "!", "@", "#", "$", "%", "^", "&", "*", "(":
-				var target int
-				switch key {
-				case "!":
-					target = 0
-				case "@":
-					target = 1
-				case "#":
-					target = 2
-				case "$":
-					target = 3
-				case "%":
-					target = 4
-				case "^":
-					target = 5
-				case "&":
-					target = 6
-				case "*":
-					target = 7
-				case "(":
-					target = 8
-				}
-				if target < len(m.profiles) {
-					if updated, cmd, ok := m.switchToProfileIndex(target); ok {
-						m = updated
-						return m, cmd
+			prefix := m.config.NumbModifier + "+"
+			if strings.HasPrefix(key, prefix) && len(key) > len(prefix) {
+				numberChar := key[len(key)-1]
+				if numberChar >= '1' && numberChar <= '9' {
+					target := int(numberChar - '1') // '1' -> 0, '2' -> 1, etc.
+					if target < len(m.profiles) {
+						if updated, cmd, ok := m.switchToProfileIndex(target); ok {
+							m = updated
+							return m, cmd
+						}
 					}
+					return m, nil
 				}
-				return m, nil
-			case "~": // Shift + `
+			}
+			if key == "~" { // Shift + `
 				return m.handleProfileCycle()
 			}
 		}
