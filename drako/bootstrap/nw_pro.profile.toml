@@ -16,8 +16,8 @@ col = "A"
 row = 0
 items = [
     { name = "👀 Find Devices", description = "This is your network radar. It automatically finds your local network address and sends out a signal to ask all devices to announce themselves. It's the perfect first step to see what's connected to your WiFi or local network.", command = "sudo nmap -sn $(ip -o -f inet addr show | awk '/scope global/ {print $4}')", interactive = true },
-    { name = "👋 Ping a Device", description = "This is like shouting 'Marco!' and waiting for a 'Polo!'. You send a small packet to a specific address, and if it's online, it sends one back. It's the simplest way to check if a computer is reachable. You'll be prompted for the IP address to ping.", command = "read -p 'Enter IP to ping: ' ip && ping -c 4 $ip", interactive = true },
-    { name = "🚪 Check Common Ports", description = "Imagine a device has thousands of doors (ports), but only a few are open for services like websites. This command checks the most common 1,000 doors on a device to see which are open. It's a quick way to guess what a device is doing.", command = "read -p 'Enter IP to scan: ' ip && nmap $ip", interactive = true }
+    { name = "👋 Ping a Device", description = "This is like shouting 'Marco!' and waiting for a 'Polo!'. You send a small packet to a specific address, and if it's online, it sends one back. It's the simplest way to check if a computer is reachable. You'll be prompted for the IP address to ping.", command = "read -p 'Enter IP to ping: ' ip && ping -c 4 $ip", interactive = true, hold_after = true },
+    { name = "🚪 Check Common Ports", description = "Imagine a device has thousands of doors (ports), but only a few are open for services like websites. This command checks the most common 1,000 doors on a device to see which are open. It's a quick way to guess what a device is doing.", command = "read -p 'Enter IP to scan: ' ip && nmap $ip", interactive = true, hold_after = true }
 ]
 
 # --- Column 1, Row 0: DNS & Domain Intel ---
@@ -26,9 +26,9 @@ name = "🤔 DNS & Domains ⋮ "
 col = "B"
 row = 0
 items = [
-    { name = "🌍 DNS Lookup (A Record)", description = "Computers use numbers (IP addresses), but we use names (like google.com). DNS is the internet's phonebook that translates names to numbers. This command asks the phonebook for the main 'A' record of a website.", command = "read -p 'Enter domain: ' domain && dig A $domain", interactive = false },
-    { name = "📬 DNS Lookup (MX Record)", description = "Domains have special records for different services. 'MX' records point to the mail servers. This command asks the DNS phonebook where to send emails for a domain. It's how your email finds its way across the world.", command = "read -p 'Enter domain: ' domain && dig MX $domain", interactive = false },
-    { name = "👤 Who owns this domain?", description = "Every domain name is registered to someone. This 'whois' command is like looking up the title deed for a website. It shows you public info about the owner of a domain, their contact info, and when it expires. A bit like digital detective work.", command = "read -p 'Enter domain: ' domain && whois $domain", interactive = true }
+    { name = "🌍 DNS Lookup (A Record)", description = "Computers use numbers (IP addresses), but we use names (like google.com). DNS is the internet's phonebook that translates names to numbers. This command asks the phonebook for the main 'A' record of a website.", command = "read -p 'Enter domain: ' domain && dig A $domain", interactive = true, hold_after = true },
+    { name = "📬 DNS Lookup (MX Record)", description = "Domains have special records for different services. 'MX' records point to the mail servers. This command asks the DNS phonebook where to send emails for a domain. It's how your email finds its way across the world.", command = "read -p 'Enter domain: ' domain && dig MX $domain", interactive = true, hold_after = true },
+    { name = "👤 Who owns this domain?", description = "Every domain name is registered to someone. This 'whois' command is like looking up the title deed for a website. It shows you public info about the owner of a domain, their contact info, and when it expires. A bit like digital detective work.", command = "read -p 'Enter domain: ' domain && whois $domain", interactive = true, hold_after = true }
 ]
 
 # --- Column 0, Row 1: Your Computer's Network ---
