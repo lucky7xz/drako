@@ -7,6 +7,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -74,7 +75,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, nil
 				}
 			}
-			if key == "~" { // Shift + `
+			if key == "`" {// might use ~ too with shift
 				return m.handleProfileCycle()
 			}
 		}
@@ -145,6 +146,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 
 
+	case navTimeoutMsg:
+		if m.navigationTimer != nil {
+			m.navigationTimer.Stop()
+		}
+		m.navigationTimer = nil
+		return m, nil
+
 	case profileStatusClearMsg:
 		if msg.id != m.statusClearTimerID {
 			return m, nil
@@ -160,6 +168,49 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
+
+	// Handle number-based navigation (1-9)
+	if num, err := strconv.Atoi(key); err == nil && num >= 1 && num <= 9 {
+		targetIndex := num - 1 // Convert to 0-based index
+
+		if m.navigationTimer == nil { // This is the first number press (column selection)
+			lastCol := findLastPopulatedCol(m.grid)
+			targetCol := min(targetIndex, lastCol)
+
+			// Ensure the target column is valid before proceeding
+			if targetCol < 0 {
+				return m, nil
+			}
+
+			targetRow := findFirstPopulatedRow(m.grid, targetCol)
+
+			m.cursorCol = targetCol
+			m.cursorRow = targetRow
+
+			m.navigationTimer = time.NewTimer(500 * time.Millisecond)
+
+			return m, func() tea.Msg {
+				<-m.navigationTimer.C
+				return navTimeoutMsg{}
+			}
+
+		} else { // This is the second number press (row selection)
+			m.navigationTimer.Stop()
+			m.navigationTimer = nil
+
+			lastRow := findLastPopulatedRow(m.grid, m.cursorCol)
+			targetRow := min(targetIndex, lastRow)
+
+			m.cursorRow = targetRow
+			return m, nil
+		}
+	}
+
+	// If a navigation sequence was in progress, any non-numeric key cancels it.
+	if m.navigationTimer != nil {
+		m.navigationTimer.Stop()
+		m.navigationTimer = nil
+	}
 
 	switch key {
 	case "ctrl+c", "q":
@@ -233,6 +284,57 @@ func (m model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 	return m, nil
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func findLastPopulatedCol(grid [][]string) int {
+	lastCol := -1
+	if len(grid) == 0 {
+		return lastCol
+	}
+	for r := 0; r < len(grid); r++ {
+		for c := 0; c < len(grid[r]); c++ {
+			if grid[r][c] != "" && c > lastCol {
+				lastCol = c
+			}
+		}
+	}
+	return lastCol
+}
+
+func findLastPopulatedRow(grid [][]string, col int) int {
+	lastRow := -1
+	if len(grid) == 0 || col < 0 {
+		return lastRow
+	}
+	for r := 0; r < len(grid); r++ {
+		if col < len(grid[r]) {
+			if grid[r][col] != "" {
+				lastRow = r
+			}
+		}
+	}
+	return lastRow
+}
+
+func findFirstPopulatedRow(grid [][]string, col int) int {
+	if len(grid) == 0 || col < 0 {
+		return 0
+	}
+	for r := 0; r < len(grid); r++ {
+		if col < len(grid[r]) {
+			if grid[r][col] != "" {
+				return r
+			}
+		}
+	}
+	return 0 // Fallback
 }
 
 func (m model) updatePathMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {

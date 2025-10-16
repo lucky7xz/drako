@@ -31,6 +31,7 @@ type (
 	profileStatusClearMsg struct {
 		id int
 	}
+	navTimeoutMsg struct{}
 )
 
 type CommandItem struct {

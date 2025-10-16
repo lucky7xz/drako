@@ -17,6 +17,15 @@ theme = "dracula"
 #theme = "dracula2"
 #theme = "jade"
 
+# ┌─ Keybinding Modifier ────────────────────────────────────┐
+# │ Set the modifier for number-based shortcuts.
+# │ "alt" is the default and generally works well.
+# │ "ctrl" is another option, but may be intercepted by your
+# │ terminal or window manager.
+# │ Function keys (F1-F9) are not configured via this string.
+# └──────────────────────────────────────────────────────────┘
+numb_modifier = "alt"
+
 
 
 [behavior]

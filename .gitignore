@@ -1,4 +1,5 @@
 .cache/
+xyz.*
 # Binaries for programs and plugins
 #*.exe
 #*.exe~

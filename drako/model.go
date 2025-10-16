@@ -57,6 +57,8 @@ type model struct {
 	nextTimerID        int
 	statusClearTimerID int
 
+	navigationTimer *time.Timer
+
 	inventory inventoryModel
 
 	dropdownRow          int
