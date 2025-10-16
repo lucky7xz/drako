@@ -410,9 +410,9 @@ func loadConfig(profileOverride *string) configBundle {
 	activeIndex := 0
 	pivotStillValid := requestedPivot != ""
 
-	if target != "" && target != "default" {
+	if target != "" {
 		found := false
-		for i := 1; i < len(profiles); i++ {
+		for i := 0; i < len(profiles); i++ {
 			if normalizeProfileName(profiles[i].Name) == target {
 				activeIndex = i
 				found = true
@@ -432,10 +432,10 @@ func loadConfig(profileOverride *string) configBundle {
 
 	effective := base
 	effective.Theme = base.Theme
-	if activeIndex > 0 {
-		info := profiles[activeIndex]
-		effective = applyProfileOverlay(base, info.Overlay)
-		log.Printf("Applied profile overlay: %s", info.Name)
+	selected := profiles[activeIndex]
+	if normalizeProfileName(selected.Name) != "default" {
+		effective = applyProfileOverlay(base, selected.Overlay)
+		log.Printf("Applied profile overlay: %s", selected.Name)
 	}
 
 	clampConfig(&effective)

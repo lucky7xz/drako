@@ -78,24 +78,36 @@ func initInventoryModel(configDir string) inventoryModel {
 	sort.Strings(inventory)
 
 	// Build visible list including the special "Default" entry
-	var visible []string
+	// Persisted equipped_order uses canonical names (e.g., "Default", "nw_pro")
+	var visible []string // contains filenames for overlays and the literal "Default"
 	if pf, err := readPivotProfile(configDir); err == nil && len(pf.EquippedOrder) > 0 {
-		// Honor equipped_order exactly; include Default if present
-		remaining := map[string]bool{"Default": true}
-		for _, v := range visibleFiles { remaining[v] = true }
-		for _, name := range pf.EquippedOrder {
-			if remaining[name] {
-				visible = append(visible, name)
-				delete(remaining, name)
+		// Map canonical name -> filename
+		nameToFile := make(map[string]string, len(visibleFiles))
+		for _, f := range visibleFiles {
+			name := strings.TrimSuffix(f, ".profile.toml")
+			nameToFile[name] = f
+		}
+		// Track remaining overlays by name
+		remaining := make(map[string]string, len(nameToFile))
+		for n, f := range nameToFile { remaining[n] = f }
+		addedDefault := false
+		for _, n := range pf.EquippedOrder {
+			if n == "Default" {
+				visible = append(visible, "Default")
+				addedDefault = true
+				continue
+			}
+			if f, ok := remaining[n]; ok {
+				visible = append(visible, f)
+				delete(remaining, n)
 			}
 		}
-		// Append any new leftovers alphabetically (Default goes among leftovers if not listed)
-		if len(remaining) > 0 {
-			var rest []string
-			for v := range remaining { rest = append(rest, v) }
-			sort.Strings(rest)
-			visible = append(visible, rest...)
-		}
+		// Append any leftovers alphabetically by name; if Default wasn't listed, append it at the end
+		var restNames []string
+		for n := range remaining { restNames = append(restNames, n) }
+		sort.Strings(restNames)
+		for _, n := range restNames { visible = append(visible, remaining[n]) }
+		if !addedDefault { visible = append(visible, "Default") }
 	} else {
 		// No saved order: Default first, then files alphabetically
 		sort.Strings(visibleFiles)
@@ -145,8 +157,16 @@ func applyInventoryChangesCmd(configDir string, m inventoryModel) tea.Cmd {
 			}
 		}
 
-		// Persist the current visible order into pivot.toml as equipped_order
-		if err := writePivotEquippedOrder(configDir, append([]string{}, m.visible...)); err != nil {
+		// Persist the current visible order into pivot.toml as equipped_order (canonical names)
+		order := make([]string, 0, len(m.visible))
+		for _, v := range m.visible {
+			if v == "Default" {
+				order = append(order, "Default")
+				continue
+			}
+			order = append(order, strings.TrimSuffix(v, ".profile.toml"))
+		}
+		if err := writePivotEquippedOrder(configDir, order); err != nil {
 			log.Printf("could not write equipped order: %v", err)
 		}
 

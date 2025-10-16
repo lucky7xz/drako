@@ -579,6 +579,11 @@ func (m model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 		} else {
 			// Place
+			// Prevent placing Default into Inventory list (focusedList==1)
+			if inv.focusedList == 1 && inv.heldItem != nil && *inv.heldItem == "Default" {
+				inv.status = "Default cannot be moved to Inventory"
+				return m, nil
+			}
 			// Ensure cursor is valid for placement
 			if inv.cursor > len(*currentList) {
 				inv.cursor = len(*currentList)
