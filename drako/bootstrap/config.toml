@@ -46,8 +46,7 @@ description = "This is like checking for app updates on your phone, but for your
 command = "sudo apt update && sudo apt upgrade"
 col = "A"
 row = 0
-interactive = true
-hold_after = true
+auto_close_execution = false
 
 [[commands]]
 name = "🧹 Clean Packages"
@@ -55,7 +54,7 @@ description = "This is my digital decluttering button. When you update software,
 command = "sudo apt autoremove"
 col = "A"
 row = 1
-interactive = false
+auto_close_execution = false
 
 [[commands]]
 name = "👀 Process Monitor"
@@ -63,7 +62,6 @@ description = "This is like opening the hood of your car while the engine is run
 command = "btop"
 col = "A"
 row = 2
-interactive = true
 
 [[commands]]
 name = "🛡️ Virus Scan (Home)"
@@ -71,7 +69,7 @@ description = "Okay, so Linux is pretty secure, but it's never a bad idea to be 
 command = "sudo freshclam && clamscan -r --bell -i /home/$USER"
 col = "A"
 row = 3
-interactive = true
+auto_close_execution = false
 
 #[[commands]]
 #name = "Live Logs"
@@ -90,7 +88,7 @@ description = "I love this one. It's like a super-powered search bar for your fi
 command = "find . -type f | fzf"
 col = "B"
 row = 0
-interactive = true
+auto_close_execution = false
 
 [[commands]]
 name = " Open .bashrc"
@@ -98,7 +96,6 @@ description = "This is where all your terminal customizations live. The .bashrc 
 command = "micro ~/.bashrc"
 col = "B"
 row = 1
-interactive = false
 
 [[commands]]
 name = "💾 Disk Usage"
@@ -106,7 +103,6 @@ description = "Ever wonder where all your free space went? Me too. All the time.
 command = "baobab"
 col = "B"
 row = 2
-interactive = false
 
 [[commands]]
 name = " ℹ️  System Info"
@@ -114,8 +110,7 @@ description = "This is your computer's trading card. It shows a cool logo of you
 command = "neofetch"
 col = "B"
 row = 3
-interactive = false
-
+debug_output = true
 #==========================================
 # ┌─ Column 2: Network & Web ──────────────┐
 # └────────────────────────────────────────┘
@@ -125,7 +120,7 @@ description = "Bundled up all the little tools that this menu uses, just in case
 command = "sudo apt install micro btop neofetch clamav duf fzf bmon"
 col = "C"
 row = 0
-interactive = true
+auto_close_execution = false
 
 [[commands]]
 name = "🌐 Bandwidth (bmon)"
@@ -133,7 +128,6 @@ description = "Curious how much internet you're using right now? This opens up a
 command = "bmon"
 col = "C"
 row = 1
-interactive = true
 
 [[commands]]
 name = "🌦️ Weather"
@@ -141,14 +135,19 @@ description = "Because who has time to open a web browser? This gives you a quic
 command = "curl wttr.in"
 col = "C"
 row = 2
-interactive = false
+auto_close_execution = false
 
 [[commands]]
 name = "  🐉 dr4ko Config ⋮ "
 col = "Z"
 row = -1
 items = [
-    { name = "⚙️ Edit config.toml", description = "This is the command center, the cockpit, the big red button. It opens up the very file you're reading right now, so you can tweak and tune dR4ko to your heart's content. Want to change a command? A description? The theme? This is the place. It's like being handed the keys to the whole operation. A little bit of power is a fun thing, isn't it? Never be afraid to break stuff. Read the next description to see why.", command = "micro ~/.config/drako/config.toml", interactive = true },
-    { name = "📁 Browse config dir", description = "Welcome to the rabbit hole. In Linux, many of your configurations live in hidden folders, like this `.config` directory. It's a bit of a secret clubhouse for your apps. This command opens up the `drako` folder inside, where all its settings live. We've set you up with some sensible defaults, but the real magic is making it your own. Go ahead, poke around, make some changes. That's the whole point! You can even save your custom setups and reuse them. It's your system, your rules. Welcome to the world of dotfiles.", command = "yazi ~/.config/drako/", interactive = true }
+    { name = "⚙️ Edit config.toml", description = "This is the command center, the cockpit, the big red button. It opens up the very file you're reading right now, so you can tweak and tune dR4ko to your heart's content. Want to change a command? A description? The theme? This is the place. It's like being handed the keys to the whole operation. A little bit of power is a fun thing, isn't it? Never be afraid to break stuff. Read the next description to see why.", command = "micro ~/.config/drako/config.toml"},
+    { name = "📁 Browse config dir", description = "Welcome to the rabbit hole. In Linux, many of your configurations live in hidden folders, like this `.config` directory. It's a bit of a secret clubhouse for your apps. This command opens up the `drako` folder inside, where all its settings live. We've set you up with some sensible defaults, but the real magic is making it your own. Go ahead, poke around, make some changes. That's the whole point! You can even save your custom setups and reuse them. It's your system, your rules. Welcome to the world of dotfiles.", command = "yazi ~/.config/drako/"},
+    { name = "Go Version", description = "Checks the installed Go version. Drako is built with Go, so if it fails to launch, confirming you have a compatible Go version is the first step.", command = "go version", auto_close_execution = false},
+    { name = "Which Go", description = "Shows the exact location of the Go compiler. If this is empty or wrong, it means the system can't find the Go compiler, which is essential for building and running Drako.", command = "which go", auto_close_execution = false},
+    { name = "Go Env GOROOT", description = "Displays the GOROOT path, where Go's standard libraries are. An incorrect GOROOT can cause build failures.", command = "go env GOROOT", auto_close_execution = false},
+    { name = "Go Env GOPATH", description = "Displays the GOPATH, your workspace for Go projects. If Drako's source isn't in the right GOPATH, the compiler might not find it.", command = "go env GOPATH", auto_close_execution = false}
+
 ]
 

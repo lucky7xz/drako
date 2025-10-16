@@ -11,11 +11,12 @@ y = 2
 name = "⚙️ Setup & Config"
 col = "A"
 row = 0
-items = [
-    { 
-      name = "Install Nginx", 
-      description = "Detects OS (Debian/RHEL/Arch) and installs the Nginx server.",
-      command = """
+
+[[commands.items]]
+name = "Install Nginx"
+description = "Detects OS (Debian/RHEL/Arch) and installs the Nginx server."
+auto_close_execution = false
+command = """
 #!/bin/sh
 # Universal Nginx Installer
 
@@ -47,52 +48,91 @@ else
     printf '\n[ERROR] Could not find a supported package manager. Aborting.\n' >&2
     exit 1
 fi
-      """
-    },
-    { name = "✅ Test Config", description = "Validate the Nginx configuration for syntax errors.", command = "sudo nginx -t" },
-    { name = "📜 View Main Config", description = "Display the main nginx.conf file.", command = "cat /etc/nginx/nginx.conf" },
-    { name = "📁 List Enabled Sites", description = "List all currently enabled site configurations.", command = "ls -l /etc/nginx/sites-enabled/" }
-]
+"""
+
+[[commands.items]]
+name = "✅ Test Config"
+description = "Validate the Nginx configuration for syntax errors."
+command = "sudo nginx -t"
+auto_close_execution = false
+
+[[commands.items]]
+name = "📜 View Main Config"
+description = "Display the main nginx.conf file."
+command = "cat /etc/nginx/nginx.conf"
+auto_close_execution = false
+
+[[commands.items]]
+name = "📁 List Enabled Sites"
+description = "List all currently enabled site configurations."
+command = "ls -l /etc/nginx/sites-enabled/"
+auto_close_execution = false
 
 # ┌─ Service Management (B,0) ─────────────────────┐
 [[commands]]
 name = "🚀 Service Management"
 col = "B"
 row = 0
-items = [
-    { name = "▶️ Start", command = "sudo systemctl start nginx" },
-    { name = "⏹️ Stop", command = "sudo systemctl stop nginx" },
-    { name = "🔄 Restart", command = "sudo systemctl restart nginx" },
-    { name = "⚡ Reload", description = "Gracefully reload config without dropping connections.", command = "sudo systemctl reload nginx" },
-    { name = "🔌 Enable on Boot", command = "sudo systemctl enable nginx" },
-    { name = "📊 Status", command = "sudo systemctl status nginx" }
-]
+
+[[commands.items]]
+name = "▶️ Start"
+command = "sudo systemctl start nginx"
+auto_close_execution = false
+
+[[commands.items]]
+name = "⏹️ Stop"
+command = "sudo systemctl stop nginx"
+auto_close_execution = false
+
+[[commands.items]]
+name = "🔄 Restart"
+command = "sudo systemctl restart nginx"
+auto_close_execution = false
+
+[[commands.items]]
+name = "⚡ Reload"
+description = "Gracefully reload config without dropping connections."
+command = "sudo systemctl reload nginx"
+auto_close_execution = false
+
+[[commands.items]]
+name = "🔌 Enable on Boot"
+command = "sudo systemctl enable nginx"
+auto_close_execution = false
+
+[[commands.items]]
+name = "📊 Status"
+command = "sudo systemctl status nginx"
+auto_close_execution = false
 
 # ┌─ Site Management (A,1) ────────────────────────┐
 [[commands]]
 name = "🌐 Site Management"
 col = "A"
 row = 1
-items = [
-    { 
-      name = "Enable Site", 
-      description = "Enable a site by creating a symlink (Debian/Ubuntu style).",
-      command = "printf 'Enter config file name from sites-available: '; read -r site && sudo ln -s /etc/nginx/sites-available/\"$site\" /etc/nginx/sites-enabled/\"$site\" && echo 'Site enabled. Reload Nginx to apply.'"
-    },
-    { 
-      name = "Disable Site", 
-      description = "Disable a site by removing its symlink.",
-      command = "printf 'Enter config file name from sites-enabled: '; read -r site && sudo rm /etc/nginx/sites-enabled/\"$site\" && echo 'Site disabled. Reload Nginx to apply.'"
-    }
-]
+
+[[commands.items]]
+name = "Enable Site"
+description = "Enable a site by creating a symlink (Debian/Ubuntu style)."
+command = "printf 'Enter config file name from sites-available: '; read -r site && sudo ln -s /etc/nginx/sites-available/\"$site\" /etc/nginx/sites-enabled/\"$site\" && echo 'Site enabled. Reload Nginx to apply.'"
+auto_close_execution = false
+
+[[commands.items]]
+name = "Disable Site"
+description = "Disable a site by removing its symlink."
+command = "printf 'Enter config file name from sites-enabled: '; read -r site && sudo rm /etc/nginx/sites-enabled/\"$site\" && echo 'Site disabled. Reload Nginx to apply.'"
+auto_close_execution = false
 
 # ┌─ Logs (B,1) ───────────────────────────────────┐
 [[commands]]
 name = "📜 Logs"
 col = "B"
 row = 1
-items = [
-    { name = "Follow Access Log", command = "sudo tail -f /var/log/nginx/access.log" },
-    { name = "Follow Error Log", command = "sudo tail -f /var/log/nginx/error.log" }
-]
 
+[[commands.items]]
+name = "Follow Access Log"
+command = "sudo tail -f /var/log/nginx/access.log"
+
+[[commands.items]]
+name = "Follow Error Log"
+command = "sudo tail -f /var/log/nginx/error.log"

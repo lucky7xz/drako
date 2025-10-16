@@ -293,7 +293,7 @@ func (m model) viewInventoryMode() string {
 	s.WriteString(titleStyle.Render("Inventory Management") + "\n\n")
 
 	// Render Visible Grid
-	s.WriteString(listHeaderStyle.Render("Visible Profiles") + "\n")
+	s.WriteString(listHeaderStyle.Render("Equipped Profiles") + "\n")
 	s.WriteString(m.renderInventoryGrid(m.inventory.visible, 0))
 	s.WriteString("\n\n")
 
