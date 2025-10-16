@@ -606,26 +606,25 @@ func (m model) switchToProfileIndex(target int) (model, tea.Cmd, bool) {
 		target = ((target % total) + total) % total
 	}
 
-	if target > 0 {
-		info := m.profiles[target]
-		if !fileExists(info.Path) {
-			log.Printf("skipping missing profile: %s", info.Path)
+	selected := m.profiles[target]
+	norm := strings.TrimSpace(strings.ToLower(selected.Name))
+
+	// Skip missing non-default profiles
+	if norm != "default" {
+		if !fileExists(selected.Path) {
+			log.Printf("skipping missing profile: %s", selected.Path)
 			return m, nil, false
 		}
 	}
 
-	if target == 0 {
-		_ = os.Unsetenv("DRAKO_PROFILE")
-	} else {
-		_ = os.Setenv("DRAKO_PROFILE", m.profiles[target].Name)
-	}
-
 	updated := m
 	updated.activeProfileIndex = target
-	if target > 0 {
-		updated.config = applyProfileOverlay(m.baseConfig, m.profiles[target].Overlay)
-	} else {
+	if norm == "default" {
+		_ = os.Unsetenv("DRAKO_PROFILE")
 		updated.config = m.baseConfig
+	} else {
+		_ = os.Setenv("DRAKO_PROFILE", selected.Name)
+		updated.config = applyProfileOverlay(m.baseConfig, selected.Overlay)
 	}
 	updated.applyConfig(updated.config)
 
