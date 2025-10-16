@@ -400,7 +400,23 @@ func (m model) updateChildMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch key := msg.String(); key {
+	key := msg.String()
+
+	// Handle number-based navigation (1-9)
+	if num, err := strconv.Atoi(key); err == nil && num >= 1 && num <= 9 {
+		targetIndex := num - 1 // Convert to 0-based index
+		if len(m.dropdownItems) > 0 {
+			// If the target is out of bounds, select the last item.
+			if targetIndex >= len(m.dropdownItems) {
+				m.dropdownSelectedIdx = len(m.dropdownItems) - 1
+			} else {
+				m.dropdownSelectedIdx = targetIndex
+			}
+		}
+		return m, nil
+	}
+
+	switch key {
 	case "q", "esc":
 		// Close dropdown and return to grid mode
 		m.mode = gridMode
