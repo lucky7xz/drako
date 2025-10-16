@@ -35,22 +35,22 @@ type (
 )
 
 type CommandItem struct {
-	Name        string `toml:"name"`
-	Command     string `toml:"command"`
-	Interactive bool   `toml:"interactive"`
-	HoldAfter   bool   `toml:"hold_after"`
-	Description string `toml:"description"`
+	Name               string `toml:"name"`
+	Command            string `toml:"command"`
+	Description        string `toml:"description"`
+	AutoCloseExecution *bool  `toml:"auto_close_execution"`
+	DebugExecution     *bool  `toml:"debug_execution"`
 }
 
 type Command struct {
-	Name        string        `toml:"name"`
-	Command     string        `toml:"command"`
-	Row         int           `toml:"row"`
-	Col         string        `toml:"col"`
-	Interactive bool          `toml:"interactive"`
-	HoldAfter   bool          `toml:"hold_after"`
-	Description string        `toml:"description"`
-	Items       []CommandItem `toml:"items"`
+	Name               string        `toml:"name"`
+	Command            string        `toml:"command"`
+	Row                int           `toml:"row"`
+	Col                string        `toml:"col"`
+	Description        string        `toml:"description"`
+	AutoCloseExecution *bool         `toml:"auto_close_execution"`
+	DebugExecution     *bool         `toml:"debug_execution"`
+	Items              []CommandItem `toml:"items"`
 }
 
 type Config struct {

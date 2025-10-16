@@ -70,7 +70,8 @@ type model struct {
 	infoTitle        string
 	infoCommand      string
 	infoDescription  string
-	infoInteractive  bool
+	infoExecMode     string
+	infoAutoClose    bool
 	infoCwd          string
 }
 

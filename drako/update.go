@@ -240,7 +240,13 @@ func (m model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.previousMode = m.mode
 				m.infoTitle = selectedChoice
 				m.infoDescription = cmd.Description
-				m.infoInteractive = cmd.Interactive
+				// Resolve execution mode and auto-close
+				autoClose := true
+				if cmd.AutoCloseExecution != nil { autoClose = *cmd.AutoCloseExecution }
+				debug := false
+				if cmd.DebugExecution != nil { debug = *cmd.DebugExecution }
+				if debug { m.infoExecMode = "debug" } else { m.infoExecMode = "live" }
+				m.infoAutoClose = autoClose
 				m.infoCwd = m.currentPath
 				if strings.TrimSpace(cmd.Command) == "" {
 					m.infoCommand = "Error: no command. ( This might be a folder of commands!)"
@@ -255,7 +261,8 @@ func (m model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.previousMode = m.mode
 		m.infoTitle = selectedChoice
 		m.infoDescription = ""
-		m.infoInteractive = false
+		m.infoExecMode = ""
+		m.infoAutoClose = false
 		m.infoCwd = m.currentPath
 		m.infoCommand = "Error: command not found"
 		m.mode = infoMode
@@ -447,7 +454,13 @@ func (m model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.infoTitle = fmt.Sprintf("%s: %s", parent, item.Name)
 			}
 			m.infoDescription = item.Description
-			m.infoInteractive = item.Interactive
+			// Resolve execution mode and auto-close for item
+			autoClose := true
+			if item.AutoCloseExecution != nil { autoClose = *item.AutoCloseExecution }
+			debug := false
+			if item.DebugExecution != nil { debug = *item.DebugExecution }
+			if debug { m.infoExecMode = "debug" } else { m.infoExecMode = "live" }
+			m.infoAutoClose = autoClose
 			m.infoCwd = m.currentPath
 			if strings.TrimSpace(item.Command) == "" {
 				m.infoCommand = "Error: no command configured"
