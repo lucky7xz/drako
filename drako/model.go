@@ -275,7 +275,7 @@ func (m *model) toggleProfileLock() tea.Cmd {
 			messageCmd = m.setProfileStatus("Pivot cleared", false)
 		}
 	} else {
-		err = writePivotProfile(m.configDir, currentName)
+		err = writePivotLocked(m.configDir, currentName)
 		if err == nil {
 			m.profileLocked = true
 			m.pivotProfileName = currentName

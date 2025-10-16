@@ -177,7 +177,7 @@ func applyProfileOverlay(base Config, overlay profileOverlay) Config {
 
 
 
-const pivotProfileFilename = "pivot.profile"
+const pivotProfileFilename = "pivot.toml"
 
 
 
@@ -217,55 +217,68 @@ func pivotProfilePath(configDir string) string {
 
 
 
-func readPivotProfile(configDir string) (string, error) {
+type pivotFile struct {
+	Locked        string   `toml:"locked"`
+	EquippedOrder []string `toml:"equipped_order"`
+}
 
-	data, err := os.ReadFile(pivotProfilePath(configDir))
-
+func readPivotProfile(configDir string) (pivotFile, error) {
+	var pf pivotFile
+	path := pivotProfilePath(configDir)
+	data, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
-
-		return "", nil
-
+		return pivotFile{}, nil
 	}
-
 	if err != nil {
-
-		return "", err
-
+		return pivotFile{}, err
 	}
-
-	return strings.TrimSpace(string(data)), nil
-
+	if _, err := toml.Decode(string(data), &pf); err != nil {
+		return pivotFile{}, err
+	}
+	return pf, nil
 }
 
-
-
-func writePivotProfile(configDir, name string) error {
-
+func writePivotFile(configDir string, pf pivotFile) error {
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
-
 		return err
-
 	}
-
-	return os.WriteFile(pivotProfilePath(configDir), []byte(name+"\n"), 0o644)
-
+	path := pivotProfilePath(configDir)
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return toml.NewEncoder(f).Encode(pf)
 }
 
+func writePivotLocked(configDir, name string) error {
+	pf, _ := readPivotProfile(configDir)
+	pf.Locked = strings.TrimSpace(name)
+	return writePivotFile(configDir, pf)
+}
 
+func writePivotEquippedOrder(configDir string, order []string) error {
+	pf, _ := readPivotProfile(configDir)
+	pf.EquippedOrder = order
+	return writePivotFile(configDir, pf)
+}
 
 func deletePivotProfile(configDir string) error {
-
-	err := os.Remove(pivotProfilePath(configDir))
-
-	if errors.Is(err, os.ErrNotExist) {
-
-		return nil
-
+	// Preserve equipped_order; only clear the lock
+	pf, _ := readPivotProfile(configDir)
+	if pf.Locked == "" && len(pf.EquippedOrder) == 0 {
+		// No useful content, remove file if it exists
+		return os.Remove(pivotProfilePath(configDir))
 	}
-
-	return err
-
+	pf.Locked = ""
+	return writePivotFile(configDir, pf)
 }
+
+
+
+
+
+
 
 
 func loadConfig(profileOverride *string) configBundle {
@@ -291,19 +304,13 @@ func loadConfig(profileOverride *string) configBundle {
 
 
 
-	pivotName, err := readPivotProfile(configDir)
-
+	pf, err := readPivotProfile(configDir)
 	if err != nil {
-
 		log.Printf("warning: could not read pivot profile: %v", err)
-
-		pivotName = ""
-
+		pf = pivotFile{}
 	}
-
 	pivotRequested := false
-
-	requestedPivot := strings.TrimSpace(pivotName)
+	requestedPivot := strings.TrimSpace(pf.Locked)
 
 
 
@@ -363,6 +370,28 @@ func loadConfig(profileOverride *string) configBundle {
 	clampConfig(&base)
 
 	profiles := discoverProfiles(configDir)
+	// Reorder profiles based on pivot equipped_order
+	if len(pf.EquippedOrder) > 0 {
+		remaining := map[string]ProfileInfo{}
+		for i := 0; i < len(profiles); i++ {
+			remaining[normalizeProfileName(profiles[i].Name)] = profiles[i]
+		}
+		var ordered []ProfileInfo
+		for _, n := range pf.EquippedOrder {
+			norm := normalizeProfileName(n)
+			if info, ok := remaining[norm]; ok {
+				ordered = append(ordered, info)
+				delete(remaining, norm)
+			}
+		}
+		if len(remaining) > 0 {
+			var rest []ProfileInfo
+			for _, v := range remaining { rest = append(rest, v) }
+			sort.Slice(rest, func(i, j int) bool { return rest[i].Name < rest[j].Name })
+			ordered = append(ordered, rest...)
+		}
+		profiles = ordered
+	}
 
 	var requested string
 	if profileOverride != nil {
@@ -393,8 +422,8 @@ func loadConfig(profileOverride *string) configBundle {
 		if !found && strings.TrimSpace(requested) != "" {
 			log.Printf("profile not found, falling back to default: %s", requested)
 			if pivotRequested {
-				if err := deletePivotProfile(configDir); err != nil {
-					log.Printf("warning: could not delete pivot profile: %v", err)
+				if err := writePivotLocked(configDir, ""); err != nil {
+					log.Printf("warning: could not clear pivot lock: %v", err)
 				}
 				pivotStillValid = false
 			}

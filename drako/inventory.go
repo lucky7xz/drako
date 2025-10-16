@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -61,7 +62,7 @@ func initInventoryModel(configDir string) inventoryModel {
 		return inventoryModel{err: err}
 	}
 
-	visible, err := newList(configDir)
+	visibleFiles, err := newList(configDir)
 	if err != nil {
 		log.Printf("could not read config directory: %v", err)
 		return inventoryModel{err: err}
@@ -71,6 +72,34 @@ func initInventoryModel(configDir string) inventoryModel {
 	if err != nil {
 		log.Printf("could not read inventory directory: %v", err)
 		return inventoryModel{err: err}
+	}
+
+	// Sort inventory list alphabetically
+	sort.Strings(inventory)
+
+	// Build visible list including the special "Default" entry
+	var visible []string
+	if pf, err := readPivotProfile(configDir); err == nil && len(pf.EquippedOrder) > 0 {
+		// Honor equipped_order exactly; include Default if present
+		remaining := map[string]bool{"Default": true}
+		for _, v := range visibleFiles { remaining[v] = true }
+		for _, name := range pf.EquippedOrder {
+			if remaining[name] {
+				visible = append(visible, name)
+				delete(remaining, name)
+			}
+		}
+		// Append any new leftovers alphabetically (Default goes among leftovers if not listed)
+		if len(remaining) > 0 {
+			var rest []string
+			for v := range remaining { rest = append(rest, v) }
+			sort.Strings(rest)
+			visible = append(visible, rest...)
+		}
+	} else {
+		// No saved order: Default first, then files alphabetically
+		sort.Strings(visibleFiles)
+		visible = append([]string{"Default"}, visibleFiles...)
 	}
 
 	return inventoryModel{
@@ -87,8 +116,9 @@ func applyInventoryChangesCmd(configDir string, m inventoryModel) tea.Cmd {
 		inventoryDir := filepath.Join(configDir, "inventory")
 		moves := map[string]string{} // from -> to
 
-		// Find files to move from visible to inventory
+		// Find files to move from visible to inventory (skip Default)
 		for _, file := range m.initialVisible {
+			if file == "Default" { continue }
 			if !contains(m.visible, file) {
 				moves[filepath.Join(configDir, file)] = filepath.Join(inventoryDir, file)
 			}
@@ -115,12 +145,13 @@ func applyInventoryChangesCmd(configDir string, m inventoryModel) tea.Cmd {
 			}
 		}
 
-		if len(moves) > 0 {
-			return reloadProfilesMsg{}
+		// Persist the current visible order into pivot.toml as equipped_order
+		if err := writePivotEquippedOrder(configDir, append([]string{}, m.visible...)); err != nil {
+			log.Printf("could not write equipped order: %v", err)
 		}
 
-		// If no moves, just exit without reloading
-		return tea.KeyMsg{Type: tea.KeyEsc}
+		// Always reload to reflect order and membership changes
+		return reloadProfilesMsg{}
 	}
 }
 
