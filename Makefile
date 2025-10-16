@@ -6,7 +6,7 @@
 # ===================================================================
 install:
 	@echo "Installing drako..."
-	go install ./drako
+	go install
 	@echo "Installation complete."
 	@echo "Run 'drako' to start the application."
 	@echo "A default config will be created at ~/.config/drako/config.toml on first run if it doesn't exist."
