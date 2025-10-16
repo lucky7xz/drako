@@ -321,7 +321,7 @@ func (m model) viewInventoryMode() string {
 	s.WriteString(help)
 
 	return appStyle.Render(
-		lipgloss.Place(m.termWidth, m.termHeight, lipgloss.Left, lipgloss.Top, s.String()),
+		lipgloss.Place(m.termWidth, m.termHeight, lipgloss.Center, lipgloss.Center, s.String()),
 	)
 }
 
