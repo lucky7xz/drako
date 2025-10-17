@@ -10,11 +10,14 @@ x = 3
 y = 4
 # └────────────────────────────────────────────────┘
 
+# ┌─ Themes ──────────────────────────────┐
+# | More themes when there is time.
+# └───────────────────────────────────────┘
+
 #theme = "everforest"
 #theme = "nord"
-#theme = "orasaka" #!
+#theme = "orasaka"
 theme = "dracula"
-#theme = "dracula2"
 #theme = "jade"
 
 # ┌─ Keybinding Modifier ────────────────────────────────────┐
@@ -26,12 +29,23 @@ theme = "dracula"
 # └──────────────────────────────────────────────────────────┘
 numb_modifier = "alt"
 
-
+# ┌─ Shell ────────────────────────────────────────┐
+# | For each Profile (including the default), you
+# | can set a custom shell to run the commands.
+# | The default is bash, though some profiles are 
+# | POSIX compatible by design, eg. for minimal
+# | server distros.
+# |
+# | TODO: list them
+# └────────────────────────────────────────────────
+#default_shell = "bash"   # or "zsh", "fish", "sh", etc.
 
 [behavior]
 exit_confirmation = false
 auto_save = true
 
+
+# =======================================================================================================
 # ┌─ Commands ───────────────────────────────────────────────┐
 # │ A clean, generic layout for any Ubuntu desktop.
 # └──────────────────────────────────────────────────────────┘

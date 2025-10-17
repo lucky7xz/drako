@@ -54,15 +54,14 @@ type Command struct {
 }
 
 type Config struct {
-	DR4koPath    string              `toml:"dR4ko_path"`
-	Theme        string              `toml:"theme"`
-	DefaultShell string              `toml:"default_shell"`
-	NumbModifier string              `toml:"numb_modifier"`
-	Behavior     DracoBehaviorConfig `toml:"behavior"`
-	X            int                 `toml:"x"`
-	Y            int                 `toml:"y"`
-	Profile      string              `toml:"profile"`
-	Commands     []Command           `toml:"commands"`
+	DR4koPath    string    `toml:"dR4ko_path"`
+	Theme        string    `toml:"theme"`
+	DefaultShell string    `toml:"default_shell"`
+	NumbModifier string    `toml:"numb_modifier"`
+	X            int       `toml:"x"`
+	Y            int       `toml:"y"`
+	Profile      string    `toml:"profile"`
+	Commands     []Command `toml:"commands"`
 }
 
 type ProfileInfo struct {
@@ -85,24 +84,13 @@ type configBundle struct {
 }
 
 
-type DracoBehaviorConfig struct {
-	ExitConfirmation bool `toml:"exit_confirmation"`
-	AutoSave         bool `toml:"auto_save"`
-}
-
-type behaviorOverlay struct {
-	ExitConfirmation *bool `toml:"exit_confirmation"`
-	AutoSave         *bool `toml:"auto_save"`
-}
-
 type profileOverlay struct {
 	DR4koPath    *string          `toml:"dR4ko_path"`
 	X            *int             `toml:"x"`
 	Y            *int             `toml:"y"`
-	Theme        *string          `toml:"theme"`
-	DefaultShell *string          `toml:"default_shell"`
-	NumbModifier *string          `toml:"numb_modifier"`
-	Behavior     *behaviorOverlay `toml:"behavior"`
-	Commands     *[]Command       `toml:"commands"`
+	Theme        *string    `toml:"theme"`
+	DefaultShell *string    `toml:"default_shell"`
+	NumbModifier *string    `toml:"numb_modifier"`
+	Commands     *[]Command `toml:"commands"`
 }
 

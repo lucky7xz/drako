@@ -159,18 +159,6 @@ func applyProfileOverlay(base Config, overlay profileOverlay) Config {
 		cfg.NumbModifier = *overlay.NumbModifier
 	}
 
-	if overlay.Behavior != nil {
-
-		if overlay.Behavior.ExitConfirmation != nil {
-			cfg.Behavior.ExitConfirmation = *overlay.Behavior.ExitConfirmation
-		}
-
-		if overlay.Behavior.AutoSave != nil {
-			cfg.Behavior.AutoSave = *overlay.Behavior.AutoSave
-		}
-
-	}
-
 	if overlay.Commands != nil {
 		cfg.Commands = copyCommands(*overlay.Commands)
 	}
@@ -326,10 +314,6 @@ func loadConfig(profileOverride *string) configBundle {
 		base.Y = 3
 
 		base.Theme = "dracula"
-
-		base.Behavior = DracoBehaviorConfig{ExitConfirmation: false, AutoSave: true}
-
-
 
 		f, err := os.Create(configPath)
 
