@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-//go:embed bootstrap/**
+//go:embed all:bootstrap
 var bootstrapFS embed.FS
 
 func bootstrapCopy(dstRoot string) error {

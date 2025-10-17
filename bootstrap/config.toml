@@ -91,7 +91,7 @@ row = 0
 auto_close_execution = false
 
 [[commands]]
-name = " Open .bashrc"
+name = " 📜 Open .bashrc"
 description = "This is where all your terminal customizations live. The .bashrc file loads every time you open a terminal and controls your aliases, environment variables, and prompt appearance. It's like the settings panel for your command line experience. I open this file whenever I want to add a new shortcut or tweak how my terminal behaves."
 command = "micro ~/.bashrc"
 col = "B"
