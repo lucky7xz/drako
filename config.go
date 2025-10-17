@@ -151,6 +151,10 @@ func applyProfileOverlay(base Config, overlay profileOverlay) Config {
 		cfg.Theme = *overlay.Theme
 	}
 
+	if overlay.DefaultShell != nil {
+		cfg.DefaultShell = *overlay.DefaultShell
+	}
+
 	if overlay.NumbModifier != nil {
 		cfg.NumbModifier = *overlay.NumbModifier
 	}
@@ -184,15 +188,10 @@ const pivotProfileFilename = "pivot.toml"
 func getConfigDir() (string, error) {
 
 	configDir, err := os.UserConfigDir()
-
 	if err != nil || configDir == "" {
-
 		home, herr := os.UserHomeDir()
-
 		if herr != nil {
-
 			return "", errors.Join(err, herr)
-
 		}
 
 		configDir = filepath.Join(home, ".drako")
@@ -286,9 +285,7 @@ func loadConfig(profileOverride *string) configBundle {
 	configDir, err := getConfigDir()
 
 	if err != nil {
-
 		log.Fatalf("could not resolve a config directory: %v", err)
-
 	}
 
 	configPath := filepath.Join(configDir, "config.toml")
@@ -363,6 +360,9 @@ func loadConfig(profileOverride *string) configBundle {
 		}
 		if strings.TrimSpace(base.NumbModifier) == "" {
 			base.NumbModifier = "alt"
+		}
+		if strings.TrimSpace(base.DefaultShell) == "" {
+			base.DefaultShell = "bash"
 		}
 		log.Printf("Loaded config: X=%d, Y=%d, Commands=%d", base.X, base.Y, len(base.Commands))
 	}

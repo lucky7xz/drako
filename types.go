@@ -56,6 +56,7 @@ type Command struct {
 type Config struct {
 	DR4koPath    string              `toml:"dR4ko_path"`
 	Theme        string              `toml:"theme"`
+	DefaultShell string              `toml:"default_shell"`
 	NumbModifier string              `toml:"numb_modifier"`
 	Behavior     DracoBehaviorConfig `toml:"behavior"`
 	X            int                 `toml:"x"`
@@ -99,6 +100,7 @@ type profileOverlay struct {
 	X            *int             `toml:"x"`
 	Y            *int             `toml:"y"`
 	Theme        *string          `toml:"theme"`
+	DefaultShell *string          `toml:"default_shell"`
 	NumbModifier *string          `toml:"numb_modifier"`
 	Behavior     *behaviorOverlay `toml:"behavior"`
 	Commands     *[]Command       `toml:"commands"`

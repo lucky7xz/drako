@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	"golang.org/x/term"
 )
 
 // - Optional booleans in config are represented as *bool (pointer-to-bool) so we
@@ -15,6 +17,22 @@ import (
 func boolOrDefault(ptr *bool, def bool) bool {
 	if ptr == nil { return def }
 	return *ptr
+}
+
+// waitForAnyKey waits for any single keypress in raw mode.
+func waitForAnyKey() {
+	fd := int(os.Stdin.Fd())
+	oldState, err := term.MakeRaw(fd)
+	if err != nil {
+		// Fallback: just wait for Enter if raw mode fails
+		fmt.Scanln()
+		return
+	}
+	defer term.Restore(fd, oldState)
+
+	// Read one byte
+	buf := make([]byte, 1)
+	os.Stdin.Read(buf)
 }
 
 // runCommand finds the selected command from the loaded config and executes it.
@@ -51,8 +69,8 @@ func runCommand(config Config, selected string) {
 	var autoClosePtr *bool
 	var debugPtr *bool
 
-	// Default shell to use for string commands. Wire from config later.
-	shell_config := "bash" //config.DefaultShell
+	// Default shell to use for string commands (honors config/profile).
+	shell_config := config.DefaultShell
 
 	// Search for a top-level command or a nested item matching the selected name.
 	found := false
@@ -110,8 +128,8 @@ func runCommand(config Config, selected string) {
 			fmt.Printf("\n--- Command Failed ---\n")
 			fmt.Printf("Error: %v\n", err)
 		}
-		fmt.Printf("\nPress Enter to return to the application.")
-		fmt.Scanln()
+		fmt.Printf("\nPress any key to return to the application.")
+		waitForAnyKey()
 		return
 	}
 
@@ -123,8 +141,8 @@ func runCommand(config Config, selected string) {
 		fmt.Printf("\n--- Command Failed ---\n")
 		fmt.Printf("Command: '%s'\n", selected)
 		fmt.Printf("Error: %v\n", err)
-		fmt.Printf("\nPress Enter to return to the application.")
-		fmt.Scanln()
+		fmt.Printf("\nPress any key to return to the application.")
+		waitForAnyKey()
 		return
 	}
 
@@ -132,7 +150,8 @@ func runCommand(config Config, selected string) {
 	if !autoClose {
 		fmt.Printf("\n--- Command Finished ---\n")
 		fmt.Printf("Command: '%s'\n", selected)
-		fmt.Printf("\nPress Enter to return to the application.")
-		fmt.Scanln()
+		fmt.Printf("\nPress any key to return to the application.")
+		waitForAnyKey()
+		return
 	}
 }
