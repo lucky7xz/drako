@@ -98,8 +98,9 @@ func fileExists(path string) bool {
 
 func normalizeProfileName(name string) string {
 	n := strings.TrimSpace(strings.ToLower(name))
+	// Normalize known suffixes in safe order
+	n = strings.TrimSuffix(n, ".profile.toml")
 	n = strings.TrimSuffix(n, ".toml")
-	n = strings.TrimSuffix(n, ".profile")
 	n = strings.TrimSuffix(n, ".profile")
 	return n
 }

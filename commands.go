@@ -102,9 +102,18 @@ func runCommand(config Config, selected string) {
 		if found { break }
 	}
 
-	// If we didn't find a configured string to run via a shell, try to execute
-	// the "selected" token directly as a binary found in PATH (no shell).
+	// If we didn't find a prepared command to run via a shell:
+	// - If a config match existed but had no command string, don't try PATH; just inform and return.
+	// - Otherwise, try to execute the "selected" token directly as a binary in PATH (no shell).
 	if cmd == nil {
+		if found {
+			log.Printf("No command configured for: %s", selected)
+			fmt.Printf("\n--- No Command Configured ---\n")
+			fmt.Printf("Command: '%s'\n", selected)
+			fmt.Printf("\nPress any key to return to the application.")
+			waitForAnyKey()
+			return
+		}
 		if path, err := exec.LookPath(selected); err == nil {
 			// This is like subprocess.run([path]) in Python; argv is literal (no shell).
 			cmd = exec.Command(path)
