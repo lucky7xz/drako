@@ -33,6 +33,7 @@ type model struct {
 	pathComponents     []string
 	selectedPathIndex  int
 	childDirs          []string
+	childDirsError     error
 	selectedChildIndex int
 
 	onlineStatus      string
@@ -193,10 +194,13 @@ func (m *model) updatePathComponents() {
 
 func (m *model) listChildDirs() {
 	m.childDirs = []string{}
+	m.childDirsError = nil
 	path := m.buildPathFromComponents(m.selectedPathIndex)
 
 	files, err := os.ReadDir(path)
 	if err != nil {
+		log.Printf("could not read directory %s: %v", path, err)
+		m.childDirsError = err
 		return
 	}
 

@@ -250,6 +250,9 @@ func (m model) renderChildDirs() string {
 	if m.mode != childMode && m.mode != pathMode {
 		return ""
 	}
+	if m.childDirsError != nil {
+		return offlineStyle.Render("  [cannot read directory: permission denied or path invalid]")
+	}
 	if len(m.childDirs) == 0 {
 		return helpStyle.Render("  [no sub-directories]")
 	}
