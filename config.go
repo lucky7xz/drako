@@ -27,6 +27,17 @@ func letterToColumn(s string) (int, error) {
 	return int(char - 'a'), nil
 }
 
+// defaultConfig returns a Config with sensible defaults.
+func defaultConfig() Config {
+	return Config{
+		X:            3,
+		Y:            3,
+		Theme:        "dracula",
+		NumbModifier: "alt",
+		DefaultShell: "bash",
+	}
+}
+
 func clampConfig(cfg *Config) {
 	if cfg.X < 1 {
 		cfg.X = 1
@@ -132,7 +143,6 @@ func discoverProfiles(configDir string) []ProfileInfo {
 }
 
 func applyProfileOverlay(base Config, overlay profileOverlay) Config {
-
 	cfg := base
 
 	if overlay.DR4koPath != nil {
@@ -171,8 +181,6 @@ func applyProfileOverlay(base Config, overlay profileOverlay) Config {
 
 const pivotProfileFilename = "pivot.toml"
 
-
-
 func getConfigDir() (string, error) {
 
 	configDir, err := os.UserConfigDir()
@@ -181,15 +189,11 @@ func getConfigDir() (string, error) {
 		if herr != nil {
 			return "", errors.Join(err, herr)
 		}
-
 		configDir = filepath.Join(home, ".drako")
 
 	} else {
-
 		configDir = filepath.Join(configDir, "drako")
-
 	}
-
 	return configDir, nil
 
 }
@@ -197,9 +201,7 @@ func getConfigDir() (string, error) {
 
 
 func pivotProfilePath(configDir string) string {
-
 	return filepath.Join(configDir, pivotProfileFilename)
-
 }
 
 
@@ -261,13 +263,6 @@ func deletePivotProfile(configDir string) error {
 	return writePivotFile(configDir, pf)
 }
 
-
-
-
-
-
-
-
 func loadConfig(profileOverride *string) configBundle {
 
 	configDir, err := getConfigDir()
@@ -287,8 +282,6 @@ func loadConfig(profileOverride *string) configBundle {
 		}
 	}
 
-
-
 	pf, err := readPivotProfile(configDir)
 	if err != nil {
 		log.Printf("warning: could not read pivot profile: %v", err)
@@ -302,33 +295,19 @@ func loadConfig(profileOverride *string) configBundle {
 	var base Config
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-
 		if err := os.MkdirAll(configDir, 0o755); err != nil {
-
 			log.Fatalf("could not create config directory: %v", err)
-
 		}
 
-		base.X = 3
-
-		base.Y = 3
-
-		base.Theme = "dracula"
-
+		base = defaultConfig()
 		f, err := os.Create(configPath)
-
 		if err != nil {
-
 			log.Fatalf("could not create config file: %v", err)
-
 		}
 
 		defer f.Close()
-
 		if err := toml.NewEncoder(f).Encode(base); err != nil {
-
 			log.Fatalf("could not write to config file: %v", err)
-
 		}
 
 
@@ -342,11 +321,16 @@ func loadConfig(profileOverride *string) configBundle {
 		if _, err := toml.Decode(configString, &base); err != nil {
 			log.Fatalf("could not decode config file: %v", err)
 		}
+		// Apply defaults for any missing fields
+		defaults := defaultConfig()
 		if strings.TrimSpace(base.NumbModifier) == "" {
-			base.NumbModifier = "alt"
+			base.NumbModifier = defaults.NumbModifier
 		}
 		if strings.TrimSpace(base.DefaultShell) == "" {
-			base.DefaultShell = "bash"
+			base.DefaultShell = defaults.DefaultShell
+		}
+		if strings.TrimSpace(base.Theme) == "" {
+			base.Theme = defaults.Theme
 		}
 		log.Printf("Loaded config: X=%d, Y=%d, Commands=%d", base.X, base.Y, len(base.Commands))
 	}

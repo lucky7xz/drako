@@ -30,9 +30,9 @@ func waitForAnyKey() {
 	}
 	defer term.Restore(fd, oldState)
 
-	// Read one byte
+	// Read one byte (ignore errors since we're just pausing)
 	buf := make([]byte, 1)
-	os.Stdin.Read(buf)
+	_, _ = os.Stdin.Read(buf)
 }
 
 // runCommand finds the selected command from the loaded config and executes it.

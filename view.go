@@ -357,7 +357,7 @@ func columnToLetter(col int) string {
 }
 
 func (m model) renderFooter() string {
-	return footerStyle.Render("[ v0.1 |  github.com/lucky7xz/drako | 2025 ]")
+	return footerStyle.Render("[ github.com/lucky7xz | {yx}.xyz ]")
 }
 
 func (m model) renderProfileCounter() string {
