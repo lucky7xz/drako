@@ -34,6 +34,13 @@ func waitForAnyKey() {
 	_, _ = os.Stdin.Read(buf)
 }
 
+func pause(msg string) {
+	if msg != "" {
+		fmt.Print(msg)
+	}
+	waitForAnyKey()
+}
+
 // findCommandByName returns a pointer to the matching top-level command or a nested item.
 // If an item is returned, the parent command is also returned.
 func findCommandByName(cfg Config, name string) (parent *Command, item *CommandItem, ok bool) {
@@ -118,8 +125,8 @@ func runCommand(config Config, selected string) {
 			log.Printf("No command configured for: %s", selected)
 			fmt.Printf("\n--- No Command Configured ---\n")
 			fmt.Printf("Command: '%s'\n", selected)
-			fmt.Printf("\nPress any key to return to the application.")
-			waitForAnyKey()
+			pause("\nPress any key to return to the application.")
+
 			return
 		}
 		if path, err := exec.LookPath(selected); err == nil {
@@ -145,8 +152,7 @@ func runCommand(config Config, selected string) {
 			fmt.Printf("\n--- Command Failed ---\n")
 			fmt.Printf("Error: %v\n", err)
 		}
-		fmt.Printf("\nPress any key to return to the application.")
-		waitForAnyKey()
+		pause("\nPress any key to return to the application.")
 		return
 	}
 
@@ -158,8 +164,8 @@ func runCommand(config Config, selected string) {
 		fmt.Printf("\n--- Command Failed ---\n")
 		fmt.Printf("Command: '%s'\n", selected)
 		fmt.Printf("Error: %v\n", err)
-		fmt.Printf("\nPress any key to return to the application.")
-		waitForAnyKey()
+		pause("\nPress any key to return to the application.")
+
 		return
 	}
 
@@ -167,8 +173,8 @@ func runCommand(config Config, selected string) {
 	if !autoClose {
 		fmt.Printf("\n--- Command Finished ---\n")
 		fmt.Printf("Command: '%s'\n", selected)
-		fmt.Printf("\nPress any key to return to the application.")
-		waitForAnyKey()
+		pause("\nPress any key to return to the application.")
+
 		return
 	}
 }
