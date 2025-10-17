@@ -34,6 +34,23 @@ func waitForAnyKey() {
 	_, _ = os.Stdin.Read(buf)
 }
 
+// findCommandByName returns a pointer to the matching top-level command or a nested item.
+// If an item is returned, the parent command is also returned.
+func findCommandByName(cfg Config, name string) (parent *Command, item *CommandItem, ok bool) {
+	for i := range cfg.Commands {
+		c := &cfg.Commands[i]
+		if c.Name == name {
+			return c, nil, true
+		}
+		for j := range c.Items {
+			if c.Items[j].Name == name {
+				return c, &c.Items[j], true
+			}
+		}
+	}
+	return nil, nil, false
+}
+
 // runCommand finds the selected command from the loaded config and executes it.
 
 // - exec.Cmd is like subprocess, constructed with argv (no implicit shell).
@@ -71,34 +88,26 @@ func runCommand(config Config, selected string) {
 	// Default shell to use for string commands (honors config/profile).
 	shell_config := config.DefaultShell
 
-	// Search for a top-level command or a nested item matching the selected name.
-	found := false
-	for _, customCmd := range config.Commands {
-		if customCmd.Name == selected {
-			// Expand tokens using a single helper for consistency
-			commandStr := expandCommandTokens(customCmd.Command, config)
+	// Resolve a top-level command or nested item by name.
+	parentCmd, itemCfg, found := findCommandByName(config, selected)
+	if found {
+		if itemCfg == nil {
+			// top-level command
+			commandStr := expandCommandTokens(parentCmd.Command, config)
 			if commandStr != "" {
 				cmd = buildShellCmd(shell_config, commandStr)
-				autoClosePtr = customCmd.AutoCloseExecution
-				debugPtr = customCmd.DebugExecution
+				autoClosePtr = parentCmd.AutoCloseExecution
+				debugPtr = parentCmd.DebugExecution
 			}
-			found = true
-			break
-		}
-		// Scan nested menu items.
-		for _, item := range customCmd.Items {
-			if item.Name == selected {
-				commandStr := expandCommandTokens(item.Command, config)
-				if commandStr != "" {
-					cmd = buildShellCmd(shell_config, commandStr)
-					autoClosePtr = item.AutoCloseExecution
-					debugPtr = item.DebugExecution
-				}
-				found = true
-				break
+		} else {
+			// dropdown item
+			commandStr := expandCommandTokens(itemCfg.Command, config)
+			if commandStr != "" {
+				cmd = buildShellCmd(shell_config, commandStr)
+				autoClosePtr = itemCfg.AutoCloseExecution
+				debugPtr = itemCfg.DebugExecution
 			}
 		}
-		if found { break }
 	}
 
 	// If we didn't find a prepared command to run via a shell:
