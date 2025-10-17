@@ -249,7 +249,7 @@ func (m model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				if strings.TrimSpace(cmd.Command) == "" {
 					m.infoCommand = "Error: no command. ( This might be a folder of commands!)"
 				} else {
-					m.infoCommand = strings.ReplaceAll(cmd.Command, "{dR4ko_path}", m.config.DR4koPath)
+					m.infoCommand = expandCommandTokens(cmd.Command, m.config)
 				}
 				m.mode = infoMode
 				return m, nil
@@ -463,7 +463,7 @@ func (m model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if strings.TrimSpace(item.Command) == "" {
 				m.infoCommand = "Error: no command configured"
 			} else {
-				m.infoCommand = strings.ReplaceAll(item.Command, "{dR4ko_path}", m.config.DR4koPath)
+				m.infoCommand = expandCommandTokens(item.Command, m.config)
 			}
 			m.mode = infoMode
 			return m, nil

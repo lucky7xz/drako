@@ -76,8 +76,8 @@ func runCommand(config Config, selected string) {
 	found := false
 	for _, customCmd := range config.Commands {
 		if customCmd.Name == selected {
-			// Replace {dR4ko_path} token before building the command.
-			commandStr := strings.ReplaceAll(customCmd.Command, "{dR4ko_path}", config.DR4koPath)
+			// Expand tokens using a single helper for consistency
+			commandStr := expandCommandTokens(customCmd.Command, config)
 			if commandStr != "" {
 				cmd = buildShellCmd(shell_config, commandStr)
 				autoClosePtr = customCmd.AutoCloseExecution
@@ -89,7 +89,7 @@ func runCommand(config Config, selected string) {
 		// Scan nested menu items.
 		for _, item := range customCmd.Items {
 			if item.Name == selected {
-				commandStr := strings.ReplaceAll(item.Command, "{dR4ko_path}", config.DR4koPath)
+				commandStr := expandCommandTokens(item.Command, config)
 				if commandStr != "" {
 					cmd = buildShellCmd(shell_config, commandStr)
 					autoClosePtr = item.AutoCloseExecution

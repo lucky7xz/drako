@@ -88,6 +88,12 @@ func copyCommands(src []Command) []Command {
 	return dst
 }
 
+func expandCommandTokens(s string, cfg Config) string {
+	if strings.TrimSpace(s) == "" { return s }
+	s = strings.ReplaceAll(s, "{dR4ko_path}", cfg.DR4koPath)
+	return s
+}
+
 func fileExists(path string) bool {
 	if strings.TrimSpace(path) == "" {
 		return true
