@@ -15,8 +15,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-
-
 func (m model) Init() tea.Cmd {
 	return tea.Batch(
 		tea.EnterAltScreen,
@@ -648,29 +646,6 @@ func (m model) handleProfileCycle() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *model) findFirstNonEmptyRow(col int) int {
-	if col < 0 || col >= len(m.grid[0]) {
-		return 0
-	}
-	for r := 0; r < len(m.grid); r++ {
-		if m.grid[r][col] != "" {
-			return r
-		}
-	}
-	return 0
-}
-
-func (m *model) findLastNonEmptyRow(col int) int {
-	if col < 0 || col >= len(m.grid[0]) {
-		return 0
-	}
-	for r := len(m.grid) - 1; r >= 0; r-- {
-		if m.grid[r][col] != "" {
-			return r
-		}
-	}
-	return 0
-}
 
 func (m *model) moveCursor(rowDir, colDir int) {
 	bestRow, bestCol := -1, -1
