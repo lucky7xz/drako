@@ -5,8 +5,17 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	
 
 	"golang.org/x/term"
+)
+
+var (
+	pauseFn       = pause
+	lookPathFn    = exec.LookPath
+	commandFn     = exec.Command
+	setenvFn      = os.Setenv
+	unsetenvFn    = os.Unsetenv
 )
 
 // - Optional booleans in config are represented as *bool (pointer-to-bool) so we
@@ -125,13 +134,13 @@ func runCommand(config Config, selected string) {
 			log.Printf("No command configured for: %s", selected)
 			fmt.Printf("\n--- No Command Configured ---\n")
 			fmt.Printf("Command: '%s'\n", selected)
-			pause("\nPress any key to return to the application.")
+			pauseFn("\nPress any key to return to the application.")
 
 			return
 		}
-		if path, err := exec.LookPath(selected); err == nil {
+		if path, err := lookPathFn(selected); err == nil {
 			// This is like subprocess.run([path]) in Python; argv is literal (no shell).
-			cmd = exec.Command(path)
+			cmd = commandFn(path)
 		} else {
 			log.Printf("Executable not found in PATH: %s", selected)
 			return
@@ -152,7 +161,7 @@ func runCommand(config Config, selected string) {
 			fmt.Printf("\n--- Command Failed ---\n")
 			fmt.Printf("Error: %v\n", err)
 		}
-		pause("\nPress any key to return to the application.")
+		pauseFn("\nPress any key to return to the application.")
 		return
 	}
 
@@ -164,7 +173,7 @@ func runCommand(config Config, selected string) {
 		fmt.Printf("\n--- Command Failed ---\n")
 		fmt.Printf("Command: '%s'\n", selected)
 		fmt.Printf("Error: %v\n", err)
-		pause("\nPress any key to return to the application.")
+		pauseFn("\nPress any key to return to the application.")
 
 		return
 	}

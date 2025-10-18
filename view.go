@@ -356,7 +356,7 @@ func columnToLetter(col int) string {
 	if col < 0 || col > 25 {
 		return "?"
 	}
-	return string('A' + col)
+	return string(rune('A' + col))
 }
 
 func (m model) renderFooter() string {
