@@ -72,6 +72,12 @@ type ProfileInfo struct {
 
 }
 
+type ProfileParseError struct {
+	Name string
+	Path string
+	Err  string
+}
+
 type configBundle struct {
 
 	Base        Config
@@ -80,6 +86,7 @@ type configBundle struct {
 	ActiveIndex int
 	ConfigDir   string
 	LockedName  string
+	Broken      []ProfileParseError
 
 }
 

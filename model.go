@@ -74,6 +74,9 @@ type model struct {
 	infoExecMode     string
 	infoAutoClose    bool
 	infoCwd          string
+
+	pendingProfileErrors    []ProfileParseError
+	profileErrorQueueActive bool
 }
 
 func (m *model) applyConfig(cfg Config) {
@@ -124,6 +127,34 @@ func (m *model) applyBundle(bundle configBundle) {
 	m.profileLocked = strings.TrimSpace(bundle.LockedName) != ""
 }
 
+// presentNextBrokenProfile pops the next pending broken profile error and configures infoMode to display it.
+func (m model) presentNextBrokenProfile() model {
+	if len(m.pendingProfileErrors) == 0 {
+		return m
+	}
+	e := m.pendingProfileErrors[0]
+	m.pendingProfileErrors = m.pendingProfileErrors[1:]
+
+	m.previousMode = m.mode
+	m.infoTitle = fmt.Sprintf("Profile error: %s", e.Name)
+	// Put actionable details into infoCommand so users can copy with 'y'
+	m.infoCommand = fmt.Sprintf("Path: %s\nError: %s", e.Path, strings.TrimSpace(e.Err))
+	m.infoDescription = "This profile has an error and was hidden from selection.\n\n"
+	if strings.Contains(e.Err, "empty profile file") {
+		m.infoDescription += "The file is completely empty. Either add valid TOML configuration or move/delete the file via Inventory (i).\n\n"
+	} else if strings.Contains(e.Err, "no settings found") {
+		m.infoDescription += "The file exists but contains no configuration settings. Either add valid TOML configuration or move/delete the file via Inventory (i).\n\n"
+	} else {
+		m.infoDescription += "The file has a TOML syntax error. Either fix the syntax error or move/delete the file via Inventory (i).\n\n"
+	}
+	m.infoDescription += "Press any key to continue to the next error, or 'y' to copy error details to clipboard."
+	m.infoExecMode = ""
+	m.infoAutoClose = false
+	m.infoCwd = m.configDir
+	m.mode = infoMode
+	return m
+}
+
 func (m model) activeProfileName() string {
 	if len(m.profiles) == 0 {
 		return "Default"
@@ -161,6 +192,11 @@ func initialModel() model {
 		baseConfig:        bundle.Base,
 	}
 	m.applyBundle(bundle)
+	if len(bundle.Broken) > 0 {
+		m.pendingProfileErrors = append(m.pendingProfileErrors, bundle.Broken...)
+		m.profileErrorQueueActive = true
+		m = m.presentNextBrokenProfile()
+	}
 	m.updatePathComponents()
 	m.listChildDirs()
 	return m

@@ -102,6 +102,18 @@ func fileExists(path string) bool {
 	return err == nil && !info.IsDir()
 }
 
+// overlayIsEmpty returns true if no settings are provided in the overlay.
+func overlayIsEmpty(ov profileOverlay) bool {
+	if ov.DR4koPath != nil { return false }
+	if ov.X != nil { return false }
+	if ov.Y != nil { return false }
+	if ov.Theme != nil { return false }
+	if ov.DefaultShell != nil { return false }
+	if ov.NumbModifier != nil { return false }
+	if ov.Commands != nil && len(*ov.Commands) > 0 { return false }
+	return true
+}
+
 func normalizeProfileName(name string) string {
 	n := strings.TrimSpace(strings.ToLower(name))
 	// Normalize known suffixes in safe order
@@ -111,15 +123,16 @@ func normalizeProfileName(name string) string {
 	return n
 }
 
-func discoverProfiles(configDir string) []ProfileInfo {
+func discoverProfilesWithErrors(configDir string) ([]ProfileInfo, []ProfileParseError) {
 	profiles := []ProfileInfo{{Name: "Default", Path: ""}}
 
 	entries, err := os.ReadDir(configDir)
 	if err != nil {
-		return profiles
+		return profiles, nil
 	}
 
 	var overlays []ProfileInfo
+	var broken []ProfileParseError
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
@@ -129,9 +142,38 @@ func discoverProfiles(configDir string) []ProfileInfo {
 			continue
 		}
 		path := filepath.Join(configDir, name)
+		data, rerr := os.ReadFile(path)
+		if rerr != nil {
+			broken = append(broken, ProfileParseError{
+				Name: strings.TrimSuffix(name, ".profile.toml"),
+				Path: path,
+				Err:  rerr.Error(),
+			})
+			continue
+		}
+		if strings.TrimSpace(string(data)) == "" {
+			broken = append(broken, ProfileParseError{
+				Name: strings.TrimSuffix(name, ".profile.toml"),
+				Path: path,
+				Err:  "empty profile file (no content)",
+			})
+			continue
+		}
 		var overlay profileOverlay
-		if _, err := toml.DecodeFile(path, &overlay); err != nil {
-			log.Printf("warning: could not decode profile overlay %s: %v", path, err)
+		if _, err := toml.Decode(string(data), &overlay); err != nil {
+			broken = append(broken, ProfileParseError{
+				Name: strings.TrimSuffix(name, ".profile.toml"),
+				Path: path,
+				Err:  err.Error(),
+			})
+			continue
+		}
+		if overlayIsEmpty(overlay) {
+			broken = append(broken, ProfileParseError{
+				Name: strings.TrimSuffix(name, ".profile.toml"),
+				Path: path,
+				Err:  "no settings found in profile",
+			})
 			continue
 		}
 		overlays = append(overlays, ProfileInfo{
@@ -146,6 +188,11 @@ func discoverProfiles(configDir string) []ProfileInfo {
 	})
 
 	profiles = append(profiles, overlays...)
+	return profiles, broken
+}
+
+func discoverProfiles(configDir string) []ProfileInfo {
+	profiles, _ := discoverProfilesWithErrors(configDir)
 	return profiles
 }
 
@@ -344,7 +391,7 @@ func loadConfig(profileOverride *string) configBundle {
 
 	clampConfig(&base)
 
-	profiles := discoverProfiles(configDir)
+	profiles, broken := discoverProfilesWithErrors(configDir)
 	// Reorder profiles based on pivot equipped_order
 	if len(pf.EquippedOrder) > 0 {
 		remaining := map[string]ProfileInfo{}
@@ -384,6 +431,7 @@ func loadConfig(profileOverride *string) configBundle {
 	target := normalizeProfileName(requested)
 	activeIndex := 0
 	pivotStillValid := requestedPivot != ""
+	useFactoryDefaults := false
 
 	if target != "" {
 		found := false
@@ -395,7 +443,8 @@ func loadConfig(profileOverride *string) configBundle {
 			}
 		}
 		if !found && strings.TrimSpace(requested) != "" {
-			log.Printf("profile not found, falling back to default: %s", requested)
+			log.Printf("profile not found (possibly broken), falling back to factory defaults: %s", requested)
+			useFactoryDefaults = true
 			if pivotRequested {
 				if err := writePivotLocked(configDir, ""); err != nil {
 					log.Printf("warning: could not clear pivot lock: %v", err)
@@ -406,9 +455,12 @@ func loadConfig(profileOverride *string) configBundle {
 	}
 
 	effective := base
-	effective.Theme = base.Theme
 	selected := profiles[activeIndex]
-	if normalizeProfileName(selected.Name) != "default" {
+	if useFactoryDefaults || (len(broken) > 0 && normalizeProfileName(selected.Name) == "default") {
+		// Either an explicitly requested profile was missing/broken, or there are broken overlays present
+		// and we are using Default. Fall back to factory defaults (3x3).
+		effective = defaultConfig()
+	} else if normalizeProfileName(selected.Name) != "default" {
 		effective = applyProfileOverlay(base, selected.Overlay)
 		log.Printf("Applied profile overlay: %s", selected.Name)
 	}
@@ -428,5 +480,6 @@ func loadConfig(profileOverride *string) configBundle {
 			}
 			return requestedPivot
 		}(),
+		Broken: broken,
 	}
 }

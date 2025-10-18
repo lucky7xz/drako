@@ -38,6 +38,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case reloadProfilesMsg:
 		bundle := loadConfig(nil)
 		m.applyBundle(bundle)
+		if len(bundle.Broken) > 0 {
+			m.pendingProfileErrors = append(m.pendingProfileErrors, bundle.Broken...)
+			m.profileErrorQueueActive = true
+			m = m.presentNextBrokenProfile()
+			return m, nil
+		}
 		m.mode = gridMode
 		return m, nil
 
@@ -495,7 +501,21 @@ func copyToClipboardCmd(s string) tea.Cmd {
 }
 
 func (m model) updateInfoMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
+	key := msg.String()
+	if m.profileErrorQueueActive {
+		var cmds []tea.Cmd
+		if key == "y" {
+			cmds = append(cmds, copyToClipboardCmd(m.infoCommand))
+		}
+		if len(m.pendingProfileErrors) > 0 {
+			m = m.presentNextBrokenProfile()
+			return m, tea.Batch(cmds...)
+		}
+		m.profileErrorQueueActive = false
+		m.mode = m.previousMode
+		return m, tea.Batch(cmds...)
+	}
+	switch key {
 	case "y":
 		prev := m.previousMode
 		m.mode = prev
