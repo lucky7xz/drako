@@ -48,6 +48,6 @@ name = "🛤️ Trace the Path ⋮ "
 col = "B"
 row = 1
 items = [
-    { name = "📍 Trace to Google", description = "Ever wonder how your data gets from your computer to Google's servers? This command shows you every 'hop' it takes along the way. It's like getting a turn-by-turn map of your data's journey across the internet. MTR keeps running to show you the connection quality live.", command = "mtr google.com", auto_close_execution = false },
+    { name = "📍 Trace to Host", description = "Trace the path (hops) to any host you choose. MTR keeps running to show live connection quality.", command = "read -p 'Enter host: ' host && mtr $host", auto_close_execution = false }
     { name = "🌐 Trace to Cloudflare DNS", description = "Cloudflare runs one of the fastest DNS services at 1.1.1.1. Tracing the path to it is another good way to check your internet connection's health and see the route your data takes to a different major part of the internet backbone.", command = "mtr 1.1.1.1", auto_close_execution = false}
 ]

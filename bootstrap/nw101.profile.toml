@@ -20,8 +20,8 @@ auto_close_execution = false
 
 [[commands]]
 name = " Check Connection"
-description = "Pings a public DNS server to check internet connectivity."
-command = "ping 8.8.8.8"
+description = "Pings a host you choose to check connectivity."
+command = "read -p 'Enter host to ping: ' host && ping -c 4 $host"
 col = "B"
 row = 0
 auto_close_execution = false
@@ -29,7 +29,7 @@ auto_close_execution = false
 [[commands]]
 name = "🛤️ Trace Route"
 description = "Traces the network path to a remote host."
-command = "mtr google.com"
+command = "read -p 'Enter host to trace: ' host && mtr $host"
 col = "C"
 row = 0
 auto_close_execution = false
@@ -46,7 +46,7 @@ auto_close_execution = false
 [[commands]]
 name = "❓ Check DNS"
 description = "Performs a DNS lookup for a given domain."
-command = "dig google.com"
+command = "read -p 'Enter domain: ' domain && dig $domain"
 col = "B"
 row = 1
 auto_close_execution = false

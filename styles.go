@@ -25,9 +25,6 @@ headerArt = `
 `
 
 
-
-
-
 	headerStyle           lipgloss.Style
 	helpStyle             lipgloss.Style
 	statusBarStyle        lipgloss.Style
