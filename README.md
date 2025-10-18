@@ -11,42 +11,30 @@
 The terminal is a realm of immense power, but also of entropy. Commands are forgotten, workflows fracture, and focus is lost to the noise. **Drako** is a **TUI-Deck launcher** that imposes structure, transforming your terminal into a disciplined, grid-based command center.
 
 
-## 🚀 Quick Start: A Single Command
+## 🚀 Quick Start
 
-`drako` is forged in Go for speed and simplicity. If go is installed, installing `drako` is a single command.
+`If go is installed, installing `drako` is a single command.
 
 ```bash
 go install github.com/lucky/drako@latest  # install drako
 ```
 
-Note that it will install `drako` to your `$GOPATH/bin` directory. If you don't have a `$GOPATH`, you can set it to your `$HOME/go` directory via:
-
-```bash
-# Golang environment variables
-export GOROOT=/usr/local/go
-export GOPATH=$HOME/go
-export PATH=$PATH:/usr/local/go/bin
-
-# Update PATH to include GOPATH and GOROOT binaries
-export PATH=$GOPATH/bin:$GOROOT/bin:$HOME/.local/bin:$PATH
-
-```
-
 ### Install Go
 
-- Windows: https://go.dev/dl/ // official Go installer
-- macOS: `brew install go` // Homebrew
-- Arch: `sudo pacman -S go` // pacman
-- Linux (Debian/Ubuntu): `sudo apt install golang` // apt
+
+- macOS: `brew install go`
+- Arch: `sudo pacman -S go`
+- Debian/Ubuntu: `sudo apt install golang`
+- Windows is not **yet** supported.
 
 
-Run `drako`. On its first execution, it will construct your configuration file at `~/.config/drako/config.toml`. This is the foundation. Modify it to begin bending your workflow into shape.
+Run `drako`. On its first execution, it will construct your configuration file at `~/.config/drako/config.toml`. This is the foundation. Modify it to begin bending your workflow into shape. We also provide a handful of profiles by default, to give you some inspiration. 
 
 
 ## Navigation
 
-- **Grid Navigation:** Use w/a/s/d/arrow keys or vim keys (h, j, k, l) to move around the grid. 
-- **Switch Profile:** Use `Ctrl` + number keys (`1`-`9`) to switch directly to a profile. Use `~` to cycle to the next profile.
+- **Grid Navigation:** Use w/a/s/d/arrow keys or vim keys (h, j, k, l) to move around the grid. You can also use number keys for col/row if pressed in sequence. 
+- **Switch Profile:** Use `Alt` + number keys (`1`-`9`) to switch directly to a profile. The modifier can be changed in the configuration. 
 - **Prifile Inventory:** Use `i` to open the profile inventory to add/remove profiles from your rotation.
 - **Lock Current Profile:** Press `r` to lock or unlock the current profile.
 - **Tab:** Press `tab` to switch from grid mode to directory mode, or vice versa.
@@ -72,22 +60,21 @@ name = "File System"
 command = "yazi"
 col = 0
 row = 1
-interactive = true # For full-screen applications
+# auto close is fine here.
 
 [[commands]]
 name = "Git Status"
 command = "git status"
 col = 1
 row = 0
-interactive = false # For commands that print and exit
+auto_close_execution = false
 
 [[commands]]
 name = "Update & Upgrade"
 command = "sudo apt update && sudo apt upgrade"
 col = 0
 row = 0
-interactive = true
-hold_after = true # For commands that require user interaction, but should not automatically exit
+auto_close_execution = false
 
 
 ```
@@ -106,14 +93,13 @@ name = "nmap LAN"
 command = "nmap -sn 192.168.1.0/24"
 col = 0
 row = 0
-interactive = false
+auto_close_execution = false
 
 [[commands]]
 name = "Bandwidth"
 command = "bmon"
 col = 0
 row = 1
-interactive = true
 ```
 
 ---
