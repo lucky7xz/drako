@@ -137,7 +137,7 @@ Ideas are welcome. Bugs will be hunted.
 
 ## 📜 License
 
-`drako` is released under the [MIT License](LICENSE).
+The core Drako engine is released under the [GNU Affero General Public License v3.0](LICENSE). Bootstrap assets in the `bootstrap/` directory are released under either [MIT](bootstrap/LICENSE-MIT) or [Apache-2.0](bootstrap/LICENSE-Apache) licenses.
 
 ---
 <div align="center">

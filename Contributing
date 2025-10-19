@@ -1,0 +1,42 @@
+# Contributing to Drako
+
+Thanks for considering a contribution! This document explains how to contribute and the licensing terms that apply.
+
+## Quick start
+- Fork, branch, commit small logical changes.
+- Follow existing code style.
+- Include a clear PR description.
+- Sign off your commits (DCO) — see “Developer Certificate of Origin” below.
+
+## Licensing model
+- Core application code (everything outside `bootstrap/`) is licensed under AGPL-3.0-or-later.
+- Bootstrap assets (`bootstrap/`) are licensed under MIT or Apache-2.0 (as indicated per file).
+
+Use SPDX headers:
+- Core files: `SPDX-License-Identifier: AGPL-3.0-or-later`
+- Bootstrap files: `SPDX-License-Identifier: MIT` or `Apache-2.0`
+
+## Inbound = Outbound
+By contributing, you agree your contribution is licensed under the same license(s) as the part of the project you modify:
+- Core contributions → AGPL-3.0-or-later
+- Bootstrap contributions → MIT or Apache-2.0 (matching the file/subtree)
+
+This ensures the project can redistribute your changes under its existing licenses.
+
+## Relicensing permission (maintainer rights)
+In addition to the above, you grant the Drako maintainers a perpetual, worldwide, royalty‑free, irrevocable license to relicense your contribution, in whole or in part of Drako, under:
+- Any later version of the AGPL or GPL/LGPL families, and
+- Any OSI‑approved license, if the maintainers decide to adjust the project’s overall licensing in the future.
+
+This clause exists to avoid relicensing roadblocks and keep the project healthy long‑term. You will remain credited for your contribution.
+
+If you cannot grant this permission (e.g., employer IP restrictions), please open an issue before submitting code.
+
+## Developer Certificate of Origin (DCO)
+We use the DCO to confirm you have the right to contribute under the stated licenses.
+
+Sign your commits with:
+
+```
+Signed-off-by: Your Name your.email@example.com
+```
