@@ -102,12 +102,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			m.traffic = themeNameStyle.Render("error")
 		} else {
-			if msg.online {
-				m.onlineStatus = onlineStyle.Render("online")
-			} else {
-				m.onlineStatus = offlineStyle.Render("offline")
-			}
-
 			now := msg.t
 			currentSent := msg.counters.BytesSent
 			currentRecv := msg.counters.BytesRecv
@@ -130,6 +124,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.recvHistory = m.recvHistory[firstValidIndex:]
 			}
 
+			isActive := false
 			if len(m.timeHistory) > 1 {
 				duration := m.timeHistory[len(m.timeHistory)-1].Sub(m.timeHistory[0]).Seconds()
 				sentDelta := m.sentHistory[len(m.sentHistory)-1] - m.sentHistory[0]
@@ -139,11 +134,24 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					sentBps := float64(sentDelta) / duration
 					recvBps := float64(recvDelta) / duration
 					m.traffic = themeNameStyle.Render(fmt.Sprintf("↓ %s ↑ %s", formatTraffic(recvBps), formatTraffic(sentBps)))
+					if sentBps > 2*1024 || recvBps > 2*1024 {
+						isActive = true
+					}
 				} else {
 					m.traffic = themeNameStyle.Render("---")
 				}
 			} else {
 				m.traffic = themeNameStyle.Render("calculating...")
+			}
+
+			if msg.online {
+				if isActive {
+					m.onlineStatus = onlineStyle.Render("online (active)")
+				} else {
+					m.onlineStatus = onlineStyle.Render("online (idle)")
+				}
+			} else {
+				m.onlineStatus = offlineStyle.Render("offline")
 			}
 		}
 		return m, networkTick()
