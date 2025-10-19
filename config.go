@@ -215,6 +215,10 @@ func applyProfileOverlay(base Config, overlay profileOverlay) Config {
 		cfg.Theme = *overlay.Theme
 	}
 
+	if overlay.HeaderArt != nil {
+		cfg.HeaderArt = overlay.HeaderArt
+	}
+
 	if overlay.DefaultShell != nil {
 		cfg.DefaultShell = *overlay.DefaultShell
 	}

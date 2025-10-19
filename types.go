@@ -56,6 +56,7 @@ type Command struct {
 type Config struct {
 	DR4koPath    string    `toml:"dR4ko_path"`
 	Theme        string    `toml:"theme"`
+	HeaderArt    *string   `toml:"header_art"`
 	DefaultShell string    `toml:"default_shell"`
 	NumbModifier string    `toml:"numb_modifier"`
 	X            int       `toml:"x"`
@@ -96,6 +97,7 @@ type profileOverlay struct {
 	X            *int             `toml:"x"`
 	Y            *int             `toml:"y"`
 	Theme        *string    `toml:"theme"`
+	HeaderArt    *string    `toml:"header_art"`
 	DefaultShell *string    `toml:"default_shell"`
 	NumbModifier *string    `toml:"numb_modifier"`
 	Commands     *[]Command `toml:"commands"`

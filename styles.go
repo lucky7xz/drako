@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -13,7 +14,7 @@ var (
 	appStyle = lipgloss.NewStyle().
 			Margin(1, 2)
 
-headerArt = `
+	headerArt = `
 ╭───────────────────────────────╮
 │   //┏━ ┓z       ┏━ ┓\\:...    │
 │  ┏━━┫  ╋━━━┳━━━━╋  ┣━┓━━━━━┓  │
@@ -24,6 +25,7 @@ headerArt = `
 ╰───────────────────────────────╯
 `
 
+	activeHeaderArt = ""
 
 	headerStyle           lipgloss.Style
 	helpStyle             lipgloss.Style
@@ -58,6 +60,14 @@ headerArt = `
 func applyThemeStyles(config Config) {
 	theme := getTheme(config.Theme)
 	ui := mapThemeToUI(theme)
+
+	if config.HeaderArt != nil && strings.TrimSpace(*config.HeaderArt) != "" {
+		activeHeaderArt = *config.HeaderArt
+		log.Printf("Using custom header art from config")
+	} else {
+		activeHeaderArt = headerArt
+		log.Printf("Using default header art")
+	}
 
 	headerStyle = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.HeaderFG)).
@@ -205,7 +215,7 @@ func applyThemeStyles(config Config) {
 func renderHeaderArt(spinnerView string) string {
 	// Use a placeholder for the spinner
 	placeholder := "SPINNERPLACEHOLDER"
-	formattedArt := fmt.Sprintf(headerArt, placeholder)
+	formattedArt := fmt.Sprintf(activeHeaderArt, placeholder)
 	lines := strings.Split(formattedArt, "\n")
 
 	// Get the primary color from headerStyle

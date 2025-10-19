@@ -1,14 +1,14 @@
-# dR4ko - TUI Mask Configuration (Generic Ubuntu Desktop)
+# dR4ko - TUI Mask Configuration (Generic Unix Desktop)
 
-# ┌─ Project Path ─────────────────────────────────────────────┐
-# │ Base path for dR4ko project - other tools can inherit this
-# └────────────────────────────────────────────────────────────┘
-dR4ko_path = "/home/$USER/dotfiles/scripts/drako"
+# ┌─ Fun Stuff ───────────────────────────────────────────┐
+# │ How about some header art? 
+# └────────────────────────────────────────────────────────┘
 
-# ┌─ Grid Dimensions ──────────────────────────────┐
-x = 3
-y = 4
-# └────────────────────────────────────────────────┘
+#header_art = '''
+#╔══════════════════════════════════════╗
+#║  Custom Header Art                   ║
+#╚══════════════════════════════════════╝
+#'''
 
 # ┌─ Themes ──────────────────────────────┐
 # | More themes when there is time.
@@ -20,6 +20,15 @@ y = 4
 theme = "dracula"
 #theme = "jade"
 
+# ┌─ Technical stuff zzZZZz ───────────────────────────┐
+# │ What is even that? 
+# └────────────────────────────────────────────────────┘
+
+# ┌─ Grid Dimensions ──────────────────────────────┐
+x = 3
+y = 4
+# └────────────────────────────────────────────────┘
+
 # ┌─ Keybinding Modifier ────────────────────────────────────┐
 # │ Set the modifier for number-based shortcuts.
 # │ "alt" is the default and generally works well.
@@ -28,6 +37,13 @@ theme = "dracula"
 # │ Function keys (F1-F9) are not configured via this string.
 # └──────────────────────────────────────────────────────────┘
 numb_modifier = "alt"
+
+
+# ┌─ Project Path ─────────────────────────────────────────────┐
+# │ Base path for dR4ko project - other tools can inherit this
+# └────────────────────────────────────────────────────────────┘
+dR4ko_path = "/home/$USER/dotfiles/scripts/drako"
+
 
 # ┌─ Shell ────────────────────────────────────────┐
 # | For each Profile (including the default), you
@@ -40,15 +56,15 @@ numb_modifier = "alt"
 # └────────────────────────────────────────────────
 #default_shell = "bash"   # or "zsh", "fish", "sh", etc.
 
-[behavior]
-exit_confirmation = false
-auto_save = true
 
 
 # =======================================================================================================
+# =======================================================================================================
+
 # ┌─ Commands ───────────────────────────────────────────────┐
-# │ A clean, generic layout for any Ubuntu desktop.
+# │ A clean, generic layout for any Unix desktop.
 # └──────────────────────────────────────────────────────────┘
+
 
 #==========================================
 # ┌─ Column 0: System & Security ──────────┐
