@@ -349,7 +349,31 @@ func (m model) renderInventoryGrid(profiles []string, listID int) string {
 		}
 	}
 
-	return lipgloss.JoinHorizontal(lipgloss.Left, cells...)
+	// Wrap cells into multiple lines if there are too many to fit on one line
+	if len(cells) == 0 {
+		return ""
+	}
+
+	// Calculate how many cells can fit on one line
+	cellWidth := lipgloss.Width(cells[0])
+	maxCellsPerLine := m.termWidth / cellWidth
+
+	// If we can fit all cells on one line, do so
+	if len(cells) <= maxCellsPerLine || maxCellsPerLine <= 0 {
+		return lipgloss.JoinHorizontal(lipgloss.Left, cells...)
+	}
+
+	// Otherwise, wrap into multiple lines
+	var lines []string
+	for i := 0; i < len(cells); i += maxCellsPerLine {
+		end := i + maxCellsPerLine
+		if end > len(cells) {
+			end = len(cells)
+		}
+		lines = append(lines, lipgloss.JoinHorizontal(lipgloss.Left, cells[i:end]...))
+	}
+
+	return lipgloss.JoinVertical(lipgloss.Left, lines...)
 }
 
 func columnToLetter(col int) string {
