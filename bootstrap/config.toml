@@ -122,7 +122,7 @@ row = 0
 auto_close_execution = false
 
 [[commands]]
-name = "🌐 Bandwidth (bmon)"
+name = "🌐 Bandwidth"
 description = "Curious how much internet you're using right now? This opens up a little dashboard showing data going in and out. I find it mesmerizing to watch the numbers jump when I'm downloading a big file. It's the perfect tool for figuring out if it's your internet that's slow, or if your computer is just having a moment."
 command = "bmon"
 col = "B"
