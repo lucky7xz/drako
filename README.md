@@ -8,7 +8,7 @@
 
 ### `[DEMO WILL BE HERE]`
 
-The terminal is a realm of immense power, but also of entropy. Commands are forgotten, workflows fracture, and focus is lost to the noise. **Drako** is a **TUI-Deck launcher** that imposes structure, transforming your terminal into a disciplined, grid-based command center.
+The terminal is a realm of immense power, but also of high entropy. Commands are forgotten, workflows fracture, and focus is lost to the noise. **Drako** is a **TUI-Deck launcher** that enables structure, transforming your terminal into a disciplined, grid-based command center. 
 
 
 ## 🚀 Quick Start
@@ -33,7 +33,7 @@ Run `drako`. On its first execution, it will construct your configuration file a
 
 ## Navigation
 
-- **Grid Navigation:** Use w/a/s/d/arrow keys or vim keys (h, j, k, l) to move around the grid. You can also use number keys for col/row if pressed in sequence. 
+- **Grid Navigation:** Use w/a/s/d/arrow keys or vim keys (h, j, k, l) to move around the grid. You can also use number keys for col/row if pressed in sequence. Eg. pressing 3 and 4 in quick sequence, will move the cursor to the 3rd column - 4th row.  
 - **Switch Profile:** Use `Alt` + number keys (`1`-`9`) to switch directly to a profile. The modifier can be changed in the configuration. 
 - **Prifile Inventory:** Use `i` to open the profile inventory to add/remove profiles from your rotation.
 - **Lock Current Profile:** Press `r` to lock or unlock the current profile.
@@ -117,6 +117,17 @@ row = 1
 -   **Harness, Don't Replace.** `drako` integrates with the tools you already use. If it runs in the terminal, it can be bound to the grid.
 
 -   **The Power of TUI Decks:** For those who wish to build true terminal cathedrals, `drako` serves as the gateway to `para13`, a `TUI-Deck` build with seamless integration into `drako`. More will be revealed in time. Stay tuned
+
+## Roadmap 
+
+ - [ ] Update Bootstrap collection
+ - [ ] DRY and Refactor  
+ - [ ] Full unit test suite
+ - [ ] Windows support (limited)
+ - [ ] Steamdeck support (limited)
+ - [ ] ARM Support
+ - [ ] CI/CD
+
 
 
 ## ⚠️ Safety First

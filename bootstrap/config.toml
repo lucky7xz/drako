@@ -45,6 +45,7 @@ numb_modifier = "alt"
 dR4ko_path = "/home/$USER/dotfiles/scripts/drako"
 
 
+#TODO : THIS WILL BE REMOVED ON BETA
 # ┌─ Shell ────────────────────────────────────────┐
 # | For each Profile (including the default), you
 # | can set a custom shell to run the commands.
@@ -62,7 +63,7 @@ dR4ko_path = "/home/$USER/dotfiles/scripts/drako"
 # =======================================================================================================
 
 # ┌─ Commands ───────────────────────────────────────────────┐
-# │ A clean, generic layout for any Unix desktop.
+# │ A clean, generic layout for Debian/Ubuntu desktop.
 # └──────────────────────────────────────────────────────────┘
 
 
@@ -121,11 +122,12 @@ row = 0
 auto_close_execution = false
 
 [[commands]]
-name = " 📜 Open .bashrc"
-description = "This is where all your terminal customizations live. The .bashrc file loads every time you open a terminal and controls your aliases, environment variables, and prompt appearance. It's like the settings panel for your command line experience. I open this file whenever I want to add a new shortcut or tweak how my terminal behaves."
-command = "micro ~/.bashrc"
+name = "🌐 Bandwidth (bmon)"
+description = "Curious how much internet you're using right now? This opens up a little dashboard showing data going in and out. I find it mesmerizing to watch the numbers jump when I'm downloading a big file. It's the perfect tool for figuring out if it's your internet that's slow, or if your computer is just having a moment."
+command = "bmon"
 col = "B"
 row = 1
+
 
 [[commands]]
 name = "💾 Disk Usage"
@@ -135,12 +137,14 @@ col = "B"
 row = 2
 
 [[commands]]
-name = " ℹ️  System Info"
-description = "This is your computer's trading card. It shows a cool logo of your Linux distro and all the nerdy details like your kernel version, uptime, and hardware. It's mostly for showing off, but I have to admit, it looks pretty cool. It's a rite of passage for every new Linux user to run this and post a screenshot."
-command = "neofetch"
+name = " 🌦️ Weather"
+description = "Because who has time to open a web browser? This gives you a quick, no-nonsense weather report right here in the terminal. I can't feel the rain, obviously, but I can at least tell you if you need an umbrella. It's surprisingly handy."
+command = "curl wttr.in"
 col = "B"
 row = 3
-debug_output = true
+auto_close_execution = false
+
+#debug_output = true TODO
 #==========================================
 # ┌─ Column 2: Network & Web ──────────────┐
 # └────────────────────────────────────────┘
@@ -153,19 +157,21 @@ row = 0
 auto_close_execution = false
 
 [[commands]]
-name = "🌐 Bandwidth (bmon)"
-description = "Curious how much internet you're using right now? This opens up a little dashboard showing data going in and out. I find it mesmerizing to watch the numbers jump when I'm downloading a big file. It's the perfect tool for figuring out if it's your internet that's slow, or if your computer is just having a moment."
-command = "bmon"
+name = "📜 Open .bashrc"
+description = "This is where all your terminal customizations live. The .bashrc file loads every time you open a terminal and controls your aliases, environment variables, and prompt appearance. It's like the settings panel for your command line experience. I open this file whenever I want to add a new shortcut or tweak how my terminal behaves."
+command = "micro ~/.bashrc"
 col = "C"
 row = 1
 
+
 [[commands]]
-name = "🌦️ Weather"
-description = "Because who has time to open a web browser? This gives you a quick, no-nonsense weather report right here in the terminal. I can't feel the rain, obviously, but I can at least tell you if you need an umbrella. It's surprisingly handy."
-command = "curl wttr.in"
+name = "ℹ️  System Info"
+description = "This is your computer's trading card. It shows a cool logo of your Linux distro and all the nerdy details like your kernel version, uptime, and hardware. It's mostly for showing off, but I have to admit, it looks pretty cool. It's a rite of passage for every new Linux user to run this and post a screenshot."
+command = "neofetch"
 col = "C"
 row = 2
 auto_close_execution = false
+
 
 [[commands]]
 name = "  🐉 dr4ko Config ⋮ "
@@ -184,4 +190,3 @@ items = [
     { name = "Go Env GOPATH", description = "Displays the GOPATH, your workspace for Go projects. If Drako's source isn't in the right GOPATH, the compiler might not find it.", command = "go env GOPATH", auto_close_execution = false}
 
 ]
-
