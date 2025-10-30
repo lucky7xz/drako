@@ -608,9 +608,9 @@ func (m model) viewInfoMode() string {
 		}
 	}
 	raw = append(raw, "")
-	raw = append(raw, labelStyle.Render("Exec:")+" "+valueStyle.Render(m.infoExecMode))
-	raw = append(raw, labelStyle.Render("Auto-close:")+" "+valueStyle.Render(fmt.Sprintf("%v", m.infoAutoClose)))
-	raw = append(raw, labelStyle.Render("CWD:")+" "+valueStyle.Render(m.infoCwd))
+	raw = append(raw, labelStyle.Render("Exec: ")+valueStyle.Render(m.infoExecMode))
+	raw = append(raw, labelStyle.Render("Auto-close: ")+valueStyle.Render(fmt.Sprintf("%v", m.infoAutoClose)))
+	raw = append(raw, labelStyle.Render("CWD: ")+valueStyle.Render(m.infoCwd))
 	raw = append(raw, "")
 	raw = append(raw, helpStyle.Render("Press y to copy command • any key to close"))
 
