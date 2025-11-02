@@ -43,7 +43,7 @@ Run `drako`. On its first execution, it will construct your configuration file a
 
 
 
-## 🛠️ Configuration Example
+## 🛠️ Configuration Example 
 
 All power emanates from `~/.config/drako/config.toml`.
 
