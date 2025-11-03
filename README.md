@@ -30,6 +30,16 @@ go install github.com/lucky/drako@latest  # install drako
 
 Run `drako`. On its first execution, it will construct your configuration file at `~/.config/drako/config.toml`. This is the foundation. Modify it to begin bending your workflow into shape. We also provide a handful of profiles by default, to give you some inspiration. 
 
+### Update
+
+To update `drako` to the latest version, simply run the installation command again.
+
+If you are not getting the latest version, use this command instead:
+```bash
+GOPROXY=direct go install github.com/lucky/drako@latest  # install drako
+```
+If newly added profiles do not appear after the update, note that `drako` only creates the bootstrap folder under .config/drako if there is none present alreay. As such, the new profiles will no be created. 
+
 
 ## Navigation
 
