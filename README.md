@@ -6,7 +6,7 @@
 </div>
 
 
-### `[DEMO WILL BE HERE]`
+### `[DEMO WILL BE HERE]` 
 
 The terminal is a realm of immense power, but also of high entropy. Commands are forgotten, workflows fracture, and focus is lost to the noise. **Drako** is a **TUI-Deck launcher** that enables structure, transforming your terminal into a disciplined, grid-based command center. 
 
