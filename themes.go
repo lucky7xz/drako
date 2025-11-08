@@ -2,123 +2,79 @@ package main
 
 // DracoThemeConfig holds the color palette for a theme.
 type DracoThemeConfig struct {
-	Primary    string
-	Secondary  string
-	Background string
-	Foreground string
-	Comment    string
-	Cyan       string
-	Green      string
-	Orange     string
-	Pink       string
-	Purple     string
-	Red        string
-	Yellow     string
+	Primary    string // Main brand color
+	Secondary  string // Secondary accent color
+	Background string // Main background
+	Foreground string // Main text color
+	Comment    string // Muted text, borders
+	Success    string // For positive status
+	Warning    string // For warnings
+	Error      string // For errors
+	Info       string // For informational messages
+	Accent     string // For selected items, cursors
 }
 
 // themes is a map of available theme presets.
 var themes = map[string]DracoThemeConfig{
 	"dracula": {
-		Primary:    "#ff2e63", // Hot Pink
-		Secondary:  "#ff8c00", // Vibrant Orange
-		Background: "#0d0221", // Deep Purple
-		Foreground: "#f0f0f0", // Very light gray
-		Comment:    "#5c527f", // Muted purple-gray
-		Cyan:       "#00f5d4", // Bright aqua
-		Green:      "#00f5d4", // Bright aqua (teal)
-		Orange:     "#ff8c00", // Orange
-		Pink:       "#ff2e63", // Hot Pink --selector?
-		Purple:     "#9d4edd", // Vivid purple -- grid?
-		Red:        "#ff2e63", // Hot pink-red
-		Yellow:     "#f9f871", // Soft lemon
-	},
+		Primary:    "#ff2e63",
+		Secondary:  "#ff8c00",
+		Background: "#0d0221",
+		Foreground: "#f0f0f0",
+		Comment:    "#5c527f",
+		Success:    "#00f5d4",
+		Warning:    "#f9f871",
+		Error:      "#ff2e63",
+		Info:       "#00f5d4",
+		Accent:     "#9d4edd",
 
-	"dracula2":{               
-		Primary:    "#ff79c6", // Hot pink
-		Secondary:  "#bd93f9", // Soft purple
-		Foreground: "#f8f8f2", // Off-white
-		Background: "#282a36", // Deep slate
-		Comment:    "#6272a4", // Muted blue-gray
-		Cyan:       "#8be9fd", // Light cyan
-		Green:      "#50fa7b", // Neon green
-		Orange:     "#ffb86c", // Peach orange
-		Pink:       "#ff79c6", // Hot pink
-		Purple:     "#bd93f9", // Soft purple
-		Red:        "#ff5555", // Bright red
-		Yellow:     "#f1fa8c", // Pale yellow
-		},
-
-//"dracula": {
-//        Primary:    "#ff2e63", // Hot Pink
-//        Secondary:  "#ff8c00", // Vibrant Orange
-//        Background: "#0d0221", // Deep Purple
-//        Foreground: "#f0f0f0",
-//        Comment:    "#5c527f",
-//        Cyan:       "#00f5d4",
-//        Green:      "#00f5d4",
-//        Orange:     "#ff8c00",
-//        Pink:       "#ff2e63",
-//        Purple:     "#9d4edd",
-//        Red:        "#ff2e63",
-//        Yellow:     "#f9f871",
-//},
-
-	
 	"jade": {
-		Primary:    "#50fa7b", // Light Green (Logo Color)
-		Secondary:  "#8be9fd", // Cyan
+		Primary:    "#50fa7b",
+		Secondary:  "#8be9fd",
 		Background: "#282a36",
 		Foreground: "#f8f8f2",
 		Comment:    "#6272a4",
-		Cyan:       "#8be9fd", // Light cyan
-		Green:      "#50fa7b",
-		Orange:     "#ffb86c",
-		Pink:       "#50fa7b",
-		Purple:     "#50fa7b",
-		Red:        "#ff5555",
-		Yellow:     "#f1fa8c",
+		Success:    "#50fa7b",
+		Warning:    "#f1fa8c",
+		Error:      "#ff5555",
+		Info:       "#8be9fd",
+		Accent:     "#50fa7b",
 	},
 	"nord": {
-		Primary:    "#0077be", // Marine Blue (Logo Color)
-		Secondary:  "#5e81ac", // Steel blue
-		Background: "#0a192f", // Deep ocean navy
-		Foreground: "#e5e9f0", // Very light gray
-		Comment:    "#4c566a", // Gray-blue
-		Cyan:       "#88c0d0", // Soft cyan
-		Green:      "#a3be8c", // Sage green
-		Orange:     "#d08770", // Muted orange
-		Pink:       "#0077be", // Dusty mauve
-		Purple:     "#0077be", // Dusty mauve
-		Red:        "#bf616a", // Desaturated red
-		Yellow:     "#ebcb8b", // Warm sand
+		Primary:    "#0077be",
+		Secondary:  "#5e81ac",
+		Background: "#0a192f",
+		Foreground: "#e5e9f0",
+		Comment:    "#4c566a",
+		Success:    "#a3be8c",
+		Warning:    "#ebcb8b",
+		Error:      "#bf616a",
+		Info:       "#88c0d0",
+		Accent:     "#0077be",
 	},
 	"everforest": {
-		Primary:    "#4a7c59", // Dark Green (Logo Color)
-		Secondary:  "#a7c080", // Moss green
-		Background: "#2d353b", // Charcoal
-		Foreground: "#d3c6aa", // Pale khaki
-		Comment:    "#5c6a72", // Grey
-		Cyan:       "#83c092", // Desaturated teal
-		Green:      "#a7c080", // Moss green
-		Orange:     "#e69875", // Warm apricot
-		Pink:       "#4a7c59", // Soft rose
-		Purple:     "#4a7c59", // Soft rose
-		Red:        "#e67e80", // Coral red
-		Yellow:     "#dbbc7f", // Muted gold
+		Primary:    "#4a7c59",
+		Secondary:  "#a7c080",
+		Background: "#2d353b",
+		Foreground: "#d3c6aa",
+		Comment:    "#5c6a72",
+		Success:    "#a7c080",
+		Warning:    "#dbbc7f",
+		Error:      "#e67e80",
+		Info:       "#83c092",
+		Accent:     "#4a7c59",
 	},
 	"orasaka": {
-		Primary:    "#f5c2e7", // Light Pink (Logo Color)
-		Secondary:  "#cba6f7", // Mauve
-		Background: "#1e1e2e", // Very dark slate
-		Foreground: "#cdd6f4", // Light periwinkle
-		Comment:    "#585b70", // Slate gray
-		Cyan:       "#89dceb", // Sky cyan
-		Green:      "#a6e3a1", // Mint green
-		Orange:     "#fab387", // Apricot
-		Pink:       "#f5c2e7",
-		Purple:     "#cba6f7",
-		Red:        "#f38ba8", // Rose red
-		Yellow:     "#f9e2af", // Pale gold
+		Primary:    "#f5c2e7",
+		Secondary:  "#cba6f7",
+		Background: "#1e1e2e",
+		Foreground: "#cdd6f4",
+		Comment:    "#585b70",
+		Success:    "#a6e3a1",
+		Warning:    "#f9e2af",
+		Error:      "#f38ba8",
+		Info:       "#89dceb",
+		Accent:     "#f5c2e7",
 	},
 }
 
@@ -162,22 +118,22 @@ func mapThemeToUI(t DracoThemeConfig) UIColors {
 		FooterFG:       t.Comment,
 
 		GridBorder:     t.Comment,
-		GridSelBorder:  t.Pink,
-		GridSelText:    t.Pink,
+		GridSelBorder:  t.Accent,
+		GridSelText:    t.Accent,
 
 		Path:           t.Primary,
-		PathSelected:   t.Pink,
+		PathSelected:   t.Accent,
 		PathSeparator:  t.Comment,
 
-		StatusInfo:     t.Cyan,
-		StatusPositive: t.Green,
-		StatusNegative: t.Red,
-		Warning:        t.Orange,
+		StatusInfo:     t.Info,
+		StatusPositive: t.Success,
+		StatusNegative: t.Error,
+		Warning:        t.Warning,
 
 		HelpFG:         t.Comment,
 		TitleFG:        t.Primary,
 		ListHeaderFG:   t.Secondary,
-		CursorFG:       t.Pink,
+		CursorFG:       t.Accent,
 
 		ButtonFG:       t.Foreground,
 		ButtonBG:       t.Comment,
