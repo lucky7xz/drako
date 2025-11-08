@@ -1,5 +1,17 @@
 package main
 
+import (
+	"embed"
+	"fmt"
+	"github.com/BurntSushi/toml"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+)
+
+//go:embed bootstrap/themes.toml
+var embeddedThemesFS embed.FS
+
 // DracoThemeConfig holds the color palette for a theme.
 type DracoThemeConfig struct {
 	Primary    string // Main brand color
@@ -14,68 +26,39 @@ type DracoThemeConfig struct {
 	Accent     string // For selected items, cursors
 }
 
-// themes is a map of available theme presets.
-var themes = map[string]DracoThemeConfig{
-	"dracula": {
-		Primary:    "#ff2e63",
-		Secondary:  "#ff8c00",
-		Background: "#0d0221",
-		Foreground: "#f0f0f0",
-		Comment:    "#5c527f",
-		Success:    "#00f5d4",
-		Warning:    "#f9f871",
-		Error:      "#ff2e63",
-		Info:       "#00f5d4",
-		Accent:     "#9d4edd",
+var loadedThemes map[string]DracoThemeConfig
 
-	"jade": {
-		Primary:    "#50fa7b",
-		Secondary:  "#8be9fd",
-		Background: "#282a36",
-		Foreground: "#f8f8f2",
-		Comment:    "#6272a4",
-		Success:    "#50fa7b",
-		Warning:    "#f1fa8c",
-		Error:      "#ff5555",
-		Info:       "#8be9fd",
-		Accent:     "#50fa7b",
-	},
-	"nord": {
-		Primary:    "#0077be",
-		Secondary:  "#5e81ac",
-		Background: "#0a192f",
-		Foreground: "#e5e9f0",
-		Comment:    "#4c566a",
-		Success:    "#a3be8c",
-		Warning:    "#ebcb8b",
-		Error:      "#bf616a",
-		Info:       "#88c0d0",
-		Accent:     "#0077be",
-	},
-	"everforest": {
-		Primary:    "#4a7c59",
-		Secondary:  "#a7c080",
-		Background: "#2d353b",
-		Foreground: "#d3c6aa",
-		Comment:    "#5c6a72",
-		Success:    "#a7c080",
-		Warning:    "#dbbc7f",
-		Error:      "#e67e80",
-		Info:       "#83c092",
-		Accent:     "#4a7c59",
-	},
-	"orasaka": {
-		Primary:    "#f5c2e7",
-		Secondary:  "#cba6f7",
-		Background: "#1e1e2e",
-		Foreground: "#cdd6f4",
-		Comment:    "#585b70",
-		Success:    "#a6e3a1",
-		Warning:    "#f9e2af",
-		Error:      "#f38ba8",
-		Info:       "#89dceb",
-		Accent:     "#f5c2e7",
-	},
+func init() {
+	userConfigDir, err := os.UserConfigDir()
+	if err != nil {
+		panic(fmt.Sprintf("Failed to get user config directory: %v", err))
+	}
+
+	userThemesPath := filepath.Join(userConfigDir, "drako", "themes.toml")
+
+	var themesContent []byte
+
+	if _, err := os.Stat(userThemesPath); err == nil {
+		// User-defined themes.toml exists, load from there
+		themesContent, err = ioutil.ReadFile(userThemesPath)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to read user themes file %s: %v", userThemesPath, err))
+		}
+	} else if os.IsNotExist(err) {
+		// User-defined themes.toml does not exist, load from embedded
+		themesContent, err = embeddedThemesFS.ReadFile("bootstrap/themes.toml")
+		if err != nil {
+			panic(fmt.Sprintf("Failed to read embedded themes file: %v", err))
+		}
+	} else {
+		// Other error checking user themes file
+		panic(fmt.Sprintf("Error checking user themes file %s: %v", userThemesPath, err))
+	}
+
+	// Decode the TOML content
+	if _, err := toml.Decode(string(themesContent), &loadedThemes); err != nil {
+		panic(fmt.Sprintf("Failed to decode themes TOML: %v", err))
+	}
 }
 
 // UIColors describes concrete UI component colors derived from a theme.
@@ -149,10 +132,10 @@ func mapThemeToUI(t DracoThemeConfig) UIColors {
 // getTheme returns the color palette for a given theme name.
 // If the theme is not found, it defaults to "dracula".
 func getTheme(name string) DracoThemeConfig {
-	if theme, ok := themes[name]; ok {
+	if theme, ok := loadedThemes[name]; ok {
 		return theme
 	}
-	return themes["dracula"]
+	return loadedThemes["dracula"]
 }
 
 

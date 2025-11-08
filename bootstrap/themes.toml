@@ -1,0 +1,73 @@
+# This file contains all the theme definitions for Draco.
+
+[dracula]
+Primary    = "#ff2e63" # Hot Pink
+Secondary  = "#ff8c00" # Vibrant Orange
+Background = "#0d0221" # Deep Purple
+Foreground = "#f0f0f0" # Very Light Gray
+Comment    = "#5c527f" # Muted Purple-Gray
+Success    = "#00f5d4" # Bright Aqua
+Warning    = "#f9f871" # Soft Lemon
+Error      = "#ff2e63" # Hot Pink
+Info       = "#00f5d4" # Bright Aqua
+Accent     = "#ff2e63" # Hot Pink
+
+[dracula2]
+Primary    = "#ff79c6" # Hot Pink
+Secondary  = "#bd93f9" # Soft Purple
+Foreground = "#f8f8f2" # Off-White
+Background = "#282a36" # Deep Slate
+Comment    = "#6272a4" # Muted Blue-Gray
+Success    = "#50fa7b" # Neon Green
+Warning    = "#f1fa8c" # Pale Yellow
+Error      = "#ff5555" # Bright Red
+Info       = "#8be9fd" # Light Cyan
+Accent     = "#ff79c6" # Hot Pink
+
+[jade]
+Primary    = "#50fa7b" # Light Green
+Secondary  = "#8be9fd" # Cyan
+Background = "#282a36" # Deep Slate
+Foreground = "#f8f8f2" # Off-White
+Comment    = "#6272a4" # Muted Blue-Gray
+Success    = "#50fa7b" # Light Green
+Warning    = "#f1fa8c" # Pale Yellow
+Error      = "#ff5555" # Bright Red
+Info       = "#8be9fd" # Light Cyan
+Accent     = "#50fa7b" # Light Green
+
+[nord]
+Primary    = "#0077be" # Marine Blue
+Secondary  = "#5e81ac" # Steel Blue
+Background = "#0a192f" # Deep Ocean Navy
+Foreground = "#e5e9f0" # Very Light Gray
+Comment    = "#4c566a" # Gray-Blue
+Success    = "#a3be8c" # Sage Green
+Warning    = "#ebcb8b" # Warm Sand
+Error      = "#bf616a" # Desaturated Red
+Info       = "#88c0d0" # Soft Cyan
+Accent     = "#0077be" # Marine Blue
+
+[everforest]
+Primary    = "#4a7c59" # Dark Green
+Secondary  = "#a7c080" # Moss Green
+Background = "#2d353b" # Charcoal
+Foreground = "#d3c6aa" # Pale Khaki
+Comment    = "#5c6a72" # Gray
+Success    = "#a7c080" # Moss Green
+Warning    = "#dbbc7f" # Muted Gold
+Error      = "#e67e80" # Coral Red
+Info       = "#83c092" # Desaturated Teal
+Accent     = "#4a7c59" # Dark Green
+
+[orasaka]
+Primary    = "#f5c2e7" # Light Pink
+Secondary  = "#cba6f7" # Mauve
+Background = "#1e1e2e" # Very Dark Slate
+Foreground = "#cdd6f4" # Light Periwinkle
+Comment    = "#585b70" # Slate Gray
+Success    = "#a6e3a1" # Mint Green
+Warning    = "#f9e2af" # Pale Gold
+Error      = "#f38ba8" # Rose Red
+Info       = "#89dceb" # Sky Cyan
+Accent     = "#f5c2e7" # Light Pink
