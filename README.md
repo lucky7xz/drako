@@ -1,8 +1,6 @@
-
-
 <video width="100%" controls loop>
-  <source src="https://raw.githubusercontent.com/lucky7xz/drako/main/docs/demo_v0.1.8.mp4" type="video/mp4">
-  Your browser doesn't support video—[download here](https://raw.githubusercontent.com/lucky7xz/drako/main/docs/demo_v0.1.8.mp4).
+  <source src="docs/demo_v0.1.8.mp4" type="video/mp4">
+  Your browser doesn't support video—[download here](docs/demo_v0.1.8.mp4).
 </video>
 
 
