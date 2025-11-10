@@ -1,16 +1,10 @@
-<div align="center">
 
-# drako 
-
-
-</div>
-
-## Demo Video
 
 <video width="100%" controls loop>
-  <source src="docs/demo_v0.1.8.mp4" type="video/mp4">
-  Your browser doesn't support video—[download here](docs/demo_v0.1.8.mp4).
+  <source src="https://raw.githubusercontent.com/lucky7xz/drako/main/docs/demo_v0.1.8.mp4" type="video/mp4">
+  Your browser doesn't support video—[download here](https://raw.githubusercontent.com/lucky7xz/drako/main/docs/demo_v0.1.8.mp4).
 </video>
+
 
 The terminal is a realm of immense power, but also of high entropy. Commands are forgotten, workflows fracture, and focus is lost to the noise. **Drako** is a **TUI-Deck launcher** that enables structure, transforming your terminal into a disciplined, grid-based command center. 
 
