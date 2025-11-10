@@ -1,4 +1,4 @@
-[![Demo v0.1.8](docs/demo.png)](docs/demo_v0.1.8.mp4)
+![Demo v0.1.8](docs/demo.gif)
 
 The terminal is a realm of immense power, but also of high entropy. Commands are forgotten, workflows fracture, and focus is lost to the noise. **Drako** is a **TUI-Deck launcher** that enables structure, transforming your terminal into a disciplined, grid-based command center. 
 
