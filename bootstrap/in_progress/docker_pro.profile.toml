@@ -202,13 +202,13 @@ auto_close_execution = false
 name = "📤 Backup a Volume"
 description = "Create a compressed .tar.gz backup of a volume."
 auto_close_execution = false
-command = ""
+command = """
 printf 'Enter volume name to backup: '; read -r vol_name && \
 printf 'Enter backup destination path (e.g., /mnt/nas/backups): '; read -r backup_path && \
 fname=\"backup_${vol_name}_$(date +%Y-%m-%d_%H-%M-%S).tar.gz\" && \
 sudo docker run --rm -v \"${vol_name}:/data\" -v \"${backup_path}:/backup\" alpine \
 tar -czf \"/backup/${fname}\" -C /data . && \
-echo \"Backup created at ${backup_path}/${fname}\" 
+echo \"Backup created at ${backup_path}/${fname}\"
 """
 
 [[commands.items]]

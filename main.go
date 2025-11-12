@@ -13,6 +13,12 @@ import (
 // main wires everything together. It keeps the program running so that after a command
 // finishes we jump back into the TUI without losing state or the screen layout.
 func main() {
+	// Check if CLI command was invoked (e.g., drako sync <url>)
+	if handleCLI() {
+		return
+	}
+
+	// Proceed with TUI mode
 	configDir, err := getConfigDir()
 	if err != nil {
 		fmt.Printf("could not get config dir: %v", err)
