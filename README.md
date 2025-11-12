@@ -137,6 +137,7 @@ drako summon git@github.com:user/my_profile_collection.git
 
 Works with any git server (GitHub, GitLab, Gitea, Bitbucket, self-hosted). Pick and choose the files you need from your repo. Summoned profiles land in `~/.config/drako/inventory/`, ready to equip via the inventory (`i` key). Each profile is validated for safety (size limits, TOML format, profile structure) and requires your confirmation before copying. Private repos require SSH keys
 
+For git repos, profiles can declare `assets = ["path/or/dir", ...]` (relative), which drako copies into `~/.config/drako/` preserving paths, with a pre-copy plan shown and sensible size limits. This way you can copy over a handful of small files with their corresponding profile in one go.
 
 ## ⚠️ Safety First
 

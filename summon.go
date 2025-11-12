@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io/fs"
 	"io"
 	"log"
 	"net/http"
@@ -14,6 +15,14 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+)
+
+// Asset copy limits
+const (
+	assetWarnSizeBytes  = 1 * 1024 * 1024  // 1 MB warn
+	assetMaxFileBytes   = 5 * 1024 * 1024  // 5 MB per file hard limit
+	assetMaxTotalBytes  = 50 * 1024 * 1024 // 50 MB total hard limit
+	assetMaxFileCount   = 500              // safety cap
 )
 
 // confirmAction prompts the user to confirm an action
@@ -223,6 +232,13 @@ func summonFromGit(repoURL, inventoryDir string) error {
 			continue
 		}
 
+		// Parse overlay to detect assets
+		assets, perr := readAssetsFromProfile(srcPath)
+		if perr != nil {
+			fmt.Printf("⚠️  Warning: could not read assets from %s: %v (continuing)\n", dstName, perr)
+			assets = nil
+		}
+
 		// Get file info for size display
 		info, _ := os.Stat(srcPath)
 		size := info.Size()
@@ -233,12 +249,43 @@ func summonFromGit(repoURL, inventoryDir string) error {
 			overwriting = true
 		}
 
-		// Ask for confirmation
+		// Ask for confirmation (include assets plan if any)
 		fmt.Printf("  File: %s\n", dstName)
 		fmt.Printf("  Size: %d bytes (%.1f KB)\n", size, float64(size)/1024)
 		fmt.Printf("  Destination: %s\n", inventoryDir)
 		if overwriting {
 			fmt.Printf("  ⚠️  Warning: Will overwrite existing file\n")
+		}
+		if len(assets) > 0 {
+			fmt.Printf("  Assets declared: %d\n", len(assets))
+			fmt.Printf("  Plan (destination under ~/.config/drako using asset paths as given):\n")
+			plans := planAssetsList(tempDir, filepath.Dir(srcPath), assets)
+			totalPlannedBytes := int64(0)
+			totalPlannedFiles := 0
+			missingPlanned := 0
+			for _, p := range plans {
+				status := "file"
+				if p.IsDir {
+					status = "dir"
+				}
+				dest := filepath.Join("~/.config/drako", p.DestRel)
+				if p.Missing {
+					fmt.Printf("    - %s (%s) -> %s [missing]\n", p.AssetRel, status, dest)
+					missingPlanned++
+				} else {
+					if p.IsDir {
+						fmt.Printf("    - %s (%s, %d files, %.1f MB) -> %s\n", p.AssetRel, status, p.FileCount, float64(p.Bytes)/(1024*1024), dest)
+					} else {
+						fmt.Printf("    - %s (%s, %.1f MB) -> %s\n", p.AssetRel, status, float64(p.Bytes)/(1024*1024), dest)
+					}
+					totalPlannedBytes += p.Bytes
+					totalPlannedFiles += p.FileCount
+				}
+			}
+			fmt.Printf("  Assets summary: planned_files=%d, planned_bytes=%.1f MB, missing=%d\n",
+				totalPlannedFiles, float64(totalPlannedBytes)/(1024*1024), missingPlanned)
+			fmt.Printf("  Note: No per-asset prompts. Missing assets will be warned and skipped. Limits: %d files, total ≤ %d MB, per-file ≤ %d MB.\n",
+				assetMaxFileCount, assetMaxTotalBytes/(1024*1024), assetMaxFileBytes/(1024*1024))
 		}
 		
 		if !confirmAction(fmt.Sprintf("Summon %s?", dstName)) {
@@ -252,6 +299,14 @@ func summonFromGit(repoURL, inventoryDir string) error {
 		}
 		fmt.Printf("✓ Summoned: %s\n", dstName)
 		summoned++
+
+		// Handle assets (git-only feature)
+		if len(assets) > 0 {
+			aCopied, aSkipped, aMissing, aBytes := copyAssetsList(tempDir, filepath.Dir(srcPath), assets)
+			fmt.Printf("  Assets: copied=%d, skipped=%d, missing=%d, total=%.1f MB\n",
+				aCopied, aSkipped, aMissing, float64(aBytes)/(1024*1024))
+			log.Printf("Assets for %s: copied=%d, skipped=%d, missing=%d, bytes=%d", dstName, aCopied, aSkipped, aMissing, aBytes)
+		}
 	}
 
 	// Summary
@@ -273,6 +328,271 @@ func summonFromGit(repoURL, inventoryDir string) error {
 
 	log.Printf("Successfully summoned %d profile(s) from repository: %s (skipped: %d, cancelled: %d)", summoned, repoURL, skipped, cancelled)
 	return nil
+}
+
+// readAssetsFromProfile parses a profile file and returns declared assets (relative paths)
+func readAssetsFromProfile(profilePath string) ([]string, error) {
+	data, err := os.ReadFile(profilePath)
+	if err != nil {
+		return nil, err
+	}
+	var overlay profileOverlay
+	if _, err := toml.Decode(string(data), &overlay); err != nil {
+		return nil, err
+	}
+	if overlay.Assets == nil {
+		return nil, nil
+	}
+	var out []string
+	for _, raw := range *overlay.Assets {
+		s := strings.TrimSpace(raw)
+		if s == "" {
+			continue
+		}
+		// Clean path to normalize separators and remove leading "./"
+		s = filepath.Clean(s)
+		s = strings.TrimPrefix(s, "./")
+		out = append(out, s)
+	}
+	return out, nil
+}
+
+// copyAssetsList copies a list of assets (files or directories) from the cloned repo to configDir.
+// - repoRoot: tempDir where repo was cloned
+// - profileDir: directory of the profile file (assets are relative to this)
+// Returns counts of copied/skipped/missing and total bytes copied.
+func copyAssetsList(repoRoot, profileDir string, assets []string) (int, int, int, int64) {
+	configDir, err := getConfigDir()
+	if err != nil {
+		log.Printf("assets: could not resolve config dir: %v", err)
+		return 0, 0, len(assets), 0
+	}
+	var copied, skipped, missing int
+	var totalBytes int64
+	var fileCount int
+
+	for _, rel := range assets {
+		// Resolve asset path relative to profileDir
+		cleanRel, safe := cleanAssetRel(rel)
+		if !safe {
+			log.Printf("assets: skipping unsafe relative path %s", rel)
+			skipped++
+			continue
+		}
+		src := filepath.Join(profileDir, cleanRel)
+		// Ensure src is within repoRoot
+		ok, err := isPathWithinBase(repoRoot, src)
+		if err != nil || !ok {
+			log.Printf("assets: skipping unsafe path %s (err=%v)", rel, err)
+			skipped++
+			continue
+		}
+		// Destination is exactly the asset path under configDir (no extra parent folders)
+		dst := filepath.Join(configDir, cleanRel)
+
+		info, statErr := os.Stat(src)
+		if statErr != nil {
+			log.Printf("assets: missing %s", rel)
+			missing++
+			continue
+		}
+		if info.IsDir() {
+			c, s, m, _ := copyDirWithLimits(src, dst, &fileCount, &totalBytes)
+			copied += c
+			skipped += s
+			missing += m
+			continue
+		}
+		// Single file copy with limits
+		if allow, _ := checkAssetFileAllowed(info.Size(), fileCount, totalBytes); !allow {
+			log.Printf("assets: skipping (limits) %s", rel)
+			skipped++
+			continue
+		}
+		if info.Size() > assetWarnSizeBytes {
+			fmt.Printf("  ⚠️  Large asset: %s (%.1f MB)\n", rel, float64(info.Size())/(1024*1024))
+		}
+		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+			log.Printf("assets: mkdir failed for %s: %v", dst, err)
+			skipped++
+			continue
+		}
+		if err := copyFile(src, dst); err != nil {
+			log.Printf("assets: copy failed %s -> %s: %v", src, dst, err)
+			skipped++
+			continue
+		}
+		copied++
+		fileCount++
+		totalBytes += info.Size()
+	}
+	return copied, skipped, missing, totalBytes
+}
+
+// assetPlanItem describes what will be copied for an asset
+type assetPlanItem struct {
+	AssetRel  string
+	DestRel   string
+	IsDir     bool
+	FileCount int
+	Bytes     int64
+	Missing   bool
+}
+
+// planAssetsList enumerates assets to present a copy plan before confirmation
+func planAssetsList(repoRoot, profileDir string, assets []string) []assetPlanItem {
+	configDir, _ := getConfigDir()
+	var plans []assetPlanItem
+	for _, rel := range assets {
+		cleanRel, safe := cleanAssetRel(rel)
+		if !safe {
+			plans = append(plans, assetPlanItem{AssetRel: rel, DestRel: cleanRel, Missing: true})
+			continue
+		}
+		src := filepath.Join(profileDir, cleanRel)
+		ok, err := isPathWithinBase(repoRoot, src)
+		if err != nil || !ok {
+			plans = append(plans, assetPlanItem{AssetRel: rel, DestRel: cleanRel, Missing: true})
+			continue
+		}
+		info, statErr := os.Stat(src)
+		if statErr != nil {
+			plans = append(plans, assetPlanItem{AssetRel: rel, DestRel: cleanRel, Missing: true})
+			continue
+		}
+		if info.IsDir() {
+			// Walk dir to count files/bytes
+			var files int
+			var bytes int64
+			filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
+				if err != nil { return nil }
+				if d.IsDir() { return nil }
+				fi, e := d.Info()
+				if e != nil { return nil }
+				files++
+				bytes += fi.Size()
+				return nil
+			})
+			plans = append(plans, assetPlanItem{
+				AssetRel:  rel,
+				DestRel:   cleanRel,
+				IsDir:     true,
+				FileCount: files,
+				Bytes:     bytes,
+				Missing:   false,
+			})
+		} else {
+			plans = append(plans, assetPlanItem{
+				AssetRel:  rel,
+				DestRel:   cleanRel,
+				IsDir:     false,
+				FileCount: 1,
+				Bytes:     info.Size(),
+				Missing:   false,
+			})
+		}
+		_ = configDir // only used to hint destination in UI printing (done above)
+	}
+	return plans
+}
+
+// cleanAssetRel normalizes an asset relative path and ensures it is safe (no abs, no parent escapes)
+func cleanAssetRel(rel string) (string, bool) {
+	rel = strings.TrimSpace(rel)
+	if rel == "" {
+		return "", false
+	}
+	if filepath.IsAbs(rel) {
+		return "", false
+	}
+	clean := filepath.Clean(rel)
+	clean = strings.TrimPrefix(clean, "./")
+	// Reject parent traversal
+	if clean == ".." || strings.HasPrefix(clean, "../") || strings.Contains(clean, "/../") {
+		return "", false
+	}
+	return clean, true
+}
+
+// copyDirWithLimits recursively copies files from srcDir to dstDir with size/count limits
+func copyDirWithLimits(srcDir, dstDir string, fileCount *int, totalBytes *int64) (int, int, int, int64) {
+	copied := 0
+	skipped := 0
+	missing := 0
+	var copiedBytes int64
+	err := filepath.WalkDir(srcDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		info, serr := d.Info()
+		if serr != nil {
+			return serr
+		}
+		if allow, _ := checkAssetFileAllowed(info.Size(), *fileCount, *totalBytes); !allow {
+			skipped++
+			return nil
+		}
+		rel, rerr := filepath.Rel(srcDir, path)
+		if rerr != nil {
+			skipped++
+			return nil
+		}
+		dst := filepath.Join(dstDir, rel)
+		if info.Size() > assetWarnSizeBytes {
+			fmt.Printf("  ⚠️  Large asset file: %s (%.1f MB)\n", rel, float64(info.Size())/(1024*1024))
+		}
+		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+			skipped++
+			return nil
+		}
+		if err := copyFile(path, dst); err != nil {
+			skipped++
+			return nil
+		}
+		*fileCount++
+		*totalBytes += info.Size()
+		copiedBytes += info.Size()
+		copied++
+		return nil
+	})
+	if err != nil {
+		log.Printf("assets: copy dir error %s: %v", srcDir, err)
+	}
+	return copied, skipped, missing, copiedBytes
+}
+
+// checkAssetFileAllowed enforces per-file and aggregate limits
+func checkAssetFileAllowed(size int64, fileCount int, totalBytes int64) (bool, int64) {
+	if size > assetMaxFileBytes {
+		return false, totalBytes
+	}
+	if fileCount+1 > assetMaxFileCount {
+		return false, totalBytes
+	}
+	if totalBytes+size > assetMaxTotalBytes {
+		return false, totalBytes
+	}
+	return true, totalBytes + size
+}
+
+// isPathWithinBase checks if target is within base after resolving symlinks
+func isPathWithinBase(base, target string) (bool, error) {
+	baseAbs, err := filepath.Abs(base)
+	if err != nil {
+		return false, err
+	}
+	targetAbs, err := filepath.Abs(target)
+	if err != nil {
+		return false, err
+	}
+	rel, err := filepath.Rel(baseAbs, targetAbs)
+	if err != nil {
+		return false, err
+	}
+	return !strings.HasPrefix(rel, ".."), nil
 }
 
 // summonFromHTTP downloads a profile file from an HTTP/HTTPS URL

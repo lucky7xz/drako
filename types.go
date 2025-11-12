@@ -100,6 +100,7 @@ type profileOverlay struct {
 	HeaderArt    *string    `toml:"header_art"`
 	DefaultShell *string    `toml:"default_shell"`
 	NumbModifier *string    `toml:"numb_modifier"`
+	Assets       *[]string  `toml:"assets"`
 	Commands     *[]Command `toml:"commands"`
 }
 
