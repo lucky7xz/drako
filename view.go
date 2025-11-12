@@ -12,6 +12,11 @@ func (m model) View() string {
 		return "Initializing..."
 	}
 
+	// If terminal is too small even at min_scale, show blocking overlay
+	if tooSmall, reqW, reqH := isBelowMinimum(m.termWidth, m.termHeight, m.config); tooSmall {
+		return m.renderSizeOverlay(reqW, reqH)
+	}
+
 	if m.mode == inventoryMode {
 		return m.viewInventoryMode()
 	}
@@ -91,6 +96,81 @@ func (m model) View() string {
 			finalContent,
 		),
 	)
+}
+
+// renderSizeOverlay shows a centered panel with current and required dimensions
+func (m model) renderSizeOverlay(reqW, reqH int) string {
+	title := titleStyle.Render("Terminal too small")
+	minScalePct := 60
+	info := helpStyle.Render(
+		fmt.Sprintf("Current: %dx%d  |  Required (at %d%%): %dx%d",
+			m.termWidth, m.termHeight, minScalePct, reqW, reqH),
+	)
+	hint := helpStyle.Render("Hint: maximize the window or lower grid size (x,y)")
+
+	box := lipgloss.JoinVertical(
+		lipgloss.Left,
+		title,
+		info,
+		hint,
+	)
+
+	overlay := lipgloss.NewStyle().
+		Padding(1, 2).
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#FF5F5F")).
+		Align(lipgloss.Center).
+		Render(box)
+
+	return lipgloss.Place(
+		m.termWidth, m.termHeight,
+		lipgloss.Center, lipgloss.Center,
+		overlay,
+	)
+}
+
+// --- Minimum size helpers (computed from grid size and min_scale) ---
+
+// calculateRequiredSize computes the minimum terminal dimensions needed
+// for the current grid at 100% scale
+func calculateRequiredSize(cfg Config) (minWidth, minHeight int) {
+	// Base cell dimensions at 100% scale
+	// Cell = content (25) + padding (1+1) + border (1+1) = 29 width
+	cellWidth := 29
+	// Reasonable cell height for a single-line grid cell with borders
+	cellHeight := 4
+
+	// Grid area
+	gridWidth := cfg.X * cellWidth
+	gridHeight := cfg.Y * cellHeight
+
+	// Additional UI elements
+	headerHeight := 10   // Header art + spacing
+	statusBarHeight := 5 // Status and bars
+	sideMargin := 4      // Left/right margins
+	verticalPadding := 2 // Top/bottom padding
+
+	minWidth = gridWidth + sideMargin
+	minHeight = gridHeight + headerHeight + statusBarHeight + verticalPadding
+	return minWidth, minHeight
+}
+
+// requiredSizeAtScale estimates the space needed at a given scale factor
+func requiredSizeAtScale(cfg Config, scale float64) (int, int) {
+	w, h := calculateRequiredSize(cfg)
+	return int(float64(w) * scale), int(float64(h) * scale)
+}
+
+// isBelowMinimum returns whether the terminal is too small even at min_scale,
+// and returns the required width/height at min_scale for display.
+func isBelowMinimum(termWidth, termHeight int, cfg Config) (bool, int, int) {
+	// Default minimum scale is 60% (triggers a bit sooner)
+	scale := 0.60
+	reqW, reqH := requiredSizeAtScale(cfg, scale)
+	if termWidth < reqW || termHeight < reqH {
+		return true, reqW, reqH
+	}
+	return false, reqW, reqH
 }
 
 func (m model) renderGrid() string {
