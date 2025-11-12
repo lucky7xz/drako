@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"log"
@@ -14,6 +15,18 @@ import (
 
 	"github.com/BurntSushi/toml"
 )
+
+// confirmAction prompts the user to confirm an action
+func confirmAction(prompt string) bool {
+	fmt.Printf("%s [y/N]: ", prompt)
+	reader := bufio.NewReader(os.Stdin)
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		return false
+	}
+	response = strings.ToLower(strings.TrimSpace(response))
+	return response == "y" || response == "yes"
+}
 
 // summonProfile downloads a profile from a URL and saves it to the inventory directory.
 // Supports:
@@ -38,10 +51,41 @@ func summonProfile(sourceURL, configDir string) error {
 			warnIfNoSSHKeys()
 		}
 		
+		// Confirm before cloning
+		fmt.Printf("\nYou are about to clone a git repository:\n")
+		fmt.Printf("  Source: %s\n", sourceURL)
+		fmt.Printf("  Destination: %s\n", inventoryDir)
+		fmt.Printf("  Action: Find and copy all .profile.toml files\n\n")
+		
+		if !confirmAction("Proceed with cloning?") {
+			return fmt.Errorf("operation cancelled by user")
+		}
+		
 		return summonFromGit(sourceURL, inventoryDir)
 	}
 
 	// Otherwise, treat as HTTP/HTTPS file download (user wants single file)
+	// Extract filename for confirmation
+	filename := extractFilenameFromURL(sourceURL)
+	if filename == "" || !strings.HasSuffix(filename, ".profile.toml") {
+		filename = "personal.profile.toml"
+	}
+	
+	fmt.Printf("\nYou are about to download a profile:\n")
+	fmt.Printf("  Source: %s\n", sourceURL)
+	fmt.Printf("  Destination: %s/%s\n", inventoryDir, filename)
+	
+	// Check if file exists
+	dstPath := filepath.Join(inventoryDir, filename)
+	if _, err := os.Stat(dstPath); err == nil {
+		fmt.Printf("  ⚠️  Warning: %s already exists and will be overwritten\n", filename)
+	}
+	fmt.Println()
+	
+	if !confirmAction("Proceed with download?") {
+		return fmt.Errorf("operation cancelled by user")
+	}
+	
 	return summonFromHTTP(sourceURL, inventoryDir)
 }
 
@@ -148,9 +192,18 @@ func summonFromGit(repoURL, inventoryDir string) error {
 		return fmt.Errorf("no .profile.toml files found in repository")
 	}
 
+	// Show what was found
+	fmt.Printf("\nFound %d profile file(s) in repository:\n", len(profileFiles))
+	for _, srcPath := range profileFiles {
+		fmt.Printf("  - %s\n", filepath.Base(srcPath))
+	}
+	fmt.Println()
+
 	// Copy and validate all profile files to config directory
 	summoned := 0
 	skipped := 0
+	cancelled := 0
+	
 	for _, srcPath := range profileFiles {
 		dstName := filepath.Base(srcPath)
 		dstPath := filepath.Join(inventoryDir, dstName)
@@ -163,10 +216,34 @@ func summonFromGit(repoURL, inventoryDir string) error {
 		}
 
 		// Validate file content before copying
-		fmt.Printf("Validating %s...\n", dstName)
+		fmt.Printf("\nValidating %s...\n", dstName)
 		if err := validateProfileFile(srcPath); err != nil {
 			fmt.Printf("⚠️  Skipping %s: %v\n", dstName, err)
 			skipped++
+			continue
+		}
+
+		// Get file info for size display
+		info, _ := os.Stat(srcPath)
+		size := info.Size()
+		
+		// Check if destination exists
+		overwriting := false
+		if _, err := os.Stat(dstPath); err == nil {
+			overwriting = true
+		}
+
+		// Ask for confirmation
+		fmt.Printf("  File: %s\n", dstName)
+		fmt.Printf("  Size: %d bytes (%.1f KB)\n", size, float64(size)/1024)
+		fmt.Printf("  Destination: %s\n", inventoryDir)
+		if overwriting {
+			fmt.Printf("  ⚠️  Warning: Will overwrite existing file\n")
+		}
+		
+		if !confirmAction(fmt.Sprintf("Summon %s?", dstName)) {
+			fmt.Printf("⊘ Cancelled: %s\n", dstName)
+			cancelled++
 			continue
 		}
 
@@ -177,15 +254,24 @@ func summonFromGit(repoURL, inventoryDir string) error {
 		summoned++
 	}
 
+	// Summary
+	fmt.Printf("\n=== Summary ===\n")
+	fmt.Printf("✓ Summoned: %d\n", summoned)
+	if cancelled > 0 {
+		fmt.Printf("⊘ Cancelled: %d\n", cancelled)
+	}
+	if skipped > 0 {
+		fmt.Printf("⚠️  Skipped: %d (validation errors)\n", skipped)
+	}
+
 	if summoned == 0 {
+		if cancelled > 0 {
+			return fmt.Errorf("no profiles summoned (all cancelled by user)")
+		}
 		return fmt.Errorf("no valid profile files found in repository (%d skipped)", skipped)
 	}
 
-	if skipped > 0 {
-		fmt.Printf("\n⚠️  %d file(s) skipped due to validation errors\n", skipped)
-	}
-
-	log.Printf("Successfully summoned %d profile(s) from repository: %s (skipped: %d)", summoned, repoURL, skipped)
+	log.Printf("Successfully summoned %d profile(s) from repository: %s (skipped: %d, cancelled: %d)", summoned, repoURL, skipped, cancelled)
 	return nil
 }
 

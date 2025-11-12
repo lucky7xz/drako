@@ -104,6 +104,7 @@ col = 0
 row = 1
 ```
 
+
 ---
 
 ## ✨ The Core Philosophy
@@ -120,16 +121,21 @@ row = 1
 
 -   **The Power of TUI Decks:** For those who wish to build true terminal cathedrals, `drako` serves as the gateway to `para13`, a `TUI-Deck` build with seamless integration into `drako`. More will be revealed in time. Stay tuned
 
-## Roadmap 
+---
 
- - [ ] Update Bootstrap collection
- - [ ] DRY and Refactor  
- - [ ] Full unit test suite
- - [ ] Windows support (limited)
- - [ ] Steamdeck support (limited)
- - [ ] ARM Support
- - [ ] CI/CD
+## 🪄 Summoning Profiles
 
+Share and reuse command decks across machines and teams. Instead of manually copying profiles, summon them directly from remote sources:
+
+```bash
+
+# Clones the repo and looks for .profile.toml files.
+# Discards the temporary repo
+
+drako summon git@github.com:user/my_profile_collection.git
+```
+
+Works with any git server (GitHub, GitLab, Gitea, Bitbucket, self-hosted). Pick and choose the files you need from your repo. Summoned profiles land in `~/.config/drako/inventory/`, ready to equip via the inventory (`i` key). Each profile is validated for safety (size limits, TOML format, profile structure) and requires your confirmation before copying. Private repos require SSH keys
 
 
 ## ⚠️ Safety First
@@ -137,6 +143,17 @@ row = 1
 - Only run commands you understand. Some entries perform system changes (e.g., package updates, Docker operations).
 - Review commands: press `e` to open the command description and read every command.
 - When unsure, consult documentation or ask a trusted friend/colleague.
+
+## Roadmap 
+
+ - [x] Update Bootstrap collection
+ - [x] Summon profiles 
+ - [ ] DRY and Refactor  
+ - [ ] Full unit test suite
+ - [ ] Windows support (limited)
+ - [ ] Steamdeck support (limited)
+ - [ ] ARM Support
+ - [ ] CI/CD
 
 ---
 
