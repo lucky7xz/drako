@@ -148,7 +148,7 @@ For git repos, profiles can declare `assets = ["path/or/dir", ...]` (relative), 
 ## Roadmap 
 
  - [x] Update Bootstrap collection
- - [x] Summon profiles 
+ - [x] Summon profiles incl assets
  - [ ] DRY and Refactor  
  - [ ] Full unit test suite
  - [ ] Windows support (limited)

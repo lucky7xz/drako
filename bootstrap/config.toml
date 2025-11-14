@@ -149,17 +149,20 @@ auto_close_execution = false
 # ┌─ Column 2: Network & Web ──────────────┐
 # └────────────────────────────────────────┘
 [[commands]]
-name = " 📦 Install Dependencies"
-description = "Bundled up all the little tools that this menu uses, just in case you don't have them. It's like getting all the batteries and accessories included for once. This makes sure all the other buttons here will work as expected. I like to be prepared, you know?"
-command = "sudo apt install micro btop neofetch clamav duf fzf bmon"
+name = " 📦 Install Dependencies ⋮ "
 col = "C"
 row = 0
-auto_close_execution = false
+description = "Bundled up all the little tools that this menu uses, just in case you don't have them. It's like getting all the batteries and accessories included for once. This makes sure all the other buttons here will work as expected. I like to be prepared, you know? "
+items = [
+    { name = "Install common tools", description = "Install utilities used across profiles (btop, neofetch, clamav, fzf, bmon).", command = "sudo apt install -y btop neofetch clamav fzf bmon", auto_close_execution = false},
+    { name = "Install micro", description = "Installs the micro text editor. Micro is a modern, easy-to-use terminal editor recommended for beginners.", command = "sudo apt install -y micro", auto_close_execution = false},
+    { name = "Set micro as $EDITOR", description = "$EDITOR is an environment variable that sets your default text editor. This adds it to ~/.bashrc. Restart your shell after.", command = "echo 'export EDITOR=micro' >> ~/.bashrc", auto_close_execution = false}
+]
 
 [[commands]]
 name = "📜 Open .bashrc"
 description = "This is where all your terminal customizations live. The .bashrc file loads every time you open a terminal and controls your aliases, environment variables, and prompt appearance. It's like the settings panel for your command line experience. I open this file whenever I want to add a new shortcut or tweak how my terminal behaves."
-command = "micro ~/.bashrc"
+command = "$EDITOR ~/.bashrc"
 col = "C"
 row = 1
 
@@ -178,15 +181,14 @@ name = "  🐉 dr4ko Config ⋮ "
 col = "Z"
 row = -1
 items = [
-    { name = "⚙️ Edit config.toml", description = "This is the command center, the cockpit, the big red button. It opens up the very file you're reading right now, so you can tweak and tune dR4ko to your heart's content. Want to change a command? A description? The theme? This is the place. It's like being handed the keys to the whole operation. A little bit of power is a fun thing, isn't it? Never be afraid to break stuff. Read the next description to see why.", command = "micro ~/.config/drako/config.toml"},
+    { name = "⚙️ Edit config.toml", description = "This is the command center, the cockpit, the big red button. It opens up the very file you're reading right now, so you can tweak and tune dR4ko to your heart's content. Want to change a command? A description? The theme? This is the place. It's like being handed the keys to the whole operation. A little bit of power is a fun thing, isn't it? Never be afraid to break stuff. Read the next description to see why.", command = "$EDITOR ~/.config/drako/config.toml"},
     { name = "📁 Browse config dir", description = "Welcome to the rabbit hole. In Linux, many of your configurations live in hidden folders, like this `.config` directory. It's a bit of a secret clubhouse for your apps. This command opens up the `drako` folder inside, where all its settings live. We've set you up with some sensible defaults, but the real magic is making it your own. Go ahead, poke around, make some changes. That's the whole point! You can even save your custom setups and reuse them. It's your system, your rules. Welcome to the world of dotfiles.", command = "yazi ~/.config/drako/"},
-    { name = "📜 Open Logs", description = "Opens the Drako log file to see what's been happening under the hood. Useful for debugging or just satisfying your curiosity about what Drako has been up to.", command = "micro ~/.config/drako/drako.log"},
-    { name = "📜 Open Pivots", description = "Opens the Drako log file to see what's been happening under the hood. Useful for debugging or just satisfying your curiosity about what Drako has been up to.", command = "micro ~/.config/drako/pivots.toml"},
+    { name = "📜 Open Logs", description = "Opens the Drako log file to see what's been happening under the hood. Useful for debugging or just satisfying your curiosity about what Drako has been up to.", command = "$EDITOR ~/.config/drako/drako.log"},
+    { name = "ℹ️ Open Pivots", description = "Opens the Drako pivot file to see what's been happening under the hood. Useful for debugging or just satisfying your curiosity about what Drako has been up to.", command = "$EDITOR ~/.config/drako/pivots.toml"},
 
     #===========================================================================================================
     { name = "Go Version", description = "Checks the installed Go version. Drako is built with Go, so if it fails to launch, confirming you have a compatible Go version is the first step.", command = "go version", auto_close_execution = false},
     { name = "Which Go", description = "Shows the exact location of the Go compiler. If this is empty or wrong, it means the system can't find the Go compiler, which is essential for building and running Drako.", command = "which go", auto_close_execution = false},
-    { name = "Go Env GOROOT", description = "Displays the GOROOT path, where Go's standard libraries are. An incorrect GOROOT can cause build failures.", command = "go env GOROOT", auto_close_execution = false},
-    { name = "Go Env GOPATH", description = "Displays the GOPATH, your workspace for Go projects. If Drako's source isn't in the right GOPATH, the compiler might not find it.", command = "go env GOPATH", auto_close_execution = false}
-
+    { name = "Add Go to .bashrc", description = "Appends GOPATH and PATH entries for Go to your ~/.bashrc if missing.", command = "if ! grep -q \"export GOPATH=\" ~/.bashrc; then printf \"\\n# Go environment\\nexport GOPATH=\\\"\\$HOME/go\\\"\\nexport PATH=\\\"\\$PATH:\\$GOPATH/bin:/usr/local/go/bin\\\"\\n\" >> ~/.bashrc; echo \"Appended Go env to ~/.bashrc\"; else echo \"Go env already present\"; fi", auto_close_execution = false}
+    
 ]
