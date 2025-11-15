@@ -18,10 +18,12 @@ import (
 )
 
 func (m model) Init() tea.Cmd {
+	configDir, _ := getConfigDir()
 	return tea.Batch(
 		tea.EnterAltScreen,
 		checkNetworkStatus(),
 		m.spinner.Tick,
+		watchConfigCmd(configDir),
 	)
 }
 
@@ -48,6 +50,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.mode = gridMode
 		return m, nil
+
+	case configChangedMsg:
+		// Config file changed on disk, reload everything
+		log.Printf("Config file change detected: %s", msg.path)
+		bundle := loadConfig(nil)
+		m.applyBundle(bundle)
+		if len(bundle.Broken) > 0 {
+			m.pendingProfileErrors = append(m.pendingProfileErrors, bundle.Broken...)
+			m.profileErrorQueueActive = true
+			m = m.presentNextBrokenProfile()
+		}
+		// Restart the watcher for the next change
+		configDir, _ := getConfigDir()
+		return m, watchConfigCmd(configDir)
 
 	case inventoryErrorMsg:
 		m.inventory.err = msg.err
@@ -81,7 +97,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, nil
 				}
 			}
-			if key == "`" {// might use ~ too with shift
+			if key == "`" { // might use ~ too with shift
 				return m.handleProfileCycle()
 			}
 		}
@@ -157,8 +173,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		return m, networkTick()
-
-
 
 	case navTimeoutMsg:
 		if m.navigationTimer != nil {
@@ -256,10 +270,18 @@ func (m model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.infoDescription = cmd.Description
 				// Resolve execution mode and auto-close
 				autoClose := true
-				if cmd.AutoCloseExecution != nil { autoClose = *cmd.AutoCloseExecution }
+				if cmd.AutoCloseExecution != nil {
+					autoClose = *cmd.AutoCloseExecution
+				}
 				debug := false
-				if cmd.DebugExecution != nil { debug = *cmd.DebugExecution }
-				if debug { m.infoExecMode = "debug" } else { m.infoExecMode = "live" }
+				if cmd.DebugExecution != nil {
+					debug = *cmd.DebugExecution
+				}
+				if debug {
+					m.infoExecMode = "debug"
+				} else {
+					m.infoExecMode = "live"
+				}
 				m.infoAutoClose = autoClose
 				m.infoCwd = m.currentPath
 				if strings.TrimSpace(cmd.Command) == "" {
@@ -470,10 +492,18 @@ func (m model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.infoDescription = item.Description
 			// Resolve execution mode and auto-close for item
 			autoClose := true
-			if item.AutoCloseExecution != nil { autoClose = *item.AutoCloseExecution }
+			if item.AutoCloseExecution != nil {
+				autoClose = *item.AutoCloseExecution
+			}
 			debug := false
-			if item.DebugExecution != nil { debug = *item.DebugExecution }
-			if debug { m.infoExecMode = "debug" } else { m.infoExecMode = "live" }
+			if item.DebugExecution != nil {
+				debug = *item.DebugExecution
+			}
+			if debug {
+				m.infoExecMode = "debug"
+			} else {
+				m.infoExecMode = "live"
+			}
 			m.infoAutoClose = autoClose
 			m.infoCwd = m.currentPath
 			if strings.TrimSpace(item.Command) == "" {
@@ -677,7 +707,6 @@ func (m model) handleProfileCycle() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-
 func (m *model) moveCursor(rowDir, colDir int) {
 	bestRow, bestCol := -1, -1
 	minDist := math.MaxFloat64
@@ -773,16 +802,16 @@ func getLinuxClipboardCommand() (string, []string) {
 			return "wl-copy", []string{}
 		}
 	}
-	
+
 	// Check for X11 clipboard utilities
 	if _, err := exec.LookPath("xclip"); err == nil {
 		return "xclip", []string{"-selection", "clipboard"}
 	}
-	
+
 	if _, err := exec.LookPath("xsel"); err == nil {
 		return "xsel", []string{"--clipboard", "--input"}
 	}
-	
+
 	// No clipboard utility found
 	return "", []string{}
 }
@@ -791,7 +820,7 @@ func getLinuxClipboardCommand() (string, []string) {
 func tryOSC52(s string) bool {
 	// Encode the string in base64
 	enc := base64.StdEncoding.EncodeToString([]byte(s))
-	
+
 	// Check if we're running in tmux
 	if os.Getenv("TMUX") != "" {
 		// Tmux requires special wrapping
@@ -804,7 +833,7 @@ func tryOSC52(s string) bool {
 		log.Printf("Attempted to copy to clipboard using OSC52 (tmux) - this requires terminal support")
 		return true
 	}
-	
+
 	// Check if we're running in screen
 	if os.Getenv("STY") != "" {
 		// Screen requires special wrapping
@@ -817,7 +846,7 @@ func tryOSC52(s string) bool {
 		log.Printf("Attempted to copy to clipboard using OSC52 (screen) - this requires terminal support")
 		return true
 	}
-	
+
 	// Standard OSC52 sequence
 	seq := fmt.Sprintf("\x1b]52;c;%s\x07", enc)
 	_, err := os.Stderr.WriteString(seq)
@@ -825,7 +854,7 @@ func tryOSC52(s string) bool {
 		log.Printf("OSC52 copy failed: %v", err)
 		return false
 	}
-	
+
 	log.Printf("Attempted to copy to clipboard using OSC52 - this requires terminal support")
 	return true
 }
@@ -872,7 +901,7 @@ func tryCommand(s string, name string, args ...string) bool {
 		log.Printf("Clipboard command failed: %s %v, error: %v", name, args, err)
 		return false
 	}
-	
+
 	log.Printf("Successfully copied to clipboard using: %s %v", name, args)
 	return true
 }
