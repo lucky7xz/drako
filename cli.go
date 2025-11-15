@@ -20,6 +20,9 @@ func handleCLI() bool {
 	case "summon", "--summon":
 		handleSummonCommand()
 		return true
+	case "purge", "--purge":
+		handlePurgeCommand()
+		return true
 	default:
 		return false
 	}
@@ -76,5 +79,52 @@ func printSummonUsage() {
 	fmt.Fprintf(os.Stderr, "\n  # Summon from a git repository (finds all .profile.toml files):\n")
 	fmt.Fprintf(os.Stderr, "  drako summon git@github.com:user/repo.git\n")
 	fmt.Fprintf(os.Stderr, "  drako summon https://github.com/user/repo.git\n")
+}
+
+// handlePurgeCommand processes the 'drako purge' command
+func handlePurgeCommand() {
+	configDir, err := getConfigDir()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Check for --all flag
+	nukeAll := false
+	if len(os.Args) > 2 && (os.Args[2] == "--all" || os.Args[2] == "-a") {
+		nukeAll = true
+	}
+
+	// Setup logging for CLI command (if not nuking everything)
+	if !nukeAll {
+		logPath := filepath.Join(configDir, "drako.log")
+		logFile, err := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: could not open log file: %v\n", err)
+		} else {
+			defer logFile.Close()
+			log.SetOutput(logFile)
+		}
+	}
+
+	if nukeAll {
+		log.Printf("Purge --all command invoked")
+	} else {
+		log.Printf("Purge command invoked")
+	}
+	
+	if err := purgeConfig(configDir, nukeAll); err != nil {
+		log.Printf("Purge failed: %v", err)
+		fmt.Fprintf(os.Stderr, "Purge failed: %v\n", err)
+		os.Exit(1)
+	}
+
+	if nukeAll {
+		fmt.Printf("\n✓ Full purge completed - %s has been deleted\n", configDir)
+	} else {
+		fmt.Printf("\n✓ Purge completed successfully\n")
+		fmt.Printf("✓ config.toml has been preserved at %s/config.toml\n", configDir)
+	}
+	os.Exit(0)
 }
 
