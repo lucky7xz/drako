@@ -1,6 +1,8 @@
 module github.com/lucky7xz/drako
 
-go 1.24
+go 1.24.0
+
+toolchain go1.24.4
 
 require (
 	github.com/BurntSushi/toml v1.5.0
