@@ -18,6 +18,7 @@ const (
 	inventoryMode
 	dropdownMode
 	infoMode
+	lockedMode
 )
 
 type (
@@ -32,6 +33,7 @@ type (
 		id int
 	}
 	navTimeoutMsg struct{}
+	lockCheckMsg  struct{}
 )
 
 type CommandItem struct {
@@ -54,15 +56,16 @@ type Command struct {
 }
 
 type Config struct {
-	DR4koPath    string    `toml:"dR4ko_path"`
-	Theme        string    `toml:"theme"`
-	HeaderArt    *string   `toml:"header_art"`
-	DefaultShell string    `toml:"default_shell"`
-	NumbModifier string    `toml:"numb_modifier"`
-	X            int       `toml:"x"`
-	Y            int       `toml:"y"`
-	Profile      string    `toml:"profile"`
-	Commands     []Command `toml:"commands"`
+	DR4koPath          string    `toml:"dR4ko_path"`
+	Theme              string    `toml:"theme"`
+	HeaderArt          *string   `toml:"header_art"`
+	DefaultShell       string    `toml:"default_shell"`
+	NumbModifier       string    `toml:"numb_modifier"`
+	X                  int       `toml:"x"`
+	Y                  int       `toml:"y"`
+	Profile            string    `toml:"profile"`
+	LockTimeoutMinutes *int      `toml:"lock_timeout_minutes"`
+	Commands           []Command `toml:"commands"`
 }
 
 type ProfileInfo struct {
@@ -93,14 +96,15 @@ type configBundle struct {
 
 
 type profileOverlay struct {
-	DR4koPath    *string          `toml:"dR4ko_path"`
-	X            *int             `toml:"x"`
-	Y            *int             `toml:"y"`
-	Theme        *string    `toml:"theme"`
-	HeaderArt    *string    `toml:"header_art"`
-	DefaultShell *string    `toml:"default_shell"`
-	NumbModifier *string    `toml:"numb_modifier"`
-	Assets       *[]string  `toml:"assets"`
-	Commands     *[]Command `toml:"commands"`
+	DR4koPath          *string    `toml:"dR4ko_path"`
+	X                  *int       `toml:"x"`
+	Y                  *int       `toml:"y"`
+	Theme              *string    `toml:"theme"`
+	HeaderArt          *string    `toml:"header_art"`
+	DefaultShell       *string    `toml:"default_shell"`
+	NumbModifier       *string    `toml:"numb_modifier"`
+	LockTimeoutMinutes *int       `toml:"lock_timeout_minutes"`
+	Assets             *[]string  `toml:"assets"`
+	Commands           *[]Command `toml:"commands"`
 }
 

@@ -24,7 +24,15 @@ func (m model) Init() tea.Cmd {
 		checkNetworkStatus(),
 		m.spinner.Tick,
 		watchConfigCmd(configDir),
+		lockCheckTick(),
 	)
+}
+
+// lockCheckTick creates a command that checks for auto-lock every 30 seconds
+func lockCheckTick() tea.Cmd {
+	return tea.Tick(30*time.Second, func(time.Time) tea.Msg {
+		return lockCheckMsg{}
+	})
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -77,6 +85,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		key := msg.String()
 		log.Printf("Key pressed: %q", key)
+
+		// Update last activity time for any key press (except in locked mode)
+		if m.mode != lockedMode {
+			m.lastActivityTime = time.Now()
+		}
+
+		// Handle locked mode separately
+		if m.mode == lockedMode {
+			return m.updateLockedMode(msg)
+		}
+
 		if key == "r" {
 			cmd := m.toggleProfileLock()
 			return m, cmd
@@ -188,6 +207,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.statusClearTimerID = 0
 		m.profileStatusMessage = ""
 		return m, nil
+
+	case lockCheckMsg:
+		// Check if we should auto-lock
+		if m.mode != lockedMode && m.lockTimeoutMins > 0 {
+			elapsed := time.Since(m.lastActivityTime)
+			if elapsed >= time.Duration(m.lockTimeoutMins)*time.Minute {
+				log.Printf("Auto-locking after %v of inactivity", elapsed)
+				m = m.enterLockedMode()
+			}
+		}
+		return m, lockCheckTick()
 
 	}
 
@@ -564,6 +594,53 @@ func (m model) updateInfoMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	default:
 		m.mode = m.previousMode
 		return m, nil
+	}
+}
+
+func (m model) updateLockedMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	key := msg.String()
+
+	// Allow Ctrl+C to quit even when locked
+	if key == "ctrl+c" {
+		m.quitting = true
+		return m, tea.Quit
+	}
+
+	dir := pumpDirectionForKey(key)
+	if dir == 0 {
+		return m, nil
+	}
+
+	// Require alternating directions to "pump" the slider
+	if m.lockLastDirection == dir {
+		if m.lockProgress > 0 {
+			m.lockProgress--
+		}
+		return m, nil
+	}
+
+	m.lockLastDirection = dir
+	if m.lockProgress < m.lockPumpGoal {
+		m.lockProgress++
+	}
+
+	if m.lockProgress >= m.lockPumpGoal {
+		log.Printf("Unlocking via pump sequence after %d steps", m.lockProgress)
+		m = m.exitLockedMode()
+		return m, nil
+	}
+
+	return m, nil
+}
+
+func pumpDirectionForKey(key string) int {
+	switch key {
+	case "left", "h", "a":
+		return -1
+	case "right", "l", "d":
+		return 1
+	default:
+		return 0
 	}
 }
 

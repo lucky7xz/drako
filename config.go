@@ -110,6 +110,7 @@ func overlayIsEmpty(ov profileOverlay) bool {
 	if ov.Theme != nil { return false }
 	if ov.DefaultShell != nil { return false }
 	if ov.NumbModifier != nil { return false }
+	if ov.LockTimeoutMinutes != nil { return false }
 	if ov.Commands != nil && len(*ov.Commands) > 0 { return false }
 	return true
 }
@@ -225,6 +226,10 @@ func applyProfileOverlay(base Config, overlay profileOverlay) Config {
 
 	if overlay.NumbModifier != nil {
 		cfg.NumbModifier = *overlay.NumbModifier
+	}
+
+	if overlay.LockTimeoutMinutes != nil {
+		cfg.LockTimeoutMinutes = overlay.LockTimeoutMinutes
 	}
 
 	if overlay.Commands != nil {

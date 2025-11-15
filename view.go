@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 )
@@ -15,6 +16,10 @@ func (m model) View() string {
 	// If terminal is too small even at min_scale, show blocking overlay
 	if tooSmall, reqW, reqH := isBelowMinimum(m.termWidth, m.termHeight, m.config); tooSmall {
 		return m.renderSizeOverlay(reqW, reqH)
+	}
+
+	if m.mode == lockedMode {
+		return m.viewLockedMode()
 	}
 
 	if m.mode == inventoryMode {
@@ -592,6 +597,76 @@ func (m model) renderDropdownPopup() string {
 
 	content := lipgloss.JoinVertical(lipgloss.Left, lines...)
 	return dropdownPopupStyle.Render(content)
+}
+
+func (m model) viewLockedMode() string {
+	// Calculate time since last activity
+	elapsed := time.Since(m.lastActivityTime)
+	elapsedMins := int(elapsed.Minutes())
+
+	if elapsedMins < 0 {
+		elapsedMins = 0
+	}
+
+	goal := m.lockPumpGoal
+	if goal <= 0 {
+		goal = defaultLockPumpGoal
+	}
+
+	barWidth := 24
+	progress := m.lockProgress
+	if progress < 0 {
+		progress = 0
+	}
+	if progress > goal {
+		progress = goal
+	}
+
+	filled := progress * barWidth / goal
+	if filled > barWidth {
+		filled = barWidth
+	}
+
+	bar := "[" + strings.Repeat("█", filled) + strings.Repeat("░", barWidth-filled) + "]"
+
+	lockIcon := "🔒"
+	title := titleStyle.Render("Session Locked")
+	timeInfo := helpStyle.Render(fmt.Sprintf("Idle for %d minute(s)", elapsedMins))
+	instructions := helpStyle.Render("Pump ← → (A/D or H/L) to fill the slider and unlock")
+	progressLabel := helpStyle.Render(fmt.Sprintf("%d / %d pumps", m.lockProgress, goal))
+	quitHint := helpStyle.Render("Press Ctrl+C to quit")
+
+	content := lipgloss.JoinVertical(
+		lipgloss.Center,
+		"",
+		lockIcon,
+		"",
+		title,
+		"",
+		timeInfo,
+		"",
+		instructions,
+		"",
+		progressLabel,
+		bar,
+		"",
+		quitHint,
+	)
+
+	// Add a border box around the lock screen
+	box := lipgloss.NewStyle().
+		Padding(2, 4).
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#FFA500")).
+		Align(lipgloss.Center).
+		Render(content)
+
+	return appStyle.Render(
+		lipgloss.Place(m.termWidth, m.termHeight,
+			lipgloss.Center, lipgloss.Center,
+			box,
+		),
+	)
 }
 
 func (m model) viewInfoMode() string {

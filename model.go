@@ -15,7 +15,9 @@ import (
 )
 
 const (
-	profileStatusDuration = 3 * time.Second
+	profileStatusDuration     = 3 * time.Second
+	defaultLockTimeoutMinutes = 5
+	defaultLockPumpGoal       = 6
 )
 
 type model struct {
@@ -77,6 +79,13 @@ type model struct {
 
 	pendingProfileErrors    []ProfileParseError
 	profileErrorQueueActive bool
+
+	lastActivityTime time.Time
+	lockTimeoutMins  int
+	modeBeforeLock   navMode
+	lockProgress     int
+	lockPumpGoal     int
+	lockLastDirection int
 }
 
 func (m *model) applyConfig(cfg Config) {
@@ -107,6 +116,17 @@ func (m *model) applyConfig(cfg Config) {
 		m.spinner.Spinner = spinner.Line
 	}
 	m.spinner.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF"))
+
+	// Initialize lock timeout (default minutes if not set)
+	if cfg.LockTimeoutMinutes != nil && *cfg.LockTimeoutMinutes > 0 {
+		m.lockTimeoutMins = *cfg.LockTimeoutMinutes
+	} else {
+		m.lockTimeoutMins = defaultLockTimeoutMinutes
+	}
+
+	if m.lockPumpGoal <= 0 {
+		m.lockPumpGoal = defaultLockPumpGoal
+	}
 }
 
 func (m *model) applyBundle(bundle configBundle) {
@@ -190,6 +210,9 @@ func initialModel() model {
 		mode:              gridMode,
 		spinner:           s,
 		baseConfig:        bundle.Base,
+		lastActivityTime:  time.Now(),
+		modeBeforeLock:    gridMode,
+		lockPumpGoal:      defaultLockPumpGoal,
 	}
 	m.applyBundle(bundle)
 	if len(bundle.Broken) > 0 {
@@ -328,4 +351,24 @@ func (m *model) toggleProfileLock() tea.Cmd {
 		return m.setProfileStatus("Pivot error", false)
 	}
 	return messageCmd
+}
+
+func (m model) enterLockedMode() model {
+	if m.mode != lockedMode {
+		m.modeBeforeLock = m.mode
+	}
+	m.mode = lockedMode
+	m.lockProgress = 0
+	m.lockLastDirection = 0
+	return m
+}
+
+func (m model) exitLockedMode() model {
+	if m.mode == lockedMode {
+		m.mode = m.modeBeforeLock
+	}
+	m.lastActivityTime = time.Now()
+	m.lockProgress = 0
+	m.lockLastDirection = 0
+	return m
 }
