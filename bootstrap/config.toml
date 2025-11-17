@@ -189,6 +189,5 @@ items = [
     #===========================================================================================================
     { name = "Go Version", description = "Checks the installed Go version. Drako is built with Go, so if it fails to launch, confirming you have a compatible Go version is the first step.", command = "go version", auto_close_execution = false},
     { name = "Which Go", description = "Shows the exact location of the Go compiler. If this is empty or wrong, it means the system can't find the Go compiler, which is essential for building and running Drako.", command = "which go", auto_close_execution = false},
-    { name = "Add Go to .bashrc", description = "Appends GOPATH and PATH entries for Go to your ~/.bashrc if missing.", command = "if ! grep -q \"export GOPATH=\" ~/.bashrc; then printf \"\\n# Go environment\\nexport GOPATH=\\\"\\$HOME/go\\\"\\nexport PATH=\\\"\\$PATH:\\$GOPATH/bin:/usr/local/go/bin\\\"\\n\" >> ~/.bashrc; echo \"Appended Go env to ~/.bashrc\"; else echo \"Go env already present\"; fi", auto_close_execution = false}
     
 ]

@@ -5,6 +5,8 @@ The terminal is a realm of immense power, but also of high entropy. Commands are
 
 ## 🚀 Quick Start
 
+> Requires Go **1.24** or newer.
+
 `If go is installed, installing `drako` is a single command.
 
 ```bash
@@ -164,6 +166,17 @@ Ideas are welcome. Bugs will be hunted.
 -   **Issues:** Report defects or propose architectural changes.
 -   **Pull Requests:** Fork the repository and submit your work.
 -   **Alpha State:** `drako` is currently in ALPHA. It is stable but evolving. This is your opportunity to influence its development.
+
+---
+
+## ❤️ Thanks to Charmbracelet
+
+`drako` uses several Charmbracelet projects to deliver the TUI:
+
+- [`bubbletea`](https://github.com/charmbracelet/bubbletea) for the model/view/update loop
+- [`lipgloss`](https://github.com/charmbracelet/lipgloss) for layout and styling
+- [`bubbles`](https://github.com/charmbracelet/bubbles) for common components
+
 
 
 ## 📜 License
