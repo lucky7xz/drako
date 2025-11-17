@@ -105,7 +105,7 @@ description = "Publish local commits upstream."
 col = "C"
 row = 1
 items = [
-    { name = "Push Current Branch", description = "Uploads your current branch to its upstream remote.", command = "git push", auto_close_execution = falqse }
+    { name = "Push Current Branch", description = "Uploads your current branch to its upstream remote.", command = "git push", auto_close_execution = false }
 ]
 
 [[commands]]
