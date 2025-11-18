@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -10,6 +11,11 @@ import (
 
 	"github.com/BurntSushi/toml"
 )
+
+func fatalf(format string, args ...any) {
+	fmt.Fprintf(os.Stderr, format+"\n", args...)
+	log.Fatalf(format, args...)
+}
 
 func letterToColumn(s string) (int, error) {
 	if len(s) != 1 {
@@ -63,7 +69,7 @@ func buildGrid(config Config) [][]string {
 		row := cmd.Row
 		col, err := letterToColumn(cmd.Col)
 		if err != nil {
-			log.Fatalf("invalid column value for command %q: %v", cmd.Name, err)
+			fatalf("invalid column value for command %q: %v", cmd.Name, err)
 		}
 
 		if row == -1 {
@@ -331,14 +337,14 @@ func loadConfig(profileOverride *string) configBundle {
 	configDir, err := getConfigDir()
 
 	if err != nil {
-		log.Fatalf("could not resolve a config directory: %v", err)
+		fatalf("could not resolve a config directory: %v", err)
 	}
 
 	configPath := filepath.Join(configDir, "config.toml")
 	// First run: if config file is missing, ensure dir and copy embedded bootstrap assets
 	if _, statErr := os.Stat(configPath); errors.Is(statErr, os.ErrNotExist) {
 		if mkErr := os.MkdirAll(configDir, 0o755); mkErr != nil {
-			log.Fatalf("could not create config directory: %v", mkErr)
+			fatalf("could not create config directory: %v", mkErr)
 		}
 		if err := bootstrapCopy(configDir); err != nil {
 			log.Printf("warning: bootstrap copy failed: %v", err)
@@ -359,18 +365,18 @@ func loadConfig(profileOverride *string) configBundle {
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		if err := os.MkdirAll(configDir, 0o755); err != nil {
-			log.Fatalf("could not create config directory: %v", err)
+			fatalf("could not create config directory: %v", err)
 		}
 
 		base = defaultConfig()
 		f, err := os.Create(configPath)
 		if err != nil {
-			log.Fatalf("could not create config file: %v", err)
+			fatalf("could not create config file: %v", err)
 		}
 
 		defer f.Close()
 		if err := toml.NewEncoder(f).Encode(base); err != nil {
-			log.Fatalf("could not write to config file: %v", err)
+			fatalf("could not write to config file: %v", err)
 		}
 
 
@@ -378,11 +384,11 @@ func loadConfig(profileOverride *string) configBundle {
 		log.Printf("Loading config from: %s", configPath)
 		configBytes, err := os.ReadFile(configPath)
 		if err != nil {
-			log.Fatalf("could not read config file: %v", err)
+			fatalf("could not read config file: %v", err)
 		}
 		configString := os.ExpandEnv(string(configBytes))
 		if _, err := toml.Decode(configString, &base); err != nil {
-			log.Fatalf("could not decode config file: %v", err)
+			fatalf("could not decode config file: %v", err)
 		}
 		// Apply defaults for any missing fields
 		defaults := defaultConfig()
