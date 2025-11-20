@@ -27,7 +27,7 @@ func (m model) View() string {
 	}
 
 	if m.mode == dropdownMode {
-    	return m.viewDropdownMode()
+		return m.viewDropdownMode()
 	}
 
 	if m.mode == infoMode {
@@ -71,8 +71,6 @@ func (m model) View() string {
 	pathBar := m.renderPathBar()
 	childDirs := m.renderChildDirs()
 
-	appFooter := m.renderFooter()
-
 	footer := lipgloss.JoinVertical(
 		lipgloss.Left,
 		help,
@@ -82,17 +80,10 @@ func (m model) View() string {
 		childDirs,
 	)
 
-	// Center the footer separately
-	centeredFooter := lipgloss.NewStyle().
-		Width(m.termWidth).
-		Align(lipgloss.Center).
-		Render(appFooter)
-
 	finalContent := lipgloss.JoinVertical(
 		lipgloss.Center,
 		mainContent,
 		footer,
-		centeredFooter,
 	)
 
 	return appStyle.Render(
@@ -213,7 +204,7 @@ func (m model) renderGrid() string {
 
 			headerContent := headerCellStyle.Render(styledLabel)
 			headerWithLines := strings.ReplaceAll(headerContent, " ", "─")
-			
+
 			headerPart := fmt.Sprintf("┌%s┐", headerWithLines)
 			headerParts = append(headerParts, headerPart)
 		}
@@ -278,7 +269,7 @@ func truncateText(s string, maxLength int) string {
 	if lipgloss.Width(s) <= maxLength {
 		return s
 	}
-	
+
 	var truncated strings.Builder
 	var currentWidth int
 	for _, r := range s {
@@ -289,7 +280,7 @@ func truncateText(s string, maxLength int) string {
 		truncated.WriteRune(r)
 		currentWidth += runeWidth
 	}
-	
+
 	return truncated.String() + "..."
 }
 
@@ -309,9 +300,9 @@ func (m model) renderProfileBar() string {
 		}
 		segments = append(segments, style.Render(m.profileStatusMessage))
 	}
-	
+
 	//segments = append(segments, helpStyle.Render(" \n\n		Press i for Inventory"))
-	
+
 	return lipgloss.NewStyle().PaddingTop(1).Render(lipgloss.JoinHorizontal(lipgloss.Left, segments...))
 }
 
@@ -515,7 +506,6 @@ func (m model) viewDropdownMode() string {
 	profileBar := m.renderProfileBar()
 	pathBar := m.renderPathBar()
 	childDirs := m.renderChildDirs()
-	appFooter := m.renderFooter()
 
 	footer := lipgloss.JoinVertical(
 		lipgloss.Left,
@@ -526,22 +516,15 @@ func (m model) viewDropdownMode() string {
 		childDirs,
 	)
 
-	// Center the footer separately
-	centeredFooter := lipgloss.NewStyle().
-		Width(m.termWidth).
-		Align(lipgloss.Center).
-		Render(appFooter)
-
 	finalContent := lipgloss.JoinVertical(
 		lipgloss.Center,
 		mainContent,
 		footer,
-		centeredFooter,
 	)
 
 	// Render dropdown popup
 	dropdownPopup := m.renderDropdownPopup()
-	
+
 	// Place the dropdown in the center of the screen
 	popupOverlay := lipgloss.Place(m.termWidth, m.termHeight,
 		lipgloss.Center, lipgloss.Center,
@@ -661,10 +644,21 @@ func (m model) viewLockedMode() string {
 		Align(lipgloss.Center).
 		Render(content)
 
+	footer := lipgloss.NewStyle().
+		Width(m.termWidth).
+		Align(lipgloss.Center).
+		Render(m.renderFooter())
+
+	body := lipgloss.JoinVertical(
+		lipgloss.Center,
+		box,
+		footer,
+	)
+
 	return appStyle.Render(
 		lipgloss.Place(m.termWidth, m.termHeight,
 			lipgloss.Center, lipgloss.Center,
-			box,
+			body,
 		),
 	)
 }
@@ -681,12 +675,18 @@ func (m model) viewInfoMode() string {
 
 	// Wrap width for info popup content
 	wrapWidth := m.termWidth - 10
-	if wrapWidth > 80 { wrapWidth = 80 }
-	if wrapWidth < 20 { wrapWidth = 20 }
+	if wrapWidth > 80 {
+		wrapWidth = 80
+	}
+	if wrapWidth < 20 {
+		wrapWidth = 20
+	}
 
 	// Local helpers to wrap text by visual width
 	wrapWord := func(word string, width int) []string {
-		if width <= 0 { return []string{word} }
+		if width <= 0 {
+			return []string{word}
+		}
 		var out []string
 		var b strings.Builder
 		cur := 0
@@ -700,13 +700,19 @@ func (m model) viewInfoMode() string {
 			b.WriteRune(r)
 			cur += w
 		}
-		if b.Len() > 0 { out = append(out, b.String()) }
+		if b.Len() > 0 {
+			out = append(out, b.String())
+		}
 		return out
 	}
 	wrapLine := func(s string, width int) []string {
-		if width <= 0 { return []string{s} }
+		if width <= 0 {
+			return []string{s}
+		}
 		fields := strings.Fields(s)
-		if len(fields) == 0 { return []string{""} }
+		if len(fields) == 0 {
+			return []string{""}
+		}
 		var lines []string
 		var line string
 		for _, word := range fields {
@@ -732,7 +738,9 @@ func (m model) viewInfoMode() string {
 				}
 			}
 		}
-		if line != "" { lines = append(lines, line) }
+		if line != "" {
+			lines = append(lines, line)
+		}
 		return lines
 	}
 
@@ -745,7 +753,10 @@ func (m model) viewInfoMode() string {
 		raw = append(raw, labelStyle.Render("Command:"))
 		for _, para := range strings.Split(m.infoCommand, "\n") {
 			para = strings.TrimSpace(para)
-			if para == "" { raw = append(raw, valueStyle.Render("")); continue }
+			if para == "" {
+				raw = append(raw, valueStyle.Render(""))
+				continue
+			}
 			for _, ln := range wrapLine(para, wrapWidth) {
 				raw = append(raw, valueStyle.Render(ln))
 			}
@@ -756,7 +767,10 @@ func (m model) viewInfoMode() string {
 		raw = append(raw, labelStyle.Render("Description:"))
 		for _, para := range strings.Split(m.infoDescription, "\n") {
 			para = strings.TrimSpace(para)
-			if para == "" { raw = append(raw, valueStyle.Render("")); continue }
+			if para == "" {
+				raw = append(raw, valueStyle.Render(""))
+				continue
+			}
 			for _, ln := range wrapLine(para, wrapWidth) {
 				raw = append(raw, valueStyle.Render(ln))
 			}
@@ -776,12 +790,16 @@ func (m model) viewInfoMode() string {
 			maxW = w
 		}
 	}
-	if maxW == 0 { maxW = 1 }
+	if maxW == 0 {
+		maxW = 1
+	}
 
 	var lines []string
 	for _, line := range raw {
 		pad := maxW - lipgloss.Width(line)
-		if pad < 0 { pad = 0 }
+		if pad < 0 {
+			pad = 0
+		}
 		lines = append(lines, line+bgFill.Render(strings.Repeat(" ", pad)))
 	}
 
