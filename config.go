@@ -41,6 +41,14 @@ func defaultConfig() Config {
 		Theme:        "dracula",
 		NumbModifier: "alt",
 		DefaultShell: "bash",
+		Keys: InputConfig{
+			Explain:      "e",
+			Inventory:    "i",
+			PathGridMode: "tab",
+			Lock:         "r",
+			ProfilePrev:  "o",
+			ProfileNext:  "p",
+		},
 	}
 }
 
@@ -95,7 +103,9 @@ func copyCommands(src []Command) []Command {
 }
 
 func expandCommandTokens(s string, cfg Config) string {
-	if strings.TrimSpace(s) == "" { return s }
+	if strings.TrimSpace(s) == "" {
+		return s
+	}
 	s = strings.ReplaceAll(s, "{dR4ko_path}", cfg.DR4koPath)
 	return s
 }
@@ -110,14 +120,30 @@ func fileExists(path string) bool {
 
 // overlayIsEmpty returns true if no settings are provided in the overlay.
 func overlayIsEmpty(ov profileOverlay) bool {
-	if ov.DR4koPath != nil { return false }
-	if ov.X != nil { return false }
-	if ov.Y != nil { return false }
-	if ov.Theme != nil { return false }
-	if ov.DefaultShell != nil { return false }
-	if ov.NumbModifier != nil { return false }
-	if ov.LockTimeoutMinutes != nil { return false }
-	if ov.Commands != nil && len(*ov.Commands) > 0 { return false }
+	if ov.DR4koPath != nil {
+		return false
+	}
+	if ov.X != nil {
+		return false
+	}
+	if ov.Y != nil {
+		return false
+	}
+	if ov.Theme != nil {
+		return false
+	}
+	if ov.DefaultShell != nil {
+		return false
+	}
+	if ov.NumbModifier != nil {
+		return false
+	}
+	if ov.LockTimeoutMinutes != nil {
+		return false
+	}
+	if ov.Commands != nil && len(*ov.Commands) > 0 {
+		return false
+	}
 	return true
 }
 
@@ -246,8 +272,6 @@ func applyProfileOverlay(base Config, overlay profileOverlay) Config {
 
 }
 
-
-
 const pivotProfileFilename = "pivot.toml"
 
 func getConfigDir() (string, error) {
@@ -267,13 +291,9 @@ func getConfigDir() (string, error) {
 
 }
 
-
-
 func pivotProfilePath(configDir string) string {
 	return filepath.Join(configDir, pivotProfileFilename)
 }
-
-
 
 type pivotFile struct {
 	Locked        string   `toml:"locked"`
@@ -359,8 +379,6 @@ func loadConfig(profileOverride *string) configBundle {
 	pivotRequested := false
 	requestedPivot := strings.TrimSpace(pf.Locked)
 
-
-
 	var base Config
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
@@ -378,7 +396,6 @@ func loadConfig(profileOverride *string) configBundle {
 		if err := toml.NewEncoder(f).Encode(base); err != nil {
 			fatalf("could not write to config file: %v", err)
 		}
-
 
 	} else {
 		log.Printf("Loading config from: %s", configPath)
@@ -401,10 +418,31 @@ func loadConfig(profileOverride *string) configBundle {
 		if strings.TrimSpace(base.Theme) == "" {
 			base.Theme = defaults.Theme
 		}
+		// Apply key defaults if missing
+		if strings.TrimSpace(base.Keys.Explain) == "" {
+			base.Keys.Explain = defaults.Keys.Explain
+		}
+		if strings.TrimSpace(base.Keys.Inventory) == "" {
+			base.Keys.Inventory = defaults.Keys.Inventory
+		}
+		if strings.TrimSpace(base.Keys.PathGridMode) == "" {
+			base.Keys.PathGridMode = defaults.Keys.PathGridMode
+		}
+		if strings.TrimSpace(base.Keys.Lock) == "" {
+			base.Keys.Lock = defaults.Keys.Lock
+		}
+		if strings.TrimSpace(base.Keys.ProfilePrev) == "" {
+			base.Keys.ProfilePrev = defaults.Keys.ProfilePrev
+		}
+		if strings.TrimSpace(base.Keys.ProfileNext) == "" {
+			base.Keys.ProfileNext = defaults.Keys.ProfileNext
+		}
 		log.Printf("Loaded config: X=%d, Y=%d, Commands=%d", base.X, base.Y, len(base.Commands))
 	}
 
 	clampConfig(&base)
+	// Compute the navigation sets based on flags
+	base.Keys.initControls()
 
 	profiles, broken := discoverProfilesWithErrors(configDir)
 	// Reorder profiles based on pivot equipped_order
@@ -423,7 +461,9 @@ func loadConfig(profileOverride *string) configBundle {
 		}
 		if len(remaining) > 0 {
 			var rest []ProfileInfo
-			for _, v := range remaining { rest = append(rest, v) }
+			for _, v := range remaining {
+				rest = append(rest, v)
+			}
 			sort.Slice(rest, func(i, j int) bool { return rest[i].Name < rest[j].Name })
 			ordered = append(ordered, rest...)
 		}
@@ -475,8 +515,13 @@ func loadConfig(profileOverride *string) configBundle {
 		// Either an explicitly requested profile was missing/broken, or there are broken overlays present
 		// and we are using Default. Fall back to factory defaults (3x3).
 		effective = defaultConfig()
+		// Ensure controls are initialized for factory default
+		effective.Keys.initControls()
 	} else if normalizeProfileName(selected.Name) != "default" {
 		effective = applyProfileOverlay(base, selected.Overlay)
+		// Controls might have been updated if overlay affects base config (which it does)
+		// Re-init controls to be safe, although keys aren't currently overridable per profile
+		effective.Keys.initControls()
 		log.Printf("Applied profile overlay: %s", selected.Name)
 	}
 

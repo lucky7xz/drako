@@ -1,4 +1,4 @@
-# dR4ko - TUI Mask Configuration (Generic Unix Desktop)
+# dR4ko - Default Config
 
 # ┌─ Fun Stuff ───────────────────────────────────────────┐
 # │ How about some header art? 
@@ -35,9 +35,30 @@ y = 4
 # │ "ctrl" is another option, but may be intercepted by your
 # │ terminal or window manager.
 # │ Function keys (F1-F9) are not configured via this string.
-# └──────────────────────────────────────────────────────────┘
+# └───────────────────────────────────────────────────────────┘
 numb_modifier = "alt"
 
+
+# ┌─ Key Bindings ─────────────────────────────────────────────┐
+# │ Customize your control scheme.
+# │ Arrows are always enabled.
+# │ Defaults are shown commented out.
+# └────────────────────────────────────────────────────────────┘
+[keys]
+#disable_wasd_bindings = true
+#disable_vim_bindings = true
+
+#explain = "e"
+#inventory = "i"
+#path_grid_mode = "tab"
+#lock = "r"
+profile_prev = "o"
+profile_next = "p"
+
+
+
+#TODO : THIS MGIHT BE REMOVED ON BETA
+# =======================================================================================================
 
 # ┌─ Project Path ─────────────────────────────────────────────┐
 # │ Base path for dR4ko project - other tools can inherit this
@@ -45,7 +66,6 @@ numb_modifier = "alt"
 dR4ko_path = "/home/$USER/dotfiles/scripts/drako"
 
 
-#TODO : THIS WILL BE REMOVED ON BETA
 # ┌─ Shell ────────────────────────────────────────┐
 # | For each Profile (including the default), you
 # | can set a custom shell to run the commands.
@@ -55,11 +75,9 @@ dR4ko_path = "/home/$USER/dotfiles/scripts/drako"
 # |
 # | TODO: list them
 # └────────────────────────────────────────────────
+
 #default_shell = "bash"   # or "zsh", "fish", "sh", etc.
 
-
-
-# =======================================================================================================
 # =======================================================================================================
 
 # ┌─ Commands ───────────────────────────────────────────────┐
@@ -156,7 +174,7 @@ description = "Bundled up all the little tools that this menu uses, just in case
 items = [
     { name = "Install common tools", description = "Install utilities used across profiles (btop, neofetch, clamav, fzf, bmon).", command = "sudo apt install -y btop neofetch clamav fzf bmon", auto_close_execution = false},
     { name = "Install micro", description = "Installs the micro text editor. Micro is a modern, easy-to-use terminal editor recommended for beginners.", command = "sudo apt install -y micro", auto_close_execution = false},
-    { name = "Set micro as $EDITOR", description = "$EDITOR is an environment variable that sets your default text editor. This adds it to ~/.bashrc. Restart your shell after.", command = "echo 'export EDITOR=micro' >> ~/.bashrc", auto_close_execution = false}
+    { name = "Set micro as EDITOR", description = "EDITOR is an environment variable that sets your default text editor. This adds it to ~/.bashrc. Restart your shell after.", command = "echo 'export EDITOR=micro' >> ~/.bashrc", auto_close_execution = false}
 ]
 
 [[commands]]
@@ -189,5 +207,6 @@ items = [
     #===========================================================================================================
     { name = "Go Version", description = "Checks the installed Go version. Drako is built with Go, so if it fails to launch, confirming you have a compatible Go version is the first step.", command = "go version", auto_close_execution = false},
     { name = "Which Go", description = "Shows the exact location of the Go compiler. If this is empty or wrong, it means the system can't find the Go compiler, which is essential for building and running Drako.", command = "which go", auto_close_execution = false},
+    { name = "Alias x=drako", description = "Adds 'alias x=~/go/bin/drako' to your ~/.bashrc so you can launch it by just typing 'x'. Useful if ~/go/bin is not in your PATH.", command = """echo "alias x='~/go/bin/drako'" >> ~/.bashrc && echo "Alias added to ~/.bashrc. Restart shell or run 'source ~/.bashrc' to use 'x'.""" , auto_close_execution = false}
     
 ]

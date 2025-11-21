@@ -38,11 +38,31 @@ If newly added profiles do not appear after the update, note that `drako` only c
 ## Navigation
 
 - **Grid Navigation:** Use w/a/s/d/arrow keys or vim keys (h, j, k, l) to move around the grid. You can also use number keys for col/row if pressed in sequence. Eg. pressing 3 and 4 in quick sequence, will move the cursor to the 3rd column - 4th row.  
-- **Switch Profile:** Use `Alt` + number keys (`1`-`9`) to switch directly to a profile. The modifier can be changed in the configuration. 
+- **Switch Profile:** Use `Alt` + number keys (`1`-`9`) to switch directly to a profile. The modifier can be changed in the configuration.
+- **Cycle Profile:** Use `o` (previous) and `p` (next) to cycle through equipped profiles.
 - **Prifile Inventory:** Use `i` to open the profile inventory to add/remove profiles from your rotation.
 - **Lock Current Profile:** Press `r` to lock or unlock the current profile.
 - **Tab:** Press `tab` to switch from grid mode to directory mode, or vice versa.
 - **Quit:** Press `q` to exit `drako`. Note that TUIs opened with drako will be closed via their own quit command.
+
+### Customizing Controls
+
+Key bindings can be customized in `~/.config/drako/config.toml` under the `[keys]` section.
+
+```toml
+[keys]
+# Disable default navigation schemes if they conflict
+#disable_wasd_bindings = true
+#disable_vim_bindings = true
+
+# Remap specific actions (defaults shown)
+#explain = "e"
+#inventory = "i"
+#path_grid_mode = "tab"
+#lock = "r"
+#profile_prev = "o"
+#profile_next = "p"
+```
 
 
 
