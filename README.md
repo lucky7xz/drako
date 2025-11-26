@@ -7,14 +7,13 @@ The terminal is a realm of immense power, but also of high entropy. Commands are
 
 > Requires Go **1.24** or newer.
 
-`If go is installed, installing `drako` is a single command.
+If Go is installed on your system, installing `drako` is a single command.
 
 ```bash
-go install github.com/lucky7xz/drako@latest  # install drako
+go install github.com/lucky7xz/drako@latest 
 ```
 
-### Install Go
-
+### Installing Go
 
 - macOS: `brew install go`
 - Arch: `sudo pacman -S go`
@@ -29,8 +28,9 @@ Run `drako`. On its first execution, it will construct your configuration file a
 To update `drako` to the latest version, simply run the installation command again.
 
 If you are not getting the latest version, use this command instead:
+
 ```bash
-GOPROXY=direct go install github.com/lucky/drako@latest  # install drako
+GOPROXY=direct go install github.com/lucky/drako@latest
 ```
 If newly added profiles do not appear after the update, note that `drako` only creates the bootstrap folder under .config/drako if there is none present alreay. As such, the new profiles will no be created. 
 
@@ -127,7 +127,6 @@ row = 1
 ```
 
 
----
 
 ## ✨ The Core Philosophy
 
@@ -135,15 +134,15 @@ row = 1
 
 -   **The Grid is Your Command Deck.** Your most vital commands are laid out on a visual grid for immediate, single-keypress access. No more searching shell history or forgotten aliases.
 
--   **Profiles are Shifting Forms.** A profile is a complete reconfiguration of the grid for a different context. Switch from a "Go Developer" deck (`go build`, `go test`) to a "Network Sentinel" deck (`nmap`, `mtr`) instantly.
+-   **Profiles are Shifting Forms.** A profile is a complete reconfiguration of the grid for a different context. Switch from a "DevOps" (`docker`, `ufw`) to a "Network Sentinel" deck (`nmap`, `mtr`) instantly.
 
--   **Your Deck is Portable.** The true power of profiles is their portability. By keeping your `~/.config/drako` directory in a Git repository, you can deploy your entire command center to a new server with a single command. This transforms `drako` into a declarative, repeatable control panel for any machine you manage.
+-   **Your Deck is Portable.** The true power of profiles is their portability. By keeping your `profile` file directory in a Git repository, you can deploy your entire command center to a new server with a single command. This transforms `drako` into a declarative, repeatable control panel for any machine you manage.
 
 -   **Harness, Don't Replace.** `drako` integrates with the tools you already use. If it runs in the terminal, it can be bound to the grid.
 
 -   **The Power of TUI Decks:** For those who wish to build true terminal cathedrals, `drako` serves as the gateway to `para13`, a `TUI-Deck` build with seamless integration into `drako`. More will be revealed in time. Stay tuned
 
----
+
 
 ## 🪄 Summoning Profiles
 
@@ -178,7 +177,7 @@ For git repos, profiles can declare `assets = ["path/or/dir", ...]` (relative), 
  - [ ] ARM Support
  - [ ] CI/CD
 
----
+
 
 ## 🤝 Contribution
 
@@ -187,7 +186,7 @@ Ideas are welcome. Bugs will be hunted.
 -   **Pull Requests:** Fork the repository and submit your work.
 -   **Alpha State:** `drako` is currently in ALPHA. It is stable but evolving. This is your opportunity to influence its development.
 
----
+
 
 ## ❤️ Thanks to Charmbracelet
 
