@@ -37,35 +37,15 @@ If newly added profiles do not appear after the update, note that `drako` only c
 
 ## Navigation
 
-- **Grid Navigation:** Use w/a/s/d/arrow keys or vim keys (h, j, k, l) to move around the grid. You can also use number keys for col/row if pressed in sequence. Eg. pressing 3 and 4 in quick sequence, will move the cursor to the 3rd column - 4th row.  
-- **Switch Profile:** Use `Alt` + number keys (`1`-`9`) to switch directly to a profile. The modifier can be changed in the configuration.
-- **Cycle Profile:** Use `o` (previous) and `p` (next) to cycle through equipped profiles.
-- **Prifile Inventory:** Use `i` to open the profile inventory to add/remove profiles from your rotation.
-- **Lock Current Profile:** Press `r` to lock or unlock the current profile.
-- **Tab:** Press `tab` to switch from grid mode to directory mode, or vice versa.
-- **Quit:** Press `q` to exit `drako`. Note that TUIs opened with drako will be closed via their own quit command.
+- **Grid Navigation:** Use arrows (always on), `w/a/s/d`, or `h/j/k/l`.
+- **Switch Profile:** Use `Alt` + `1-9` to switch directly.
+- **Cycle Profile:** Use `o` (prev) and `p` (next).
+- **Profile Inventory:** Press `i`.
+- **Lock:** Press `r`.
+- **Grid/Path Toggle:** Press `Tab`.
+- **Quit:** Press `q`.
 
-### Customizing Controls
-
-Key bindings can be customized in `~/.config/drako/config.toml` under the `[keys]` section.
-
-```toml
-[keys]
-# Disable default navigation schemes if they conflict
-#disable_wasd_bindings = true
-#disable_vim_bindings = true
-
-# Remap specific actions (defaults shown)
-#explain = "e"
-#inventory = "i"
-#path_grid_mode = "tab"
-#lock = "r"
-#profile_prev = "o"
-#profile_next = "p"
-```
-
-
-
+> **Customization:** Remap keys in `~/.config/drako/config.toml` under `[keys]`. You can also disable WASD/Vim bindings there.
 
 ## 🛠️ Configuration Example 
 
@@ -128,10 +108,11 @@ row = 1
 
 
 
-## ✨ The Core Philosophy
+## ✨ Philosophy
 
 `drako` is built on a few core principles:
 
+<<<<<<< HEAD
 -   **The Grid is Your Command Deck.** Your most vital commands are laid out on a visual grid for immediate, single-keypress access. No more searching shell history or forgotten aliases.
 
 -   **Profiles are Shifting Forms.** A profile is a complete reconfiguration of the grid for a different context. Switch from a "DevOps" (`docker`, `ufw`) to a "Network Sentinel" deck (`nmap`, `mtr`) instantly.
@@ -143,6 +124,13 @@ row = 1
 -   **The Power of TUI Decks:** For those who wish to build true terminal cathedrals, `drako` serves as the gateway to `para13`, a `TUI-Deck` build with seamless integration into `drako`. More will be revealed in time. Stay tuned
 
 
+=======
+-   **The Grid is Your Command Deck:** Commands are mapped to a visual grid for immediate, single-keypress access. It beats searching shell history or remembering aliases.
+-   **Profiles are Contexts:** A profile is a complete reconfiguration of the grid. Switch from a "Dev" deck (`go build`, `test`) to an "Ops" deck (`nmap`, `ssh`) instantly.
+-   **Portable Configuration:** Your entire setup lives in `~/.config/drako`. Git-manage your own profile folder and `summon` it with `drako summon`. You can deploy your exact control panel to any new machine in an instant.
+-   **Harness, Don't Replace:** It integrates with the tools you already use. If it runs in the terminal, it can be bound to the grid.
+---
+>>>>>>> 01310d8 (moved config and exported all)
 
 ## 🪄 Summoning Profiles
 
@@ -156,9 +144,9 @@ Share and reuse command decks across machines and teams. Instead of manually cop
 drako summon git@github.com:user/my_profile_collection.git
 ```
 
-Works with any git server (GitHub, GitLab, Gitea, Bitbucket, self-hosted). Pick and choose the files you need from your repo. Summoned profiles land in `~/.config/drako/inventory/`, ready to equip via the inventory (`i` key). Each profile is validated for safety (size limits, TOML format, profile structure) and requires your confirmation before copying. Private repos require SSH keys
+Works with any Git host (GitHub, GitLab, self-hosted). Summoned profiles land in your inventory, validated for syntax before copying.
 
-For git repos, profiles can declare `assets = ["path/or/dir", ...]` (relative), which drako copies into `~/.config/drako/` preserving paths, with a pre-copy plan shown and sensible size limits. This way you can copy over a handful of small files with their corresponding profile in one go.
+If a profile needs extra files (scripts, configs), declare it under `assets = [" relative path / or / dir",...]`. `drako` will offer to copy those files alongside the profile, keeping their paths intact.
 
 ## ⚠️ Safety First
 

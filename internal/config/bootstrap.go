@@ -1,5 +1,4 @@
-
-package main
+package config
 
 import (
 	"embed"

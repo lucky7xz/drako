@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"errors"
@@ -33,8 +33,8 @@ func letterToColumn(s string) (int, error) {
 	return int(char - 'a'), nil
 }
 
-// defaultConfig returns a Config with sensible defaults.
-func defaultConfig() Config {
+// DefaultConfig returns a Config with sensible defaults.
+func DefaultConfig() Config {
 	return Config{
 		X:            3,
 		Y:            3,
@@ -52,7 +52,7 @@ func defaultConfig() Config {
 	}
 }
 
-func clampConfig(cfg *Config) {
+func ClampConfig(cfg *Config) {
 	if cfg.X < 1 {
 		cfg.X = 1
 	}
@@ -67,8 +67,8 @@ func clampConfig(cfg *Config) {
 	}
 }
 
-func buildGrid(config Config) [][]string {
-	clampConfig(&config)
+func BuildGrid(config Config) [][]string {
+	ClampConfig(&config)
 	grid := make([][]string, config.Y)
 	for i := range grid {
 		grid[i] = make([]string, config.X)
@@ -93,7 +93,7 @@ func buildGrid(config Config) [][]string {
 	return grid
 }
 
-func copyCommands(src []Command) []Command {
+func CopyCommands(src []Command) []Command {
 	if len(src) == 0 {
 		return []Command{}
 	}
@@ -102,7 +102,7 @@ func copyCommands(src []Command) []Command {
 	return dst
 }
 
-func expandCommandTokens(s string, cfg Config) string {
+func ExpandCommandTokens(s string, cfg Config) string {
 	if strings.TrimSpace(s) == "" {
 		return s
 	}
@@ -110,7 +110,7 @@ func expandCommandTokens(s string, cfg Config) string {
 	return s
 }
 
-func fileExists(path string) bool {
+func FileExists(path string) bool {
 	if strings.TrimSpace(path) == "" {
 		return true
 	}
@@ -118,8 +118,8 @@ func fileExists(path string) bool {
 	return err == nil && !info.IsDir()
 }
 
-// overlayIsEmpty returns true if no settings are provided in the overlay.
-func overlayIsEmpty(ov profileOverlay) bool {
+// OverlayIsEmpty returns true if no settings are provided in the overlay.
+func OverlayIsEmpty(ov ProfileOverlay) bool {
 	if ov.DR4koPath != nil {
 		return false
 	}
@@ -147,7 +147,7 @@ func overlayIsEmpty(ov profileOverlay) bool {
 	return true
 }
 
-func normalizeProfileName(name string) string {
+func NormalizeProfileName(name string) string {
 	n := strings.TrimSpace(strings.ToLower(name))
 	// Normalize known suffixes in safe order
 	n = strings.TrimSuffix(n, ".profile.toml")
@@ -156,7 +156,7 @@ func normalizeProfileName(name string) string {
 	return n
 }
 
-func discoverProfilesWithErrors(configDir string) ([]ProfileInfo, []ProfileParseError) {
+func DiscoverProfilesWithErrors(configDir string) ([]ProfileInfo, []ProfileParseError) {
 	profiles := []ProfileInfo{{Name: "Default", Path: ""}}
 
 	entries, err := os.ReadDir(configDir)
@@ -192,7 +192,7 @@ func discoverProfilesWithErrors(configDir string) ([]ProfileInfo, []ProfileParse
 			})
 			continue
 		}
-		var overlay profileOverlay
+		var overlay ProfileOverlay
 		if _, err := toml.Decode(string(data), &overlay); err != nil {
 			broken = append(broken, ProfileParseError{
 				Name: strings.TrimSuffix(name, ".profile.toml"),
@@ -201,7 +201,7 @@ func discoverProfilesWithErrors(configDir string) ([]ProfileInfo, []ProfileParse
 			})
 			continue
 		}
-		if overlayIsEmpty(overlay) {
+		if OverlayIsEmpty(overlay) {
 			broken = append(broken, ProfileParseError{
 				Name: strings.TrimSuffix(name, ".profile.toml"),
 				Path: path,
@@ -224,12 +224,12 @@ func discoverProfilesWithErrors(configDir string) ([]ProfileInfo, []ProfileParse
 	return profiles, broken
 }
 
-func discoverProfiles(configDir string) []ProfileInfo {
-	profiles, _ := discoverProfilesWithErrors(configDir)
+func DiscoverProfiles(configDir string) []ProfileInfo {
+	profiles, _ := DiscoverProfilesWithErrors(configDir)
 	return profiles
 }
 
-func applyProfileOverlay(base Config, overlay profileOverlay) Config {
+func ApplyProfileOverlay(base Config, overlay ProfileOverlay) Config {
 	cfg := base
 
 	if overlay.DR4koPath != nil {
@@ -265,7 +265,7 @@ func applyProfileOverlay(base Config, overlay profileOverlay) Config {
 	}
 
 	if overlay.Commands != nil {
-		cfg.Commands = copyCommands(*overlay.Commands)
+		cfg.Commands = CopyCommands(*overlay.Commands)
 	}
 
 	return cfg
@@ -274,7 +274,7 @@ func applyProfileOverlay(base Config, overlay profileOverlay) Config {
 
 const pivotProfileFilename = "pivot.toml"
 
-func getConfigDir() (string, error) {
+func GetConfigDir() (string, error) {
 
 	configDir, err := os.UserConfigDir()
 	if err != nil || configDir == "" {
@@ -329,19 +329,19 @@ func writePivotFile(configDir string, pf pivotFile) error {
 	return toml.NewEncoder(f).Encode(pf)
 }
 
-func writePivotLocked(configDir, name string) error {
+func WritePivotLocked(configDir, name string) error {
 	pf, _ := readPivotProfile(configDir)
 	pf.Locked = strings.TrimSpace(name)
 	return writePivotFile(configDir, pf)
 }
 
-func writePivotEquippedOrder(configDir string, order []string) error {
+func WritePivotEquippedOrder(configDir string, order []string) error {
 	pf, _ := readPivotProfile(configDir)
 	pf.EquippedOrder = order
 	return writePivotFile(configDir, pf)
 }
 
-func deletePivotProfile(configDir string) error {
+func DeletePivotProfile(configDir string) error {
 	// Preserve equipped_order; only clear the lock
 	pf, _ := readPivotProfile(configDir)
 	if pf.Locked == "" && len(pf.EquippedOrder) == 0 {
@@ -352,9 +352,9 @@ func deletePivotProfile(configDir string) error {
 	return writePivotFile(configDir, pf)
 }
 
-func loadConfig(profileOverride *string) configBundle {
+func LoadConfig(profileOverride *string) ConfigBundle {
 
-	configDir, err := getConfigDir()
+	configDir, err := GetConfigDir()
 
 	if err != nil {
 		fatalf("could not resolve a config directory: %v", err)
@@ -386,7 +386,7 @@ func loadConfig(profileOverride *string) configBundle {
 			fatalf("could not create config directory: %v", err)
 		}
 
-		base = defaultConfig()
+		base = DefaultConfig()
 		f, err := os.Create(configPath)
 		if err != nil {
 			fatalf("could not create config file: %v", err)
@@ -408,7 +408,7 @@ func loadConfig(profileOverride *string) configBundle {
 			fatalf("could not decode config file: %v", err)
 		}
 		// Apply defaults for any missing fields
-		defaults := defaultConfig()
+		defaults := DefaultConfig()
 		if strings.TrimSpace(base.NumbModifier) == "" {
 			base.NumbModifier = defaults.NumbModifier
 		}
@@ -440,20 +440,20 @@ func loadConfig(profileOverride *string) configBundle {
 		log.Printf("Loaded config: X=%d, Y=%d, Commands=%d", base.X, base.Y, len(base.Commands))
 	}
 
-	clampConfig(&base)
+	ClampConfig(&base)
 	// Compute the navigation sets based on flags
-	base.Keys.initControls()
+	base.Keys.InitControls()
 
-	profiles, broken := discoverProfilesWithErrors(configDir)
+	profiles, broken := DiscoverProfilesWithErrors(configDir)
 	// Reorder profiles based on pivot equipped_order
 	if len(pf.EquippedOrder) > 0 {
 		remaining := map[string]ProfileInfo{}
 		for i := 0; i < len(profiles); i++ {
-			remaining[normalizeProfileName(profiles[i].Name)] = profiles[i]
+			remaining[NormalizeProfileName(profiles[i].Name)] = profiles[i]
 		}
 		var ordered []ProfileInfo
 		for _, n := range pf.EquippedOrder {
-			norm := normalizeProfileName(n)
+			norm := NormalizeProfileName(n)
 			if info, ok := remaining[norm]; ok {
 				ordered = append(ordered, info)
 				delete(remaining, norm)
@@ -483,7 +483,7 @@ func loadConfig(profileOverride *string) configBundle {
 		}
 	}
 
-	target := normalizeProfileName(requested)
+	target := NormalizeProfileName(requested)
 	activeIndex := 0
 	pivotStillValid := requestedPivot != ""
 	useFactoryDefaults := false
@@ -491,7 +491,7 @@ func loadConfig(profileOverride *string) configBundle {
 	if target != "" {
 		found := false
 		for i := 0; i < len(profiles); i++ {
-			if normalizeProfileName(profiles[i].Name) == target {
+			if NormalizeProfileName(profiles[i].Name) == target {
 				activeIndex = i
 				found = true
 				break
@@ -501,7 +501,7 @@ func loadConfig(profileOverride *string) configBundle {
 			log.Printf("profile not found (possibly broken), falling back to factory defaults: %s", requested)
 			useFactoryDefaults = true
 			if pivotRequested {
-				if err := writePivotLocked(configDir, ""); err != nil {
+				if err := WritePivotLocked(configDir, ""); err != nil {
 					log.Printf("warning: could not clear pivot lock: %v", err)
 				}
 				pivotStillValid = false
@@ -511,24 +511,24 @@ func loadConfig(profileOverride *string) configBundle {
 
 	effective := base
 	selected := profiles[activeIndex]
-	if useFactoryDefaults || (len(broken) > 0 && normalizeProfileName(selected.Name) == "default") {
+	if useFactoryDefaults || (len(broken) > 0 && NormalizeProfileName(selected.Name) == "default") {
 		// Either an explicitly requested profile was missing/broken, or there are broken overlays present
 		// and we are using Default. Fall back to factory defaults (3x3).
-		effective = defaultConfig()
+		effective = DefaultConfig()
 		// Ensure controls are initialized for factory default
-		effective.Keys.initControls()
-	} else if normalizeProfileName(selected.Name) != "default" {
-		effective = applyProfileOverlay(base, selected.Overlay)
+		effective.Keys.InitControls()
+	} else if NormalizeProfileName(selected.Name) != "default" {
+		effective = ApplyProfileOverlay(base, selected.Overlay)
 		// Controls might have been updated if overlay affects base config (which it does)
 		// Re-init controls to be safe, although keys aren't currently overridable per profile
-		effective.Keys.initControls()
+		effective.Keys.InitControls()
 		log.Printf("Applied profile overlay: %s", selected.Name)
 	}
 
-	clampConfig(&effective)
-	effective.Commands = copyCommands(effective.Commands)
+	ClampConfig(&effective)
+	effective.Commands = CopyCommands(effective.Commands)
 
-	return configBundle{
+	return ConfigBundle{
 		Base:        base,
 		Config:      effective,
 		Profiles:    profiles,
