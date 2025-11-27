@@ -1,4 +1,4 @@
-package main
+package core
 
 import (
 	"fmt"
@@ -52,9 +52,9 @@ func pause(msg string) {
 	waitForAnyKey()
 }
 
-// findCommandByName returns a pointer to the matching top-level command or a nested item.
+// FindCommandByName returns a pointer to the matching top-level command or a nested item.
 // If an item is returned, the parent command is also returned.
-func findCommandByName(cfg config.Config, name string) (parent *config.Command, item *config.CommandItem, ok bool) {
+func FindCommandByName(cfg config.Config, name string) (parent *config.Command, item *config.CommandItem, ok bool) {
 	for i := range cfg.Commands {
 		c := &cfg.Commands[i]
 		if c.Name == name {
@@ -68,8 +68,6 @@ func findCommandByName(cfg config.Config, name string) (parent *config.Command, 
 	}
 	return nil, nil, false
 }
-
-// runCommand finds the selected command from the loaded config and executes it.
 
 // - exec.Cmd is like subprocess, constructed with argv (no implicit shell).
 // - We explicitly ask for a shell with buildShellCmd.
@@ -96,7 +94,8 @@ func buildShellCmd(shell_config, commandStr string) *exec.Cmd {
 	}
 }
 
-func runCommand(cfg config.Config, selected string) {
+// RunCommand finds the selected command from the loaded config and executes it.
+func RunCommand(cfg config.Config, selected string) {
 	// cmd will hold the prepared command to run. It's a pointer type; zero value is nil.
 	var cmd *exec.Cmd
 	// Pointers to per-command overrides; nil means "use default".
@@ -107,7 +106,7 @@ func runCommand(cfg config.Config, selected string) {
 	shell_config := cfg.DefaultShell
 
 	// Resolve a top-level command or nested item by name.
-	parentCmd, itemCfg, found := findCommandByName(cfg, selected)
+	parentCmd, itemCfg, found := FindCommandByName(cfg, selected)
 	if found {
 		if itemCfg == nil {
 			// top-level command

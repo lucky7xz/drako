@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"fmt"
@@ -8,9 +8,9 @@ import (
 	"sort"
 )
 
-// purgeConfig deletes everything in ~/.config/drako/ except config.toml (unless nukeAll is true)
+// PurgeConfig deletes everything in ~/.config/drako/ except config.toml (unless nukeAll is true)
 // Shows a preview and requires confirmation
-func purgeConfig(configDir string, nukeAll bool) error {
+func PurgeConfig(configDir string, nukeAll bool) error {
 	if nukeAll {
 		log.Printf("Starting FULL purge (--all) for: %s", configDir)
 	} else {
@@ -41,14 +41,14 @@ func purgeConfig(configDir string, nukeAll bool) error {
 	} else {
 		fmt.Printf("\n🗑️  The following items will be DELETED from %s:\n\n", configDir)
 	}
-	
+
 	for _, item := range items {
 		info, err := os.Stat(item)
 		if err != nil {
 			fmt.Printf("  • %s (error reading)\n", filepath.Base(item))
 			continue
 		}
-		
+
 		if info.IsDir() {
 			// Count files in directory
 			count := countFilesInDir(item)
@@ -60,7 +60,7 @@ func purgeConfig(configDir string, nukeAll bool) error {
 			fmt.Printf("  📄 %s (%s)\n", filepath.Base(item), sizeStr)
 		}
 	}
-	
+
 	if nukeAll {
 		fmt.Printf("\n💀 EVERYTHING will be deleted (including config.toml)\n")
 	} else {
@@ -73,8 +73,8 @@ func purgeConfig(configDir string, nukeAll bool) error {
 	if nukeAll {
 		confirmMsg = "💀 This will DELETE EVERYTHING. Are you absolutely sure?"
 	}
-	
-	if !confirmAction(confirmMsg) {
+
+	if !ConfirmAction(confirmMsg) {
 		log.Printf("Purge cancelled by user")
 		return fmt.Errorf("operation cancelled by user")
 	}
@@ -104,7 +104,7 @@ func purgeConfig(configDir string, nukeAll bool) error {
 // collectPurgeItems scans configDir and returns all items (optionally including config.toml if nukeAll is true)
 func collectPurgeItems(configDir string, nukeAll bool) ([]string, error) {
 	var items []string
-	
+
 	entries, err := os.ReadDir(configDir)
 	if err != nil {
 		return nil, err
@@ -112,19 +112,19 @@ func collectPurgeItems(configDir string, nukeAll bool) ([]string, error) {
 
 	for _, entry := range entries {
 		name := entry.Name()
-		
+
 		// Skip config.toml unless nukeAll is true
 		if name == "config.toml" && !nukeAll {
 			continue
 		}
-		
+
 		fullPath := filepath.Join(configDir, name)
 		items = append(items, fullPath)
 	}
 
 	// Sort for consistent display
 	sort.Strings(items)
-	
+
 	return items, nil
 }
 
@@ -162,4 +162,3 @@ func formatSize(bytes int64) string {
 		return fmt.Sprintf("%d B", bytes)
 	}
 }
-

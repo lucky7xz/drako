@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"bufio"
@@ -26,8 +26,8 @@ const (
 	assetMaxFileCount  = 500              // safety cap
 )
 
-// confirmAction prompts the user to confirm an action
-func confirmAction(prompt string) bool {
+// ConfirmAction prompts the user to confirm an action
+func ConfirmAction(prompt string) bool {
 	fmt.Printf("%s [y/N]: ", prompt)
 	reader := bufio.NewReader(os.Stdin)
 	response, err := reader.ReadString('\n')
@@ -38,11 +38,11 @@ func confirmAction(prompt string) bool {
 	return response == "y" || response == "yes"
 }
 
-// summonProfile downloads a profile from a URL and saves it to the inventory directory.
+// SummonProfile downloads a profile from a URL and saves it to the inventory directory.
 // Supports:
 //   - HTTP/HTTPS URLs (raw file downloads) - user provides file URL
 //   - Git repository URLs (clones whole repo) - user provides repo URL
-func summonProfile(sourceURL, configDir string) error {
+func SummonProfile(sourceURL, configDir string) error {
 	// Inventory directory is where summoned profiles go
 	inventoryDir := filepath.Join(configDir, "inventory")
 	if err := os.MkdirAll(inventoryDir, 0o755); err != nil {
@@ -67,7 +67,7 @@ func summonProfile(sourceURL, configDir string) error {
 		fmt.Printf("  Destination: %s\n", inventoryDir)
 		fmt.Printf("  Action: Find and copy all .profile.toml files\n\n")
 
-		if !confirmAction("Proceed with cloning?") {
+		if !ConfirmAction("Proceed with cloning?") {
 			return fmt.Errorf("operation cancelled by user")
 		}
 
@@ -92,7 +92,7 @@ func summonProfile(sourceURL, configDir string) error {
 	}
 	fmt.Println()
 
-	if !confirmAction("Proceed with download?") {
+	if !ConfirmAction("Proceed with download?") {
 		return fmt.Errorf("operation cancelled by user")
 	}
 
@@ -289,7 +289,7 @@ func summonFromGit(repoURL, inventoryDir string) error {
 				assetMaxFileCount, assetMaxTotalBytes/(1024*1024), assetMaxFileBytes/(1024*1024))
 		}
 
-		if !confirmAction(fmt.Sprintf("Summon %s?", dstName)) {
+		if !ConfirmAction(fmt.Sprintf("Summon %s?", dstName)) {
 			fmt.Printf("⊘ Cancelled: %s\n", dstName)
 			cancelled++
 			continue

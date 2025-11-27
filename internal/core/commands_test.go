@@ -1,16 +1,18 @@
-package main
+package core
 
 import (
 	"fmt"
 	"os/exec"
 	"testing"
+
+	"github.com/lucky7xz/drako/internal/config"
 )
 
 func TestFindCommandByName(t *testing.T) {
-	cfg := Config{
-		Commands: []Command{
+	cfg := config.Config{
+		Commands: []config.Command{
 			{Name: "A", Command: "echo A"},
-			{Name: "B", Items: []CommandItem{{Name: "B1", Command: "echo B1"}}},
+			{Name: "B", Items: []config.CommandItem{{Name: "B1", Command: "echo B1"}}},
 		},
 	}
 	tests := []struct {
@@ -26,7 +28,7 @@ func TestFindCommandByName(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			p, it, ok := findCommandByName(cfg, tc.in)
+			p, it, ok := FindCommandByName(cfg, tc.in)
 			if ok != tc.wantOk {
 				t.Fatalf("ok=%v, want %v", ok, tc.wantOk)
 			}
@@ -55,10 +57,10 @@ func TestRunCommand_ConfigMatchButEmptyCommand(t *testing.T) {
 		return exec.Command("echo")
 	}
 
-	cfg := Config{
-		Commands: []Command{{Name: "test", Command: ""}},
+	cfg := config.Config{
+		Commands: []config.Command{{Name: "test", Command: ""}},
 	}
-	runCommand(cfg, "test")
+	RunCommand(cfg, "test")
 
 	// Should pause but not execute anything
 	if !paused {
@@ -84,8 +86,8 @@ func TestRunCommand_PathFallback(t *testing.T) {
 		return exec.Command("echo")
 	}
 
-	cfg := Config{} // No matching configured command
-	runCommand(cfg, "echo")
+	cfg := config.Config{} // No matching configured command
+	RunCommand(cfg, "echo")
 
 	if len(gotArgs) == 0 || gotArgs[0] != "/bin/echo" {
 		t.Fatalf("expected to build cmd with looked-up path, got %v", gotArgs)
@@ -93,16 +95,16 @@ func TestRunCommand_PathFallback(t *testing.T) {
 }
 
 func TestExpandCommandTokens(t *testing.T) {
-	cfg := Config{DR4koPath: "/x"}
+	cfg := config.Config{DR4koPath: "/x"}
 	tests := map[string]string{
-		"":                      "",
-		"no_tokens":            "no_tokens",
-		"cd {dR4ko_path}":      "cd /x",
+		"":                          "",
+		"no_tokens":                 "no_tokens",
+		"cd {dR4ko_path}":           "cd /x",
 		"{dR4ko_path} {dR4ko_path}": "/x /x",
 	}
 	for in, want := range tests {
 		t.Run(in, func(t *testing.T) {
-			if got := expandCommandTokens(in, cfg); got != want {
+			if got := config.ExpandCommandTokens(in, cfg); got != want {
 				t.Fatalf("want %q, got %q", want, got)
 			}
 		})

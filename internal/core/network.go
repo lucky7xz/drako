@@ -1,4 +1,4 @@
-package main
+package core
 
 import (
 	"fmt"
@@ -6,32 +6,36 @@ import (
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
 	gopsutil_net "github.com/shirou/gopsutil/v3/net"
 )
 
-func checkNetworkStatus() tea.Cmd {
-	return func() tea.Msg {
-		online := localOnline()
+type NetworkStatus struct {
+	Online   bool
+	Counters gopsutil_net.IOCountersStat
+	Time     time.Time
+	Err      error
+}
 
-		// Get per-interface counters to filter out loopback/virtual traffic
-		perIface, err := gopsutil_net.IOCounters(true)
-		if err != nil {
-			return networkStatusMsg{online: online, err: err, t: time.Now()}
-		}
+func CheckNetworkStatus() NetworkStatus {
+	online := localOnline()
 
-		// Sum only real NICs (exclude lo, docker, vbox, etc.)
-		var totalSent, totalRecv uint64
-		for _, c := range perIface {
-			if isVirtualInterface(c.Name) {
-				continue
-			}
-			totalSent += c.BytesSent
-			totalRecv += c.BytesRecv
-		}
-
-		return networkStatusMsg{online: online, counters: gopsutil_net.IOCountersStat{BytesSent: totalSent, BytesRecv: totalRecv}, t: time.Now()}
+	// Get per-interface counters to filter out loopback/virtual traffic
+	perIface, err := gopsutil_net.IOCounters(true)
+	if err != nil {
+		return NetworkStatus{Online: online, Err: err, Time: time.Now()}
 	}
+
+	// Sum only real NICs (exclude lo, docker, vbox, etc.)
+	var totalSent, totalRecv uint64
+	for _, c := range perIface {
+		if isVirtualInterface(c.Name) {
+			continue
+		}
+		totalSent += c.BytesSent
+		totalRecv += c.BytesRecv
+	}
+
+	return NetworkStatus{Online: online, Counters: gopsutil_net.IOCountersStat{BytesSent: totalSent, BytesRecv: totalRecv}, Time: time.Now()}
 }
 
 // isVirtualInterface returns true for loopback or known virtual interface prefixes.
@@ -88,13 +92,7 @@ func isAPIPA(ip net.IP) bool {
 	return ip4 != nil && ip4[0] == 169 && ip4[1] == 254
 }
 
-func networkTick() tea.Cmd {
-	return tea.Tick(2500*time.Millisecond, func(t time.Time) tea.Msg {
-		return checkNetworkStatus()()
-	})
-}
-
-func formatTraffic(bps float64) string {
+func FormatTraffic(bps float64) string {
 	const (
 		kb = 1024
 		mb = 1024 * kb

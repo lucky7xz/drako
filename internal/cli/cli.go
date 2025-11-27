@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"fmt"
@@ -9,9 +9,9 @@ import (
 	"github.com/lucky7xz/drako/internal/config" // drako.chronyx.xyz
 )
 
-// handleCLI checks if the program was invoked with CLI arguments (not TUI mode).
+// HandleCLI checks if the program was invoked with CLI arguments (not TUI mode).
 // Returns true if a CLI command was handled, false if it should proceed to TUI.
-func handleCLI() bool {
+func HandleCLI() bool {
 	if len(os.Args) <= 1 {
 		return false
 	}
@@ -20,20 +20,20 @@ func handleCLI() bool {
 
 	switch command {
 	case "summon", "--summon":
-		handleSummonCommand()
+		HandleSummonCommand()
 		return true
 	case "purge", "--purge":
-		handlePurgeCommand()
+		HandlePurgeCommand()
 		return true
 	default:
 		return false
 	}
 }
 
-// handleSummonCommand processes the 'drako summon <url>' command
-func handleSummonCommand() {
+// HandleSummonCommand processes the 'drako summon <url>' command
+func HandleSummonCommand() {
 	if len(os.Args) < 3 {
-		printSummonUsage()
+		PrintSummonUsage()
 		os.Exit(1)
 	}
 
@@ -60,7 +60,7 @@ func handleSummonCommand() {
 	sourceURL := os.Args[2]
 	log.Printf("Attempting to summon profile from: %s", sourceURL)
 
-	if err := summonProfile(sourceURL, configDir); err != nil {
+	if err := SummonProfile(sourceURL, configDir); err != nil {
 		log.Printf("Summon failed: %v", err)
 		fmt.Fprintf(os.Stderr, "Summon failed: %v\n", err)
 		os.Exit(1)
@@ -71,8 +71,8 @@ func handleSummonCommand() {
 	os.Exit(0)
 }
 
-// printSummonUsage prints the usage information for the summon command
-func printSummonUsage() {
+// PrintSummonUsage prints the usage information for the summon command
+func PrintSummonUsage() {
 	fmt.Fprintf(os.Stderr, "Usage: drako summon <url>\n")
 	fmt.Fprintf(os.Stderr, "\nSummoned profiles are saved to ~/.config/drako/inventory/\n")
 	fmt.Fprintf(os.Stderr, "\nExamples:\n")
@@ -83,8 +83,8 @@ func printSummonUsage() {
 	fmt.Fprintf(os.Stderr, "  drako summon https://github.com/user/repo.git\n")
 }
 
-// handlePurgeCommand processes the 'drako purge' command
-func handlePurgeCommand() {
+// HandlePurgeCommand processes the 'drako purge' command
+func HandlePurgeCommand() {
 	configDir, err := config.GetConfigDir()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
@@ -115,7 +115,7 @@ func handlePurgeCommand() {
 		log.Printf("Purge command invoked")
 	}
 
-	if err := purgeConfig(configDir, nukeAll); err != nil {
+	if err := PurgeConfig(configDir, nukeAll); err != nil {
 		log.Printf("Purge failed: %v", err)
 		fmt.Fprintf(os.Stderr, "Purge failed: %v\n", err)
 		os.Exit(1)
