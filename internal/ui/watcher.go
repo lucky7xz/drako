@@ -1,17 +1,17 @@
-package main
+package ui
 
 import (
 	"log"
 	"path/filepath"
 	"strings"
 
-	"github.com/fsnotify/fsnotify"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/fsnotify/fsnotify"
 )
 
-// configChangedMsg signals that a config file has changed
-type configChangedMsg struct {
-	path string
+// ConfigChangedMsg signals that a config file has changed
+type ConfigChangedMsg struct {
+	Path string
 }
 
 // startConfigWatcher watches the config directory for .toml file changes
@@ -35,7 +35,7 @@ func startConfigWatcher(configDir string) tea.Cmd {
 		// Listen for events in a goroutine
 		go func() {
 			defer watcher.Close()
-			
+
 			for {
 				select {
 				case event, ok := <-watcher.Events:
@@ -50,7 +50,7 @@ func startConfigWatcher(configDir string) tea.Cmd {
 
 					// Get the filename
 					filename := filepath.Base(event.Name)
-					
+
 					// Ignore files that aren't .toml
 					if !strings.HasSuffix(filename, ".toml") {
 						continue
@@ -62,11 +62,11 @@ func startConfigWatcher(configDir string) tea.Cmd {
 					}
 
 					log.Printf("Config file changed: %s", filename)
-					
+
 					// Signal the app to reload (this will be caught by bubbletea)
 					// Note: We can't send tea.Msg directly from a goroutine,
 					// so we'll need to handle this differently
-					
+
 				case err, ok := <-watcher.Errors:
 					if !ok {
 						return
@@ -80,8 +80,8 @@ func startConfigWatcher(configDir string) tea.Cmd {
 	}
 }
 
-// watchConfigCmd returns a command that continuously watches for config changes
-func watchConfigCmd(configDir string) tea.Cmd {
+// WatchConfigCmd returns a command that continuously watches for config changes
+func WatchConfigCmd(configDir string) tea.Cmd {
 	return func() tea.Msg {
 		watcher, err := fsnotify.NewWatcher()
 		if err != nil {
@@ -112,7 +112,7 @@ func watchConfigCmd(configDir string) tea.Cmd {
 				}
 
 				filename := filepath.Base(event.Name)
-				
+
 				// Must be a .toml file
 				if !strings.HasSuffix(filename, ".toml") {
 					continue
@@ -125,7 +125,7 @@ func watchConfigCmd(configDir string) tea.Cmd {
 
 				log.Printf("Detected change in: %s", filename)
 				watcher.Close()
-				return configChangedMsg{path: event.Name}
+				return ConfigChangedMsg{Path: event.Name}
 
 			case err, ok := <-watcher.Errors:
 				if !ok {
@@ -137,4 +137,3 @@ func watchConfigCmd(configDir string) tea.Cmd {
 		}
 	}
 }
-

@@ -1,9 +1,9 @@
-package main
+package ui
 
 import (
 	"time"
 
-	"github.com/lucky7xz/drako/internal/config" // drako.chronyx.xyz
+	"github.com/lucky7xz/drako/internal/config"
 	gopsutil_net "github.com/shirou/gopsutil/v3/net"
 )
 

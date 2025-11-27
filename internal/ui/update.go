@@ -1,4 +1,4 @@
-package main
+package ui
 
 import (
 	"encoding/base64"
@@ -15,18 +15,32 @@ import (
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/lucky7xz/drako/internal/config" // config.drako.chronyx.xyz
+	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/core"
 )
 
-func (m model) Init() tea.Cmd {
+func (m Model) Init() tea.Cmd {
 	configDir, _ := config.GetConfigDir()
 	return tea.Batch(
 		tea.EnterAltScreen,
-		checkNetworkStatus(),
+		checkNetworkStatusCmd(),
 		m.spinner.Tick,
-		watchConfigCmd(configDir),
+		WatchConfigCmd(configDir),
 		lockCheckTick(),
 	)
+}
+
+func checkNetworkStatusCmd() tea.Cmd {
+	return func() tea.Msg {
+		status := core.CheckNetworkStatus()
+		return networkStatusMsg{online: status.Online, counters: status.Counters, t: status.Time, err: status.Err}
+	}
+}
+
+func networkTick() tea.Cmd {
+	return tea.Tick(2500*time.Millisecond, func(t time.Time) tea.Msg {
+		return checkNetworkStatusCmd()()
+	})
 }
 
 // lockCheckTick creates a command that checks for auto-lock every 30 seconds
@@ -36,7 +50,7 @@ func lockCheckTick() tea.Cmd {
 	})
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.termWidth = msg.Width
@@ -60,9 +74,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.mode = gridMode
 		return m, nil
 
-	case configChangedMsg:
+	case ConfigChangedMsg:
 		// Config file changed on disk, reload everything
-		log.Printf("Config file change detected: %s", msg.path)
+		log.Printf("Config file change detected: %s", msg.Path)
 		bundle := config.LoadConfig(nil)
 		m.applyBundle(bundle)
 		if len(bundle.Broken) > 0 {
@@ -72,7 +86,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		// Restart the watcher for the next change
 		configDir, _ := config.GetConfigDir()
-		return m, watchConfigCmd(configDir)
+		return m, WatchConfigCmd(configDir)
 
 	case inventoryErrorMsg:
 		m.inventory.err = msg.err
@@ -97,13 +111,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateLockedMode(msg)
 		}
 
-		if m.config.Keys.IsLock(msg) {
+		if IsLock(m.Config.Keys, msg) {
 			cmd := m.toggleProfileLock()
 			return m, cmd
 		}
 		// Profile switching with configurable modifier + Number or ~ (Shift + `)
 		if m.mode == gridMode || m.mode == childMode {
-			if ok, target := m.config.Keys.IsProfileSwitch(msg, m.config.NumbModifier); ok {
+			if ok, target := IsProfileSwitch(m.Config.Keys, msg, m.Config.NumbModifier); ok {
 				if target < len(m.profiles) {
 					if updated, cmd, ok := m.switchToProfileIndex(target); ok {
 						m = updated
@@ -112,10 +126,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return m, nil
 			}
-			if m.config.Keys.IsProfilePrev(msg) {
+			if IsProfilePrev(m.Config.Keys, msg) {
 				return m.handleProfileCycle(-1)
 			}
-			if m.config.Keys.IsProfileNext(msg) {
+			if IsProfileNext(m.Config.Keys, msg) {
 				return m.handleProfileCycle(1)
 			}
 		}
@@ -169,7 +183,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if duration > 0 {
 					sentBps := float64(sentDelta) / duration
 					recvBps := float64(recvDelta) / duration
-					m.traffic = themeNameStyle.Render(fmt.Sprintf("↓ %s ↑ %s", formatTraffic(recvBps), formatTraffic(sentBps)))
+					m.traffic = themeNameStyle.Render(fmt.Sprintf("↓ %s ↑ %s", core.FormatTraffic(recvBps), core.FormatTraffic(sentBps)))
 					if sentBps > 2*1024 || recvBps > 2*1024 {
 						isActive = true
 					}
@@ -223,7 +237,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 
 	// Handle number-based navigation (1-9)
@@ -270,29 +284,29 @@ func (m model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	switch {
-	case key == "ctrl+c", key == "q":
-		m.quitting = true
+	case Matches(m.Config.Keys, msg, "ctrl+c"), Matches(m.Config.Keys, msg, "q"):
+		m.Quitting = true
 		return m, tea.Quit
-	case m.config.Keys.IsInventory(msg):
+	case IsInventory(m.Config.Keys, msg):
 		m.mode = inventoryMode
-		m.inventory = initInventoryModel(m.configDir)
+		m.inventory = InitInventoryModel(m.configDir)
 		return m, nil
-	case m.config.Keys.IsUp(msg):
+	case IsUp(m.Config.Keys, msg):
 		m.moveCursor(-1, 0)
-	case m.config.Keys.IsDown(msg):
+	case IsDown(m.Config.Keys, msg):
 		m.moveCursor(1, 0)
-	case m.config.Keys.IsLeft(msg):
+	case IsLeft(m.Config.Keys, msg):
 		m.moveCursor(0, -1)
-	case m.config.Keys.IsRight(msg):
+	case IsRight(m.Config.Keys, msg):
 		m.moveCursor(0, 1)
-	case m.config.Keys.IsPathGridMode(msg):
+	case IsPathGridMode(m.Config.Keys, msg):
 		m.mode = pathMode
-	case m.config.Keys.IsExplain(msg):
+	case IsExplain(m.Config.Keys, msg):
 		selectedChoice := m.grid[m.cursorRow][m.cursorCol]
 		if strings.TrimSpace(selectedChoice) == "" {
 			return m, nil
 		}
-		for _, cmd := range m.config.Commands {
+		for _, cmd := range m.Config.Commands {
 			if cmd.Name == selectedChoice {
 				m.previousMode = m.mode
 				m.infoTitle = selectedChoice
@@ -316,7 +330,7 @@ func (m model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				if strings.TrimSpace(cmd.Command) == "" {
 					m.infoCommand = "Error: no command. ( This might be a folder of commands!)"
 				} else {
-					m.infoCommand = config.ExpandCommandTokens(cmd.Command, m.config)
+					m.infoCommand = config.ExpandCommandTokens(cmd.Command, m.Config)
 				}
 				m.mode = infoMode
 				return m, nil
@@ -336,7 +350,7 @@ func (m model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		selectedChoice := m.grid[m.cursorRow][m.cursorCol]
 		if selectedChoice != "" {
 			// Check if this command has dropdown items
-			for _, cmd := range m.config.Commands {
+			for _, cmd := range m.Config.Commands {
 				if cmd.Name == selectedChoice {
 					if len(cmd.Items) > 0 {
 						// Open dropdown menu
@@ -351,7 +365,7 @@ func (m model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				}
 			}
 			// Single command, execute normally
-			m.selected = selectedChoice
+			m.Selected = selectedChoice
 			return m, tea.Quit
 		}
 	}
@@ -409,29 +423,29 @@ func findFirstPopulatedRow(grid [][]string, col int) int {
 	return 0 // Fallback
 }
 
-func (m model) updatePathMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) updatePathMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
-	case m.config.Keys.Matches(msg, "ctrl+c"), m.config.Keys.Matches(msg, "q"):
-		m.quitting = true
+	case Matches(m.Config.Keys, msg, "ctrl+c"), Matches(m.Config.Keys, msg, "q"):
+		m.Quitting = true
 		return m, tea.Quit
-	case m.config.Keys.IsLeft(msg):
+	case IsLeft(m.Config.Keys, msg):
 		if m.selectedPathIndex > 0 {
 			m.selectedPathIndex--
 			m.listChildDirs()
 		}
-	case m.config.Keys.IsRight(msg):
+	case IsRight(m.Config.Keys, msg):
 		if m.selectedPathIndex < len(m.pathComponents)-1 {
 			m.selectedPathIndex++
 			m.listChildDirs()
 		}
-	case m.config.Keys.IsDown(msg):
+	case IsDown(m.Config.Keys, msg):
 		if len(m.childDirs) > 0 {
 			m.mode = childMode
 			m.selectedChildIndex = 0
 		}
-	case m.config.Keys.IsPathGridMode(msg):
+	case IsPathGridMode(m.Config.Keys, msg):
 		m.mode = gridMode
-	case m.config.Keys.Matches(msg, "enter"), m.config.Keys.Matches(msg, " "):
+	case Matches(m.Config.Keys, msg, "enter"), Matches(m.Config.Keys, msg, " "):
 		targetPath := m.buildPathFromComponents(m.selectedPathIndex)
 		if err := os.Chdir(targetPath); err == nil {
 			m.currentPath, _ = os.Getwd()
@@ -442,24 +456,24 @@ func (m model) updatePathMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) updateChildMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) updateChildMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
-	case m.config.Keys.Matches(msg, "ctrl+c"), m.config.Keys.Matches(msg, "q"):
-		m.quitting = true
+	case Matches(m.Config.Keys, msg, "ctrl+c"), Matches(m.Config.Keys, msg, "q"):
+		m.Quitting = true
 		return m, tea.Quit
-	case m.config.Keys.IsUp(msg):
+	case IsUp(m.Config.Keys, msg):
 		if m.selectedChildIndex > 0 {
 			m.selectedChildIndex--
 		} else {
 			m.mode = pathMode
 		}
-	case m.config.Keys.IsDown(msg):
+	case IsDown(m.Config.Keys, msg):
 		if m.selectedChildIndex < len(m.childDirs)-1 {
 			m.selectedChildIndex++
 		}
-	case m.config.Keys.IsPathGridMode(msg):
+	case IsPathGridMode(m.Config.Keys, msg):
 		m.mode = gridMode
-	case m.config.Keys.Matches(msg, "enter"), m.config.Keys.Matches(msg, " "):
+	case Matches(m.Config.Keys, msg, "enter"), Matches(m.Config.Keys, msg, " "):
 		parentPath := m.buildPathFromComponents(m.selectedPathIndex)
 		targetPath := filepath.Join(parentPath, m.childDirs[m.selectedChildIndex])
 		if err := os.Chdir(targetPath); err == nil {
@@ -471,7 +485,7 @@ func (m model) updateChildMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 
 	// Handle number-based navigation (1-9)
@@ -489,23 +503,23 @@ func (m model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	switch {
-	case m.config.Keys.Matches(msg, "q"), m.config.Keys.Matches(msg, "esc"):
+	case Matches(m.Config.Keys, msg, "q"), Matches(m.Config.Keys, msg, "esc"):
 		// Close dropdown and return to grid mode
 		m.mode = gridMode
 		m.dropdownItems = nil
 		return m, nil
-	case m.config.Keys.Matches(msg, "ctrl+c"):
-		m.quitting = true
+	case Matches(m.Config.Keys, msg, "ctrl+c"):
+		m.Quitting = true
 		return m, tea.Quit
-	case m.config.Keys.IsUp(msg):
+	case IsUp(m.Config.Keys, msg):
 		if m.dropdownSelectedIdx > 0 {
 			m.dropdownSelectedIdx--
 		}
-	case m.config.Keys.IsDown(msg):
+	case IsDown(m.Config.Keys, msg):
 		if m.dropdownSelectedIdx < len(m.dropdownItems)-1 {
 			m.dropdownSelectedIdx++
 		}
-	case m.config.Keys.IsExplain(msg):
+	case IsExplain(m.Config.Keys, msg):
 		if m.dropdownSelectedIdx >= 0 && m.dropdownSelectedIdx < len(m.dropdownItems) {
 			item := m.dropdownItems[m.dropdownSelectedIdx]
 			parent := ""
@@ -538,17 +552,17 @@ func (m model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if strings.TrimSpace(item.Command) == "" {
 				m.infoCommand = "Error: no command configured"
 			} else {
-				m.infoCommand = config.ExpandCommandTokens(item.Command, m.config)
+				m.infoCommand = config.ExpandCommandTokens(item.Command, m.Config)
 			}
 			m.mode = infoMode
 			return m, nil
 		}
 		return m, nil
-	case m.config.Keys.Matches(msg, "enter"), m.config.Keys.Matches(msg, " "):
+	case Matches(m.Config.Keys, msg, "enter"), Matches(m.Config.Keys, msg, " "):
 		// Execute the selected dropdown item
 		if m.dropdownSelectedIdx >= 0 && m.dropdownSelectedIdx < len(m.dropdownItems) {
 			selectedItem := m.dropdownItems[m.dropdownSelectedIdx]
-			m.selected = selectedItem.Name
+			m.Selected = selectedItem.Name
 			// Store the command to execute
 			// We need to create a temporary command entry for execution
 			return m, tea.Quit
@@ -570,7 +584,7 @@ func copyToClipboardCmd(s string) tea.Cmd {
 	}
 }
 
-func (m model) updateInfoMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) updateInfoMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 	if m.profileErrorQueueActive {
 		var cmds []tea.Cmd
@@ -596,12 +610,12 @@ func (m model) updateInfoMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 }
 
-func (m model) updateLockedMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) updateLockedMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 
 	// Allow Ctrl+C to quit even when locked
 	if key == "ctrl+c" {
-		m.quitting = true
+		m.Quitting = true
 		return m, tea.Quit
 	}
 
@@ -643,7 +657,7 @@ func pumpDirectionForKey(key string) int {
 	}
 }
 
-func (m model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	inv := &m.inventory
 
 	if inv.err != nil {
@@ -654,29 +668,29 @@ func (m model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	switch {
-	case m.config.Keys.Matches(msg, "q"), m.config.Keys.Matches(msg, "esc"):
+	case Matches(m.Config.Keys, msg, "q"), Matches(m.Config.Keys, msg, "esc"):
 		m.mode = gridMode
 		return m, nil
-	case m.config.Keys.Matches(msg, "ctrl+c"):
-		m.quitting = true
+	case Matches(m.Config.Keys, msg, "ctrl+c"):
+		m.Quitting = true
 		return m, tea.Quit
 
 	// Navigation
-	case m.config.Keys.IsUp(msg):
+	case IsUp(m.Config.Keys, msg):
 		if inv.focusedList > 0 {
 			inv.focusedList--
 			inv.cursor = 0
 		}
-	case m.config.Keys.IsDown(msg):
+	case IsDown(m.Config.Keys, msg):
 		if inv.focusedList < 2 {
 			inv.focusedList++
 			inv.cursor = 0
 		}
-	case m.config.Keys.IsLeft(msg):
+	case IsLeft(m.Config.Keys, msg):
 		if inv.focusedList < 2 && inv.cursor > 0 {
 			inv.cursor--
 		}
-	case m.config.Keys.IsRight(msg):
+	case IsRight(m.Config.Keys, msg):
 		if inv.focusedList < 2 {
 			list := inv.visible
 			if inv.focusedList == 1 {
@@ -686,14 +700,14 @@ func (m model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				inv.cursor++
 			}
 		}
-	case m.config.Keys.IsPathGridMode(msg): // Reuse tab for focus cycle
+	case IsPathGridMode(m.Config.Keys, msg): // Reuse tab for focus cycle
 		inv.focusedList = (inv.focusedList + 1) % 3 // 0: visible, 1: inventory, 2: apply
 		inv.cursor = 0
 
 	// Lift and Place
-	case m.config.Keys.Matches(msg, " "), m.config.Keys.Matches(msg, "enter"):
+	case Matches(m.Config.Keys, msg, " "), Matches(m.Config.Keys, msg, "enter"):
 		if inv.focusedList == 2 { // Apply button is focused
-			return m, applyInventoryChangesCmd(m.configDir, m.inventory)
+			return m, ApplyInventoryChangesCmd(m.configDir, m.inventory)
 		}
 
 		currentList := &inv.visible
@@ -732,7 +746,7 @@ func (m model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) switchToProfileIndex(target int) (model, tea.Cmd, bool) {
+func (m Model) switchToProfileIndex(target int) (Model, tea.Cmd, bool) {
 	if len(m.profiles) == 0 {
 		return m, nil, false
 	}
@@ -756,17 +770,17 @@ func (m model) switchToProfileIndex(target int) (model, tea.Cmd, bool) {
 	updated.activeProfileIndex = target
 	if norm == "default" {
 		_ = os.Unsetenv("DRAKO_PROFILE")
-		updated.config = m.baseConfig
+		updated.Config = m.baseConfig
 	} else {
 		_ = os.Setenv("DRAKO_PROFILE", selected.Name)
-		updated.config = config.ApplyProfileOverlay(m.baseConfig, selected.Overlay)
+		updated.Config = config.ApplyProfileOverlay(m.baseConfig, selected.Overlay)
 	}
-	updated.applyConfig(updated.config)
+	updated.applyConfig(updated.Config)
 
 	return updated, nil, true
 }
 
-func (m model) handleProfileCycle(direction int) (tea.Model, tea.Cmd) {
+func (m Model) handleProfileCycle(direction int) (tea.Model, tea.Cmd) {
 	if len(m.profiles) <= 1 {
 		return m, nil
 	}
@@ -788,7 +802,7 @@ func (m model) handleProfileCycle(direction int) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *model) moveCursor(rowDir, colDir int) {
+func (m *Model) moveCursor(rowDir, colDir int) {
 	bestRow, bestCol := -1, -1
 	minDist := math.MaxFloat64
 

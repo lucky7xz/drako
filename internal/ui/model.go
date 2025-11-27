@@ -1,4 +1,4 @@
-package main
+package ui
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/lucky7xz/drako/internal/config" // config.drako.chronyx.xyz
+	"github.com/lucky7xz/drako/internal/config"
 )
 
 const (
@@ -21,14 +21,14 @@ const (
 	defaultLockPumpGoal       = 6
 )
 
-type model struct {
+type Model struct {
 	grid        [][]string
 	cursorRow   int
 	cursorCol   int
 	termWidth   int
 	termHeight  int
-	selected    string
-	quitting    bool
+	Selected    string
+	Quitting    bool
 	mode        navMode
 	spinner     spinner.Model
 	inputBuffer string
@@ -48,9 +48,9 @@ type model struct {
 
 	currentPath string
 
-	baseConfig            Config
-	config                Config
-	profiles              []ProfileInfo
+	baseConfig            config.Config
+	Config                config.Config
+	profiles              []config.ProfileInfo
 	activeProfileIndex    int
 	configDir             string
 	pivotProfileName      string
@@ -68,7 +68,7 @@ type model struct {
 	dropdownRow         int
 	dropdownCol         int
 	dropdownSelectedIdx int
-	dropdownItems       []CommandItem
+	dropdownItems       []config.CommandItem
 
 	previousMode    navMode
 	infoTitle       string
@@ -78,7 +78,7 @@ type model struct {
 	infoAutoClose   bool
 	infoCwd         string
 
-	pendingProfileErrors    []ProfileParseError
+	pendingProfileErrors    []config.ProfileParseError
 	profileErrorQueueActive bool
 
 	lastActivityTime  time.Time
@@ -89,7 +89,7 @@ type model struct {
 	lockLastDirection int
 }
 
-func (m *model) applyConfig(cfg Config) {
+func (m *Model) applyConfig(cfg config.Config) {
 	config.ClampConfig(&cfg)
 	applyThemeStyles(cfg)
 
@@ -110,7 +110,7 @@ func (m *model) applyConfig(cfg Config) {
 			}
 		}
 	}
-	m.config = cfg
+	m.Config = cfg
 	m.inputBuffer = ""
 	if m.spinner.Spinner.Frames == nil {
 		m.spinner = spinner.New()
@@ -130,11 +130,11 @@ func (m *model) applyConfig(cfg Config) {
 	}
 }
 
-func (m *model) applyBundle(bundle ConfigBundle) {
+func (m *Model) applyBundle(bundle config.ConfigBundle) {
 	m.baseConfig = bundle.Base
 	profiles := bundle.Profiles
 	if len(profiles) == 0 {
-		profiles = []ProfileInfo{{Name: "Default"}}
+		profiles = []config.ProfileInfo{{Name: "Default"}}
 	}
 	m.profiles = profiles
 	if bundle.ActiveIndex < 0 || bundle.ActiveIndex >= len(profiles) {
@@ -149,7 +149,7 @@ func (m *model) applyBundle(bundle ConfigBundle) {
 }
 
 // presentNextBrokenProfile pops the next pending broken profile error and configures infoMode to display it.
-func (m model) presentNextBrokenProfile() model {
+func (m Model) presentNextBrokenProfile() Model {
 	if len(m.pendingProfileErrors) == 0 {
 		return m
 	}
@@ -176,7 +176,7 @@ func (m model) presentNextBrokenProfile() model {
 	return m
 }
 
-func (m model) activeProfileName() string {
+func (m Model) activeProfileName() string {
 	if len(m.profiles) == 0 {
 		return "Default"
 	}
@@ -191,7 +191,7 @@ func (m model) activeProfileName() string {
 	return name
 }
 
-func initialModel() model {
+func InitialModel() Model {
 	path, err := os.Getwd()
 	if err != nil {
 		path = "could not get path"
@@ -201,7 +201,7 @@ func initialModel() model {
 
 	s := spinner.New()
 	s.Spinner = spinner.Line
-	m := model{
+	m := Model{
 		cursorRow:         0,
 		cursorCol:         0,
 		trafficAvgSeconds: 7.5,
@@ -226,7 +226,7 @@ func initialModel() model {
 	return m
 }
 
-func (m *model) updatePathComponents() {
+func (m *Model) updatePathComponents() {
 	home, err := os.UserHomeDir()
 	path := m.currentPath
 	if err == nil {
@@ -252,7 +252,7 @@ func (m *model) updatePathComponents() {
 	m.selectedPathIndex = len(m.pathComponents) - 1
 }
 
-func (m *model) listChildDirs() {
+func (m *Model) listChildDirs() {
 	m.childDirs = []string{}
 	m.childDirsError = nil
 	path := m.buildPathFromComponents(m.selectedPathIndex)
@@ -272,7 +272,7 @@ func (m *model) listChildDirs() {
 	sort.Strings(m.childDirs)
 }
 
-func (m *model) buildPathFromComponents(index int) string {
+func (m *Model) buildPathFromComponents(index int) string {
 	home, _ := os.UserHomeDir()
 
 	if len(m.pathComponents) == 0 {
@@ -296,7 +296,7 @@ func (m *model) buildPathFromComponents(index int) string {
 	}
 }
 
-func (m *model) scheduleStatusClearTimer() tea.Cmd {
+func (m *Model) scheduleStatusClearTimer() tea.Cmd {
 	m.nextTimerID++
 	id := m.nextTimerID
 	m.statusClearTimerID = id
@@ -305,7 +305,7 @@ func (m *model) scheduleStatusClearTimer() tea.Cmd {
 	})
 }
 
-func (m *model) setProfileStatus(message string, positive bool) tea.Cmd {
+func (m *Model) setProfileStatus(message string, positive bool) tea.Cmd {
 	m.profileStatusMessage = message
 	m.profileStatusPositive = positive
 	if strings.TrimSpace(message) == "" {
@@ -315,7 +315,7 @@ func (m *model) setProfileStatus(message string, positive bool) tea.Cmd {
 	return m.scheduleStatusClearTimer()
 }
 
-func (m *model) toggleProfileLock() tea.Cmd {
+func (m *Model) toggleProfileLock() tea.Cmd {
 	if strings.TrimSpace(m.configDir) == "" {
 		return m.setProfileStatus("Pivot unavailable", false)
 	}
@@ -350,7 +350,7 @@ func (m *model) toggleProfileLock() tea.Cmd {
 	return messageCmd
 }
 
-func (m model) enterLockedMode() model {
+func (m Model) enterLockedMode() Model {
 	if m.mode != lockedMode {
 		m.modeBeforeLock = m.mode
 	}
@@ -360,7 +360,7 @@ func (m model) enterLockedMode() model {
 	return m
 }
 
-func (m model) exitLockedMode() model {
+func (m Model) exitLockedMode() Model {
 	if m.mode == lockedMode {
 		m.mode = m.modeBeforeLock
 	}

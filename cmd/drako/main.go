@@ -8,14 +8,17 @@ import (
 	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/lucky7xz/drako/internal/cli"
 	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/ui"
 )
 
 // main wires everything together. It keeps the program running so that after a command
 // finishes we jump back into the TUI without losing state or the screen layout.
 func main() {
 	// Check if CLI command was invoked (e.g., drako sync <url>)
-	if handleCLI() {
+	if cli.HandleCLI() {
 		return
 	}
 
@@ -39,7 +42,8 @@ func main() {
 	log.SetOutput(f)
 
 	for {
-		program := tea.NewProgram(initialModel())
+		// Start the TUI program (Model/View/Update is now in internal/ui)
+		program := tea.NewProgram(ui.InitialModel())
 
 		result, err := program.Run()
 		if err != nil {
@@ -47,13 +51,14 @@ func main() {
 			os.Exit(1)
 		}
 
-		state, ok := result.(model)
-		if !ok || state.quitting {
+		// Cast result to ui.Model
+		state, ok := result.(ui.Model)
+		if !ok || state.Quitting {
 			return
 		}
 
-		if state.selected != "" {
-			runCommand(state.config, state.selected)
+		if state.Selected != "" {
+			core.RunCommand(state.Config, state.Selected)
 
 			cmd := exec.Command("clear")
 			cmd.Stdout = os.Stdout

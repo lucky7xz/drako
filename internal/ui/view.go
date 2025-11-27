@@ -1,4 +1,4 @@
-package main
+package ui
 
 import (
 	"fmt"
@@ -6,16 +6,16 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/lucky7xz/drako/internal/config" // drako.chronyx.xyz
+	"github.com/lucky7xz/drako/internal/config"
 )
 
-func (m model) View() string {
+func (m Model) View() string {
 	if m.termWidth == 0 {
 		return "Initializing..."
 	}
 
 	// If terminal is too small even at min_scale, show blocking overlay
-	if tooSmall, reqW, reqH := isBelowMinimum(m.termWidth, m.termHeight, m.config); tooSmall {
+	if tooSmall, reqW, reqH := IsBelowMinimum(m.termWidth, m.termHeight, m.Config); tooSmall {
 		return m.renderSizeOverlay(reqW, reqH)
 	}
 
@@ -55,7 +55,7 @@ func (m model) View() string {
 	netText := netLabel + m.traffic
 	statusText := fmt.Sprintf("STATUS: %s", m.onlineStatus)
 	themeText := "THEME: "
-	themeName := themeNameStyle.Render(m.config.Theme)
+	themeName := themeNameStyle.Render(m.Config.Theme)
 	separator := helpStyle.Render(" | ")
 
 	networkStatusBar := lipgloss.NewStyle().PaddingTop(1).Render(
@@ -96,7 +96,7 @@ func (m model) View() string {
 }
 
 // renderSizeOverlay shows a centered panel with current and required dimensions
-func (m model) renderSizeOverlay(reqW, reqH int) string {
+func (m Model) renderSizeOverlay(reqW, reqH int) string {
 	title := titleStyle.Render("Terminal too small")
 	minScalePct := 60
 	info := helpStyle.Render(
@@ -128,9 +128,9 @@ func (m model) renderSizeOverlay(reqW, reqH int) string {
 
 // --- Minimum size helpers (computed from grid size and min_scale) ---
 
-// calculateRequiredSize computes the minimum terminal dimensions needed
+// CalculateRequiredSize computes the minimum terminal dimensions needed
 // for the current grid at 100% scale
-func calculateRequiredSize(cfg config.Config) (minWidth, minHeight int) {
+func CalculateRequiredSize(cfg config.Config) (minWidth, minHeight int) {
 	// Base cell dimensions at 100% scale
 	// Cell = content (25) + padding (1+1) + border (1+1) = 29 width
 	cellWidth := 29
@@ -152,25 +152,25 @@ func calculateRequiredSize(cfg config.Config) (minWidth, minHeight int) {
 	return minWidth, minHeight
 }
 
-// requiredSizeAtScale estimates the space needed at a given scale factor
-func requiredSizeAtScale(cfg config.Config, scale float64) (int, int) {
-	w, h := calculateRequiredSize(cfg)
+// RequiredSizeAtScale estimates the space needed at a given scale factor
+func RequiredSizeAtScale(cfg config.Config, scale float64) (int, int) {
+	w, h := CalculateRequiredSize(cfg)
 	return int(float64(w) * scale), int(float64(h) * scale)
 }
 
-// isBelowMinimum returns whether the terminal is too small even at min_scale,
+// IsBelowMinimum returns whether the terminal is too small even at min_scale,
 // and returns the required width/height at min_scale for display.
-func isBelowMinimum(termWidth, termHeight int, cfg config.Config) (bool, int, int) {
+func IsBelowMinimum(termWidth, termHeight int, cfg config.Config) (bool, int, int) {
 	// Default minimum scale is 60% (triggers a bit sooner)
 	scale := 0.60
-	reqW, reqH := requiredSizeAtScale(cfg, scale)
+	reqW, reqH := RequiredSizeAtScale(cfg, scale)
 	if termWidth < reqW || termHeight < reqH {
 		return true, reqW, reqH
 	}
 	return false, reqW, reqH
 }
 
-func (m model) renderGrid() string {
+func (m Model) renderGrid() string {
 	const maxTextWidth = 25 // Max width for the text inside.
 
 	maxContentWidth := 0
@@ -285,7 +285,7 @@ func truncateText(s string, maxLength int) string {
 	return truncated.String() + "..."
 }
 
-func (m model) renderProfileBar() string {
+func (m Model) renderProfileBar() string {
 	profileLabel := lipgloss.NewStyle().Render("PROFILE: ")
 	segments := []string{profileLabel + m.activeProfileName()}
 
@@ -307,7 +307,7 @@ func (m model) renderProfileBar() string {
 	return lipgloss.NewStyle().PaddingTop(1).Render(lipgloss.JoinHorizontal(lipgloss.Left, segments...))
 }
 
-func (m model) renderPathBar() string {
+func (m Model) renderPathBar() string {
 	var renderedParts []string
 	for i, component := range m.pathComponents {
 		var style lipgloss.Style
@@ -323,7 +323,7 @@ func (m model) renderPathBar() string {
 	return statusBarStyle.Render(lipgloss.JoinHorizontal(lipgloss.Top, strings.Join(renderedParts, separator)))
 }
 
-func (m model) renderChildDirs() string {
+func (m Model) renderChildDirs() string {
 	if m.mode != childMode && m.mode != pathMode {
 		return ""
 	}
@@ -356,7 +356,7 @@ func (m model) renderChildDirs() string {
 	return lipgloss.JoinVertical(lipgloss.Left, rows[start:end]...)
 }
 
-func (m model) viewInventoryMode() string {
+func (m Model) viewInventoryMode() string {
 	// If there's an error, just show that.
 	if m.inventory.err != nil {
 		errorText := lipgloss.JoinVertical(lipgloss.Center,
@@ -405,7 +405,7 @@ func (m model) viewInventoryMode() string {
 	)
 }
 
-func (m model) renderInventoryGrid(profiles []string, listID int) string {
+func (m Model) renderInventoryGrid(profiles []string, listID int) string {
 	var cells []string
 	isFocused := m.inventory.focusedList == listID
 
@@ -460,11 +460,11 @@ func columnToLetter(col int) string {
 	return string(rune('A' + col))
 }
 
-func (m model) renderFooter() string {
+func (m Model) renderFooter() string {
 	return footerStyle.Render("[ github.com/lucky7xz | {chronyx}.xyz ]")
 }
 
-func (m model) renderProfileCounter() string {
+func (m Model) renderProfileCounter() string {
 	y := len(m.profiles)
 	if y > 9 {
 		y = 9
@@ -477,7 +477,7 @@ func (m model) renderProfileCounter() string {
 	return titleStyle.Render(counter)
 }
 
-func (m model) viewDropdownMode() string {
+func (m Model) viewDropdownMode() string {
 	// Render the base grid view
 	header := renderHeaderArt(m.spinner.View())
 	grid := m.renderGrid()
@@ -491,7 +491,7 @@ func (m model) viewDropdownMode() string {
 	netText := netLabel + m.traffic
 	statusText := fmt.Sprintf("STATUS: %s", m.onlineStatus)
 	themeText := "THEME: "
-	themeName := themeNameStyle.Render(m.config.Theme)
+	themeName := themeNameStyle.Render(m.Config.Theme)
 	separator := helpStyle.Render(" | ")
 
 	networkStatusBar := lipgloss.NewStyle().PaddingTop(1).Render(
@@ -540,7 +540,7 @@ func (m model) viewDropdownMode() string {
 	)
 }
 
-func (m model) renderDropdownPopup() string {
+func (m Model) renderDropdownPopup() string {
 	// Ensure every segment renders with the popup background to avoid black gaps
 	bg := dropdownPopupStyle.GetBackground()
 	bgFill := lipgloss.NewStyle().Background(bg)
@@ -583,7 +583,7 @@ func (m model) renderDropdownPopup() string {
 	return dropdownPopupStyle.Render(content)
 }
 
-func (m model) viewLockedMode() string {
+func (m Model) viewLockedMode() string {
 	// Calculate time since last activity
 	elapsed := time.Since(m.lastActivityTime)
 	elapsedMins := int(elapsed.Minutes())
@@ -664,7 +664,7 @@ func (m model) viewLockedMode() string {
 	)
 }
 
-func (m model) viewInfoMode() string {
+func (m Model) viewInfoMode() string {
 	header := renderHeaderArt(m.spinner.View())
 
 	// Build info lines with same background rules to avoid black gaps

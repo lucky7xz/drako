@@ -1,4 +1,4 @@
-package main
+package ui
 
 import (
 	"fmt"
@@ -35,8 +35,8 @@ type inventoryModel struct {
 	initialInventory []string
 }
 
-// newList creates a new list of profiles by scanning a directory for .profile.toml files.
-func newList(dir string) ([]string, error) {
+// NewList creates a new list of profiles by scanning a directory for .profile.toml files.
+func NewList(dir string) ([]string, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -54,8 +54,8 @@ func newList(dir string) ([]string, error) {
 	return profiles, nil
 }
 
-// initInventoryModel creates the initial state for the inventory TUI.
-func initInventoryModel(configDir string) inventoryModel {
+// InitInventoryModel creates the initial state for the inventory TUI.
+func InitInventoryModel(configDir string) inventoryModel {
 	inventoryDir := filepath.Join(configDir, "inventory")
 
 	if err := os.MkdirAll(inventoryDir, 0755); err != nil {
@@ -63,13 +63,13 @@ func initInventoryModel(configDir string) inventoryModel {
 		return inventoryModel{err: err}
 	}
 
-	visibleFiles, err := newList(configDir)
+	visibleFiles, err := NewList(configDir)
 	if err != nil {
 		log.Printf("could not read config directory: %v", err)
 		return inventoryModel{err: err}
 	}
 
-	inventory, err := newList(inventoryDir)
+	inventory, err := NewList(inventoryDir)
 	if err != nil {
 		log.Printf("could not read inventory directory: %v", err)
 		return inventoryModel{err: err}
@@ -131,8 +131,8 @@ func initInventoryModel(configDir string) inventoryModel {
 	}
 }
 
-// applyInventoryChangesCmd calculates the necessary file moves and executes them.
-func applyInventoryChangesCmd(configDir string, m inventoryModel) tea.Cmd {
+// ApplyInventoryChangesCmd calculates the necessary file moves and executes them.
+func ApplyInventoryChangesCmd(configDir string, m inventoryModel) tea.Cmd {
 	return func() tea.Msg {
 		inventoryDir := filepath.Join(configDir, "inventory")
 		moves := map[string]string{} // from -> to
@@ -142,14 +142,14 @@ func applyInventoryChangesCmd(configDir string, m inventoryModel) tea.Cmd {
 			if file == "Default" {
 				continue
 			}
-			if !contains(m.visible, file) {
+			if !Contains(m.visible, file) {
 				moves[filepath.Join(configDir, file)] = filepath.Join(inventoryDir, file)
 			}
 		}
 
 		// Find files to move from inventory to visible
 		for _, file := range m.initialInventory {
-			if !contains(m.inventory, file) {
+			if !Contains(m.inventory, file) {
 				moves[filepath.Join(inventoryDir, file)] = filepath.Join(configDir, file)
 			}
 		}
@@ -186,7 +186,7 @@ func applyInventoryChangesCmd(configDir string, m inventoryModel) tea.Cmd {
 	}
 }
 
-func contains(slice []string, item string) bool {
+func Contains(slice []string, item string) bool {
 	for _, v := range slice {
 		if v == item {
 			return true
