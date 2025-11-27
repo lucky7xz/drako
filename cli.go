@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/lucky7xz/drako/internal/config" // config.drako.chronyx.xyz
 )
 
 // handleCLI checks if the program was invoked with CLI arguments (not TUI mode).
@@ -35,7 +37,7 @@ func handleSummonCommand() {
 		os.Exit(1)
 	}
 
-	configDir, err := getConfigDir()
+	configDir, err := config.GetConfigDir()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
 		os.Exit(1)
@@ -57,7 +59,7 @@ func handleSummonCommand() {
 
 	sourceURL := os.Args[2]
 	log.Printf("Attempting to summon profile from: %s", sourceURL)
-	
+
 	if err := summonProfile(sourceURL, configDir); err != nil {
 		log.Printf("Summon failed: %v", err)
 		fmt.Fprintf(os.Stderr, "Summon failed: %v\n", err)
@@ -83,7 +85,7 @@ func printSummonUsage() {
 
 // handlePurgeCommand processes the 'drako purge' command
 func handlePurgeCommand() {
-	configDir, err := getConfigDir()
+	configDir, err := config.GetConfigDir()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
 		os.Exit(1)
@@ -112,7 +114,7 @@ func handlePurgeCommand() {
 	} else {
 		log.Printf("Purge command invoked")
 	}
-	
+
 	if err := purgeConfig(configDir, nukeAll); err != nil {
 		log.Printf("Purge failed: %v", err)
 		fmt.Fprintf(os.Stderr, "Purge failed: %v\n", err)
@@ -127,4 +129,3 @@ func handlePurgeCommand() {
 	}
 	os.Exit(0)
 }
-

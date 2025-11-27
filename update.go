@@ -15,10 +15,11 @@ import (
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/lucky7xz/drako/internal/config" // config.drako.chronyx.xyz
 )
 
 func (m model) Init() tea.Cmd {
-	configDir, _ := getConfigDir()
+	configDir, _ := config.GetConfigDir()
 	return tea.Batch(
 		tea.EnterAltScreen,
 		checkNetworkStatus(),
@@ -48,7 +49,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case reloadProfilesMsg:
-		bundle := loadConfig(nil)
+		bundle := config.LoadConfig(nil)
 		m.applyBundle(bundle)
 		if len(bundle.Broken) > 0 {
 			m.pendingProfileErrors = append(m.pendingProfileErrors, bundle.Broken...)
@@ -62,7 +63,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case configChangedMsg:
 		// Config file changed on disk, reload everything
 		log.Printf("Config file change detected: %s", msg.path)
-		bundle := loadConfig(nil)
+		bundle := config.LoadConfig(nil)
 		m.applyBundle(bundle)
 		if len(bundle.Broken) > 0 {
 			m.pendingProfileErrors = append(m.pendingProfileErrors, bundle.Broken...)
@@ -70,7 +71,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m = m.presentNextBrokenProfile()
 		}
 		// Restart the watcher for the next change
-		configDir, _ := getConfigDir()
+		configDir, _ := config.GetConfigDir()
 		return m, watchConfigCmd(configDir)
 
 	case inventoryErrorMsg:
@@ -315,7 +316,7 @@ func (m model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				if strings.TrimSpace(cmd.Command) == "" {
 					m.infoCommand = "Error: no command. ( This might be a folder of commands!)"
 				} else {
-					m.infoCommand = expandCommandTokens(cmd.Command, m.config)
+					m.infoCommand = config.ExpandCommandTokens(cmd.Command, m.config)
 				}
 				m.mode = infoMode
 				return m, nil
@@ -537,7 +538,7 @@ func (m model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if strings.TrimSpace(item.Command) == "" {
 				m.infoCommand = "Error: no command configured"
 			} else {
-				m.infoCommand = expandCommandTokens(item.Command, m.config)
+				m.infoCommand = config.ExpandCommandTokens(item.Command, m.config)
 			}
 			m.mode = infoMode
 			return m, nil
@@ -745,7 +746,7 @@ func (m model) switchToProfileIndex(target int) (model, tea.Cmd, bool) {
 
 	// Skip missing non-default profiles
 	if norm != "default" {
-		if !fileExists(selected.Path) {
+		if !config.FileExists(selected.Path) {
 			log.Printf("skipping missing profile: %s", selected.Path)
 			return m, nil, false
 		}
@@ -758,7 +759,7 @@ func (m model) switchToProfileIndex(target int) (model, tea.Cmd, bool) {
 		updated.config = m.baseConfig
 	} else {
 		_ = os.Setenv("DRAKO_PROFILE", selected.Name)
-		updated.config = applyProfileOverlay(m.baseConfig, selected.Overlay)
+		updated.config = config.ApplyProfileOverlay(m.baseConfig, selected.Overlay)
 	}
 	updated.applyConfig(updated.config)
 

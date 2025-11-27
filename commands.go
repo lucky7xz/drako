@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	
 
+	"github.com/lucky7xz/drako/internal/config"
 	"golang.org/x/term"
 )
 
@@ -52,7 +52,7 @@ func pause(msg string) {
 
 // findCommandByName returns a pointer to the matching top-level command or a nested item.
 // If an item is returned, the parent command is also returned.
-func findCommandByName(cfg Config, name string) (parent *Command, item *CommandItem, ok bool) {
+func findCommandByName(cfg config.Config, name string) (parent *config.Command, item *config.CommandItem, ok bool) {
 	for i := range cfg.Commands {
 		c := &cfg.Commands[i]
 		if c.Name == name {
@@ -94,7 +94,7 @@ func buildShellCmd(shell_config, commandStr string) *exec.Cmd {
 	}
 }
 
-func runCommand(config Config, selected string) {
+func runCommand(cfg config.Config, selected string) {
 	// cmd will hold the prepared command to run. It's a pointer type; zero value is nil.
 	var cmd *exec.Cmd
 	// Pointers to per-command overrides; nil means "use default".
@@ -102,14 +102,14 @@ func runCommand(config Config, selected string) {
 	var debugPtr *bool
 
 	// Default shell to use for string commands (honors config/profile).
-	shell_config := config.DefaultShell
+	shell_config := cfg.DefaultShell
 
 	// Resolve a top-level command or nested item by name.
-	parentCmd, itemCfg, found := findCommandByName(config, selected)
+	parentCmd, itemCfg, found := findCommandByName(cfg, selected)
 	if found {
 		if itemCfg == nil {
 			// top-level command
-			commandStr := expandCommandTokens(parentCmd.Command, config)
+			commandStr := config.ExpandCommandTokens(parentCmd.Command, cfg)
 			if commandStr != "" {
 				cmd = buildShellCmd(shell_config, commandStr)
 				autoClosePtr = parentCmd.AutoCloseExecution
@@ -117,7 +117,7 @@ func runCommand(config Config, selected string) {
 			}
 		} else {
 			// dropdown item
-			commandStr := expandCommandTokens(itemCfg.Command, config)
+			commandStr := config.ExpandCommandTokens(itemCfg.Command, cfg)
 			if commandStr != "" {
 				cmd = buildShellCmd(shell_config, commandStr)
 				autoClosePtr = itemCfg.AutoCloseExecution

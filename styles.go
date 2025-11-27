@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/lucky7xz/drako/internal/config"
 )
 
 // Styling lives in one place so colors and layout tweaks are easy to reason about.
@@ -57,12 +58,12 @@ var (
 	dropdownPopupStyle    lipgloss.Style
 )
 
-func applyThemeStyles(config Config) {
-	theme := getTheme(config.Theme)
+func applyThemeStyles(cfg config.Config) {
+	theme := getTheme(cfg.Theme)
 	ui := mapThemeToUI(theme)
 
-	if config.HeaderArt != nil && strings.TrimSpace(*config.HeaderArt) != "" {
-		activeHeaderArt = *config.HeaderArt
+	if cfg.HeaderArt != nil && strings.TrimSpace(*cfg.HeaderArt) != "" {
+		activeHeaderArt = *cfg.HeaderArt
 		log.Printf("Using custom header art from config")
 	} else {
 		activeHeaderArt = headerArt
