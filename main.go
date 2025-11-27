@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/lucky7xz/drako/internal/config"
 )
 
 // main wires everything together. It keeps the program running so that after a command
@@ -19,7 +20,7 @@ func main() {
 	}
 
 	// Proceed with TUI mode
-	configDir, err := getConfigDir()
+	configDir, err := config.GetConfigDir()
 	if err != nil {
 		fmt.Printf("could not get config dir: %v", err)
 		os.Exit(1)

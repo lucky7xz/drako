@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/lucky7xz/drako/internal/config" // drako.chronyx.xyz
 )
 
 func (m model) View() string {
@@ -129,7 +130,7 @@ func (m model) renderSizeOverlay(reqW, reqH int) string {
 
 // calculateRequiredSize computes the minimum terminal dimensions needed
 // for the current grid at 100% scale
-func calculateRequiredSize(cfg Config) (minWidth, minHeight int) {
+func calculateRequiredSize(cfg config.Config) (minWidth, minHeight int) {
 	// Base cell dimensions at 100% scale
 	// Cell = content (25) + padding (1+1) + border (1+1) = 29 width
 	cellWidth := 29
@@ -152,14 +153,14 @@ func calculateRequiredSize(cfg Config) (minWidth, minHeight int) {
 }
 
 // requiredSizeAtScale estimates the space needed at a given scale factor
-func requiredSizeAtScale(cfg Config, scale float64) (int, int) {
+func requiredSizeAtScale(cfg config.Config, scale float64) (int, int) {
 	w, h := calculateRequiredSize(cfg)
 	return int(float64(w) * scale), int(float64(h) * scale)
 }
 
 // isBelowMinimum returns whether the terminal is too small even at min_scale,
 // and returns the required width/height at min_scale for display.
-func isBelowMinimum(termWidth, termHeight int, cfg Config) (bool, int, int) {
+func isBelowMinimum(termWidth, termHeight int, cfg config.Config) (bool, int, int) {
 	// Default minimum scale is 60% (triggers a bit sooner)
 	scale := 0.60
 	reqW, reqH := requiredSizeAtScale(cfg, scale)

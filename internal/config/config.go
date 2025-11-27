@@ -300,7 +300,7 @@ type pivotFile struct {
 	EquippedOrder []string `toml:"equipped_order"`
 }
 
-func readPivotProfile(configDir string) (pivotFile, error) {
+func ReadPivotProfile(configDir string) (pivotFile, error) {
 	var pf pivotFile
 	path := pivotProfilePath(configDir)
 	data, err := os.ReadFile(path)
@@ -330,20 +330,20 @@ func writePivotFile(configDir string, pf pivotFile) error {
 }
 
 func WritePivotLocked(configDir, name string) error {
-	pf, _ := readPivotProfile(configDir)
+	pf, _ := ReadPivotProfile(configDir)
 	pf.Locked = strings.TrimSpace(name)
 	return writePivotFile(configDir, pf)
 }
 
 func WritePivotEquippedOrder(configDir string, order []string) error {
-	pf, _ := readPivotProfile(configDir)
+	pf, _ := ReadPivotProfile(configDir)
 	pf.EquippedOrder = order
 	return writePivotFile(configDir, pf)
 }
 
 func DeletePivotProfile(configDir string) error {
 	// Preserve equipped_order; only clear the lock
-	pf, _ := readPivotProfile(configDir)
+	pf, _ := ReadPivotProfile(configDir)
 	if pf.Locked == "" && len(pf.EquippedOrder) == 0 {
 		// No useful content, remove file if it exists
 		return os.Remove(pivotProfilePath(configDir))
@@ -371,7 +371,7 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 		}
 	}
 
-	pf, err := readPivotProfile(configDir)
+	pf, err := ReadPivotProfile(configDir)
 	if err != nil {
 		log.Printf("warning: could not read pivot profile: %v", err)
 		pf = pivotFile{}

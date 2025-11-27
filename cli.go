@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/lucky7xz/drako/internal/config" // config.drako.chronyx.xyz
+	"github.com/lucky7xz/drako/internal/config" // drako.chronyx.xyz
 )
 
 // handleCLI checks if the program was invoked with CLI arguments (not TUI mode).

@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"slices"
@@ -28,9 +28,9 @@ type InputConfig struct {
 	navRight []string
 }
 
-// initControls prepares the input config by populating the internal navigation sets
+// InitControls prepares the input config by populating the internal navigation sets
 // based on the disable flags. It should be called after loading the config.
-func (c *InputConfig) initControls() {
+func (c *InputConfig) InitControls() {
 	// Always include arrow keys
 	c.navUp = []string{"up"}
 	c.navDown = []string{"down"}

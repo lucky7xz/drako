@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/lucky7xz/drako/internal/config"
 )
 
 // reloadProfilesMsg signals the app to reload the configuration.
@@ -80,7 +81,7 @@ func initInventoryModel(configDir string) inventoryModel {
 	// Build visible list including the special "Default" entry
 	// Persisted equipped_order uses canonical names (e.g., "Default", "nw_pro")
 	var visible []string // contains filenames for overlays and the literal "Default"
-	if pf, err := readPivotProfile(configDir); err == nil && len(pf.EquippedOrder) > 0 {
+	if pf, err := config.ReadPivotProfile(configDir); err == nil && len(pf.EquippedOrder) > 0 {
 		// Map canonical name -> filename
 		nameToFile := make(map[string]string, len(visibleFiles))
 		for _, f := range visibleFiles {
@@ -89,7 +90,9 @@ func initInventoryModel(configDir string) inventoryModel {
 		}
 		// Track remaining overlays by name
 		remaining := make(map[string]string, len(nameToFile))
-		for n, f := range nameToFile { remaining[n] = f }
+		for n, f := range nameToFile {
+			remaining[n] = f
+		}
 		addedDefault := false
 		for _, n := range pf.EquippedOrder {
 			if n == "Default" {
@@ -104,10 +107,16 @@ func initInventoryModel(configDir string) inventoryModel {
 		}
 		// Append any leftovers alphabetically by name; if Default wasn't listed, append it at the end
 		var restNames []string
-		for n := range remaining { restNames = append(restNames, n) }
+		for n := range remaining {
+			restNames = append(restNames, n)
+		}
 		sort.Strings(restNames)
-		for _, n := range restNames { visible = append(visible, remaining[n]) }
-		if !addedDefault { visible = append(visible, "Default") }
+		for _, n := range restNames {
+			visible = append(visible, remaining[n])
+		}
+		if !addedDefault {
+			visible = append(visible, "Default")
+		}
 	} else {
 		// No saved order: Default first, then files alphabetically
 		sort.Strings(visibleFiles)
@@ -130,7 +139,9 @@ func applyInventoryChangesCmd(configDir string, m inventoryModel) tea.Cmd {
 
 		// Find files to move from visible to inventory (skip Default)
 		for _, file := range m.initialVisible {
-			if file == "Default" { continue }
+			if file == "Default" {
+				continue
+			}
 			if !contains(m.visible, file) {
 				moves[filepath.Join(configDir, file)] = filepath.Join(inventoryDir, file)
 			}
@@ -166,7 +177,7 @@ func applyInventoryChangesCmd(configDir string, m inventoryModel) tea.Cmd {
 			}
 			order = append(order, strings.TrimSuffix(v, ".profile.toml"))
 		}
-		if err := writePivotEquippedOrder(configDir, order); err != nil {
+		if err := config.WritePivotEquippedOrder(configDir, order); err != nil {
 			log.Printf("could not write equipped order: %v", err)
 		}
 

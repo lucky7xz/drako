@@ -59,8 +59,8 @@ var (
 )
 
 func applyThemeStyles(cfg config.Config) {
-	theme := getTheme(cfg.Theme)
-	ui := mapThemeToUI(theme)
+	theme := config.GetTheme(cfg.Theme)
+	ui := config.MapThemeToUI(theme)
 
 	if cfg.HeaderArt != nil && strings.TrimSpace(*cfg.HeaderArt) != "" {
 		activeHeaderArt = *cfg.HeaderArt
@@ -104,7 +104,6 @@ func applyThemeStyles(cfg config.Config) {
 		BorderForeground(lipgloss.Color(ui.GridBorder)).
 		Bold(true).
 		Padding(0, 1)
-		
 
 	selectedCellStyle = lipgloss.NewStyle().
 		Border(retroBorder).
@@ -236,20 +235,20 @@ func renderHeaderArt(spinnerView string) string {
 			// Process the line in parts: before placeholder, placeholder, after placeholder
 			parts := strings.Split(line, placeholder)
 			var styledLine strings.Builder
-			
+
 			// Process part before spinner
 			if len(parts) > 0 {
 				styledLine.WriteString(styleLineSegment(parts[0], primaryStyle))
 			}
-			
+
 			// Add white-styled spinner
 			styledLine.WriteString(whiteStyle.Render(spinnerView))
-			
+
 			// Process part after spinner
 			if len(parts) > 1 {
 				styledLine.WriteString(styleLineSegment(parts[1], primaryStyle))
 			}
-			
+
 			styledLines = append(styledLines, styledLine.String())
 			continue
 		}
@@ -301,7 +300,6 @@ func styleLineSegment(segment string, primaryStyle lipgloss.Style) string {
 			continue
 		}
 
-		
 		// Check for Chinese characters "龙狼志"
 		if i+2 < len(runes) && string(runes[i:i+3]) == "龙狼志" {
 			styledLine.WriteString(whiteStyle.Render("龙狼志"))

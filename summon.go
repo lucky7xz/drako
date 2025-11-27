@@ -3,8 +3,8 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"io/fs"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"net/url"
@@ -15,14 +15,15 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/lucky7xz/drako/internal/config"
 )
 
 // Asset copy limits
 const (
-	assetWarnSizeBytes  = 1 * 1024 * 1024  // 1 MB warn
-	assetMaxFileBytes   = 5 * 1024 * 1024  // 5 MB per file hard limit
-	assetMaxTotalBytes  = 50 * 1024 * 1024 // 50 MB total hard limit
-	assetMaxFileCount   = 500              // safety cap
+	assetWarnSizeBytes = 1 * 1024 * 1024  // 1 MB warn
+	assetMaxFileBytes  = 5 * 1024 * 1024  // 5 MB per file hard limit
+	assetMaxTotalBytes = 50 * 1024 * 1024 // 50 MB total hard limit
+	assetMaxFileCount  = 500              // safety cap
 )
 
 // confirmAction prompts the user to confirm an action
@@ -54,22 +55,22 @@ func summonProfile(sourceURL, configDir string) error {
 		if err := checkGitAvailable(); err != nil {
 			return err
 		}
-		
+
 		// Warn if SSH URL but no SSH keys
 		if isSSHURL(sourceURL) {
 			warnIfNoSSHKeys()
 		}
-		
+
 		// Confirm before cloning
 		fmt.Printf("\nYou are about to clone a git repository:\n")
 		fmt.Printf("  Source: %s\n", sourceURL)
 		fmt.Printf("  Destination: %s\n", inventoryDir)
 		fmt.Printf("  Action: Find and copy all .profile.toml files\n\n")
-		
+
 		if !confirmAction("Proceed with cloning?") {
 			return fmt.Errorf("operation cancelled by user")
 		}
-		
+
 		return summonFromGit(sourceURL, inventoryDir)
 	}
 
@@ -79,22 +80,22 @@ func summonProfile(sourceURL, configDir string) error {
 	if filename == "" || !strings.HasSuffix(filename, ".profile.toml") {
 		filename = "personal.profile.toml"
 	}
-	
+
 	fmt.Printf("\nYou are about to download a profile:\n")
 	fmt.Printf("  Source: %s\n", sourceURL)
 	fmt.Printf("  Destination: %s/%s\n", inventoryDir, filename)
-	
+
 	// Check if file exists
 	dstPath := filepath.Join(inventoryDir, filename)
 	if _, err := os.Stat(dstPath); err == nil {
 		fmt.Printf("  ⚠️  Warning: %s already exists and will be overwritten\n", filename)
 	}
 	fmt.Println()
-	
+
 	if !confirmAction("Proceed with download?") {
 		return fmt.Errorf("operation cancelled by user")
 	}
-	
+
 	return summonFromHTTP(sourceURL, inventoryDir)
 }
 
@@ -139,11 +140,11 @@ func warnIfNoSSHKeys() {
 	}
 
 	sshDir := filepath.Join(home, ".ssh")
-	
+
 	// Check for common SSH key files
 	keyFiles := []string{"id_rsa", "id_ed25519", "id_ecdsa", "id_dsa"}
 	hasKeys := false
-	
+
 	for _, keyFile := range keyFiles {
 		keyPath := filepath.Join(sshDir, keyFile)
 		if _, err := os.Stat(keyPath); err == nil {
@@ -212,7 +213,7 @@ func summonFromGit(repoURL, inventoryDir string) error {
 	summoned := 0
 	skipped := 0
 	cancelled := 0
-	
+
 	for _, srcPath := range profileFiles {
 		dstName := filepath.Base(srcPath)
 		dstPath := filepath.Join(inventoryDir, dstName)
@@ -242,7 +243,7 @@ func summonFromGit(repoURL, inventoryDir string) error {
 		// Get file info for size display
 		info, _ := os.Stat(srcPath)
 		size := info.Size()
-		
+
 		// Check if destination exists
 		overwriting := false
 		if _, err := os.Stat(dstPath); err == nil {
@@ -287,7 +288,7 @@ func summonFromGit(repoURL, inventoryDir string) error {
 			fmt.Printf("  Note: No per-asset prompts. Missing assets will be warned and skipped. Limits: %d files, total ≤ %d MB, per-file ≤ %d MB.\n",
 				assetMaxFileCount, assetMaxTotalBytes/(1024*1024), assetMaxFileBytes/(1024*1024))
 		}
-		
+
 		if !confirmAction(fmt.Sprintf("Summon %s?", dstName)) {
 			fmt.Printf("⊘ Cancelled: %s\n", dstName)
 			cancelled++
@@ -336,7 +337,7 @@ func readAssetsFromProfile(profilePath string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	var overlay profileOverlay
+	var overlay config.ProfileOverlay
 	if _, err := toml.Decode(string(data), &overlay); err != nil {
 		return nil, err
 	}
@@ -362,7 +363,7 @@ func readAssetsFromProfile(profilePath string) ([]string, error) {
 // - profileDir: directory of the profile file (assets are relative to this)
 // Returns counts of copied/skipped/missing and total bytes copied.
 func copyAssetsList(repoRoot, profileDir string, assets []string) (int, int, int, int64) {
-	configDir, err := getConfigDir()
+	configDir, err := config.GetConfigDir()
 	if err != nil {
 		log.Printf("assets: could not resolve config dir: %v", err)
 		return 0, 0, len(assets), 0
@@ -441,7 +442,7 @@ type assetPlanItem struct {
 
 // planAssetsList enumerates assets to present a copy plan before confirmation
 func planAssetsList(repoRoot, profileDir string, assets []string) []assetPlanItem {
-	configDir, _ := getConfigDir()
+	configDir, _ := config.GetConfigDir()
 	var plans []assetPlanItem
 	for _, rel := range assets {
 		cleanRel, safe := cleanAssetRel(rel)
@@ -465,10 +466,16 @@ func planAssetsList(repoRoot, profileDir string, assets []string) []assetPlanIte
 			var files int
 			var bytes int64
 			filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
-				if err != nil { return nil }
-				if d.IsDir() { return nil }
+				if err != nil {
+					return nil
+				}
+				if d.IsDir() {
+					return nil
+				}
 				fi, e := d.Info()
-				if e != nil { return nil }
+				if e != nil {
+					return nil
+				}
 				files++
 				bytes += fi.Size()
 				return nil
@@ -728,7 +735,7 @@ func copyFile(src, dst string) error {
 
 // Profile size limits
 const (
-	profileWarnSize = 500 * 1024  // 500KB - warn if larger
+	profileWarnSize = 500 * 1024      // 500KB - warn if larger
 	profileMaxSize  = 2 * 1024 * 1024 // 2MB - reject if larger
 )
 
@@ -756,13 +763,13 @@ func validateProfileFile(path string) error {
 	}
 
 	// Try to parse as profileOverlay (what drako expects)
-	var overlay profileOverlay
+	var overlay config.ProfileOverlay
 	if _, err := toml.Decode(string(data), &overlay); err != nil {
 		return fmt.Errorf("invalid TOML format: %w", err)
 	}
 
 	// Check if it has at least one profile-related field
-	if overlayIsEmpty(overlay) {
+	if config.OverlayIsEmpty(overlay) {
 		return fmt.Errorf("file contains no profile settings (missing x, y, commands, theme, etc.)")
 	}
 
@@ -776,4 +783,3 @@ func validateFilename(filename string) error {
 	}
 	return nil
 }
-

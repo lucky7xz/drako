@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/lucky7xz/drako/internal/config" // config.drako.chronyx.xyz
 )
 
 const (
@@ -64,35 +65,35 @@ type model struct {
 
 	inventory inventoryModel
 
-	dropdownRow          int
-	dropdownCol          int
-	dropdownSelectedIdx  int
-	dropdownItems        []CommandItem
+	dropdownRow         int
+	dropdownCol         int
+	dropdownSelectedIdx int
+	dropdownItems       []CommandItem
 
-	previousMode     navMode
-	infoTitle        string
-	infoCommand      string
-	infoDescription  string
-	infoExecMode     string
-	infoAutoClose    bool
-	infoCwd          string
+	previousMode    navMode
+	infoTitle       string
+	infoCommand     string
+	infoDescription string
+	infoExecMode    string
+	infoAutoClose   bool
+	infoCwd         string
 
 	pendingProfileErrors    []ProfileParseError
 	profileErrorQueueActive bool
 
-	lastActivityTime time.Time
-	lockTimeoutMins  int
-	modeBeforeLock   navMode
-	lockProgress     int
-	lockPumpGoal     int
+	lastActivityTime  time.Time
+	lockTimeoutMins   int
+	modeBeforeLock    navMode
+	lockProgress      int
+	lockPumpGoal      int
 	lockLastDirection int
 }
 
 func (m *model) applyConfig(cfg Config) {
-	clampConfig(&cfg)
+	config.ClampConfig(&cfg)
 	applyThemeStyles(cfg)
 
-	m.grid = buildGrid(cfg)
+	m.grid = config.BuildGrid(cfg)
 	if len(m.grid) > 0 {
 		if m.cursorRow >= len(m.grid) {
 			m.cursorRow = len(m.grid) - 1
@@ -129,7 +130,7 @@ func (m *model) applyConfig(cfg Config) {
 	}
 }
 
-func (m *model) applyBundle(bundle configBundle) {
+func (m *model) applyBundle(bundle ConfigBundle) {
 	m.baseConfig = bundle.Base
 	profiles := bundle.Profiles
 	if len(profiles) == 0 {
@@ -196,7 +197,7 @@ func initialModel() model {
 		path = "could not get path"
 	}
 
-	bundle := loadConfig(nil)
+	bundle := config.LoadConfig(nil)
 
 	s := spinner.New()
 	s.Spinner = spinner.Line
@@ -295,8 +296,6 @@ func (m *model) buildPathFromComponents(index int) string {
 	}
 }
 
-
-
 func (m *model) scheduleStatusClearTimer() tea.Cmd {
 	m.nextTimerID++
 	id := m.nextTimerID
@@ -305,7 +304,6 @@ func (m *model) scheduleStatusClearTimer() tea.Cmd {
 		return profileStatusClearMsg{id: id}
 	})
 }
-
 
 func (m *model) setProfileStatus(message string, positive bool) tea.Cmd {
 	m.profileStatusMessage = message
@@ -317,28 +315,27 @@ func (m *model) setProfileStatus(message string, positive bool) tea.Cmd {
 	return m.scheduleStatusClearTimer()
 }
 
-
 func (m *model) toggleProfileLock() tea.Cmd {
 	if strings.TrimSpace(m.configDir) == "" {
 		return m.setProfileStatus("Pivot unavailable", false)
 	}
 
 	currentName := m.activeProfileName()
-	normCurrent := normalizeProfileName(currentName)
-	normPivot := normalizeProfileName(m.pivotProfileName)
+	normCurrent := config.NormalizeProfileName(currentName)
+	normPivot := config.NormalizeProfileName(m.pivotProfileName)
 
 	var err error
 	var messageCmd tea.Cmd
 
 	if m.profileLocked && normPivot == normCurrent && m.pivotProfileName != "" {
-		err = deletePivotProfile(m.configDir)
+		err = config.DeletePivotProfile(m.configDir)
 		if err == nil {
 			m.profileLocked = false
 			m.pivotProfileName = ""
 			messageCmd = m.setProfileStatus("Pivot cleared", false)
 		}
 	} else {
-		err = writePivotLocked(m.configDir, currentName)
+		err = config.WritePivotLocked(m.configDir, currentName)
 		if err == nil {
 			m.profileLocked = true
 			m.pivotProfileName = currentName

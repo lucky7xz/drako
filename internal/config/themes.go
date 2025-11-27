@@ -1,12 +1,12 @@
-package main
+package config
 
 import (
 	"embed"
 	"fmt"
-	"github.com/BurntSushi/toml"
-	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"github.com/BurntSushi/toml"
 )
 
 //go:embed bootstrap/themes.toml
@@ -40,7 +40,7 @@ func init() {
 
 	if _, err := os.Stat(userThemesPath); err == nil {
 		// User-defined themes.toml exists, load from there
-		themesContent, err = ioutil.ReadFile(userThemesPath)
+		themesContent, err = os.ReadFile(userThemesPath)
 		if err != nil {
 			panic(fmt.Sprintf("Failed to read user themes file %s: %v", userThemesPath, err))
 		}
@@ -63,65 +63,65 @@ func init() {
 
 // UIColors describes concrete UI component colors derived from a theme.
 type UIColors struct {
-	HeaderFG        string
-	FooterFG        string
+	HeaderFG string
+	FooterFG string
 
-	GridBorder      string
-	GridSelBorder   string
-	GridSelText     string
+	GridBorder    string
+	GridSelBorder string
+	GridSelText   string
 
-	Path            string
-	PathSelected    string
-	PathSeparator   string
+	Path          string
+	PathSelected  string
+	PathSeparator string
 
-	StatusInfo      string
-	StatusPositive  string
-	StatusNegative  string
-	Warning         string
+	StatusInfo     string
+	StatusPositive string
+	StatusNegative string
+	Warning        string
 
-	HelpFG          string
-	TitleFG         string
-	ListHeaderFG    string
-	CursorFG        string
+	HelpFG       string
+	TitleFG      string
+	ListHeaderFG string
+	CursorFG     string
 
-	ButtonFG        string
-	ButtonBG        string
-	ButtonSelFG     string
-	ButtonSelBG     string
+	ButtonFG    string
+	ButtonBG    string
+	ButtonSelFG string
+	ButtonSelBG string
 
-	DropdownBorder  string
-	DropdownFG      string
-	DropdownBG      string
+	DropdownBorder string
+	DropdownFG     string
+	DropdownBG     string
 }
 
-// mapThemeToUI maps a DracoThemeConfig to concrete UI component colors.
-func mapThemeToUI(t DracoThemeConfig) UIColors {
+// MapThemeToUI maps a DracoThemeConfig to concrete UI component colors.
+func MapThemeToUI(t DracoThemeConfig) UIColors {
 	return UIColors{
-		HeaderFG:       t.Primary,
-		FooterFG:       t.Comment,
+		HeaderFG: t.Primary,
+		FooterFG: t.Comment,
 
-		GridBorder:     t.Comment,
-		GridSelBorder:  t.Accent,
-		GridSelText:    t.Accent,
+		GridBorder:    t.Comment,
+		GridSelBorder: t.Accent,
+		GridSelText:   t.Accent,
 
-		Path:           t.Primary,
-		PathSelected:   t.Accent,
-		PathSeparator:  t.Comment,
+		Path:          t.Primary,
+		PathSelected:  t.Accent,
+		PathSeparator: t.Comment,
 
 		StatusInfo:     t.Info,
 		StatusPositive: t.Success,
 		StatusNegative: t.Error,
 		Warning:        t.Warning,
 
-		HelpFG:         t.Comment,
-		TitleFG:        t.Primary,
-		ListHeaderFG:   t.Secondary,
-		CursorFG:       t.Accent,
+		HelpFG:       t.Comment,
+		TitleFG:      t.Primary,
+		ListHeaderFG: t.Secondary,
+		CursorFG:     t.Accent,
 
-		ButtonFG:       t.Foreground,
-		ButtonBG:       t.Comment,
-		ButtonSelFG:    t.Background,
-		ButtonSelBG:    t.Primary,
+		ButtonFG:    t.Foreground,
+		ButtonBG:    t.Comment,
+		ButtonSelFG: t.Background,
+		ButtonSelBG: t.Primary,
 
 		DropdownBorder: t.Primary,
 		DropdownFG:     t.Foreground,
@@ -129,31 +129,11 @@ func mapThemeToUI(t DracoThemeConfig) UIColors {
 	}
 }
 
-// getTheme returns the color palette for a given theme name.
+// GetTheme returns the color palette for a given theme name.
 // If the theme is not found, it defaults to "dracula".
-func getTheme(name string) DracoThemeConfig {
+func GetTheme(name string) DracoThemeConfig {
 	if theme, ok := loadedThemes[name]; ok {
 		return theme
 	}
 	return loadedThemes["dracula"]
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

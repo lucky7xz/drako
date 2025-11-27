@@ -11,11 +11,11 @@ import (
 )
 
 var (
-	pauseFn       = pause
-	lookPathFn    = exec.LookPath
-	commandFn     = exec.Command
-	setenvFn      = os.Setenv
-	unsetenvFn    = os.Unsetenv
+	pauseFn    = pause
+	lookPathFn = exec.LookPath
+	commandFn  = exec.Command
+	//setenvFn   = os.Setenv
+	//unsetenvFn = os.Unsetenv
 )
 
 // - Optional booleans in config are represented as *bool (pointer-to-bool) so we
@@ -23,7 +23,9 @@ var (
 //   boolOrDefault.
 
 func boolOrDefault(ptr *bool, def bool) bool {
-	if ptr == nil { return def }
+	if ptr == nil {
+		return def
+	}
 	return *ptr
 }
 
