@@ -176,7 +176,8 @@ func summonFromGit(repoURL, inventoryDir string) error {
 
 	// Clone the repository
 	fmt.Printf("Cloning repository...\n")
-	cmd := exec.Command("git", "clone", repoURL, tempDir)
+	// Use -- to prevent argument injection if repoURL starts with a hyphen
+	cmd := exec.Command("git", "clone", "--", repoURL, tempDir)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
@@ -259,8 +260,10 @@ func summonFromGit(repoURL, inventoryDir string) error {
 		}
 		if len(assets) > 0 {
 			fmt.Printf("  Assets declared: %d\n", len(assets))
-			fmt.Printf("  Plan (destination under ~/.config/drako using asset paths as given):\n")
-			plans := planAssetsList(tempDir, filepath.Dir(srcPath), assets)
+			// Determine profile name for asset destination
+			profileName := strings.TrimSuffix(dstName, ".profile.toml")
+			fmt.Printf("  Plan (destination under ~/.config/drako/assets/%s/):\n", profileName)
+			plans := planAssetsList(tempDir, filepath.Dir(srcPath), assets, profileName)
 			totalPlannedBytes := int64(0)
 			totalPlannedFiles := 0
 			missingPlanned := 0
@@ -269,7 +272,7 @@ func summonFromGit(repoURL, inventoryDir string) error {
 				if p.IsDir {
 					status = "dir"
 				}
-				dest := filepath.Join("~/.config/drako", p.DestRel)
+				dest := filepath.Join("~/.config/drako/assets", profileName, p.DestRel)
 				if p.Missing {
 					fmt.Printf("    - %s (%s) -> %s [missing]\n", p.AssetRel, status, dest)
 					missingPlanned++
@@ -303,7 +306,14 @@ func summonFromGit(repoURL, inventoryDir string) error {
 
 		// Handle assets (git-only feature)
 		if len(assets) > 0 {
-			aCopied, aSkipped, aMissing, aBytes := copyAssetsList(tempDir, filepath.Dir(srcPath), assets)
+			// Derive profile name from the destination filename (e.g. "my-profile.profile.toml" -> "my-profile")
+			// We use dstName here because that's the final name in the inventory.
+			profileName := strings.TrimSuffix(dstName, ".profile.toml")
+
+			// We need to pass the profile name to copyAssetsList so it knows where to put them.
+			// However, copyAssetsList signature is fixed for now.
+			// Wait, I can just change copyAssetsList signature since it is internal.
+			aCopied, aSkipped, aMissing, aBytes := copyAssetsList(tempDir, filepath.Dir(srcPath), assets, profileName)
 			fmt.Printf("  Assets: copied=%d, skipped=%d, missing=%d, total=%.1f MB\n",
 				aCopied, aSkipped, aMissing, float64(aBytes)/(1024*1024))
 			log.Printf("Assets for %s: copied=%d, skipped=%d, missing=%d, bytes=%d", dstName, aCopied, aSkipped, aMissing, aBytes)
@@ -361,8 +371,9 @@ func readAssetsFromProfile(profilePath string) ([]string, error) {
 // copyAssetsList copies a list of assets (files or directories) from the cloned repo to configDir.
 // - repoRoot: tempDir where repo was cloned
 // - profileDir: directory of the profile file (assets are relative to this)
+// - profileName: name of the profile (used for subfolder isolation)
 // Returns counts of copied/skipped/missing and total bytes copied.
-func copyAssetsList(repoRoot, profileDir string, assets []string) (int, int, int, int64) {
+func copyAssetsList(repoRoot, profileDir string, assets []string, profileName string) (int, int, int, int64) {
 	configDir, err := config.GetConfigDir()
 	if err != nil {
 		log.Printf("assets: could not resolve config dir: %v", err)
@@ -388,8 +399,9 @@ func copyAssetsList(repoRoot, profileDir string, assets []string) (int, int, int
 			skipped++
 			continue
 		}
-		// Destination is exactly the asset path under configDir (no extra parent folders)
-		dst := filepath.Join(configDir, cleanRel)
+		// Destination is the assets/ directory + profile name + original relative path
+		// e.g. ~/.config/drako/assets/my-profile/script.sh
+		dst := filepath.Join(configDir, "assets", profileName, cleanRel)
 
 		info, statErr := os.Stat(src)
 		if statErr != nil {
@@ -441,7 +453,7 @@ type assetPlanItem struct {
 }
 
 // planAssetsList enumerates assets to present a copy plan before confirmation
-func planAssetsList(repoRoot, profileDir string, assets []string) []assetPlanItem {
+func planAssetsList(repoRoot, profileDir string, assets []string, profileName string) []assetPlanItem {
 	configDir, _ := config.GetConfigDir()
 	var plans []assetPlanItem
 	for _, rel := range assets {
@@ -591,14 +603,32 @@ func isPathWithinBase(base, target string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	targetAbs, err := filepath.Abs(target)
+
+	// Use EvalSymlinks to resolve the true final path.
+	// Example: If the repo contains a file 'script.sh' which is actually a symlink
+	// pointing to '../../../../etc/passwd', EvalSymlinks reveals that true path.
+	// We then check if that resolved path is still inside the repo folder.
+	// If it points outside, we reject it to prevent stealing system files.
+	targetResolved, err := filepath.EvalSymlinks(target)
+	if err != nil {
+		// If it doesn't exist, EvalSymlinks fails. We can fallback to Abs + Clean if we are creating it,
+		// but for existing source files in the repo, it MUST exist.
+		// If checking destination, it might not exist yet.
+		// However, this function is primarily used to check if a SOURCE file inside the repo
+		// is actually safe to copy (i.e. it doesn't point outside the repo).
+		return false, err
+	}
+
+	targetAbs, err := filepath.Abs(targetResolved)
 	if err != nil {
 		return false, err
 	}
+
 	rel, err := filepath.Rel(baseAbs, targetAbs)
 	if err != nil {
 		return false, err
 	}
+	// Must not start with ".."
 	return !strings.HasPrefix(rel, ".."), nil
 }
 

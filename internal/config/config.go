@@ -107,6 +107,19 @@ func ExpandCommandTokens(s string, cfg Config) string {
 		return s
 	}
 	s = strings.ReplaceAll(s, "{dR4ko_path}", cfg.DR4koPath)
+	// {assets} resolves to config_dir/assets/<active_profile_name>
+	// cfg.Profile might be empty or "Default", handled by GetConfigDir + Join
+	if strings.Contains(s, "{assets}") {
+		configDir, err := GetConfigDir()
+		if err == nil {
+			profileName := NormalizeProfileName(cfg.Profile)
+			if profileName == "" {
+				profileName = "default"
+			}
+			assetsPath := filepath.Join(configDir, "assets", profileName)
+			s = strings.ReplaceAll(s, "{assets}", assetsPath)
+		}
+	}
 	return s
 }
 

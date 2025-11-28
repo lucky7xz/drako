@@ -170,6 +170,12 @@ func RunCommand(cfg config.Config, selected string) {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+
+	// Sanitize environment variables
+	// If EnvWhitelist is configured, we restrict the environment.
+	// Otherwise, we inherit the full parent environment (pass-through).
+	cmd.Env = PrepareEnv(os.Environ(), cfg.EnvWhitelist)
+
 	if err := cmd.Run(); err != nil {
 		fmt.Printf("\n--- Command Failed ---\n")
 		fmt.Printf("Command: '%s'\n", selected)

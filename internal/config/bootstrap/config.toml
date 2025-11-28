@@ -57,6 +57,28 @@ profile_next = "p"
 
 
 
+# ┌─ Environment Variables ──────────────────────────────┐
+# | By default, drako inherits your full shell environment
+# | to ensure maximum compatibility with your tools.
+# |
+# | Uncomment 'env_whitelist' below to enable strict mode.
+# | Only the listed variables will be passed to commands.
+# | This is recommended for high-security setups.
+# └──────────────────────────────────────────────────────┘
+# env_whitelist = [
+#     "PATH",
+#     "HOME",
+#     "USER",
+#     "SHELL",
+#     "TERM",
+#     "LANG",
+#     "LC_ALL",
+#     "EDITOR",
+#     "VISUAL",
+#     "GOPATH",
+#     "SSH_AUTH_SOCK"
+# ]
+
 #TODO : THIS MGIHT BE REMOVED ON BETA
 # =======================================================================================================
 

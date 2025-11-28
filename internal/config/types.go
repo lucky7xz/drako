@@ -32,6 +32,8 @@ type Config struct {
 	Y                  int         `toml:"y"`
 	Profile            string      `toml:"profile"`
 	LockTimeoutMinutes *int        `toml:"lock_timeout_minutes"`
+	EnvWhitelist       []string    `toml:"env_whitelist"`
+	EnvBlocklist       []string    `toml:"env_blocklist"`
 	Keys               InputConfig `toml:"keys"`
 	Commands           []Command   `toml:"commands"`
 }
