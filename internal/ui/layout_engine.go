@@ -5,6 +5,7 @@ import "github.com/lucky7xz/drako/internal/config"
 // Layout controls the visibility of UI elements based on terminal size.
 type Layout struct {
 	ShowHeader bool
+	ShowFooter bool
 }
 
 // CalculateLayout determines which UI elements should be visible.
@@ -23,11 +24,18 @@ func CalculateLayout(termW, termH int, cfg config.Config) Layout {
 
 	l := Layout{
 		ShowHeader: true,
+		ShowFooter: true,
 	}
 
 	// If terminal is too short, hide the header first
 	if termH < fullHeight {
 		l.ShowHeader = false
+
+		// If still too short, hide the footer
+		neededWithoutHeader := gridHeight + footerHeight + LayoutVertPadding
+		if termH < neededWithoutHeader {
+			l.ShowFooter = false
+		}
 	}
 
 	return l

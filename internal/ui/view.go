@@ -77,14 +77,17 @@ func (m Model) View() string {
 	pathBar := m.renderPathBar()
 	childDirs := m.renderChildDirs()
 
-	footer := lipgloss.JoinVertical(
-		lipgloss.Left,
-		help,
-		networkStatusBar,
-		profileBar,
-		pathBar,
-		childDirs,
-	)
+	var footer string
+	if layout.ShowFooter {
+		footer = lipgloss.JoinVertical(
+			lipgloss.Left,
+			help,
+			networkStatusBar,
+			profileBar,
+			pathBar,
+			childDirs,
+		)
+	}
 
 	finalContent := lipgloss.JoinVertical(
 		lipgloss.Center,
@@ -515,14 +518,17 @@ func (m Model) viewDropdownMode() string {
 	pathBar := m.renderPathBar()
 	childDirs := m.renderChildDirs()
 
-	footer := lipgloss.JoinVertical(
-		lipgloss.Left,
-		help,
-		networkStatusBar,
-		profileBar,
-		pathBar,
-		childDirs,
-	)
+	var footer string
+	if layout.ShowFooter {
+		footer = lipgloss.JoinVertical(
+			lipgloss.Left,
+			help,
+			networkStatusBar,
+			profileBar,
+			pathBar,
+			childDirs,
+		)
+	}
 
 	finalContent := lipgloss.JoinVertical(
 		lipgloss.Center,

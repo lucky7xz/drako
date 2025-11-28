@@ -26,6 +26,9 @@ func HandleCLI() bool {
 	case "purge", "--purge":
 		HandlePurgeCommand()
 		return true
+	case "spec", "--spec":
+		HandleSpecCommand()
+		return true
 	default:
 		return false
 	}
