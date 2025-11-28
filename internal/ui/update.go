@@ -1,14 +1,11 @@
 package ui
 
 import (
-	"encoding/base64"
 	"fmt"
 	"log"
 	"math"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -284,7 +281,7 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	switch {
-	case Matches(m.Config.Keys, msg, "ctrl+c"), Matches(m.Config.Keys, msg, "q"):
+	case IsQuit(m.Config.Keys, msg):
 		m.Quitting = true
 		return m, tea.Quit
 	case IsInventory(m.Config.Keys, msg):
@@ -346,7 +343,7 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.infoCommand = "Error: command not found"
 		m.mode = infoMode
 		return m, nil
-	case key == "enter", key == " ":
+	case IsConfirm(m.Config.Keys, msg):
 		selectedChoice := m.grid[m.cursorRow][m.cursorCol]
 		if selectedChoice != "" {
 			// Check if this command has dropdown items
@@ -425,7 +422,7 @@ func findFirstPopulatedRow(grid [][]string, col int) int {
 
 func (m Model) updatePathMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
-	case Matches(m.Config.Keys, msg, "ctrl+c"), Matches(m.Config.Keys, msg, "q"):
+	case IsQuit(m.Config.Keys, msg):
 		m.Quitting = true
 		return m, tea.Quit
 	case IsLeft(m.Config.Keys, msg):
@@ -445,7 +442,7 @@ func (m Model) updatePathMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case IsPathGridMode(m.Config.Keys, msg):
 		m.mode = gridMode
-	case Matches(m.Config.Keys, msg, "enter"), Matches(m.Config.Keys, msg, " "):
+	case IsConfirm(m.Config.Keys, msg):
 		targetPath := m.buildPathFromComponents(m.selectedPathIndex)
 		if err := os.Chdir(targetPath); err == nil {
 			m.currentPath, _ = os.Getwd()
@@ -458,7 +455,7 @@ func (m Model) updatePathMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m Model) updateChildMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
-	case Matches(m.Config.Keys, msg, "ctrl+c"), Matches(m.Config.Keys, msg, "q"):
+	case IsQuit(m.Config.Keys, msg):
 		m.Quitting = true
 		return m, tea.Quit
 	case IsUp(m.Config.Keys, msg):
@@ -473,7 +470,7 @@ func (m Model) updateChildMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case IsPathGridMode(m.Config.Keys, msg):
 		m.mode = gridMode
-	case Matches(m.Config.Keys, msg, "enter"), Matches(m.Config.Keys, msg, " "):
+	case IsConfirm(m.Config.Keys, msg):
 		parentPath := m.buildPathFromComponents(m.selectedPathIndex)
 		targetPath := filepath.Join(parentPath, m.childDirs[m.selectedChildIndex])
 		if err := os.Chdir(targetPath); err == nil {
@@ -503,7 +500,7 @@ func (m Model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	switch {
-	case Matches(m.Config.Keys, msg, "q"), Matches(m.Config.Keys, msg, "esc"):
+	case IsCancel(m.Config.Keys, msg):
 		// Close dropdown and return to grid mode
 		m.mode = gridMode
 		m.dropdownItems = nil
@@ -558,7 +555,7 @@ func (m Model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		return m, nil
-	case Matches(m.Config.Keys, msg, "enter"), Matches(m.Config.Keys, msg, " "):
+	case IsConfirm(m.Config.Keys, msg):
 		// Execute the selected dropdown item
 		if m.dropdownSelectedIdx >= 0 && m.dropdownSelectedIdx < len(m.dropdownItems) {
 			selectedItem := m.dropdownItems[m.dropdownSelectedIdx]
@@ -574,12 +571,7 @@ func (m Model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 // copyToClipboardCmd copies text to clipboard using the best available method
 func copyToClipboardCmd(s string) tea.Cmd {
 	return func() tea.Msg {
-		if strings.TrimSpace(s) == "" {
-			return nil
-		}
-
-		// Try multiple clipboard methods in order of preference
-		tryClipboardMethods(s)
+		CopyToClipboard(s)
 		return nil
 	}
 }
@@ -668,7 +660,7 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	switch {
-	case Matches(m.Config.Keys, msg, "q"), Matches(m.Config.Keys, msg, "esc"):
+	case IsCancel(m.Config.Keys, msg):
 		m.mode = gridMode
 		return m, nil
 	case Matches(m.Config.Keys, msg, "ctrl+c"):
@@ -705,7 +697,7 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		inv.cursor = 0
 
 	// Lift and Place
-	case Matches(m.Config.Keys, msg, " "), Matches(m.Config.Keys, msg, "enter"):
+	case IsConfirm(m.Config.Keys, msg):
 		if inv.focusedList == 2 { // Apply button is focused
 			return m, ApplyInventoryChangesCmd(m.configDir, m.inventory)
 		}
@@ -842,173 +834,4 @@ func (m *Model) moveCursor(rowDir, colDir int) {
 		m.cursorRow = bestRow
 		m.cursorCol = bestCol
 	}
-}
-
-// tryClipboardMethods attempts to copy text to clipboard using various methods
-// based on the current environment, in order of preference.
-func tryClipboardMethods(s string) {
-	// First try platform-specific clipboard tools
-	switch runtime.GOOS {
-	case "linux":
-		cmd, args := getLinuxClipboardCommand()
-		if cmd != "" {
-			if tryCommand(s, cmd, args...) {
-				return
-			}
-		}
-	case "darwin":
-		if tryCommand(s, "pbcopy") {
-			return
-		}
-	case "windows":
-		// Try PowerShell first, then clip.exe
-		if tryPowerShellClipboard(s) {
-			return
-		}
-		if tryCommand(s, "clip.exe") {
-			return
-		}
-	}
-
-	// Then try OSC52 (direct terminal clipboard)
-	if tryOSC52(s) {
-		return
-	}
-
-	// Finally try tmux/screen wrappers
-	if tryTmux(s) {
-		return
-	}
-	if tryScreen(s) {
-		return
-	}
-}
-
-// isWayland checks if we are running under Wayland
-func isWayland() bool {
-	return os.Getenv("WAYLAND_DISPLAY") != "" || strings.Contains(os.Getenv("XDG_SESSION_TYPE"), "wayland")
-}
-
-// getLinuxClipboardCommand returns the appropriate clipboard command for Linux systems
-func getLinuxClipboardCommand() (string, []string) {
-	// Check for Wayland first
-	if isWayland() {
-		if _, err := exec.LookPath("wl-copy"); err == nil {
-			return "wl-copy", []string{}
-		}
-	}
-
-	// Check for X11 clipboard utilities
-	if _, err := exec.LookPath("xclip"); err == nil {
-		return "xclip", []string{"-selection", "clipboard"}
-	}
-
-	if _, err := exec.LookPath("xsel"); err == nil {
-		return "xsel", []string{"--clipboard", "--input"}
-	}
-
-	// No clipboard utility found
-	return "", []string{}
-}
-
-// tryOSC52 attempts to copy text using the OSC52 escape sequence
-func tryOSC52(s string) bool {
-	// Encode the string in base64
-	enc := base64.StdEncoding.EncodeToString([]byte(s))
-
-	// Check if we're running in tmux
-	if os.Getenv("TMUX") != "" {
-		// Tmux requires special wrapping
-		seq := fmt.Sprintf("\x1bPtmux;\x1b\x1b]52;c;%s\x07\x1b\\", enc)
-		_, err := os.Stderr.WriteString(seq)
-		if err != nil {
-			log.Printf("OSC52 copy failed: %v", err)
-			return false
-		}
-		log.Printf("Attempted to copy to clipboard using OSC52 (tmux) - this requires terminal support")
-		return true
-	}
-
-	// Check if we're running in screen
-	if os.Getenv("STY") != "" {
-		// Screen requires special wrapping
-		seq := fmt.Sprintf("\x1bP\x1b]52;c;%s\x07\x1b\\", enc)
-		_, err := os.Stderr.WriteString(seq)
-		if err != nil {
-			log.Printf("OSC52 copy failed: %v", err)
-			return false
-		}
-		log.Printf("Attempted to copy to clipboard using OSC52 (screen) - this requires terminal support")
-		return true
-	}
-
-	// Standard OSC52 sequence
-	seq := fmt.Sprintf("\x1b]52;c;%s\x07", enc)
-	_, err := os.Stderr.WriteString(seq)
-	if err != nil {
-		log.Printf("OSC52 copy failed: %v", err)
-		return false
-	}
-
-	log.Printf("Attempted to copy to clipboard using OSC52 - this requires terminal support")
-	return true
-}
-
-// tryTmux attempts to copy text when running inside tmux
-func tryTmux(s string) bool {
-	if os.Getenv("TMUX") == "" {
-		return false
-	}
-
-	// Try both tmux escape sequences
-	enc := base64.StdEncoding.EncodeToString([]byte(s))
-	fmt.Printf("\033Ptmux;\033\033]52;c;%s\a\033\\", enc)
-	return true
-}
-
-// tryScreen attempts to copy text when running inside screen
-func tryScreen(s string) bool {
-	if os.Getenv("STY") == "" {
-		return false
-	}
-
-	// Screen requires a special escape sequence
-	enc := base64.StdEncoding.EncodeToString([]byte(s))
-	fmt.Printf("\033P\033]52;c;%s\a\033\\", enc)
-	return true
-}
-
-// tryCommand attempts to copy text using an external command
-func tryCommand(s string, name string, args ...string) bool {
-	// Check if command exists
-	if _, err := exec.LookPath(name); err != nil {
-		log.Printf("Clipboard command not found: %s", name)
-		return false
-	}
-
-	// Execute command with text as input
-	cmd := exec.Command(name, args...)
-	cmd.Stdin = strings.NewReader(s)
-
-	// Run command and return success status
-	err := cmd.Run()
-	if err != nil {
-		log.Printf("Clipboard command failed: %s %v, error: %v", name, args, err)
-		return false
-	}
-
-	log.Printf("Successfully copied to clipboard using: %s %v", name, args)
-	return true
-}
-
-// tryPowerShellClipboard attempts to copy text using PowerShell on Windows
-func tryPowerShellClipboard(s string) bool {
-	if runtime.GOOS != "windows" {
-		return false
-	}
-
-	// Try PowerShell with Set-Clipboard
-	cmd := exec.Command("powershell.exe", "-NoLogo", "-NoProfile", "-Command", fmt.Sprintf("Set-Clipboard -Value \"%s\"", s))
-	err := cmd.Run()
-	return err == nil
 }

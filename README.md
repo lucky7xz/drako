@@ -10,7 +10,7 @@ The terminal is a realm of immense power, but also of high entropy. Commands are
 If Go is installed, installing `drako` is a single command.
 
 ```bash
-go install github.com/lucky7xz/drako/cmd/drako@latest  # install drako
+go install github.com/lucky7xz/drako@latest  # install drako
 ```
 
 ### Install Go

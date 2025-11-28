@@ -13,6 +13,25 @@ func Matches(c config.InputConfig, msg tea.KeyMsg, binding string) bool {
 	return msg.String() == binding
 }
 
+// IsQuit checks for global quit keys (ctrl+c, q).
+func IsQuit(c config.InputConfig, msg tea.KeyMsg) bool {
+	k := msg.String()
+	return k == "ctrl+c" || k == "q"
+}
+
+// IsCancel checks for cancel keys (q, esc).
+// Often used to exit sub-modes like dropdowns or inventory.
+func IsCancel(c config.InputConfig, msg tea.KeyMsg) bool {
+	k := msg.String()
+	return k == "q" || k == "esc"
+}
+
+// IsConfirm checks for confirmation keys (enter, space).
+func IsConfirm(c config.InputConfig, msg tea.KeyMsg) bool {
+	k := msg.String()
+	return k == "enter" || k == " "
+}
+
 // IsUp checks if the key matches any "up" navigation key.
 func IsUp(c config.InputConfig, msg tea.KeyMsg) bool {
 	return slices.Contains(c.NavUp, msg.String())
@@ -76,4 +95,3 @@ func IsProfileSwitch(c config.InputConfig, msg tea.KeyMsg, modifier string) (boo
 	}
 	return false, -1
 }
-
