@@ -6,98 +6,126 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"time"
 )
 
-// PurgeConfig deletes everything in ~/.config/drako/ except config.toml (unless nukeAll is true)
-// Shows a preview and requires confirmation
-func PurgeConfig(configDir string, nukeAll bool) error {
-	if nukeAll {
-		log.Printf("Starting FULL purge (--all) for: %s", configDir)
-	} else {
-		log.Printf("Starting purge (config.toml preserved) for: %s", configDir)
+// PurgeOptions defines the scope of the purge operation
+type PurgeOptions struct {
+	DestroyEverything bool   // Nuke ~/.config/drako entirely
+	TargetProfile     string // Delete/Move specific profile (e.g. "git")
+	TargetCore        bool   // Reset config.toml
+}
+
+// PurgeConfig executes the purge operation based on the options.
+// It moves files to ~/.config/drako/trash/ instead of deleting them,
+// unless DestroyEverything is true.
+func PurgeConfig(configDir string, opts PurgeOptions) error {
+	if opts.DestroyEverything {
+		log.Printf("Starting FULL purge (destroy everything) for: %s", configDir)
+		return performFullNuke(configDir)
 	}
 
-	// Check if config directory exists
-	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		return fmt.Errorf("config directory does not exist: %s", configDir)
+	// Ensure trash directory exists
+	trashDir := filepath.Join(configDir, "trash")
+	if err := os.MkdirAll(trashDir, 0o755); err != nil {
+		return fmt.Errorf("failed to create trash directory: %w", err)
 	}
 
-	// Collect all items in config dir
-	items, err := collectPurgeItems(configDir, nukeAll)
+	// Case 1: Reset Core (config.toml)
+	if opts.TargetCore {
+		log.Printf("Purging Core config (config.toml)")
+		return moveFileToTrash(configDir, "config.toml", trashDir)
+	}
+
+	// Case 2: Target Specific Profile
+	if opts.TargetProfile != "" {
+		log.Printf("Purging Profile: %s", opts.TargetProfile)
+		// Profile could be "git.profile.toml" or just "git"
+		// We should try to find the matching file
+		// For now, assume simple name matching
+		filename := opts.TargetProfile
+		if filepath.Ext(filename) != ".toml" {
+			filename = filename + ".profile.toml"
+		}
+		return moveFileToTrash(configDir, filename, trashDir)
+	}
+
+	// Default Behavior (Legacy): Purge everything EXCEPT config.toml
+	// This mimics the old "PurgeConfig(..., false)" behavior but SAFER (moves to trash)
+	log.Printf("Purging all items (except config.toml and trash/)")
+	items, err := collectPurgeItems(configDir, false) // false = preserve config.toml
 	if err != nil {
 		return fmt.Errorf("failed to scan directory: %w", err)
 	}
 
 	if len(items) == 0 {
 		fmt.Println("\n✓ Nothing to purge - config directory is already clean")
-		log.Printf("Purge cancelled: nothing to delete")
 		return nil
 	}
 
-	// Show preview
-	if nukeAll {
-		fmt.Printf("\n💀 FULL PURGE - The entire directory will be DELETED:\n")
-		fmt.Printf("   %s\n\n", configDir)
-	} else {
-		fmt.Printf("\n🗑️  The following items will be DELETED from %s:\n\n", configDir)
-	}
+	fmt.Printf("\n🗑️  Moving %d items to %s\n", len(items), trashDir)
+	
+	// Require confirmation if interactive? 
+	// We assume the caller (HandlePurgeCommand) handled high-level confirmation if needed.
+	// But for safety, let's ask here if it's a big batch? 
+	// Actually, let's trust the caller. This function performs the Action.
 
-	for _, item := range items {
-		info, err := os.Stat(item)
-		if err != nil {
-			fmt.Printf("  • %s (error reading)\n", filepath.Base(item))
-			continue
-		}
-
-		if info.IsDir() {
-			// Count files in directory
-			count := countFilesInDir(item)
-			fmt.Printf("  📁 %s/ (%d items)\n", filepath.Base(item), count)
-		} else {
-			// Show file size
-			size := info.Size()
-			sizeStr := formatSize(size)
-			fmt.Printf("  📄 %s (%s)\n", filepath.Base(item), sizeStr)
-		}
-	}
-
-	if nukeAll {
-		fmt.Printf("\n💀 EVERYTHING will be deleted (including config.toml)\n")
-	} else {
-		fmt.Printf("\n✓ config.toml will be PRESERVED\n")
-	}
-	fmt.Printf("\nTotal: %d items will be deleted\n\n", len(items))
-
-	// Require confirmation
-	confirmMsg := "⚠️  This action cannot be undone. Proceed with purge?"
-	if nukeAll {
-		confirmMsg = "💀 This will DELETE EVERYTHING. Are you absolutely sure?"
-	}
-
-	if !ConfirmAction(confirmMsg) {
-		log.Printf("Purge cancelled by user")
-		return fmt.Errorf("operation cancelled by user")
-	}
-
-	// Execute deletion
-	deleted := 0
+	moved := 0
 	failed := 0
 	for _, item := range items {
-		if err := os.RemoveAll(item); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to delete %s: %v\n", filepath.Base(item), err)
-			log.Printf("Failed to delete %s: %v", item, err)
+		name := filepath.Base(item)
+		if name == "trash" {
+			continue // Don't trash the trash
+		}
+		if err := moveToTrash(item, trashDir); err != nil {
+			log.Printf("Failed to trash %s: %v", name, err)
 			failed++
 		} else {
-			deleted++
+			moved++
 		}
 	}
-
-	log.Printf("Purge completed: %d deleted, %d failed", deleted, failed)
 
 	if failed > 0 {
 		return fmt.Errorf("purge completed with %d failures", failed)
 	}
+	return nil
+}
 
+// performFullNuke implements the "Destroy Everything" logic (Old --all)
+func performFullNuke(configDir string) error {
+	// Confirm existence
+	if _, err := os.Stat(configDir); os.IsNotExist(err) {
+		return fmt.Errorf("config directory does not exist: %s", configDir)
+	}
+
+	fmt.Printf("\n💀 DESTROYING EVERYTHING in %s\n", configDir)
+	// The caller (HandlePurgeCommand) should have asked for confirmation.
+	
+	if err := os.RemoveAll(configDir); err != nil {
+		return fmt.Errorf("failed to destroy config directory: %w", err)
+	}
+	return nil
+}
+
+// moveFileToTrash moves a single file from configDir to trashDir with a timestamp
+func moveFileToTrash(configDir, filename, trashDir string) error {
+	src := filepath.Join(configDir, filename)
+	if _, err := os.Stat(src); os.IsNotExist(err) {
+		return fmt.Errorf("file not found: %s", filename)
+	}
+	return moveToTrash(src, trashDir)
+}
+
+func moveToTrash(srcPath, trashDir string) error {
+	filename := filepath.Base(srcPath)
+	timestamp := time.Now().Format("20060102-150405")
+	dstName := fmt.Sprintf("%s.%s", filename, timestamp)
+	dstPath := filepath.Join(trashDir, dstName)
+
+	if err := os.Rename(srcPath, dstPath); err != nil {
+		return err
+	}
+	fmt.Printf("  ✓ Moved %s to trash\n", filename)
 	return nil
 }
 
@@ -115,6 +143,9 @@ func collectPurgeItems(configDir string, nukeAll bool) ([]string, error) {
 
 		// Skip config.toml unless nukeAll is true
 		if name == "config.toml" && !nukeAll {
+			continue
+		}
+		if name == "trash" {
 			continue
 		}
 

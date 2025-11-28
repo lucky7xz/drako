@@ -5,7 +5,9 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 
+	"github.com/lucky7xz/drako/internal/cli"
 	"github.com/lucky7xz/drako/internal/config"
 	"golang.org/x/term"
 )
@@ -96,6 +98,15 @@ func buildShellCmd(shell_config, commandStr string) *exec.Cmd {
 
 // RunCommand finds the selected command from the loaded config and executes it.
 func RunCommand(cfg config.Config, selected string) {
+	// Handle special internal commands first
+	if strings.HasPrefix(selected, "drako purge") {
+		handleInternalPurge(selected)
+		// Since purge often resets state or exits, we might want to just return here
+		// But standard purge flow ends with Exit(0) usually.
+		// If it returns, we might want to pause.
+		return
+	}
+
 	// cmd will hold the prepared command to run. It's a pointer type; zero value is nil.
 	var cmd *exec.Cmd
 	// Pointers to per-command overrides; nil means "use default".
@@ -192,5 +203,58 @@ func RunCommand(cfg config.Config, selected string) {
 		pause("\nPress any key to return to the application.")
 
 		return
+	}
+}
+
+func handleInternalPurge(command string) {
+	// Parse the command string manually since we're bypassing the shell
+	// Expected format: "drako purge --target core" or "drako purge"
+	parts := strings.Fields(command)
+	
+	// We need to parse flags again, locally.
+	// Since we can't reuse the flag.FlagSet from cli.HandlePurgeCommand easily without hacking os.Args
+	// We will manually construct the opts or helper logic.
+	
+	configDir, err := config.GetConfigDir()
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		pause("\nPress any key...")
+		return
+	}
+
+	opts := cli.PurgeOptions{}
+	
+	// Simple manual parsing for the internal use case
+	for i := 0; i < len(parts); i++ {
+		if parts[i] == "--target" && i+1 < len(parts) {
+			val := parts[i+1]
+			if val == "core" {
+				opts.TargetCore = true
+			} else {
+				opts.TargetProfile = val
+			}
+		}
+		if parts[i] == "--destroyeverything" {
+			opts.DestroyEverything = true
+		}
+	}
+
+	// Execute with confirmation
+	confirmMsg := "⚠️  Confirm reset of Core configuration?"
+	if opts.TargetProfile != "" {
+		confirmMsg = fmt.Sprintf("⚠️  Confirm removal of profile '%s'?", opts.TargetProfile)
+	}
+
+	if !cli.ConfirmAction(confirmMsg) {
+		return
+	}
+
+	if err := cli.PurgeConfig(configDir, opts); err != nil {
+		fmt.Printf("\nError: %v\n", err)
+		pause("\nPress any key...")
+	} else {
+		fmt.Printf("\n✓ Operation successful.\n")
+		// Since we modified config, we should probably exit to let the loop reload or just exit
+		os.Exit(0) 
 	}
 }

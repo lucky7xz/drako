@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -91,14 +92,39 @@ func HandlePurgeCommand() {
 		os.Exit(1)
 	}
 
-	// Check for --all flag
-	nukeAll := false
-	if len(os.Args) > 2 && (os.Args[2] == "--all" || os.Args[2] == "-a") {
-		nukeAll = true
+	// Parse purge specific flags
+	// We need a custom flagset to parse args after "drako purge"
+	purgeCmd := flag.NewFlagSet("purge", flag.ExitOnError)
+	target := purgeCmd.String("target", "", "Target to purge: 'core' or profile name (e.g. 'git')")
+	destroyEverything := purgeCmd.Bool("destroyeverything", false, "DANGEROUS: Delete entire config directory (no trash)")
+
+	// Parse args starting from index 2 (skipping "drako" and "purge")
+	if err := purgeCmd.Parse(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", err)
+		os.Exit(1)
 	}
 
-	// Setup logging for CLI command (if not nuking everything)
-	if !nukeAll {
+	// Setup options based on flags
+	opts := PurgeOptions{
+		DestroyEverything: *destroyEverything,
+	}
+
+	if *target == "core" {
+		opts.TargetCore = true
+	} else if *target != "" {
+		opts.TargetProfile = *target
+	} else if !*destroyEverything {
+		// Legacy behavior: "drako purge" without args -> Standard cleanup (preserve config.toml)
+		// BUT WAIT, the user wants "Full Circle" safe purge.
+		// Let's default to standard cleanup but now it MOVES to trash instead of delete.
+		// And it EXCLUDES config.toml by default (just like old PurgeConfig(..., false))
+		// Wait, if no target is specified, do we clean everything else?
+		// Old behavior: "PurgeConfig(..., false)" -> Deleted everything EXCEPT config.toml
+		// Let's keep that behavior for "drako purge" with no args, but SAFE (trash).
+	}
+
+	// Logging setup
+	if !opts.DestroyEverything {
 		logPath := filepath.Join(configDir, "drako.log")
 		logFile, err := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 		if err != nil {
@@ -109,23 +135,36 @@ func HandlePurgeCommand() {
 		}
 	}
 
-	if nukeAll {
-		log.Printf("Purge --all command invoked")
+	log.Printf("Purge command invoked: %+v", opts)
+
+	// Confirmations
+	confirmMsg := ""
+	if opts.DestroyEverything {
+		confirmMsg = fmt.Sprintf("💀 This will DESTROY EVERYTHING in %s.\n   NO UNDO. NO TRASH.\n   Are you absolutely sure?", configDir)
+	} else if opts.TargetCore {
+		confirmMsg = "⚠️  This will reset your Core configuration (config.toml). Proceed?"
+	} else if opts.TargetProfile != "" {
+		confirmMsg = fmt.Sprintf("⚠️  This will remove profile '%s'. Proceed?", opts.TargetProfile)
 	} else {
-		log.Printf("Purge command invoked")
+		confirmMsg = fmt.Sprintf("⚠️  This will move all profiles and data in %s to trash\n   (config.toml will be preserved). Proceed?", configDir)
 	}
 
-	if err := PurgeConfig(configDir, nukeAll); err != nil {
+	if !ConfirmAction(confirmMsg) {
+		log.Printf("Purge cancelled by user")
+		os.Exit(0)
+	}
+
+	if err := PurgeConfig(configDir, opts); err != nil {
 		log.Printf("Purge failed: %v", err)
 		fmt.Fprintf(os.Stderr, "Purge failed: %v\n", err)
 		os.Exit(1)
 	}
 
-	if nukeAll {
-		fmt.Printf("\n✓ Full purge completed - %s has been deleted\n", configDir)
+	if opts.DestroyEverything {
+		fmt.Printf("\n✓ Full destruction completed - %s has been deleted\n", configDir)
 	} else {
 		fmt.Printf("\n✓ Purge completed successfully\n")
-		fmt.Printf("✓ config.toml has been preserved at %s/config.toml\n", configDir)
+		fmt.Printf("  Items moved to %s/trash/\n", configDir)
 	}
 	os.Exit(0)
 }

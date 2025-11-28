@@ -59,9 +59,9 @@ func RescueConfig() Config {
 		},
 		Commands: []Command{
 			{
-				Name:        "Open Config Dir",
-				Command:     "xdg-open ~/.config/drako",
-				Description: "Opens the configuration directory.\n\n• Delete or fix broken profiles here.\n• Move unfinished profiles to a 'collection' subfolder to hide them.\n\nTip: You can switch to a working profile right now with 'o' (prev) or 'p' (next).",
+				Name:        "Reset Core Config",
+				Command:     "drako purge --target core",
+				Description: "Resets your config.toml to defaults.\n\n• Your old config.toml will be moved to trash/.\n• Use this if you've broken your main configuration file.\n• Drako will exit after this operation.",
 				Row:         0,
 				Col:         "a", // Left
 			},
@@ -80,11 +80,18 @@ func RescueConfig() Config {
 				Col:         "c", // Right
 			},
 			{
+				Name:        "Open Config Dir",
+				Command:     "xdg-open ~/.config/drako",
+				Description: "Opens the configuration directory.\n\n• Delete or fix broken profiles here.\n• Move unfinished profiles to a 'collection' subfolder to hide them.\n\nTip: You can switch to a working profile right now with 'o' (prev) or 'p' (next).",
+				Row:         1,
+				Col:         "b", // Center below Edit
+			},
+			{
 				Name:        "Reload Config",
 				Command:     "true", // No-op, but triggers an update loop because execution finishes
 				Description: "Forces a reload of the configuration.\nDrako automatically reloads on file save, but you can use this to manually retry.\n\nTip: You can switch to a working profile right now with 'o' (prev) or 'p' (next).",
 				Row:         1,
-				Col:         "b", // Center below Edit
+				Col:         "c", // Right below Docs
 			},
 		},
 	}

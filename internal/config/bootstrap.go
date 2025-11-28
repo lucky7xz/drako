@@ -29,6 +29,12 @@ func bootstrapCopy(dstRoot string) error {
 		if d.IsDir() {
 			return os.MkdirAll(target, 0o755)
 		}
+		// Safety: Don't overwrite existing files (e.g. user modified profiles)
+		// We only want to fill in what's missing (like the deleted config.toml)
+		if _, err := os.Stat(target); err == nil {
+			return nil
+		}
+
 		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 			return err
 		}
