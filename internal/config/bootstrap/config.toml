@@ -171,7 +171,7 @@ items = [
 # ┌─ Column 2: Network & Web ──────────────┐
 # └────────────────────────────────────────┘
 [[commands]]
-name = " 📦 Install Dependencies ⋮ "
+name = " 📦 Install Tools ⋮ "
 col = "C"
 row = 0
 description = "Bundled up all the little tools that this menu uses, just in case you don't have them. It's like getting all the batteries and accessories included for once. This makes sure all the other buttons here will work as expected. I like to be prepared, you know? "
@@ -190,7 +190,7 @@ row = 1
 
 
 [[commands]]
-name = "  🐉 dr4ko Config ⋮ "
+name = " 🐉 Core ⋮ "
 col = "C"
 row = 2
 items = [
