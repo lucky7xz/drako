@@ -35,7 +35,12 @@ func (m Model) View() string {
 		return m.viewInfoMode()
 	}
 
-	header := renderHeaderArt(m.spinner.View())
+	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config)
+
+	header := ""
+	if layout.ShowHeader {
+		header = renderHeaderArt(m.spinner.View())
+	}
 	counter := m.renderProfileCounter()
 	grid := m.renderGrid()
 	mainContent := lipgloss.JoinVertical(lipgloss.Center, header, counter, grid)
@@ -136,7 +141,12 @@ func CalculateRequiredSize(cfg config.Config) (minWidth, minHeight int) {
 	gridHeight := cfg.Y * GridCellHeight
 
 	minWidth = gridWidth + LayoutSideMargin
-	minHeight = gridHeight + LayoutHeaderHeight + LayoutStatusHeight + LayoutVertPadding
+	// Header is now optional, so minimum height doesn't strictly require it
+	// But let's keep it in the calculation for optimal experience,
+	// or reduce it?
+	// If we want to support small screens, we should say min height is grid + footer.
+	// Let's be permissive.
+	minHeight = gridHeight + LayoutStatusHeight + LayoutVertPadding
 	return minWidth, minHeight
 }
 
@@ -473,7 +483,11 @@ func (m Model) renderProfileCounter() string {
 
 func (m Model) viewDropdownMode() string {
 	// Render the base grid view
-	header := renderHeaderArt(m.spinner.View())
+	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config)
+	header := ""
+	if layout.ShowHeader {
+		header = renderHeaderArt(m.spinner.View())
+	}
 	grid := m.renderGrid()
 	mainContent := lipgloss.JoinVertical(lipgloss.Center, header, grid)
 
@@ -658,7 +672,11 @@ func (m Model) viewLockedMode() string {
 }
 
 func (m Model) viewInfoMode() string {
-	header := renderHeaderArt(m.spinner.View())
+	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config)
+	header := ""
+	if layout.ShowHeader {
+		header = renderHeaderArt(m.spinner.View())
+	}
 
 	// Build info lines with same background rules to avoid black gaps
 	bg := dropdownPopupStyle.GetBackground()

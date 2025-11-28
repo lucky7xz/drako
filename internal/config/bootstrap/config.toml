@@ -26,7 +26,7 @@ theme = "dracula"
 
 # ┌─ Grid Dimensions ──────────────────────────────┐
 x = 3
-y = 4
+y = 3
 # └────────────────────────────────────────────────┘
 
 # ┌─ Keybinding Modifier ────────────────────────────────────┐
@@ -120,12 +120,14 @@ row = 0
 auto_close_execution = false
 
 [[commands]]
-name = "🧹 Clean Packages"
-description = "This is my digital decluttering button. When you update software, old, unneeded bits can get left behind. This command tidies them up. It reminds me of Marie Kondo, a Japanese organizing expert who helps people tidy their homes. I find it deeply satisfying, like cleaning out a closet you've been ignoring. A clean system is a happy system!"
-command = "sudo apt autoremove"
+name = "🧹 Maintenance ⋮ "
+description = "My digital decluttering and security station. Keep your system lean and clean, or run a virus scan for peace of mind. A clean system is a happy system!"
 col = "A"
 row = 1
-auto_close_execution = false
+items = [
+    { name = "Clean Packages", description = "Removes old, unused packages left behind after updates. Like cleaning out a closet you've been ignoring.", command = "sudo apt autoremove", auto_close_execution = false },
+    { name = "Virus Scan (Home)", description = "Updates known signatures and scans your home directory for digital nasties. Peace of mind.", command = "sudo freshclam && clamscan -r --bell -i /home/$USER", auto_close_execution = false }
+]
 
 [[commands]]
 name = "👀 Process Monitor"
@@ -133,22 +135,6 @@ description = "This is like opening the hood of your car while the engine is run
 command = "btop"
 col = "A"
 row = 2
-
-[[commands]]
-name = "🛡️ Virus Scan (Home)"
-description = "Okay, so Linux is pretty secure, but it's never a bad idea to be careful. This first updates the list of known digital cooties, then it carefully checks your personal files for anything suspicious. I don't expect it to find anything, but it gives me peace of mind, like locking the door at night even though you live two levels under the ground."
-command = "sudo freshclam && clamscan -r --bell -i /home/$USER"
-col = "A"
-row = 3
-auto_close_execution = false
-
-#[[commands]]
-#name = "Live Logs"
-#description = "Shows a live stream of system logs."
-#command = "journalctl -f"
-#col = "A"
-#row = 4
-#interactive = true
 
 #==========================================
 # ┌─ Column 1: Files & Info ───────────────┐
@@ -170,19 +156,15 @@ row = 1
 
 
 [[commands]]
-name = "💾 Disk Usage"
-description = "Ever wonder where all your free space went? Me too. All the time. This command gives you a neat, colorful report of all your drives and how much space is being used. It's like a health checkup for your storage. Very handy for figuring out it's time to delete that 50GB game you haven't played in a year."
-command = "baobab"
+name = "📊 System Status ⋮ "
+description = "Your system's vital signs and fun stats. Check hardware details, disk usage, or even the weather outside."
 col = "B"
 row = 2
-
-[[commands]]
-name = " 🌦️ Weather"
-description = "Because who has time to open a web browser? This gives you a quick, no-nonsense weather report right here in the terminal. I can't feel the rain, obviously, but I can at least tell you if you need an umbrella. It's surprisingly handy."
-command = "curl wttr.in"
-col = "B"
-row = 3
-auto_close_execution = false
+items = [
+    { name = "System Info", description = "Your computer's trading card. Shows distro logo, kernel version, uptime, and hardware details.", command = "neofetch", auto_close_execution = false },
+    { name = "Disk Usage", description = "A colorful report of where all your free space went. Useful for finding large forgotten files.", command = "baobab" },
+    { name = "Weather", description = "A quick, no-nonsense weather report from wttr.in right in your terminal.", command = "curl wttr.in", auto_close_execution = false }
+]
 
 #debug_output = true TODO
 #==========================================
@@ -208,18 +190,9 @@ row = 1
 
 
 [[commands]]
-name = "ℹ️  System Info"
-description = "This is your computer's trading card. It shows a cool logo of your Linux distro and all the nerdy details like your kernel version, uptime, and hardware. It's mostly for showing off, but I have to admit, it looks pretty cool. It's a rite of passage for every new Linux user to run this and post a screenshot."
-command = "neofetch"
+name = "  🐉 dr4ko Config ⋮ "
 col = "C"
 row = 2
-auto_close_execution = false
-
-
-[[commands]]
-name = "  🐉 dr4ko Config ⋮ "
-col = "Z"
-row = -1
 items = [
     { name = "⚙️ Edit config.toml", description = "This is the command center, the cockpit, the big red button. It opens up the very file you're reading right now, so you can tweak and tune dR4ko to your heart's content. Want to change a command? A description? The theme? This is the place. It's like being handed the keys to the whole operation. A little bit of power is a fun thing, isn't it? Never be afraid to break stuff. Read the next description to see why.", command = "$EDITOR ~/.config/drako/config.toml"},
     { name = "📁 Browse config dir", description = "Welcome to the rabbit hole. In Linux, many of your configurations live in hidden folders, like this `.config` directory. It's a bit of a secret clubhouse for your apps. This command opens up the `drako` folder inside, where all its settings live. We've set you up with some sensible defaults, but the real magic is making it your own. Go ahead, poke around, make some changes. That's the whole point! You can even save your custom setups and reuse them. It's your system, your rules. Welcome to the world of dotfiles.", command = "xdg-open ~/.config/drako/"},
