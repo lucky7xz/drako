@@ -358,6 +358,17 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case IsConfirm(m.Config.Keys, msg):
 		selectedChoice := m.grid[m.cursorRow][m.cursorCol]
+
+		// Special handling for Exit Rescue Mode command
+		if selectedChoice == "Exit Rescue Mode" {
+			// Reset to Core profile (index 0)
+			if updated, cmd, ok := m.switchToProfileIndex(0); ok {
+				m = updated
+				return m, cmd
+			}
+			return m, nil
+		}
+
 		if selectedChoice != "" {
 			// Check if this command has dropdown items
 			for _, cmd := range m.Config.Commands {
@@ -793,7 +804,7 @@ func (m Model) switchToProfileIndex(target int) (Model, tea.Cmd, bool) {
 	norm := strings.TrimSpace(strings.ToLower(selected.Name))
 
 	// Skip missing non-default profiles
-	if norm != "default" {
+	if norm != "default" && norm != "core" {
 		if !config.FileExists(selected.Path) {
 			log.Printf("skipping missing profile: %s", selected.Path)
 			return m, nil, false
@@ -802,7 +813,7 @@ func (m Model) switchToProfileIndex(target int) (Model, tea.Cmd, bool) {
 
 	updated := m
 	updated.activeProfileIndex = target
-	if norm == "default" {
+	if norm == "default" || norm == "core" {
 		_ = os.Unsetenv("DRAKO_PROFILE")
 		updated.Config = m.baseConfig
 	} else {

@@ -100,6 +100,13 @@ func RescueConfig() Config {
 				Row:         1,
 				Col:         "c", // Right below Docs
 			},
+			{
+				Name:        "Exit Rescue Mode",
+				Command:     "true", // Intercepted by UI
+				Description: "Returns to your Core configuration.\n\n(Same as switching to the first profile with Mod+1)",
+				Row:         2,
+				Col:         "b", // Center bottom
+			},
 		},
 	}
 }
