@@ -131,24 +131,12 @@ func (m Model) renderSizeOverlay(reqW, reqH int) string {
 // CalculateRequiredSize computes the minimum terminal dimensions needed
 // for the current grid at 100% scale
 func CalculateRequiredSize(cfg config.Config) (minWidth, minHeight int) {
-	// Base cell dimensions at 100% scale
-	// Cell = content (25) + padding (1+1) + border (1+1) = 29 width
-	cellWidth := 29
-	// Reasonable cell height for a single-line grid cell with borders
-	cellHeight := 4
-
 	// Grid area
-	gridWidth := cfg.X * cellWidth
-	gridHeight := cfg.Y * cellHeight
+	gridWidth := cfg.X * GridCellWidth
+	gridHeight := cfg.Y * GridCellHeight
 
-	// Additional UI elements
-	headerHeight := 10   // Header art + spacing
-	statusBarHeight := 5 // Status and bars
-	sideMargin := 4      // Left/right margins
-	verticalPadding := 2 // Top/bottom padding
-
-	minWidth = gridWidth + sideMargin
-	minHeight = gridHeight + headerHeight + statusBarHeight + verticalPadding
+	minWidth = gridWidth + LayoutSideMargin
+	minHeight = gridHeight + LayoutHeaderHeight + LayoutStatusHeight + LayoutVertPadding
 	return minWidth, minHeight
 }
 
@@ -171,8 +159,6 @@ func IsBelowMinimum(termWidth, termHeight int, cfg config.Config) (bool, int, in
 }
 
 func (m Model) renderGrid() string {
-	const maxTextWidth = 25 // Max width for the text inside.
-
 	maxContentWidth := 0
 	for _, row := range m.grid {
 		for _, cell := range row {
@@ -183,8 +169,8 @@ func (m Model) renderGrid() string {
 		}
 	}
 
-	if maxContentWidth > maxTextWidth {
-		maxContentWidth = maxTextWidth
+	if maxContentWidth > GridMaxTextWidth {
+		maxContentWidth = GridMaxTextWidth
 	}
 
 	// Total width must account for content, padding (1+1), and border (1+1).
@@ -683,68 +669,6 @@ func (m Model) viewInfoMode() string {
 		wrapWidth = 20
 	}
 
-	// Local helpers to wrap text by visual width
-	wrapWord := func(word string, width int) []string {
-		if width <= 0 {
-			return []string{word}
-		}
-		var out []string
-		var b strings.Builder
-		cur := 0
-		for _, r := range word {
-			w := lipgloss.Width(string(r))
-			if cur+w > width && b.Len() > 0 {
-				out = append(out, b.String())
-				b.Reset()
-				cur = 0
-			}
-			b.WriteRune(r)
-			cur += w
-		}
-		if b.Len() > 0 {
-			out = append(out, b.String())
-		}
-		return out
-	}
-	wrapLine := func(s string, width int) []string {
-		if width <= 0 {
-			return []string{s}
-		}
-		fields := strings.Fields(s)
-		if len(fields) == 0 {
-			return []string{""}
-		}
-		var lines []string
-		var line string
-		for _, word := range fields {
-			ww := lipgloss.Width(word)
-			if line == "" {
-				if ww <= width {
-					line = word
-				} else {
-					lines = append(lines, wrapWord(word, width)...)
-					line = ""
-				}
-				continue
-			}
-			if lipgloss.Width(line)+1+ww <= width {
-				line += " " + word
-			} else {
-				lines = append(lines, line)
-				if ww <= width {
-					line = word
-				} else {
-					lines = append(lines, wrapWord(word, width)...)
-					line = ""
-				}
-			}
-		}
-		if line != "" {
-			lines = append(lines, line)
-		}
-		return lines
-	}
-
 	var raw []string
 	if strings.TrimSpace(m.infoTitle) != "" {
 		raw = append(raw, titleStyleLocal.Render(m.infoTitle))
@@ -752,29 +676,15 @@ func (m Model) viewInfoMode() string {
 	if strings.TrimSpace(m.infoCommand) != "" {
 		raw = append(raw, "")
 		raw = append(raw, labelStyle.Render("Command:"))
-		for _, para := range strings.Split(m.infoCommand, "\n") {
-			para = strings.TrimSpace(para)
-			if para == "" {
-				raw = append(raw, valueStyle.Render(""))
-				continue
-			}
-			for _, ln := range wrapLine(para, wrapWidth) {
-				raw = append(raw, valueStyle.Render(ln))
-			}
+		for _, ln := range WrapText(m.infoCommand, wrapWidth) {
+			raw = append(raw, valueStyle.Render(ln))
 		}
 	}
 	if strings.TrimSpace(m.infoDescription) != "" {
 		raw = append(raw, "")
 		raw = append(raw, labelStyle.Render("Description:"))
-		for _, para := range strings.Split(m.infoDescription, "\n") {
-			para = strings.TrimSpace(para)
-			if para == "" {
-				raw = append(raw, valueStyle.Render(""))
-				continue
-			}
-			for _, ln := range wrapLine(para, wrapWidth) {
-				raw = append(raw, valueStyle.Render(ln))
-			}
+		for _, ln := range WrapText(m.infoDescription, wrapWidth) {
+			raw = append(raw, valueStyle.Render(ln))
 		}
 	}
 	raw = append(raw, "")
