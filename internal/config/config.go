@@ -109,6 +109,34 @@ func ClampConfig(cfg *Config) {
 	}
 }
 
+// ValidateConfig checks if the configuration is logically valid.
+// It returns an error if any command is out of bounds for the grid size.
+func ValidateConfig(cfg Config) error {
+	for _, cmd := range cfg.Commands {
+		row := cmd.Row
+		col, err := letterToColumn(cmd.Col)
+		if err != nil {
+			return fmt.Errorf("command %q has invalid column %q: %v", cmd.Name, cmd.Col, err)
+		}
+
+		// Handle special -1 values (meaning last row/col)
+		if row == -1 {
+			row = cfg.Y - 1
+		}
+		if col == -1 {
+			col = cfg.X - 1
+		}
+
+		if row >= cfg.Y {
+			return fmt.Errorf("command %q at row %d exceeds grid height %d", cmd.Name, row, cfg.Y)
+		}
+		if col >= cfg.X {
+			return fmt.Errorf("command %q at column %q exceeds grid width %d", cmd.Name, cmd.Col, cfg.X)
+		}
+	}
+	return nil
+}
+
 func BuildGrid(config Config) [][]string {
 	// Safety clamp, though ApplyDefaults usually handles it
 	ClampConfig(&config)
@@ -470,6 +498,15 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 	// Apply defaults to the base config immediately
 	base.ApplyDefaults()
 
+	// Validate base config (sanity check)
+	if err := ValidateConfig(base); err != nil {
+		// For base config, we probably still want to crash or fallback, but let's log it
+		log.Printf("Error: Base config is invalid: %v", err)
+		// We can fallback to hard defaults if base is totally broken
+		// base = DefaultConfig()
+		// base.ApplyDefaults()
+	}
+
 	profiles, broken := DiscoverProfilesWithErrors(configDir)
 	// Reorder profiles based on pivot equipped_order
 	if len(pf.EquippedOrder) > 0 {
@@ -537,16 +574,46 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 
 	effective := base
 	selected := profiles[activeIndex]
+
+	// Helper to safely apply and validate a profile
+	applyAndValidate := func(p ProfileInfo) (Config, error) {
+		temp := ApplyProfileOverlay(base, p.Overlay)
+		temp.ApplyDefaults()
+		if err := ValidateConfig(temp); err != nil {
+			return temp, err
+		}
+		return temp, nil
+	}
+
 	if useFactoryDefaults || (len(broken) > 0 && NormalizeProfileName(selected.Name) == "default") {
 		// Fall back to factory defaults (3x3).
 		effective = DefaultConfig()
 		// ApplyDefaults will init controls too
 		effective.ApplyDefaults()
 	} else if NormalizeProfileName(selected.Name) != "default" {
-		effective = ApplyProfileOverlay(base, selected.Overlay)
-		// Overlay might have partial fields, so we re-apply defaults to ensure integrity
-		effective.ApplyDefaults()
-		log.Printf("Applied profile overlay: %s", selected.Name)
+		// Attempt to apply the selected profile
+		var err error
+		effective, err = applyAndValidate(selected)
+		if err != nil {
+			// validation failed for the selected profile!
+			log.Printf("Selected profile %q is invalid: %v. Falling back to defaults.", selected.Name, err)
+			broken = append(broken, ProfileParseError{
+				Name: selected.Name,
+				Path: selected.Path,
+				Err:  fmt.Sprintf("Grid validation failed: %v", err),
+			})
+			// Since selected is broken, we fall back to default/base
+			effective = base
+			// Reset active index to default (0)
+			activeIndex = 0
+			pivotStillValid = false
+			// Update selected to Default for display purposes if needed
+			if len(profiles) > 0 {
+				selected = profiles[0]
+			}
+		} else {
+			log.Printf("Applied profile overlay: %s", selected.Name)
+		}
 	}
 
 	effective.Commands = CopyCommands(effective.Commands)

@@ -670,29 +670,45 @@ func (m Model) viewInfoMode() string {
 	}
 
 	var raw []string
-	if strings.TrimSpace(m.infoTitle) != "" {
-		raw = append(raw, titleStyleLocal.Render(m.infoTitle))
+	
+	// Safety check if activeDetail is nil (should not happen in infoMode ideally)
+	if m.activeDetail == nil {
+		return appStyle.Render(lipgloss.Place(m.termWidth, m.termHeight, lipgloss.Center, lipgloss.Center, "Error: No detail state"))
 	}
-	if strings.TrimSpace(m.infoCommand) != "" {
+
+	if strings.TrimSpace(m.activeDetail.Title) != "" {
+		raw = append(raw, titleStyleLocal.Render(m.activeDetail.Title))
+	}
+	
+	if strings.TrimSpace(m.activeDetail.Value) != "" {
 		raw = append(raw, "")
-		raw = append(raw, labelStyle.Render("Command:"))
-		for _, ln := range WrapText(m.infoCommand, wrapWidth) {
+		label := "Value:"
+		if m.activeDetail.KeyLabel != "" {
+			label = m.activeDetail.KeyLabel + ":"
+		}
+		raw = append(raw, labelStyle.Render(label))
+		for _, ln := range WrapText(m.activeDetail.Value, wrapWidth) {
 			raw = append(raw, valueStyle.Render(ln))
 		}
 	}
-	if strings.TrimSpace(m.infoDescription) != "" {
+	
+	if strings.TrimSpace(m.activeDetail.Description) != "" {
 		raw = append(raw, "")
 		raw = append(raw, labelStyle.Render("Description:"))
-		for _, ln := range WrapText(m.infoDescription, wrapWidth) {
+		for _, ln := range WrapText(m.activeDetail.Description, wrapWidth) {
 			raw = append(raw, valueStyle.Render(ln))
 		}
 	}
+	
+	if len(m.activeDetail.Meta) > 0 {
+		raw = append(raw, "")
+		for _, meta := range m.activeDetail.Meta {
+			raw = append(raw, labelStyle.Render(meta.Label+": ")+valueStyle.Render(meta.Value))
+		}
+	}
+
 	raw = append(raw, "")
-	raw = append(raw, labelStyle.Render("Exec: ")+valueStyle.Render(m.infoExecMode))
-	raw = append(raw, labelStyle.Render("Auto-close: ")+valueStyle.Render(fmt.Sprintf("%v", m.infoAutoClose)))
-	raw = append(raw, labelStyle.Render("CWD: ")+valueStyle.Render(m.infoCwd))
-	raw = append(raw, "")
-	raw = append(raw, helpStyle.Render("Press y to copy command • any key to close"))
+	raw = append(raw, helpStyle.Render("Press y to copy details • any key to close"))
 
 	// Compute max width and pad
 	maxW := 0

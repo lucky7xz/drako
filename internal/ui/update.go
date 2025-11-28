@@ -306,8 +306,7 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		for _, cmd := range m.Config.Commands {
 			if cmd.Name == selectedChoice {
 				m.previousMode = m.mode
-				m.infoTitle = selectedChoice
-				m.infoDescription = cmd.Description
+
 				// Resolve execution mode and auto-close
 				autoClose := true
 				if cmd.AutoCloseExecution != nil {
@@ -317,17 +316,28 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				if cmd.DebugExecution != nil {
 					debug = *cmd.DebugExecution
 				}
+				execMode := "live"
 				if debug {
-					m.infoExecMode = "debug"
-				} else {
-					m.infoExecMode = "live"
+					execMode = "debug"
 				}
-				m.infoAutoClose = autoClose
-				m.infoCwd = m.currentPath
+
+				cmdStr := ""
 				if strings.TrimSpace(cmd.Command) == "" {
-					m.infoCommand = "Error: no command. ( This might be a folder of commands!)"
+					cmdStr = "Error: no command. ( This might be a folder of commands!)"
 				} else {
-					m.infoCommand = config.ExpandCommandTokens(cmd.Command, m.Config)
+					cmdStr = config.ExpandCommandTokens(cmd.Command, m.Config)
+				}
+
+				m.activeDetail = &DetailState{
+					Title:       selectedChoice,
+					KeyLabel:    "Command",
+					Value:       cmdStr,
+					Description: cmd.Description,
+					Meta: []DetailMeta{
+						{Label: "Exec", Value: execMode},
+						{Label: "Auto-close", Value: fmt.Sprintf("%v", autoClose)},
+						{Label: "CWD", Value: m.currentPath},
+					},
 				}
 				m.mode = infoMode
 				return m, nil
@@ -335,12 +345,15 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		// Not found in config
 		m.previousMode = m.mode
-		m.infoTitle = selectedChoice
-		m.infoDescription = ""
-		m.infoExecMode = ""
-		m.infoAutoClose = false
-		m.infoCwd = m.currentPath
-		m.infoCommand = "Error: command not found"
+		m.activeDetail = &DetailState{
+			Title:       selectedChoice,
+			KeyLabel:    "Command",
+			Value:       "Error: command not found",
+			Description: "",
+			Meta: []DetailMeta{
+				{Label: "CWD", Value: m.currentPath},
+			},
+		}
 		m.mode = infoMode
 		return m, nil
 	case IsConfirm(m.Config.Keys, msg):
@@ -524,12 +537,12 @@ func (m Model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				parent = m.grid[m.dropdownRow][m.dropdownCol]
 			}
 			m.previousMode = m.mode
-			if strings.TrimSpace(parent) == "" {
-				m.infoTitle = item.Name
-			} else {
-				m.infoTitle = fmt.Sprintf("%s: %s", parent, item.Name)
+
+			title := item.Name
+			if strings.TrimSpace(parent) != "" {
+				title = fmt.Sprintf("%s: %s", parent, item.Name)
 			}
-			m.infoDescription = item.Description
+
 			// Resolve execution mode and auto-close for item
 			autoClose := true
 			if item.AutoCloseExecution != nil {
@@ -539,17 +552,28 @@ func (m Model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if item.DebugExecution != nil {
 				debug = *item.DebugExecution
 			}
+			execMode := "live"
 			if debug {
-				m.infoExecMode = "debug"
-			} else {
-				m.infoExecMode = "live"
+				execMode = "debug"
 			}
-			m.infoAutoClose = autoClose
-			m.infoCwd = m.currentPath
+
+			cmdStr := ""
 			if strings.TrimSpace(item.Command) == "" {
-				m.infoCommand = "Error: no command configured"
+				cmdStr = "Error: no command configured"
 			} else {
-				m.infoCommand = config.ExpandCommandTokens(item.Command, m.Config)
+				cmdStr = config.ExpandCommandTokens(item.Command, m.Config)
+			}
+
+			m.activeDetail = &DetailState{
+				Title:       title,
+				KeyLabel:    "Command",
+				Value:       cmdStr,
+				Description: item.Description,
+				Meta: []DetailMeta{
+					{Label: "Exec", Value: execMode},
+					{Label: "Auto-close", Value: fmt.Sprintf("%v", autoClose)},
+					{Label: "CWD", Value: m.currentPath},
+				},
 			}
 			m.mode = infoMode
 			return m, nil
@@ -581,7 +605,9 @@ func (m Model) updateInfoMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.profileErrorQueueActive {
 		var cmds []tea.Cmd
 		if key == "y" {
-			cmds = append(cmds, copyToClipboardCmd(m.infoCommand))
+			if m.activeDetail != nil {
+				cmds = append(cmds, copyToClipboardCmd(m.activeDetail.Value))
+			}
 		}
 		if len(m.pendingProfileErrors) > 0 {
 			m = m.presentNextBrokenProfile()
@@ -589,15 +615,24 @@ func (m Model) updateInfoMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		m.profileErrorQueueActive = false
 		m.mode = m.previousMode
+		m.activeDetail = nil // Clear detail state
 		return m, tea.Batch(cmds...)
 	}
 	switch key {
 	case "y":
-		prev := m.previousMode
-		m.mode = prev
-		return m, copyToClipboardCmd(m.infoCommand)
+		if m.activeDetail != nil {
+			prev := m.previousMode
+			m.mode = prev
+			cmd := copyToClipboardCmd(m.activeDetail.Value)
+			m.activeDetail = nil // Clear detail state
+			return m, cmd
+		}
+		m.mode = m.previousMode
+		m.activeDetail = nil
+		return m, nil
 	default:
 		m.mode = m.previousMode
+		m.activeDetail = nil // Clear detail state
 		return m, nil
 	}
 }

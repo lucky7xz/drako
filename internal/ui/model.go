@@ -70,13 +70,8 @@ type Model struct {
 	dropdownSelectedIdx int
 	dropdownItems       []config.CommandItem
 
-	previousMode    navMode
-	infoTitle       string
-	infoCommand     string
-	infoDescription string
-	infoExecMode    string
-	infoAutoClose   bool
-	infoCwd         string
+	previousMode navMode
+	activeDetail *DetailState // Single source of truth for detail view
 
 	pendingProfileErrors    []config.ProfileParseError
 	profileErrorQueueActive bool
@@ -157,21 +152,26 @@ func (m Model) presentNextBrokenProfile() Model {
 	m.pendingProfileErrors = m.pendingProfileErrors[1:]
 
 	m.previousMode = m.mode
-	m.infoTitle = fmt.Sprintf("Profile error: %s", e.Name)
-	// Put actionable details into infoCommand so users can copy with 'y'
-	m.infoCommand = fmt.Sprintf("Path: %s\nError: %s", e.Path, strings.TrimSpace(e.Err))
-	m.infoDescription = "This profile has an error and was hidden from selection.\n\n"
+
+	desc := "This profile has an error and was hidden from selection.\n\n"
 	if strings.Contains(e.Err, "empty profile file") {
-		m.infoDescription += "The file is completely empty. Either add valid TOML configuration or move/delete the file via Inventory (i).\n\n"
+		desc += "The file is completely empty. Either add valid TOML configuration or move/delete the file via Inventory (i).\n\n"
 	} else if strings.Contains(e.Err, "no settings found") {
-		m.infoDescription += "The file exists but contains no configuration settings. Either add valid TOML configuration or move/delete the file via Inventory (i).\n\n"
+		desc += "The file exists but contains no configuration settings. Either add valid TOML configuration or move/delete the file via Inventory (i).\n\n"
 	} else {
-		m.infoDescription += "The file has a TOML syntax error. Either fix the syntax error or move/delete the file via Inventory (i).\n\n"
+		desc += "The file has a TOML syntax error. Either fix the syntax error or move/delete the file via Inventory (i).\n\n"
 	}
-	m.infoDescription += "Press any key to continue to the next error, or 'y' to copy error details to clipboard."
-	m.infoExecMode = ""
-	m.infoAutoClose = false
-	m.infoCwd = m.configDir
+	desc += "Press any key to continue to the next error, or 'y' to copy error details to clipboard."
+
+	m.activeDetail = &DetailState{
+		Title:       fmt.Sprintf("Profile error: %s", e.Name),
+		KeyLabel:    "Error",
+		Value:       fmt.Sprintf("Path: %s\nError: %s", e.Path, strings.TrimSpace(e.Err)),
+		Description: desc,
+		Meta: []DetailMeta{
+			{Label: "CWD", Value: m.configDir},
+		},
+	}
 	m.mode = infoMode
 	return m
 }
