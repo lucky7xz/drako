@@ -217,13 +217,13 @@ func ExpandCommandTokens(s string, cfg Config) string {
 	}
 	s = strings.ReplaceAll(s, "{dR4ko_path}", cfg.DR4koPath)
 	// {assets} resolves to config_dir/assets/<active_profile_name>
-	// cfg.Profile might be empty or "Default", handled by GetConfigDir + Join
+	// cfg.Profile might be empty or "Core", handled by GetConfigDir + Join
 	if strings.Contains(s, "{assets}") {
 		configDir, err := GetConfigDir()
 		if err == nil {
 			profileName := NormalizeProfileName(cfg.Profile)
-			if profileName == "" {
-				profileName = "default"
+			if profileName == "" || profileName == "core" {
+				profileName = "core" // Use 'core' folder for base assets
 			}
 			assetsPath := filepath.Join(configDir, "assets", profileName)
 			s = strings.ReplaceAll(s, "{assets}", assetsPath)
@@ -279,7 +279,7 @@ func NormalizeProfileName(name string) string {
 }
 
 func DiscoverProfilesWithErrors(configDir string) ([]ProfileInfo, []ProfileParseError) {
-	profiles := []ProfileInfo{{Name: "Default", Path: ""}}
+	profiles := []ProfileInfo{{Name: "Core", Path: ""}}
 
 	entries, err := os.ReadDir(configDir)
 	if err != nil {
@@ -623,12 +623,12 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 		return temp, nil
 	}
 
-	if useFactoryDefaults || (len(broken) > 0 && NormalizeProfileName(selected.Name) == "default") {
+	if useFactoryDefaults || (len(broken) > 0 && NormalizeProfileName(selected.Name) == "core") {
 		// Fall back to factory defaults (3x3).
 		effective = RescueConfig()
 		// ApplyDefaults will init controls too
 		effective.ApplyDefaults()
-	} else if NormalizeProfileName(selected.Name) != "default" {
+	} else if NormalizeProfileName(selected.Name) != "core" {
 		// Attempt to apply the selected profile
 		var err error
 		effective, err = applyAndValidate(selected)
@@ -640,12 +640,12 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 				Path: selected.Path,
 				Err:  fmt.Sprintf("Grid validation failed: %v", err),
 			})
-			// Since selected is broken, we fall back to default/base
+			// Since selected is broken, we fall back to core/base
 			effective = base
-			// Reset active index to default (0)
+			// Reset active index to core (0)
 			activeIndex = 0
 			pivotStillValid = false
-			// Update selected to Default for display purposes if needed
+			// Update selected to Core for display purposes if needed
 			if len(profiles) > 0 {
 				selected = profiles[0]
 			}

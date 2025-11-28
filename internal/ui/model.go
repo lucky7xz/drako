@@ -129,7 +129,7 @@ func (m *Model) applyBundle(bundle config.ConfigBundle) {
 	m.baseConfig = bundle.Base
 	profiles := bundle.Profiles
 	if len(profiles) == 0 {
-		profiles = []config.ProfileInfo{{Name: "Default"}}
+		profiles = []config.ProfileInfo{{Name: "Core"}}
 	}
 	m.profiles = profiles
 	if bundle.ActiveIndex < 0 || bundle.ActiveIndex >= len(profiles) {
@@ -178,7 +178,7 @@ func (m Model) presentNextBrokenProfile() Model {
 
 func (m Model) activeProfileName() string {
 	if len(m.profiles) == 0 {
-		return "Default"
+		return "Core"
 	}
 	idx := m.activeProfileIndex
 	if idx < 0 || idx >= len(m.profiles) {
@@ -186,7 +186,7 @@ func (m Model) activeProfileName() string {
 	}
 	name := m.profiles[idx].Name
 	if strings.TrimSpace(name) == "" {
-		return "Default"
+		return "Core"
 	}
 	return name
 }
