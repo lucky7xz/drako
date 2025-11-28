@@ -33,12 +33,20 @@ func letterToColumn(s string) (int, error) {
 	return int(char - 'a'), nil
 }
 
-// DefaultConfig returns a Config with sensible defaults.
-func DefaultConfig() Config {
+// RescueConfig returns a minimal "Safe Mode" configuration.
+// It provides tools to help the user fix a broken configuration.
+func RescueConfig() Config {
+
+	// TODO: OS SWITCH HERE
+	// Helper to try and get a reasonable open command
+	//openCmd := "xdg-open"
+	// We could check runtime.GOOS here if we wanted to be fancy,
+	// but for a hardcoded fallback, simple is better.
+
 	return Config{
 		X:            3,
 		Y:            3,
-		Theme:        "dracula",
+		Theme:        "dracula", // A safe, dark theme
 		NumbModifier: "alt",
 		DefaultShell: "bash",
 		Keys: InputConfig{
@@ -49,13 +57,43 @@ func DefaultConfig() Config {
 			ProfilePrev:  "o",
 			ProfileNext:  "p",
 		},
+		Commands: []Command{
+			{
+				Name:        "Open Config Dir",
+				Command:     "xdg-open ~/.config/drako",
+				Description: "Opens the configuration directory.\n\n• Delete or fix broken profiles here.\n• Move unfinished profiles to a 'collection' subfolder to hide them.\n\nTip: You can switch to a working profile right now with 'o' (prev) or 'p' (next).",
+				Row:         0,
+				Col:         "a", // Left
+			},
+			{
+				Name:        "Edit Config",
+				Command:     "${EDITOR:-nano} ~/.config/drako/config.toml",
+				Description: "Opens the main configuration file in your default editor.\n\n• Use this to fix syntax errors in config.toml.\n• If this file is broken, Drako falls back to this Rescue mode.\n\nTip: You can switch to a working profile right now with 'o' (prev) or 'p' (next).",
+				Row:         0,
+				Col:         "b", // Center
+			},
+			{
+				Name:        "Documentation",
+				Command:     "xdg-open https://github.com/lucky7xz/drako",
+				Description: "Opens the Drako documentation in your browser.\n\n• Check the syntax reference.\n• Find examples of valid profiles.\n\nTip: You can switch to a working profile right now with 'o' (prev) or 'p' (next).",
+				Row:         0,
+				Col:         "c", // Right
+			},
+			{
+				Name:        "Reload Config",
+				Command:     "true", // No-op, but triggers an update loop because execution finishes
+				Description: "Forces a reload of the configuration.\nDrako automatically reloads on file save, but you can use this to manually retry.\n\nTip: You can switch to a working profile right now with 'o' (prev) or 'p' (next).",
+				Row:         1,
+				Col:         "b", // Center below Edit
+			},
+		},
 	}
 }
 
 // ApplyDefaults fills in any missing fields with default values.
 // It ensures the configuration is valid and complete.
 func (c *Config) ApplyDefaults() {
-	defaults := DefaultConfig()
+	defaults := RescueConfig()
 
 	if strings.TrimSpace(c.NumbModifier) == "" {
 		c.NumbModifier = defaults.NumbModifier
@@ -471,7 +509,7 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 			fatalf("could not create config directory: %v", err)
 		}
 
-		base = DefaultConfig()
+		base = RescueConfig()
 		f, err := os.Create(configPath)
 		if err != nil {
 			fatalf("could not create config file: %v", err)
@@ -503,7 +541,7 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 		// For base config, we probably still want to crash or fallback, but let's log it
 		log.Printf("Error: Base config is invalid: %v", err)
 		// We can fallback to hard defaults if base is totally broken
-		// base = DefaultConfig()
+		// base = RescueConfig()
 		// base.ApplyDefaults()
 	}
 
@@ -587,7 +625,7 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 
 	if useFactoryDefaults || (len(broken) > 0 && NormalizeProfileName(selected.Name) == "default") {
 		// Fall back to factory defaults (3x3).
-		effective = DefaultConfig()
+		effective = RescueConfig()
 		// ApplyDefaults will init controls too
 		effective.ApplyDefaults()
 	} else if NormalizeProfileName(selected.Name) != "default" {
