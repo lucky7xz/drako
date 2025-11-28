@@ -375,6 +375,14 @@ func (m Model) viewInventoryMode() string {
 	}
 	s.WriteString(applyButton)
 
+	// Render Rescue Mode Button
+	s.WriteString("\n\n")
+	rescueButton := rescueButtonStyle.Render("[ Rescue Mode ]")
+	if m.inventory.focusedList == 3 {
+		rescueButton = selectedRescueButtonStyle.Render("[ Rescue Mode ]")
+	}
+	s.WriteString(rescueButton)
+
 	// Render Held Item Status
 	heldItemStatus := " " // Reserve space
 	if m.inventory.heldItem != nil {
@@ -469,8 +477,7 @@ func (m Model) viewDropdownMode() string {
 	grid := m.renderGrid()
 	mainContent := lipgloss.JoinVertical(lipgloss.Center, header, grid)
 
-	var helpText string
-	helpText = "Dropdown Mode | ↑/↓/ws: Select, Enter: Execute, Esc/q: Cancel"
+	helpText := "Dropdown Mode | ↑/↓/ws: Select, Enter: Execute, Esc/q: Cancel"
 	help := helpStyle.Render(helpText)
 
 	netLabel := lipgloss.NewStyle().Render("NET: ")
@@ -670,7 +677,7 @@ func (m Model) viewInfoMode() string {
 	}
 
 	var raw []string
-	
+
 	// Safety check if activeDetail is nil (should not happen in infoMode ideally)
 	if m.activeDetail == nil {
 		return appStyle.Render(lipgloss.Place(m.termWidth, m.termHeight, lipgloss.Center, lipgloss.Center, "Error: No detail state"))
@@ -679,7 +686,7 @@ func (m Model) viewInfoMode() string {
 	if strings.TrimSpace(m.activeDetail.Title) != "" {
 		raw = append(raw, titleStyleLocal.Render(m.activeDetail.Title))
 	}
-	
+
 	if strings.TrimSpace(m.activeDetail.Value) != "" {
 		raw = append(raw, "")
 		label := "Value:"
@@ -691,7 +698,7 @@ func (m Model) viewInfoMode() string {
 			raw = append(raw, valueStyle.Render(ln))
 		}
 	}
-	
+
 	if strings.TrimSpace(m.activeDetail.Description) != "" {
 		raw = append(raw, "")
 		raw = append(raw, labelStyle.Render("Description:"))
@@ -699,7 +706,7 @@ func (m Model) viewInfoMode() string {
 			raw = append(raw, valueStyle.Render(ln))
 		}
 	}
-	
+
 	if len(m.activeDetail.Meta) > 0 {
 		raw = append(raw, "")
 		for _, meta := range m.activeDetail.Meta {

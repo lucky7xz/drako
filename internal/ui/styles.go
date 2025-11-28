@@ -50,6 +50,8 @@ var (
 	selectedCursorStyle   lipgloss.Style
 	buttonStyle           lipgloss.Style
 	selectedButtonStyle   lipgloss.Style
+	rescueButtonStyle     lipgloss.Style
+	selectedRescueButtonStyle lipgloss.Style
 	errorTitleStyle       lipgloss.Style
 	errorTextStyle        lipgloss.Style
 	themeNameStyle        lipgloss.Style
@@ -180,6 +182,19 @@ func applyThemeStyles(cfg config.Config) {
 		Background(lipgloss.Color(ui.ButtonSelBG)).
 		Padding(0, 3).
 		MarginTop(1)
+
+	rescueButtonStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(ui.StatusNegative)).
+		Background(lipgloss.Color(ui.ButtonBG)).
+		Padding(0, 3).
+		MarginTop(1)
+
+	selectedRescueButtonStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#FFFFFF")).
+		Background(lipgloss.Color(ui.StatusNegative)).
+		Padding(0, 3).
+		MarginTop(1).
+		Bold(true)
 
 	errorTitleStyle = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.StatusNegative)).

@@ -66,6 +66,13 @@ func RescueConfig() Config {
 				Col:         "a", // Left
 			},
 			{
+				Name:        "Reset a Profile",
+				Command:     "printf \"Enter profile name (e.g. 'git'): \" && read name && drako purge --target \"$name\"",
+				Description: "Select a profile to reset/delete.\n\n• Useful if a specific profile is broken and crashing Drako.\n• The profile will be moved to trash/.",
+				Row:         1,
+				Col:         "a", // Left below Reset Core
+			},
+			{
 				Name:        "Edit Config",
 				Command:     "${EDITOR:-nano} ~/.config/drako/config.toml",
 				Description: "Opens the main configuration file in your default editor.\n\n• Use this to fix syntax errors in config.toml.\n• If this file is broken, Drako falls back to this Rescue mode.\n\nTip: You can switch to a working profile right now with 'o' (prev) or 'p' (next).",

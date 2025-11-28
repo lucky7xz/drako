@@ -25,7 +25,7 @@ type inventoryModel struct {
 	visible     []string // Profiles in the main config dir
 	inventory   []string // Profiles in the inventory subdir
 	cursor      int      // Position in the current list
-	focusedList int      // 0 for visible, 1 for inventory, 2 for apply
+	focusedList int      // 0 for visible, 1 for inventory, 2 for apply, 3 for rescue
 	heldItem    *string  // The profile being moved
 	status      string   // Feedback message for the user
 	err         error    // Any error that has occurred
@@ -78,9 +78,9 @@ func InitInventoryModel(configDir string) inventoryModel {
 	// Sort inventory list alphabetically
 	sort.Strings(inventory)
 
-	// Build visible list including the special "Default" entry
-	// Persisted equipped_order uses canonical names (e.g., "Default", "nw_pro")
-	var visible []string // contains filenames for overlays and the literal "Default"
+	// Build visible list including the special "Core" entry
+	// Persisted equipped_order uses canonical names (e.g., "Core", "nw_pro")
+	var visible []string // contains filenames for overlays and the literal "Core"
 	if pf, err := config.ReadPivotProfile(configDir); err == nil && len(pf.EquippedOrder) > 0 {
 		// Map canonical name -> filename
 		nameToFile := make(map[string]string, len(visibleFiles))
@@ -93,11 +93,11 @@ func InitInventoryModel(configDir string) inventoryModel {
 		for n, f := range nameToFile {
 			remaining[n] = f
 		}
-		addedDefault := false
+		addedCore := false
 		for _, n := range pf.EquippedOrder {
-			if n == "Default" {
-				visible = append(visible, "Default")
-				addedDefault = true
+			if n == "Default" || n == "Core" {
+				visible = append(visible, "Core")
+				addedCore = true
 				continue
 			}
 			if f, ok := remaining[n]; ok {
@@ -105,7 +105,7 @@ func InitInventoryModel(configDir string) inventoryModel {
 				delete(remaining, n)
 			}
 		}
-		// Append any leftovers alphabetically by name; if Default wasn't listed, append it at the end
+		// Append any leftovers alphabetically by name; if Core wasn't listed, append it at the end
 		var restNames []string
 		for n := range remaining {
 			restNames = append(restNames, n)
@@ -114,13 +114,13 @@ func InitInventoryModel(configDir string) inventoryModel {
 		for _, n := range restNames {
 			visible = append(visible, remaining[n])
 		}
-		if !addedDefault {
-			visible = append(visible, "Default")
+		if !addedCore {
+			visible = append(visible, "Core")
 		}
 	} else {
-		// No saved order: Default first, then files alphabetically
+		// No saved order: Core first, then files alphabetically
 		sort.Strings(visibleFiles)
-		visible = append([]string{"Default"}, visibleFiles...)
+		visible = append([]string{"Core"}, visibleFiles...)
 	}
 
 	return inventoryModel{
@@ -137,9 +137,9 @@ func ApplyInventoryChangesCmd(configDir string, m inventoryModel) tea.Cmd {
 		inventoryDir := filepath.Join(configDir, "inventory")
 		moves := map[string]string{} // from -> to
 
-		// Find files to move from visible to inventory (skip Default)
+		// Find files to move from visible to inventory (skip Core)
 		for _, file := range m.initialVisible {
-			if file == "Default" {
+			if file == "Core" || file == "Default" {
 				continue
 			}
 			if !Contains(m.visible, file) {
@@ -171,8 +171,8 @@ func ApplyInventoryChangesCmd(configDir string, m inventoryModel) tea.Cmd {
 		// Persist the current visible order into pivot.toml as equipped_order (canonical names)
 		order := make([]string, 0, len(m.visible))
 		for _, v := range m.visible {
-			if v == "Default" {
-				order = append(order, "Default")
+			if v == "Core" || v == "Default" {
+				order = append(order, "Core")
 				continue
 			}
 			order = append(order, strings.TrimSuffix(v, ".profile.toml"))

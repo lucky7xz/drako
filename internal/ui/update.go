@@ -709,7 +709,7 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			inv.cursor = 0
 		}
 	case IsDown(m.Config.Keys, msg):
-		if inv.focusedList < 2 {
+		if inv.focusedList < 3 {
 			inv.focusedList++
 			inv.cursor = 0
 		}
@@ -728,13 +728,20 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 		}
 	case IsPathGridMode(m.Config.Keys, msg): // Reuse tab for focus cycle
-		inv.focusedList = (inv.focusedList + 1) % 3 // 0: visible, 1: inventory, 2: apply
+		inv.focusedList = (inv.focusedList + 1) % 4 // 0: visible, 1: inventory, 2: apply, 3: rescue
 		inv.cursor = 0
 
 	// Lift and Place
 	case IsConfirm(m.Config.Keys, msg):
 		if inv.focusedList == 2 { // Apply button is focused
 			return m, ApplyInventoryChangesCmd(m.configDir, m.inventory)
+		}
+		if inv.focusedList == 3 { // Rescue Mode button
+			m.mode = gridMode
+			rescueCfg := config.RescueConfig()
+			rescueCfg.ApplyDefaults()
+			m.applyConfig(rescueCfg)
+			return m, nil
 		}
 
 		currentList := &inv.visible
