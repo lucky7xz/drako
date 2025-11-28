@@ -142,7 +142,7 @@ command = "python3 {assets}/scanner.py"
 ```
 This ensures your profile is portable and works on any machine.
 
-## 🧰 CLI Power Tools
+## 🧰 Power Tools
 
 Beyond the TUI, Drako provides CLI commands for advanced management.
 
@@ -162,7 +162,7 @@ drako purge --target core
 # Remove a specific profile (moves to trash/)
 drako purge --target git
 
-# NUCLEAR OPTION: Delete everything (NO TRASH, NO UNDO)
+# NUCLEAR OPTION: Delete everything in the .config folder (NO TRASH, NO UNDO)
 drako purge --destroyeverything
 ```
 
@@ -170,9 +170,8 @@ drako purge --destroyeverything
 
 If your configuration breaks (syntax error, invalid grid), Drako won't crash. It enters **Rescue Mode**.
 
-- **Safe Environment:** A minimal, hardcoded 3x3 grid that always works.
-- **Repair Tools:** Provides buttons to edit `config.toml`, open the config directory, or reset broken profiles.
-- **Manual Access:** You can enter Rescue Mode manually via the **Inventory** (`i`) screen by clicking `[ Rescue Mode ]`.
+- **Repair Tools:** Provides buttons to edit `config.toml`, open the config directory, or remove broken profiles.
+- **Manual Access:** You can enter Rescue Mode manually via the **Inventory** (`i`) screen with `[ Rescue Mode ]`.
 - **Exit:** Select "Exit Rescue Mode" or switch to a working profile (`o`/`p`) to return to normal operation.
 
 ## ⚠️ Safety First
@@ -191,8 +190,8 @@ If your configuration breaks (syntax error, invalid grid), Drako won't crash. It
  - [x] Grid Size Safety & Rescue Mode
  - [x] Core Profile Concept
  - [ ] Full unit test suite
- - [ ] Windows support (limited)
- - [ ] Steamdeck support (limited)
+ - [ ] Windows support
+ - [ ] Steamdeck support
  - [ ] ARM Support
  - [ ] CI/CD
 
