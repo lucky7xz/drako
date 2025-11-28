@@ -52,6 +52,48 @@ func DefaultConfig() Config {
 	}
 }
 
+// ApplyDefaults fills in any missing fields with default values.
+// It ensures the configuration is valid and complete.
+func (c *Config) ApplyDefaults() {
+	defaults := DefaultConfig()
+
+	if strings.TrimSpace(c.NumbModifier) == "" {
+		c.NumbModifier = defaults.NumbModifier
+	}
+	if strings.TrimSpace(c.DefaultShell) == "" {
+		c.DefaultShell = defaults.DefaultShell
+	}
+	if strings.TrimSpace(c.Theme) == "" {
+		c.Theme = defaults.Theme
+	}
+
+	// Apply key defaults if missing
+	if strings.TrimSpace(c.Keys.Explain) == "" {
+		c.Keys.Explain = defaults.Keys.Explain
+	}
+	if strings.TrimSpace(c.Keys.Inventory) == "" {
+		c.Keys.Inventory = defaults.Keys.Inventory
+	}
+	if strings.TrimSpace(c.Keys.PathGridMode) == "" {
+		c.Keys.PathGridMode = defaults.Keys.PathGridMode
+	}
+	if strings.TrimSpace(c.Keys.Lock) == "" {
+		c.Keys.Lock = defaults.Keys.Lock
+	}
+	if strings.TrimSpace(c.Keys.ProfilePrev) == "" {
+		c.Keys.ProfilePrev = defaults.Keys.ProfilePrev
+	}
+	if strings.TrimSpace(c.Keys.ProfileNext) == "" {
+		c.Keys.ProfileNext = defaults.Keys.ProfileNext
+	}
+
+	// Ensure limits are respected
+	ClampConfig(c)
+
+	// Initialize control sets (WASD, Vim, arrows)
+	c.Keys.InitControls()
+}
+
 func ClampConfig(cfg *Config) {
 	if cfg.X < 1 {
 		cfg.X = 1
@@ -68,6 +110,7 @@ func ClampConfig(cfg *Config) {
 }
 
 func BuildGrid(config Config) [][]string {
+	// Safety clamp, though ApplyDefaults usually handles it
 	ClampConfig(&config)
 	grid := make([][]string, config.Y)
 	for i := range grid {
@@ -395,6 +438,7 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 	var base Config
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		// This case is redundant if bootstrapCopy works, but kept for safety
 		if err := os.MkdirAll(configDir, 0o755); err != nil {
 			fatalf("could not create config directory: %v", err)
 		}
@@ -420,42 +464,11 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 		if _, err := toml.Decode(configString, &base); err != nil {
 			fatalf("could not decode config file: %v", err)
 		}
-		// Apply defaults for any missing fields
-		defaults := DefaultConfig()
-		if strings.TrimSpace(base.NumbModifier) == "" {
-			base.NumbModifier = defaults.NumbModifier
-		}
-		if strings.TrimSpace(base.DefaultShell) == "" {
-			base.DefaultShell = defaults.DefaultShell
-		}
-		if strings.TrimSpace(base.Theme) == "" {
-			base.Theme = defaults.Theme
-		}
-		// Apply key defaults if missing
-		if strings.TrimSpace(base.Keys.Explain) == "" {
-			base.Keys.Explain = defaults.Keys.Explain
-		}
-		if strings.TrimSpace(base.Keys.Inventory) == "" {
-			base.Keys.Inventory = defaults.Keys.Inventory
-		}
-		if strings.TrimSpace(base.Keys.PathGridMode) == "" {
-			base.Keys.PathGridMode = defaults.Keys.PathGridMode
-		}
-		if strings.TrimSpace(base.Keys.Lock) == "" {
-			base.Keys.Lock = defaults.Keys.Lock
-		}
-		if strings.TrimSpace(base.Keys.ProfilePrev) == "" {
-			base.Keys.ProfilePrev = defaults.Keys.ProfilePrev
-		}
-		if strings.TrimSpace(base.Keys.ProfileNext) == "" {
-			base.Keys.ProfileNext = defaults.Keys.ProfileNext
-		}
 		log.Printf("Loaded config: X=%d, Y=%d, Commands=%d", base.X, base.Y, len(base.Commands))
 	}
 
-	ClampConfig(&base)
-	// Compute the navigation sets based on flags
-	base.Keys.InitControls()
+	// Apply defaults to the base config immediately
+	base.ApplyDefaults()
 
 	profiles, broken := DiscoverProfilesWithErrors(configDir)
 	// Reorder profiles based on pivot equipped_order
@@ -525,20 +538,17 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 	effective := base
 	selected := profiles[activeIndex]
 	if useFactoryDefaults || (len(broken) > 0 && NormalizeProfileName(selected.Name) == "default") {
-		// Either an explicitly requested profile was missing/broken, or there are broken overlays present
-		// and we are using Default. Fall back to factory defaults (3x3).
+		// Fall back to factory defaults (3x3).
 		effective = DefaultConfig()
-		// Ensure controls are initialized for factory default
-		effective.Keys.InitControls()
+		// ApplyDefaults will init controls too
+		effective.ApplyDefaults()
 	} else if NormalizeProfileName(selected.Name) != "default" {
 		effective = ApplyProfileOverlay(base, selected.Overlay)
-		// Controls might have been updated if overlay affects base config (which it does)
-		// Re-init controls to be safe, although keys aren't currently overridable per profile
-		effective.Keys.InitControls()
+		// Overlay might have partial fields, so we re-apply defaults to ensure integrity
+		effective.ApplyDefaults()
 		log.Printf("Applied profile overlay: %s", selected.Name)
 	}
 
-	ClampConfig(&effective)
 	effective.Commands = CopyCommands(effective.Commands)
 
 	return ConfigBundle{
