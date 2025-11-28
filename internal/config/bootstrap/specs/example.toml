@@ -1,0 +1,14 @@
+# Drako Profile Specification
+# Usage: drako spec example
+
+# A "Spec" defines exactly which profiles should be visible (equipped).
+# When you apply a spec:
+# 1. Profiles listed here are moved from 'inventory/' to the main config folder (Visible).
+# 2. Profiles NOT listed here (except Core) are moved to 'inventory/' (Hidden).
+# 3. The order of profiles is updated to match this list.
+
+profiles = [
+    "git",       # Enable 'git' profile
+    #"unix_101",  # Enable 'unix_101' profile
+    "docker_101" # Commented out: 'docker_101' will be moved to inventory
+]

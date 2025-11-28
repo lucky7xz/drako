@@ -84,10 +84,11 @@ func ApplySpec(configDir string, targetProfiles []string) error {
 			if targetSet[norm] {
 				src := filepath.Join(inventoryDir, entry.Name())
 				dst := filepath.Join(configDir, entry.Name())
-				if err := os.Rename(src, dst); err != nil {
-					return fmt.Errorf("failed to move %s to visible: %w", entry.Name(), err)
+				if err := moveFileSafe(src, dst); err != nil {
+					log.Printf("Warning: skipped moving %s: %v", name, err)
+				} else {
+					fmt.Printf("  + Equipped: %s\n", name)
 				}
-				fmt.Printf("  + Equipped: %s\n", name)
 			}
 		}
 	}
@@ -112,10 +113,11 @@ func ApplySpec(configDir string, targetProfiles []string) error {
 		if !targetSet[norm] {
 			src := filepath.Join(configDir, entry.Name())
 			dst := filepath.Join(inventoryDir, entry.Name())
-			if err := os.Rename(src, dst); err != nil {
-				return fmt.Errorf("failed to move %s to inventory: %w", entry.Name(), err)
+			if err := moveFileSafe(src, dst); err != nil {
+				log.Printf("Warning: skipped moving %s: %v", name, err)
+			} else {
+				fmt.Printf("  - Stored: %s\n", name)
 			}
-			fmt.Printf("  - Stored: %s\n", name)
 		}
 	}
 
@@ -137,3 +139,9 @@ func ApplySpec(configDir string, targetProfiles []string) error {
 	return config.WritePivotEquippedOrder(configDir, finalOrder)
 }
 
+func moveFileSafe(src, dst string) error {
+	if _, err := os.Stat(dst); err == nil {
+		return fmt.Errorf("destination already exists: %s", dst)
+	}
+	return os.Rename(src, dst)
+}
