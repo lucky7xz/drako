@@ -32,7 +32,9 @@ If you are not getting the latest version, use this command instead:
 ```bash
 GOPROXY=direct go install github.com/lucky7xz/drako/cmd/drako@latest  # install drako
 ```
-If newly added profiles do not appear after the update, note that `drako` only creates the bootstrap folder under .config/drako if there is none present alreay. As such, the new profiles will no be created. 
+NOTE: If go binary directory is not in specified in your path, try `~/./go/bin/drako`.
+
+NOTE: If newly added profiles do not appear after the update, note that `drako` only creates the bootstrap folder under .config/drako if there is none present alreay. If the old .`.config/drako` directory persists, the new profiles will no be created. You could `purge` you old profiles (see below), or delete them manually. 
 
 
 ## Navigation
