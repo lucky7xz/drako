@@ -192,10 +192,12 @@ If your configuration breaks (syntax error, invalid grid), Drako won't crash. It
  - [x] Grid Size Safety & Rescue Mode
  - [x] Core Profile Concept
  - [ ] Full unit test suite
+ - [ ] MacOS support
  - [ ] Windows support
  - [ ] Steamdeck support
  - [ ] ARM Support
  - [ ] CI/CD
+ - [ ] Auto Update
 
 ---
 
