@@ -1,0 +1,127 @@
+# The SSH & Rsync Interactive Grid
+# A 3x3 profile with dedicated Firewall controls and user prompts for connections.
+
+# ┌─ Grid Dimensions ──────────────────────────────┐
+X = 3
+Y = 3
+# └────────────────────────────────────────────────┘
+
+#=======================================================================================================================
+# ┌─ COLUMN A: Server Management (The Fortress) ────────────────────────────────────────────────────────────────────────┐
+# │ Control the service, configure the firewall (UFW), and monitor security logs.
+# └─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+[[commands]]
+name = "🚦 SSH Service"
+description = "Turn the SSH server on, off, or check if it's alive."
+col = "A"
+row = 0
+items = [
+    { name = "Is it running?", command = "systemctl status ssh", description = "Checks if the SSH daemon is active.", auto_close_execution = false },
+    { name = "Start Service", command = "sudo systemctl start ssh", description = "Turn on SSH now.", auto_close_execution = false },
+    { name = "Enable on Boot", command = "sudo systemctl enable ssh", description = "Ensure SSH starts automatically when the server restarts.", auto_close_execution = false },
+    { name = "Restart Service", command = "sudo systemctl restart ssh", description = "Run this after changing config files to apply changes.", auto_close_execution = false }
+]
+
+[[commands]]
+name = "🧱 Firewall (UFW)"
+description = "Control who gets in. Essential security."
+col = "A"
+row = 1
+items = [
+    { name = "Check Status", command = "sudo ufw status verbose", description = "See exactly which ports are open or closed.", auto_close_execution = false },
+    { name = "Allow SSH (22)", command = "sudo ufw allow ssh", description = "Open port 22 so you don't lock yourself out.", auto_close_execution = false },
+    { name = "Allow Specific IP", command = "read -p 'Enter trusted IP: ' ip; sudo ufw allow from \"$ip\" to any port 22", description = "High Security: Only allow SSH from ONE specific location (e.g., your office IP).", auto_close_execution = false },
+    { name = "Enable Firewall", command = "sudo ufw enable", description = "Turn the firewall on. Make sure SSH is allowed first!", auto_close_execution = false },
+    { name = "Disable Firewall", command = "sudo ufw disable", description = "Turn it off if you are debugging connection issues.", auto_close_execution = false }
+]
+
+[[commands]]
+name = "📝 Config & Logs"
+description = "Edit server settings and see who is trying to log in."
+col = "A"
+row = 2
+items = [
+    { name = "Edit Config", command = "sudo nano /etc/ssh/sshd_config", description = "Change ports, disable root login, etc. (Requires restart).", auto_close_execution = false },
+    { name = "Check Auth Log", command = "tail -f /var/log/auth.log", description = "Watch live login attempts. Great for spotting hackers or debugging failures.", auto_close_execution = false },
+    { name = "Check Fail2Ban", command = "sudo fail2ban-client status sshd", description = "If installed: See how many bad IPs have been banned.", auto_close_execution = false }
+]
+
+
+#=======================================================================================================================
+# ┌─ COLUMN B: Client Connection (The Keys) ────────────────────────────────────────────────────────────────────────────┐
+# │ Interactive login tools and identity management (Keys).
+# └─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+[[commands]]
+name = "🔌 Connect (Input)"
+description = "Log in to servers. Prompts you for the target info."
+col = "B"
+row = 0
+items = [
+    { name = "Standard Login", command = "read -p 'Enter user@host: ' target; ssh \"$target\"", description = "The basic connection command.", auto_close_execution = false },
+    { name = "Custom Port Login", command = "read -p 'Enter user@host: ' target; read -p 'Port: ' port; ssh -p \"$port\" \"$target\"", description = "For servers not on default port 22.", auto_close_execution = false },
+    { name = "Debug Connection", command = "read -p 'Enter user@host: ' target; ssh -v \"$target\"", description = "Verbose mode. Prints exactly what is happening during connection.", auto_close_execution = false },
+    { name = "Run Remote Cmd", command = "read -p 'Target: ' t; read -p 'Command: ' c; ssh \"$t\" \"$c\"", description = "Log in, run a command, and exit immediately.", auto_close_execution = false }
+]
+
+[[commands]]
+name = "🔑 Key Gen"
+description = "Create and list your digital identity keys."
+col = "B"
+row = 1
+items = [
+    { name = "Generate New Key", command = "ssh-keygen -t ed25519", description = "Creates a modern, secure key pair. Just press Enter for defaults.", auto_close_execution = false },
+    { name = "List My Keys", command = "ls -l ~/.ssh/id_*", description = "Show your public (.pub) and private keys.", auto_close_execution = false },
+    { name = "Show Public Key", command = "cat ~/.ssh/id_ed25519.pub", description = "This is the text you copy to the server.", auto_close_execution = false },
+    { name = "Fix Permissions", command = "chmod 700 ~/.ssh && chmod 600 ~/.ssh/id_*", description = "Fixes 'Unprotected private key file' errors.", auto_close_execution = false }
+]
+
+[[commands]]
+name = "🚀 Deploy Keys"
+description = "Install your key on a server to enable passwordless login."
+col = "B"
+row = 2
+items = [
+    { name = "Copy ID (Default)", command = "read -p 'Enter user@host: ' target; ssh-copy-id \"$target\"", description = "Uploads your default public key to the target.", auto_close_execution = false },
+    { name = "Copy Specific ID", command = "read -p 'Enter user@host: ' target; read -p 'Key path (start with ~/.ssh/): ' key; ssh-copy-id -i \"$key\" \"$target\"", description = "Upload a specific key file.", auto_close_execution = false },
+    { name = "Test Key Login", command = "read -p 'Enter user@host: ' target; ssh -o PasswordAuthentication=no \"$target\"", description = "Forces key usage. If it asks for password, setup failed.", auto_close_execution = false }
+]
+
+
+#=======================================================================================================================
+# ┌─ COLUMN C: Data Transfer (Moving Files) ────────────────────────────────────────────────────────────────────────────┐
+# │ Move files securely. SCP for quick drops, Rsync for syncing folders.
+# └─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+[[commands]]
+name = "📦 SCP (File Copy)"
+description = "Simple file copy. Good for single files. Prompts for inputs."
+col = "C"
+row = 0
+items = [
+    { name = "Upload File", command = "read -p 'Local File: ' l; read -p 'Remote user@host:/path: ' r; scp \"$l\" \"$r\"", description = "Send a file UP to the server.", auto_close_execution = false },
+    { name = "Download File", command = "read -p 'Remote user@host:/file: ' r; read -p 'Local Path: ' l; scp \"$r\" \"$l\"", description = "Pull a file DOWN from the server.", auto_close_execution = false },
+    { name = "Upload Directory", command = "read -p 'Local Folder: ' l; read -p 'Remote user@host:/path: ' r; scp -r \"$l\" \"$r\"", description = "Send a whole folder (-r recursive).", auto_close_execution = false }
+]
+
+[[commands]]
+name = "🔄 Rsync (Sync)"
+description = "Smart sync. Only copies changed parts. The professional choice."
+col = "C"
+row = 1
+items = [
+    { name = "Sync UP to Remote", command = "read -p 'Local Folder: ' l; read -p 'Remote user@host:/path: ' r; rsync -avzP \"$l\" \"$r\"", description = "Push changes to server. -a (archive), -v (verbose), -z (compress), -P (progress).", auto_close_execution = false },
+    { name = "Sync DOWN from Remote", command = "read -p 'Remote user@host:/path: ' r; read -p 'Local Folder: ' l; rsync -avzP \"$r\" \"$l\"", description = "Pull changes from server.", auto_close_execution = false },
+    { name = "Dry Run (Safety)", command = "read -p 'Local: ' l; read -p 'Remote: ' r; rsync -avz --dry-run \"$l\" \"$r\"", description = "Simulate the transfer to see what would happen.", auto_close_execution = false }
+]
+
+[[commands]]
+name = "⏩ Rsync Advanced"
+description = "Mirroring and exclusion. Power tools for backups."
+col = "C"
+row = 2
+items = [
+    { name = "Mirror (Delete)", command = "read -p 'Local: ' l; read -p 'Remote: ' r; rsync -avz --delete \"$l\" \"$r\"", description = "WARNING: Deletes files on remote that don't exist locally. Makes exact mirror.", auto_close_execution = false },
+    { name = "Exclude Pattern", command = "read -p 'Local: ' l; read -p 'Remote: ' r; read -p 'Exclude pattern (e.g. *.tmp): ' ex; rsync -avz --exclude \"$ex\" \"$l\" \"$r\"", description = "Syncs but skips files matching the pattern.", auto_close_execution = false }
+]

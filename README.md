@@ -32,9 +32,9 @@ If you are not getting the latest version, use this command instead:
 ```bash
 GOPROXY=direct go install github.com/lucky7xz/drako/cmd/drako@latest  # install drako
 ```
-NOTE: If go binary directory is not in specified in your path, try `~/./go/bin/drako`.
+NOTE: If go binary directory is not in specified in your path, try `~/./go/bin/drako`
 
-NOTE: If newly added profiles do not appear after the update, note that `drako` only creates the bootstrap folder under .config/drako if there is none present alreay. If the old .`.config/drako` directory persists, the new profiles will no be created. You could `purge` you old profiles (see below), or delete them manually. 
+NOTE: If newly added/updated bootstrap profiles do not appear after the update command, note that `drako` only creates the bootstrap folder under .config/drako if there is none present alreay. If the old .`.config/drako` directory persists, the new profiles will no be created. You could `purge` you old profiles (see below), or delete them manually. 
 
 
 ## Navigation
@@ -173,7 +173,7 @@ drako purge --destroyeverything
 If your configuration breaks (syntax error, invalid grid), Drako won't crash. It enters **Rescue Mode**.
 
 - **Repair Tools:** Provides buttons to edit `config.toml`, open the config directory, or remove broken profiles.
-- **Manual Access:** You can enter Rescue Mode manually via the **Inventory** (`i`) screen with `[ Rescue Mode ]`.
+- **Manual Access:** You can enter `[ Rescue Mode ]` manually via the **Inventory** (`i`).
 - **Exit:** Select "Exit Rescue Mode" or switch to a working profile (`o`/`p`) to return to normal operation.
 
 ## ⚠️ Safety First

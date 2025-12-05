@@ -1,253 +1,140 @@
-# The Unix 101 Grid - Your Shell Journey from Noob to Novice
-# A 4x4 grid to master the most common and powerful command-line tools.
+# The Unix Pragmatic 3x3 - Contextualized Edition
+# Essentials only. Descriptions focus on "Why" and "When" for beginners.
 
 # ┌─ Grid Dimensions ──────────────────────────────┐
-X = 4
-Y = 4
+X = 3
+Y = 3
 # └────────────────────────────────────────────────┘
 
 #=======================================================================================================================
-# ┌─ COLUMN A: 🖥️ The Filesystem (The Basics) ──────────────────────────────────────────────────────────────────────────┐
-# │ Learn to navigate, see, and understand the layout of your system. This is step one.
+# ┌─ COLUMN A: Local Filesystem (Manage Your Space) ────────────────────────────────────────────────────────────────────┐
+# │ Navigation, file creation, permission management, and finding lost items.
 # └─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 [[commands]]
-name = "🗺️ Your Location"
-description = "Find out where you are, what's around you, and how to move. The 'you are here' map."
+name = "🗺️ Navigate & Info"
+description = "Where am I? What's here? Basic orientation skills."
 col = "A"
 row = 0
 items = [
-    { name = "List All (human)", command = "ls -lha", description = "List all files (even hidden) with details in a human-readable format.", auto_close_execution = false },
-    { name = "List by Time", command = "ls -lht", description = "Sorts by modification time, newest first.", auto_close_execution = false },
-    { name = "Where Am I?", command = "pwd", description = "Print the full path of your current working directory.", auto_close_execution = false },
-    { name = "Go Up", command = "cd ..", description = "Move one directory up.", auto_close_execution = false },
-    { name = "Go Home", command = "cd ~", description = "Instantly return to your home directory.", auto_close_execution = false },
-    { name = "Who Am I?", command = "whoami", description = "Displays your current username.", auto_close_execution = false },
-    { name = "System Info", command = "uname -a", description = "Show all system information (Kernel, hostname...)", auto_close_execution = false }
+    { name = "See Everything (ls)", command = "ls -lha", description = "List all files (including hidden ones) with their sizes and dates.", auto_close_execution = false },
+    { name = "Where am I? (pwd)", command = "pwd", description = "Lost? Prints the full path of the folder you are standing in.", auto_close_execution = false },
+    { name = "Go Home", command = "cd ~", description = "Instantly teleports you back to your main user folder.", auto_close_execution = false },
+    { name = "Who/What is this?", command = "uname -a && whoami", description = "Checks Linux version info and which user you are logged in as.", auto_close_execution = false },
+    { name = "Recall Command", command = "history | grep 'command'", description = "Forgot a complex command you ran yesterday? Find it here.", auto_close_execution = false }
 ]
 
 [[commands]]
-name = "📄 View Files"
-description = "Peek inside files without opening an editor. Use `less` for big files, `cat` for small ones."
+name = "🔨 File Ops"
+description = "Create, move, and destroy. Common daily tasks."
 col = "A"
 row = 1
 items = [
-    { name = "View Small File", command = "echo 'Try this: cat /etc/hosts'; cat /etc/hosts", auto_close_execution = false },
-    { name = "View Big File (scroll)", command = "echo 'Try this: less /var/log/syslog (press q to quit)'; less /var/log/syslog", auto_close_execution = false },
-    { name = "See The Start", command = "head -n 5 /var/log/syslog", description = "Show the first 5 lines of a file.", auto_close_execution = false },
-    { name = "See The End", command = "tail -n 5 /var/log/syslog", description = "Show the last 5 lines of a file.", auto_close_execution = false },
-    { name = "Follow a Log", command = "echo 'Try tail -f /var/log/syslog (Press Ctrl+C to stop)'; tail -f /var/log/syslog", auto_close_execution = false },
-    { name = "Better Follow", command = "echo 'Try less +F /var/log/syslog (Ctrl+C then q to quit)'; less +F /var/log/syslog", description = "Lets you 'follow' (like tail) but also scroll back (like less).", auto_close_execution = false }
+    { name = "Make Folder Path", command = "mkdir -p new/nested/folder", description = "Creates a folder inside a folder in one go (using -p).", auto_close_execution = false },
+    { name = "Copy Folder", command = "cp -r source_dir destination_dir", description = "You need -r (recursive) to copy a folder and its contents.", auto_close_execution = false },
+    { name = "Move or Rename", command = "mv old_name new_name", description = "Unix treats moving and renaming as the same action.", auto_close_execution = false },
+    { name = "Delete (Safe)", command = "rm -i filename", description = "Deletes a file, but asks you to confirm first. Good for beginners.", auto_close_execution = false },
+    { name = "Delete (Nuke)", command = "rm -rf foldername", description = "Recursively deletes a folder without asking. DANGEROUS.", auto_close_execution = false }
 ]
 
 [[commands]]
-name = "✨ Create & Destroy"
-description = "Make new files, new directories, and clean up when you're done. *Use rm with care!*"
+name = "🔐 Admin & Find"
+description = "Taking control: Run as admin (`sudo`) and hunt down lost files (`find`)."
 col = "A"
 row = 2
 items = [
-    { name = "Create Empty File", command = "touch my_new_file.txt && ls -l my_new_file.txt", description = "Creates a new, empty file or updates its timestamp.", auto_close_execution = false },
-    { name = "Create Directory", command = "mkdir my_new_dir && ls -l", auto_close_execution = false },
-    { name = "Create Nested Dirs", command = "mkdir -p deep/nested/directory && ls -R deep", description = "-p creates parent directories as needed.", auto_close_execution = false },
-    { name = "Remove File (Ask)", command = "rm -i my_new_file.txt", description = "-i (interactive) prompts you to confirm deletion.", auto_close_execution = false },
-    { name = "Remove Empty Dir", command = "rmdir my_new_dir", auto_close_execution = false },
-    { name = "Remove Dir (Force)", command = "rm -r deep", description = "-r (recursive) deletes a directory and ALL its contents. DANGEROUS!", auto_close_execution = false }
-]
-
-[[commands]]
-name = "📦 Copy & Move"
-description = "Organize your digital life. Copy files, move them, or just rename them."
-col = "A"
-row = 3
-items = [
-    { name = "Copy File", command = "touch original.txt; cp original.txt original.bak && ls", description = "Copies 'original.txt' to 'original.bak'.", auto_close_execution = false },
-    { name = "Copy Directory", command = "mkdir copy_test; cp -r copy_test copy_test_bak && ls", description = "-r (recursive) is needed to copy directories.", auto_close_execution = false },
-    { name = "Move / Rename File", command = "mv original.bak new_name.txt && ls", description = "`mv` is used for both moving and renaming.", auto_close_execution = false },
-    { name = "Move / Rename Dir", command = "mv copy_test_bak new_dir_name && ls", auto_close_execution = false }
+    { name = "Run as Admin", command = "sudo ls /root", description = "Run a command with Root/Administrator powers. Needed for system changes.", auto_close_execution = false },
+    { name = "Make Run-able", command = "chmod +x script.sh", description = "Tells the system this file is a program that can be executed.", auto_close_execution = false },
+    { name = "Fix Ownership", command = "sudo chown user:group filename", description = "Take ownership of a file you can't edit.", auto_close_execution = false },
+    { name = "Find Lost File", command = "find . -name \"*.log\"", description = "Scans current folder and all sub-folders for a specific name.", auto_close_execution = false },
+    { name = "Find Huge Files", command = "find . -type f -size +100M", description = "Finds files larger than 100MB. Good for cleaning disk space.", auto_close_execution = false }
 ]
 
 
 #=======================================================================================================================
-# ┌─ COLUMN B: 🛠️ Manipulation (The Apprentice) ────────────────────────────────────────────────────────────────────────┐
-# │ Go beyond viewing. Find files, change their permissions, and learn the *real* power of Unix.
+# ┌─ COLUMN B: Data Processing (The Power Tools) ───────────────────────────────────────────────────────────────────────┐
+# │ Don't just open files; filter, sort, and count the data inside them.
 # └─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 [[commands]]
-name = "  🕵️ Find Files"
-description = "Search your entire system for files by name, type, size, or modification time."
+name = "👀 Read & Pipe"
+description = "Ways to view file content and send data to other tools."
 col = "B"
 row = 0
 items = [
-    { name = "Find by Name (here)", command = "find . -name \"*.txt\"", description = "Find all .txt files in the current directory and subdirectories.", auto_close_execution = false },
-    { name = "Find by Name (case-ins)", command = "find . -iname \"*.txt\"", description = "-iname is case-insensitive.", auto_close_execution = false },
-    { name = "Find by Type (dirs)", command = "find ~ -type d -name \"Downloads\"", description = "Find directories named 'Downloads' in your home.", auto_close_execution = false },
-    { name = "Find by Mod Time", command = "find . -mtime -1", description = "Find files modified in the last 24 hours.", auto_close_execution = false },
-    { name = "Find & Exec", command = "find . -name \"*.bak\" -exec rm {} \\;", description = "Find all .bak files and execute `rm` on them. Powerful!", auto_close_execution = false }
+    { name = "Dump to Screen", command = "cat filename", description = "Best for small config files. Dumps the whole text at once.", auto_close_execution = false },
+    { name = "Read Pages", command = "less filename", description = "Best for large files. Scroll with arrows, press 'q' to quit.", auto_close_execution = false },
+    { name = "Watch Live Log", command = "tail -f /var/log/syslog", description = "Watch new lines appear in a log file in real-time.", auto_close_execution = false },
+    { name = "Save to File (>)", command = "echo 'content' > file.txt", description = "Saves output to a file. WARNING: Erases existing file content!", auto_close_execution = false },
+    { name = "Append to File (>>)", command = "echo 'more' >> file.txt", description = "Adds output to the END of a file. Safe (keeps existing content).", auto_close_execution = false }
 ]
 
 [[commands]]
-name = "🔐 Permissions"
-description = "Control who can read, write, or execute. `chmod` is essential for scripts, `sudo` for power."
+name = "🔍 Grep & Sort"
+description = "Find the needle in the haystack and organize your data."
 col = "B"
 row = 1
 items = [
-    { name = "Check Permissions", command = "touch test_file; ls -l test_file", description = "The first 10 characters (e.g., -rw-r--r--) are the permissions.", auto_close_execution = false },
-    { name = "Make Executable", command = "touch script.sh; chmod +x script.sh && ls -l script.sh", description = "Gives all users (owner, group, other) execute permission.", auto_close_execution = false },
-    { name = "Set Read/Write", command = "chmod 644 test_file && ls -l test_file", description = "Owner can Read/Write, Group/Other can only Read.", auto_close_execution = false },
-    { name = "Change Owner", command = "read -p 'Enter user:group: ' owner; sudo chown \"$owner\" test_file && ls -l test_file", description = "Change who owns the file.", auto_close_execution = false },
-    { name = "Run as Admin (sudo)", command = "sudo ls /root", description = "Run a command with 'Super User' privileges.", auto_close_execution = false },
-    { name = "Sudo Last Command", command = "!!", description = "This is a shell shortcut. Type `sudo !!` to run the last command as root (e.g., after a 'Permission denied' error).", auto_close_execution = false }
+    { name = "Search Text (grep)", command = "grep -rn 'search_term' .", description = "Search inside every file in this directory for a word.", auto_close_execution = false },
+    { name = "Count Lines", command = "wc -l filename", description = "How big is this file? Counts the number of lines.", auto_close_execution = false },
+    { name = "Alphabetize", command = "sort filename", description = "Sorts a messy list alphabetically.", auto_close_execution = false },
+    { name = "Remove Duplicates", command = "sort filename | uniq", description = "Strips out repeat lines. Note: You MUST sort first!", auto_close_execution = false },
+    { name = "Rank by Frequency", command = "sort filename | uniq -c | sort -nr", description = "The 'Top 10' generator. Counts occurrences and sorts by most popular.", auto_close_execution = false }
 ]
 
 [[commands]]
-name = "🆘 Get Help (man)"
-description = "Stuck? The manual is your best friend. `history` is your *other* best friend."
+name = "🪄 Sed & Awk"
+description = "Advanced editing. Replace text automatically or extract specific columns."
 col = "B"
 row = 2
 items = [
-    { name = "Read Manual (ls)", command = "man ls", description = "Press 'q' to quit.", auto_close_execution = false },
-    { name = "Find a Command", command = "read -p 'Enter keyword (e.g., copy): ' kw; man -k \"$kw\"", description = "Searches manual-page names and descriptions for a keyword.", auto_close_execution = false },
-    { name = "View History", command = "history | tail -n 20", description = "Show the last 20 commands you ran.", auto_close_execution = false },
-    { name = "Search History", command = "echo 'Try this: history | grep ls' ; history | grep ls", description = "Pipe history to grep to find a command you ran.", auto_close_execution = false },
-    { name = "Run from History", command = "echo 'Type !123 (if 123 is in your history list) to re-run it.'", auto_close_execution = false }
-]
-
-[[commands]]
-name = "⚡ The Core Concept"
-description = "This is the magic. Send output of one command to another (`|`) or to a file (`>`)."
-col = "B"
-row = 3
-items = [
-    { name = "Pipe `ls` into `less`", command = "ls -lha /etc | less", description = "Lets you scroll through a long directory listing. (q to quit)", auto_close_execution = false },
-    { name = "Save output to file", command = "echo \"Hello World\" > hello.txt && cat hello.txt", description = "`>` overwrites the file.", auto_close_execution = false },
-    { name = "Append output to file", command = "echo \"And goodbye\" >> hello.txt && cat hello.txt", description = "`>>` adds to the end of the file.", auto_close_execution = false },
-    { name = "Output to Screen & File", command = "ls -lha /etc | tee file_list.txt | less", description = "`tee` splits the output to a file AND to the next command.", auto_close_execution = false },
-    { name = "Redirect Errors", command = "find / -name \"*.txt\" 2> errors.log", description = "Run a noisy command, sending only the errors (stderr, channel 2) to a file.", auto_close_execution = false },
-    { name = "Redirect All Output", command = "find / -name \"*.txt\" &> all_output.log", description = "Sends BOTH normal output (stdout) and errors (stderr) to a file.", auto_close_execution = false }
+    { name = "Find & Replace", command = "sed 's/old/new/g' filename", description = "Automatically swaps 'old' text for 'new' text in the output.", auto_close_execution = false },
+    { name = "Get 1st Column", command = "awk '{print $1}' filename", description = "Extracts just the first word/column of every line (like Excel).", auto_close_execution = false },
+    { name = "Sum Numbers", command = "ls -l | awk '{sum += $5} END {print sum}'", description = "Advanced: Adds up the numbers in the 5th column (file size).", auto_close_execution = false },
+    { name = "Compare Files", command = "diff -u file1 file2", description = "Shows exactly which lines changed between two versions of a file.", auto_close_execution = false }
 ]
 
 
 #=======================================================================================================================
-# ┌─ COLUMN C: 🔍 Data & Text (The Adept) ──────────────────────────────────────────────────────────────────────────────┐
-# │ You've found files, now it's time to process what's inside them. This is where the real power lives.
+# ┌─ COLUMN C: System & Network (Ops & Remote) ─────────────────────────────────────────────────────────────────────────┐
+# │ Connect to the internet, automate tasks, and keep the server healthy.
 # └─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 [[commands]]
-name = "  🔍 Search Text (grep)"
-description = "Your text-searching Swiss Army knife. Find lines that match a pattern in any file."
+name = "📡 Net Connect"
+description = "Am I online? Can I reach the server? Basic network checks."
 col = "C"
 row = 0
 items = [
-    { name = "Find 'error'", command = "grep \"error\" /var/log/syslog | head", description = "Find lines containing 'error' in syslog (case-sensitive).", auto_close_execution = false },
-    { name = "Find 'error' (ignore case)", command = "grep -i \"error\" /var/log/syslog | head", description = "Use -i for case-insensitive search.", auto_close_execution = false },
-    { name = "Recursive Search", command = "grep -r \"root\" /etc/ | head", description = "Use -r to search recursively through a directory.", auto_close_execution = false },
-    { name = "Count Matches", command = "grep -c \"bash\" /etc/passwd", description = "-c counts the number of matching lines.", auto_close_execution = false },
-    { name = "Show Line Numbers", command = "grep -n \"root\" /etc/passwd", description = "-n shows the line number for each match.", auto_close_execution = false }
+    { name = "What's my IP?", command = "ip a", description = "Shows your network address and interface status.", auto_close_execution = false },
+    { name = "Is Internet Up?", command = "ping -c 4 1.1.1.1", description = "Checks connectivity to a Cloudflare server.", auto_close_execution = false },
+    { name = "Download File", command = "curl -L -O https://example.com/file.zip", description = "Downloads a file from the web directly to your current folder.", auto_close_execution = false },
+    { name = "Who's Listening?", command = "sudo netstat -tulpn", description = "Checks which programs are acting as servers (listening on ports).", auto_close_execution = false }
 ]
 
 [[commands]]
-name = "🪄 Transform Text (sed)"
-description = "The Stream EDitor. Perform powerful find-and-replace operations on text streams or files."
+name = "⏱️ Schedule & Diag"
+description = "Automation and troubleshooting. Why is the internet slow? When will the script run?"
 col = "C"
 row = 1
 items = [
-    { name = "Find & Replace (Preview)", command = "echo \"Hello world\" | sed 's/world/Universe/'", description = "Replaces 'world' with 'Universe' in the output.", auto_close_execution = false },
-    { name = "Find & Replace (All)", command = "echo \"foo bar foo\" | sed 's/foo/baz/g'", description = "'g' at the end means 'global' (replace all, not just first).", auto_close_execution = false },
-    { name = "Delete Lines", command = "echo -e \"one\\ntwo\\nthree\" | sed '/two/d'", description = "Deletes any line matching the pattern '/two/'.", auto_close_execution = false },
-    { name = "Edit File In-Place", command = "echo 'sed -i \"s/old/new/g\" filename' ; echo 'WARNING: -i edits the file directly. Use with care.'", description = "The -i flag edits the file in-place (no output to screen).", auto_close_execution = false }
+    { name = "Server Health", command = "uptime", description = "Shows how long the system has been running and how busy it is (load).", auto_close_execution = false },
+    { name = "Watch Live", command = "watch -n 1 \"df -h\"", description = "Repeats a command every second so you can see values change.", auto_close_execution = false },
+    { name = "Task Scheduler", command = "crontab -e", description = "Edit your personal schedule for automated scripts (cron jobs).", auto_close_execution = false },
+    { name = "DNS Lookup", command = "dig google.com", description = "Debugs DNS: Where does this domain name actually point to?", auto_close_execution = false },
+    { name = "Trace Path", command = "traceroute google.com", description = "Maps the hop-by-hop path data takes across the internet.", auto_close_execution = false }
 ]
 
 [[commands]]
-name = "🧬 Process Text (awk)"
-description = "A powerful pattern-scanning and text-processing language. Perfect for columns and reports."
+name = "⚙️ Sys Admin"
+description = "Housekeeping. Check disk space, stop frozen apps, and zip up files."
 col = "C"
 row = 2
 items = [
-    { name = "Print First Column", command = "echo \"one two three\" | awk '{print $1}'", auto_close_execution = false },
-    { name = "Print Last Column", command = "echo \"one two three\" | awk '{print $NF}'", auto_close_execution = false },
-    { name = "List Users (from /etc/passwd)", command = "awk -F':' '{print $1}' /etc/passwd | head", description = "Uses ':' as the delimiter (-F) to print the first column (usernames).", auto_close_execution = false },
-    { name = "Pattern Matching", command = "awk -F':' '/bash/ {print $1, $7}' /etc/passwd", description = "Only print fields for lines that contain '/bash/'.", auto_close_execution = false },
-    { name = "Sum a Column", command = "ls -l | awk '{sum += $5} END {print sum}'", description = "A simple example of using awk for calculations (summing file sizes).", auto_close_execution = false }
-]
-
-[[commands]]
-name = "📊 Data Utilities"
-description = "The classic data-processing trio: `diff` (compare), `sort` (order), `uniq` (de-duplicate), `wc` (count)."
-col = "C"
-row = 3
-items = [
-    { name = "Count Lines/Words", command = "wc /etc/hosts", description = "Counts lines, words, and characters in a file.", auto_close_execution = false },
-    { name = "Count Lines (pipe)", command = "ls /etc | wc -l", description = "Count how many files are in /etc.", auto_close_execution = false },
-    { name = "Sort Lines", command = "awk -F':' '{print $1}' /etc/passwd | head | sort", description = "Sorts the output alphabetically.", auto_close_execution = false },
-    { name = "Sort Numerically", command = "ls -l /etc | sort -n -k 5 | tail", description = "Sorts `ls` output by the 5th column (size), numerically (-n).", auto_close_execution = false },
-    { name = "Sort & Find Unique", command = "echo -e \"a\\nc\\nb\\na\\nc\" | sort | uniq", description = "The classic combo: `sort` then `uniq` to get a unique, sorted list.", auto_close_execution = false },
-    { name = "Count Uniques", command = "echo -e \"a\\nc\\nb\\na\\nc\" | sort | uniq -c", description = "-c counts the occurrences of each unique line.", auto_close_execution = false },
-    { name = "Compare Files (diff)", command = "echo \"a\\nb\" > f1.txt; echo \"a\\nc\" > f2.txt; diff -u f1.txt f2.txt", description = "-u (unified) shows a human-readable diff.", auto_close_execution = false },
-    { name = "Combo Challenge", command = "echo 'Try this: grep \"bash\" /etc/passwd | awk -F':' '{print $7}' | sort | uniq -c | sort -nr'", description = "Find all unique shells for 'bash' users, and count them, sorted by most popular.", auto_close_execution = false }
-]
-
-
-#=======================================================================================================================
-# ┌─ COLUMN D: 🌐 Network & Systems (The Novice) ───────────────────────────────────────────────────────────────────────┐
-# │ Manage your system, connect to others, and move files across the internet.
-# └─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
-
-[[commands]]
-name = "  📡 Test & Download"
-description = "Check network connectivity (`ping`), download files (`curl`, `wget`), and find your IP."
-col = "D"
-row = 0
-items = [
-    { name = "Check Connection (Ping)", command = "ping -c 4 google.com", description = "Sends 4 packets to google.com to check connectivity.", auto_close_execution = false },
-    { name = "Download File (curl)", command = "curl -O https://example.com/favicon.ico && ls -l favicon.ico", description = "-O saves the file with its original name.", auto_close_execution = false },
-    { name = "Follow Redirect (curl)", command = "curl -L https://google.com", description = "-L follows redirects (e.g., http to https).", auto_close_execution = false },
-    { name = "Download File (wget)", command = "wget https://example.com/favicon.ico -O icon.ico", description = "A popular alternative to curl for downloading.", auto_close_execution = false },
-    { name = "View Page Source", command = "curl https://example.com", auto_close_execution = false },
-    { name = "Find My IP", command = "ip a", description = "Show all network interface info (the modern tool).", auto_close_execution = false },
-    { name = "Find My IP (classic)", command = "ifconfig", description = "The classic tool to show network info (may not be installed).", auto_close_execution = false }
-]
-
-[[commands]]
-name = "🔒 Remote & Sync"
-description = "Log in to remote computers (`ssh`), copy files (`scp`), and sync directories (`rsync`)."
-col = "D"
-row = 1
-items = [
-    { name = "Secure Shell (SSH)", command = "read -p 'Enter user@host: ' dest; ssh \"$dest\"", description = "Log in to a remote machine. You'll need a server to test this!", auto_close_execution = false },
-    { name = "Generate SSH Keys", command = "ssh-keygen -t rsa -b 4096", description = "Creates a public/private key pair for secure, passwordless login.", auto_close_execution = false },
-    { name = "Secure Copy (SCP)", command = "read -p 'Enter local_file: ' file; read -p 'Enter user@host:remote_path: ' dest; scp \"$file\" \"$dest\"", description = "A simple way to copy a single file over SSH.", auto_close_execution = false },
-    { name = "Sync Files (Rsync)", command = "read -p 'Enter local_dir: ' ldir; read -p 'Enter user@host:remote_dir: ' rdir; rsync -avz \"$ldir\" \"$rdir\"", description = "The best way to sync folders. -a (archive), -v (verbose), -z (compress).", auto_close_execution = false },
-    { name = "Sync & Delete", command = "echo 'rsync -avz --delete local/ remote/'", description = "--delete makes the remote dir an exact mirror (deletes extra files!).", auto_close_execution = false }
-]
-
-[[commands]]
-name = "🗄️ Archives & Disk"
-description = "Bundle files (`tar`), compress them (`gzip`), and check your system's disk space (`df`, `du`)."
-col = "D"
-row = 2
-items = [
-    { name = "Create Archive (tar)", command = "touch a b c; tar -czvf my_archive.tar.gz a b c && ls -l my_archive.tar.gz", description = "Create (c) a gzipped (z) archive (f), verbosely (v).", auto_close_execution = false },
-    { name = "Extract Archive (tar)", command = "tar -xzvf my_archive.tar.gz", description = "Extract (x) a gzipped (z) archive (f), verbosely (v).", auto_close_execution = false },
-    { name = "List Archive Contents", command = "tar -t -f my_archive.tar.gz", description = "-t lists the contents without extracting.", auto_close_execution = false },
-    { name = "Single File Compress", command = "gzip a; ls -l a.gz", description = "Compresses 'a' and replaces it with 'a.gz'.", auto_close_execution = false },
-    { name = "Single File Decompress", command = "gunzip a.gz; ls -l a", description = "Decompresses 'a.gz' and replaces it with 'a'.", auto_close_execution = false },
-    { name = "Disk Free (df)", command = "df -h", description = "Show 'disk free' for all mounted filesystems in human-readable (-h) format.", auto_close_execution = false },
-    { name = "Disk Usage (du)", command = "du -sh .", description = "Show 'disk usage' summary (-s) for the current directory in human-readable (-h) format.", auto_close_execution = false },
-    { name = "Find Big Folders", command = "du -h --max-depth=1 . | sort -hr", description = "Find which sub-directories are using the most space.", auto_close_execution = false }
-]
-
-[[commands]]
-name = "🚦 Process Control"
-description = "See what's running on your system (`ps`, `top`) and stop processes (`kill`, `pkill`)."
-col = "D"
-row = 3
-items = [
-    { name = "Interactive Viewer", command = "top", description = "An interactive, real-time list of your system's processes. (q to quit)", auto_close_execution = false },
-    { name = "See All Processes", command = "ps aux | less", description = "A static snapshot of every process (aux) running. (q to quit)", auto_close_execution = false },
-    { name = "Find a Process", command = "ps aux | grep 'bash'", description = "Pipe to grep to find a specific running program.", auto_close_execution = false },
-    { name = "Find PID by Name", command = "pgrep -l 'bash'", description = "A simpler way to find a Process ID (PID) by name.", auto_close_execution = false },
-    { name = "Stop a Process (by PID)", command = "read -p 'Enter PID to kill: ' pid; kill \"$pid\"", description = "The 'polite' way to ask a process (by its ID) to terminate.", auto_close_execution = false },
-    { name = "Force Stop (by PID)", command = "read -p 'Enter PID to force-kill: ' pid; kill -9 \"$pid\"", description = "The 'unpolite' -9 signal. Use if the normal kill doesn't work.", auto_close_execution = false },
-    { name = "Stop a Process (by Name)", command = "read -p 'Enter process name to kill: ' name; pkill \"$name\"", description = "Kills a process based on its name (e.g., 'pkill firefox').", auto_close_execution = false },
-    { name = "Run in Background", command = "echo 'Try: sleep 10 &' ; sleep 10 &", description = "The `&` at the end runs the command in the background.", auto_close_execution = false }
+    { name = "Is Disk Full?", command = "df -h", description = "Shows free space on all hard drives.", auto_close_execution = false },
+    { name = "Folder Size", command = "du -sh .", description = "Calculates the total size of the current folder.", auto_close_execution = false },
+    { name = "Task Manager", command = "top", description = "Shows which programs are eating your CPU and RAM live.", auto_close_execution = false },
+    { name = "Kill App", command = "kill PID", description = "Forces a process (by ID) to stop. Use this if an app freezes.", auto_close_execution = false },
+    { name = "Zip Folder", command = "tar -czvf archive.tar.gz folder/", description = "Bundles a folder into a compressed archive.", auto_close_execution = false },
+    { name = "Unzip Archive", command = "tar -xzvf archive.tar.gz", description = "Extracts files from a .tar.gz archive.", auto_close_execution = false }
 ]
