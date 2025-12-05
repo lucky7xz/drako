@@ -208,7 +208,7 @@ func RunCommand(cfg config.Config, selected string) {
 
 func handleInternalPurge(command string) {
 	// Parse the command string manually since we're bypassing the shell
-	// Expected format: "drako purge --target core" or "drako purge --interactive-profile"
+	// Expected format: "drako purge --target core" or "drako purge --interactive"
 	parts := strings.Fields(command)
 
 	// We need to parse flags again, locally.
@@ -223,7 +223,7 @@ func handleInternalPurge(command string) {
 	}
 
 	opts := cli.PurgeOptions{}
-	interactiveProfile := false
+	interactive := false
 
 	// Simple manual parsing for the internal use case
 	for i := 0; i < len(parts); i++ {
@@ -238,12 +238,12 @@ func handleInternalPurge(command string) {
 		if parts[i] == "--destroyeverything" {
 			opts.DestroyEverything = true
 		}
-		if parts[i] == "--interactive-profile" {
-			interactiveProfile = true
+		if parts[i] == "--interactive" {
+			interactive = true
 		}
 	}
 
-	if interactiveProfile {
+	if interactive {
 		fmt.Print("Enter profile name to reset (e.g. 'git'): ")
 		var name string
 		if _, err := fmt.Scanln(&name); err != nil {

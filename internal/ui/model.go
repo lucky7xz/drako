@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -284,16 +285,27 @@ func (m *Model) buildPathFromComponents(index int) string {
 	}
 
 	var pathToJoin []string
+	var result string
+
 	if m.pathComponents[0] == "/" {
 		pathToJoin = m.pathComponents[1 : index+1]
-		return "/" + filepath.Join(pathToJoin...)
+		result = "/" + filepath.Join(pathToJoin...)
 	} else if m.pathComponents[0] == "~" {
 		pathToJoin = m.pathComponents[1 : index+1]
-		return filepath.Join(home, filepath.Join(pathToJoin...))
+		result = filepath.Join(home, filepath.Join(pathToJoin...))
 	} else {
 		pathToJoin = m.pathComponents[:index+1]
-		return filepath.Join(pathToJoin...)
+		result = filepath.Join(pathToJoin...)
 	}
+
+	// Windows Drive Root Fix: "C:" -> "C:\"
+	// filepath.Join("C:") returns "C:", which is relative to the current directory on drive C.
+	// We want the root of the drive, so we append the separator.
+	if runtime.GOOS == "windows" && len(pathToJoin) == 1 && strings.HasSuffix(result, ":") {
+		return result + string(os.PathSeparator)
+	}
+
+	return result
 }
 
 func (m *Model) scheduleStatusClearTimer() tea.Cmd {

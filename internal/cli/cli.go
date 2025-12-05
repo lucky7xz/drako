@@ -103,6 +103,7 @@ func HandlePurgeCommand() {
 	purgeCmd := flag.NewFlagSet("purge", flag.ExitOnError)
 	target := purgeCmd.String("target", "", "Target to purge: 'core' or profile name (e.g. 'git')")
 	destroyEverything := purgeCmd.Bool("destroyeverything", false, "DANGEROUS: Delete entire config directory (no trash)")
+	interactive := purgeCmd.Bool("interactive", false, "Interactively select a profile to purge")
 
 	// Parse args starting from index 2 (skipping "drako" and "purge")
 	if err := purgeCmd.Parse(os.Args[2:]); err != nil {
@@ -115,7 +116,20 @@ func HandlePurgeCommand() {
 		DestroyEverything: *destroyEverything,
 	}
 
-	if *target == "core" {
+	if *interactive {
+		fmt.Print("Enter profile name to purge (e.g. 'git'): ")
+		var name string
+		if _, err := fmt.Scanln(&name); err != nil {
+			fmt.Println("\nInput cancelled.")
+			os.Exit(0)
+		}
+		name = filepath.Base(name) // Basic sanitization
+		if name == "" {
+			fmt.Println("No profile name provided.")
+			os.Exit(1)
+		}
+		opts.TargetProfile = name
+	} else if *target == "core" {
 		opts.TargetCore = true
 	} else if *target != "" {
 		opts.TargetProfile = *target

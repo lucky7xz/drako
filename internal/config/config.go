@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 
@@ -36,19 +37,24 @@ func letterToColumn(s string) (int, error) {
 // RescueConfig returns a minimal "Safe Mode" configuration.
 // It provides tools to help the user fix a broken configuration.
 func RescueConfig() Config {
+	isWindows := runtime.GOOS == "windows"
 
-	// TODO: OS SWITCH HERE
-	// Helper to try and get a reasonable open command
-	//openCmd := "xdg-open"
-	// We could check runtime.GOOS here if we wanted to be fancy,
-	// but for a hardcoded fallback, simple is better.
+	openCmd := "xdg-open"
+	editorCmd := "${EDITOR:-nano}"
+	defaultShell := "bash"
+
+	if isWindows {
+		openCmd = "explorer"
+		editorCmd = "notepad"
+		defaultShell = "pwsh" // Prefer PowerShell on Windows, falling back to cmd if needed by user config
+	}
 
 	return Config{
 		X:            3,
 		Y:            3,
 		Theme:        "dracula", // A safe, dark theme
 		NumbModifier: "alt",
-		DefaultShell: "bash",
+		DefaultShell: defaultShell,
 		Keys: InputConfig{
 			Explain:      "e",
 			Inventory:    "i",
@@ -67,28 +73,28 @@ func RescueConfig() Config {
 			},
 			{
 				Name:        "Reset a Profile",
-				Command:     "printf \"Enter profile name (e.g. 'git'): \" && read name && drako purge --target \"$name\"",
+				Command:     "drako purge --interactive",
 				Description: "Select a profile to reset/delete.\n\n• Useful if a specific profile is broken and crashing Drako.\n• The profile will be moved to trash/.",
 				Row:         1,
 				Col:         "a", // Left below Reset Core
 			},
 			{
 				Name:        "Edit Config",
-				Command:     "${EDITOR:-nano} ~/.config/drako/config.toml",
+				Command:     fmt.Sprintf("%s ~/.config/drako/config.toml", editorCmd),
 				Description: "Opens the main configuration file in your default editor.\n\n• Use this to fix syntax errors in config.toml.\n• If this file is broken, Drako falls back to this Rescue mode.\n\nTip: You can switch to a working profile right now with 'o' (prev) or 'p' (next).",
 				Row:         0,
 				Col:         "b", // Center
 			},
 			{
 				Name:        "Documentation",
-				Command:     "xdg-open https://github.com/lucky7xz/drako",
+				Command:     fmt.Sprintf("%s https://github.com/lucky7xz/drako", openCmd),
 				Description: "Opens the Drako documentation in your browser.\n\n• Check the syntax reference.\n• Find examples of valid profiles.\n\nTip: You can switch to a working profile right now with 'o' (prev) or 'p' (next).",
 				Row:         0,
 				Col:         "c", // Right
 			},
 			{
 				Name:        "Open Config Dir",
-				Command:     "xdg-open ~/.config/drako",
+				Command:     fmt.Sprintf("%s ~/.config/drako", openCmd),
 				Description: "Opens the configuration directory.\n\n• Delete or fix broken profiles here.\n• Move unfinished profiles to a 'collection' subfolder to hide them.\n\nTip: You can switch to a working profile right now with 'o' (prev) or 'p' (next).",
 				Row:         1,
 				Col:         "b", // Center below Edit
