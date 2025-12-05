@@ -19,10 +19,10 @@ go install github.com/lucky7xz/drako@latest  # install drako
 - macOS: `brew install go`
 - Arch: `sudo pacman -S go`
 - Debian/Ubuntu: `sudo apt install golang`
-- Windows is not **yet** supported.
+- Windows: `scoop install go` or `winget install GoLang.Go`
 
 
-Run `drako`. On its first execution, it will construct your configuration file at `~/.config/drako/config.toml`. This is the foundation. Modify it to begin bending your workflow into shape. We also provide a handful of profiles by default, to give you some inspiration. 
+Run `drako`. On its first execution, it will construct your configuration file at `~/.config/drako/config.toml` (or `%APPDATA%\drako\config.toml` on Windows). This is the foundation. Modify it to begin bending your workflow into shape. We also provide a handful of profiles by default, to give you some inspiration. 
 
 ### Update
 
@@ -151,9 +151,16 @@ Beyond the TUI, Drako provides CLI commands for advanced management.
 ### `drako spec <name>`
 Apply a "specification" to bulk-manage your profiles.
 ```bash
-drako spec work
+drako spec example
 ```
-This loads `~/.config/drako/specs/work.toml`. Profiles listed in the spec are **equipped** (moved to visible), and all others are **stored** (moved to `inventory/`). This allows you to switch entire contexts (e.g., "Work Mode" vs "Gaming Mode") in one command.
+This loads `~/.config/drako/specs/example.toml`. Profiles listed in the spec are **equipped** (moved to visible), and all others are **stored** (moved to `inventory/`). This allows you to switch entire contexts (e.g., "Work Mode" vs "Gaming Mode") in one command.
+
+### `drako stash <name>`
+The reverse of `spec`.
+```bash
+drako stash example
+```
+Moves the profiles listed in the spec file **into** the inventory (hides them). Useful for clearing a specific set of profiles without affecting others.
 
 ### `drako purge`
 Safely reset or remove configurations.

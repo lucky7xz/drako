@@ -29,6 +29,9 @@ func HandleCLI() bool {
 	case "spec", "--spec":
 		HandleSpecCommand()
 		return true
+	case "stash", "--stash":
+		HandleStashCommand()
+		return true
 	default:
 		return false
 	}

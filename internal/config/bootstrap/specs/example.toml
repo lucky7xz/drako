@@ -10,5 +10,7 @@
 profiles = [
     "git",       # Enable 'git' profile
     #"unix_101",  # Enable 'unix_101' profile
-    "docker_101" # Commented out: 'docker_101' will be moved to inventory
-]
+    "docker_101", # Commented out: 'docker_101' will be moved to inventory
+	"ssh_101",
+	"network_101"
+]	

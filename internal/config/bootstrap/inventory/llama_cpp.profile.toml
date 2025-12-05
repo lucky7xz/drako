@@ -1,0 +1,208 @@
+# ┌────────────────────────────────────────────────────────────────────────────┐
+# │ The Llama C++ Forge - A Local Inference Engine                             │
+# ├────────────────────────────────────────────────────────────────────────────┤
+# │ This profile provides a command center for building and running llama.cpp, │
+# │ a powerful inference engine for GGUF models. It includes commands for      │
+# │ building from source, running local servers, managing Docker containers,   │
+# │ and accessing documentation.                                               │
+# └────────────────────────────────────────────────────────────────────────────┘
+
+# ┌─ Grid Dimensions ──────────────────────────────┐
+X = 3
+Y = 3
+# └────────────────────────────────────────────────┘
+
+
+]
+
+#=======================================================================================================================
+# ┌─ COLUMN A: Setup ─────────────────────────────────────────────────────────────────────────────────────────────────┐
+# │ Compile llama.cpp from source and manage the build directory.
+# └─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+[[commands]]
+name = "📦 Build from Source"
+description = "Compile llama.cpp using modern CMake. Creates a 'llama.cpp' directory in your home folder."
+col = "A"
+row = 0
+items = [
+    { name = "Build (Basic)", description = "Clones the repo and builds the standard version.", command = """
+#!/bin/bash
+set -e
+if [ ! -d "$HOME/llama.cpp" ]; then
+  git clone https://github.com/ggerganov/llama.cpp.git "$HOME/llama.cpp"
+fi
+cd "$HOME/llama.cpp"
+cmake -B build
+cmake --build build -j
+echo "Build complete! Binaries are in $HOME/llama.cpp/build/bin"
+""", auto_close_execution = false },
+    { name = "Build (CUDA)", description = "Builds with NVIDIA CUDA support for GPU acceleration.", command = """
+#!/bin/bash
+set -e
+if [ ! -d "$HOME/llama.cpp" ]; then
+  git clone https://github.com/ggerganov/llama.cpp.git "$HOME/llama.cpp"
+fi
+cd "$HOME/llama.cpp"
+cmake -B build -DLLAMA_CUDA=ON
+cmake --build build -j
+echo "Build complete! Binaries are in $HOME/llama.cpp/build/bin"
+""", auto_close_execution = false },
+    { name = "Clean Build", description = "Removes the build directory to start fresh.", command = "rm -rf $HOME/llama.cpp/build", auto_close_execution = true }
+]
+
+[[commands]]
+name = "📥 Manual Download"
+description = "Access the official GitHub releases page to download pre-compiled binaries."
+col = "A"
+row = 1
+items = [
+  { name = "Open Releases Page", description = "Opens the latest llama.cpp releases page in your browser.", command = "xdg-open https://github.com/ggerganov/llama.cpp/releases/latest >/dev/null 2>&1 &", auto_close_execution = true }
+]
+
+[[commands]]
+name = "🛑 Stop All Services"
+description = "Stops all running llama-server processes."
+col = "A"
+row = 2
+items = [
+  { name = "Stop All Servers", description = "Finds and terminates all running llama-server instances.", command = """
+#!/bin/bash
+if pgrep -f "llama-server" > /dev/null; then
+    pkill -f "llama-server"
+    echo "All llama-server processes have been stopped."
+else
+    echo "No llama-server processes were found running."
+fi
+""", auto_close_execution = false }
+]
+
+#=======================================================================================================================
+# ┌─ COLUMN B: Local Usage ───────────────────────────────────────────────────────────────────────────────────────────┐
+# │ Run inference and benchmarks directly on your local machine.
+# └─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+[[commands]]
+name = "🦙 Quick Start"
+description = "Launch the server with sensible defaults. Models are downloaded on first run."
+col = "B"
+row = 0
+items = [
+
+    {name = "Open Local WebUI", description = "Opens the LLamaCPP WebUI address in your Browser.", command = "xdg-open http://127.0.0.1:8033/ > /dev/null 2>&1 &"},
+    { name = "Start CPU (Qwen3-0.6B)", description = "Launches the small and fast Qwen3-0.6B model.", command = "$HOME/llama.cpp/build/bin/llama-server -hf ggml-org/Qwen3-0.6B-GGUF --jinja -c 0 --host 127.0.0.1 --port 8033 > ~/llama.cpp/server.log 2>&1 &", auto_close_execution = false },
+    #{ name = "Start CPU (Qwen2.5-VL-3B)", description = "Launches the Qwen2.5-VL-3B Vision Language model.", command = "$HOME/llama.cpp/build/bin/llama-server -hf ggml-org/Qwen2.5-VL-3B-Instruct-GGUF --jinja -c 0 --host 127.0.0.1 --port 8033 > ~/llama.cpp/server.log 2>&1 &", auto_close_execution = false },
+    { name = "Start CPU (Qwen2.5-Omni-3B-GGUF)", description = "Launches the Qwen2.5-Omni-3B-GGUF model.", command = "$HOME/llama.cpp/build/bin/llama-server -hf ggml-org/Qwen2.5-Omni-3B-GGUF --jinja -c 16000 --host 127.0.0.1 --port 8033 > ~/llama.cpp/server.log 2>&1 &", auto_close_execution = false },
+    { name = "Start CPU (Qwen3-4B-Thinking)", description = "Launches the Qwen3-4B-Thinking-2507-Q8_0 model.", command = "$HOME/llama.cpp/build/bin/llama-server -hf ggml-org/Qwen3-4B-Thinking-2507-Q8_0-GGUF --jinja -c 16000 --host 127.0.0.1 --port 8033 > ~/llama.cpp/server.log 2>&1 &", auto_close_execution = false },
+    { name = "Start GPU Server", description = "Launches with a larger, more capable model, offloading 35 layers to the GPU. This is a common starting point for systems with moderate VRAM.", command = "$HOME/llama.cpp/build/bin/llama-server -hf ggml-org/Qwen2-7B-Instruct-GGUF --jinja -c 4096 -ngl 35 --host 127.0.0.1 --port 8033 > ~/llama.cpp/server.log 2>&1 &", auto_close_execution = false },
+    {name = "Open Remote WebUI", description = "Opens a (remote) LLamaCPP WebUI address in your Browser.", command = "xdg-open http://0.0.0.0:8033/ > /dev/null 2>&1 &"},
+]
+
+[[commands]]
+name = "🛠️ Custom & CLI"
+description = "Run a custom server or interact directly with a model via the command line."
+col = "B"
+row = 1
+items = [
+    { name = "Custom CPU Server", description = "Prompts for model, GPU layers, and context size.", command = """
+#!/bin/bash
+read -p 'Enter HF Model Repo ID (e.g., ggml-org/Qwen2-7B-Instruct-GGUF): ' model_repo
+read -p 'Enter number of GPU layers (e.g., 35): ' ngl
+read -p 'Enter context size (e.g., 4096): ' ctx_size
+$HOME/llama.cpp/build/bin/llama-server -hf "$model_repo" -c "$ctx_size" --host 127.0.0.1 --port 8033 > ~/llama.cpp/server.log 2>&1 &
+""", auto_close_execution = false },
+    { name = "Custom GPU Server", description = "Prompts for model, GPU layers, and context size.", command = """
+#!/bin/bash
+read -p 'Enter HF Model Repo ID (e.g., ggml-org/Qwen2-7B-Instruct-GGUF): ' model_repo
+read -p 'Enter number of GPU layers (e.g., 35): ' ngl
+read -p 'Enter context size (e.g., 4096): ' ctx_size
+$HOME/llama.cpp/build/bin/llama-server -hf "$model_repo" -c "$ctx_size" -ngl "$ngl" --host 127.0.0.1 --port 8033 > ~/llama.cpp/server.log 2>&1 &
+""", auto_close_execution = false }
+]
+
+[[commands]]
+name = "⏱️ Benchmarks"
+description = "Measure model performance with llama-bench."
+col = "B"
+row = 2
+items = [
+    { name = "Run Benchmark", description = "Prompts for a model path and parameters to run a benchmark.", command = """
+#!/bin/bash
+read -p 'Enter path to GGUF model file: ' model_path
+read -p 'Enter number of threads (e.g., 8): ' threads
+read -p 'Enter number of GPU layers (e.g., 35): ' ngl
+$HOME/llama.cpp/build/bin/llama-bench -hf "$model_path" -t "$threads" -ngl "$ngl" > ~/llama.cpp/server.log 2>&1 &
+""", auto_close_execution = false }
+]
+
+#=======================================================================================================================
+# ┌─ COLUMN C: Docker & Docs ─────────────────────────────────────────────────────────────────────────────────────────┐
+# │ Manage containerized servers and access documentation.
+# └─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+[[commands]]
+name = "🐳 Docker Management"
+description = "Interactively start, stop, and monitor Docker Compose services."
+col = "C"
+row = 0
+items = [
+    { name = "Start Service", description = "Select and start a Docker Compose service.", command = """
+#!/bin/bash
+files=(./llama_cpp_assets/docker-compose*.yml)
+if [ ${#files[@]} -eq 0 ]; then
+    echo "No docker-compose files found in llama_cpp_assets."
+    exit 1
+fi
+echo "Select a Docker Compose file to start:"
+select file in "${files[@]}"; do
+    if [ -n "$file" ]; then
+        docker-compose -f "$file" up -d
+        break
+    else
+        echo "Invalid selection."
+    fi
+done
+""", auto_close_execution = false },
+    { name = "Stop Service", description = "Select and stop a Docker Compose service.", command = """
+#!/bin/bash
+files=(./llama_cpp_assets/docker-compose*.yml)
+if [ ${#files[@]} -eq 0 ]; then
+    echo "No docker-compose files found in llama_cpp_assets."
+    exit 1
+fi
+echo "Select a Docker Compose file to stop:"
+select file in "${files[@]}"; do
+    if [ -n "$file" ]; then
+        docker-compose -f "$file" down
+        break
+    else
+        echo "Invalid selection."
+    fi
+done
+""", auto_close_execution = true },
+    { name = "View Logs", description = "Select a service to view its logs.", command = """
+#!/bin/bash
+files=(./llama_cpp_assets/docker-compose*.yml)
+if [ ${#files[@]} -eq 0 ]; then
+    echo "No docker-compose files found in llama_cpp_assets."
+    exit 1
+fi
+echo "Select a Docker Compose file to view logs:"
+select file in "${files[@]}"; do
+    if [ -n "$file" ]; then
+        docker-compose -f "$file" logs -f
+        break
+    else
+        echo "Invalid selection."
+    fi
+done
+""", auto_close_execution = false }
+]
+
+[[commands]]
+name = "📚 Documentation"
+description = "Access official llama.cpp documentation and resources."
+col = "C"
+row = 1
+items = [
+    { name = "Open llama.cpp GitHub", description = "Explore the source code and latest updates.", command = "xdg-open https://github.com/ggerganov/llama.cpp >/dev/null 2>&1 &" },
+    { name = "Open Server API Docs", description = "View the OpenAI-compatible API documentation.", command = "xdg-open https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md >/dev/null 2>&1 &"},
+    { name = "Learn about GGUF", description = "Read about the GGUF model format.", command = "xdg-open https://github.com/ggerganov/ggml/blob/master/docs/gguf.md >/dev/null 2>&1 &"}
+]
