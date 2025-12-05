@@ -1,0 +1,94 @@
+# Scoop - Windows Package Manager
+# A profile for managing software on Windows via Scoop.
+
+# ┌─ Grid Dimensions ──────────────────────────────┐
+X = 3
+Y = 3
+# └────────────────────────────────────────────────┘
+
+# ┌─ Column A: Essentials ─────────────────────────┐
+[[commands]]
+name = "📢 Status & Update"
+description = "Check for updates and see what's new."
+col = "A"
+row = 0
+items = [
+    { name = "Check Status", command = "scoop status", description = "Checks for missing dependencies and outdated apps.", auto_close_execution = false },
+    { name = "Update Scoop", command = "scoop update", description = "Updates Scoop itself and the app manifests.", auto_close_execution = false },
+    { name = "Update All Apps", command = "scoop update *", description = "Updates all installed apps to their latest versions.", auto_close_execution = false }
+]
+
+[[commands]]
+name = "📋 Inventory"
+description = "See what you have installed."
+col = "A"
+row = 1
+items = [
+    { name = "List Installed", command = "scoop list", description = "Lists all apps installed via Scoop.", auto_close_execution = false },
+    { name = "Scoop Info", command = "scoop info scoop", description = "Information about the Scoop installation.", auto_close_execution = false }
+]
+
+[[commands]]
+name = "🖥️ System Info"
+description = "Basic Windows system information."
+col = "A"
+row = 2
+items = [
+    { name = "Windows Version", command = "cmd /c ver", description = "Display Windows version.", auto_close_execution = false },
+    { name = "System Info", command = "systeminfo | more", description = "Detailed configuration information about the computer and its operating system.", auto_close_execution = false },
+    { name = "IP Configuration", command = "ipconfig", description = "Display all current TCP/IP network configuration values.", auto_close_execution = false }
+]
+
+# ┌─ Column B: App Management ─────────────────────┐
+# Using PowerShell to prompt for input since we can't use 'read'
+[[commands]]
+name = "🔍 Search App"
+description = "Search for an application in the Scoop buckets."
+command = "powershell -NoProfile -Command \"$q = Read-Host 'Search Query'; scoop search $q; Read-Host 'Press Enter to exit'\""
+col = "B"
+row = 0
+auto_close_execution = true
+
+[[commands]]
+name = "⬇️ Install App"
+description = "Install a new application."
+command = "powershell -NoProfile -Command \"$a = Read-Host 'Install App Name'; scoop install $a; Read-Host 'Press Enter to exit'\""
+col = "B"
+row = 1
+auto_close_execution = true
+
+[[commands]]
+name = "🗑️ Uninstall App"
+description = "Remove an installed application."
+command = "powershell -NoProfile -Command \"$a = Read-Host 'Uninstall App Name'; scoop uninstall $a; Read-Host 'Press Enter to exit'\""
+col = "B"
+row = 2
+auto_close_execution = true
+
+# ┌─ Column C: Maintenance ────────────────────────┐
+[[commands]]
+name = "🧹 Cleanup"
+description = "Remove old versions of apps to free up space."
+col = "C"
+row = 0
+items = [
+    { name = "Cleanup All", command = "scoop cleanup *", description = "Removes old versions for all apps.", auto_close_execution = false },
+    { name = "Cache Show", command = "scoop cache show", description = "Show the download cache.", auto_close_execution = false },
+    { name = "Cache Remove", command = "scoop cache rm *", description = "Clear the download cache.", auto_close_execution = false }
+]
+
+[[commands]]
+name = "🩺 Checkup"
+description = "Check for potential problems."
+command = "scoop checkup"
+col = "C"
+row = 1
+auto_close_execution = false
+
+[[commands]]
+name = "🐚 PowerShell"
+description = "Open a new PowerShell session."
+command = "start pwsh"
+col = "C"
+row = 2
+
