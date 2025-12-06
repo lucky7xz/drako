@@ -32,6 +32,9 @@ func HandleCLI() bool {
 	case "stash", "--stash":
 		HandleStashCommand()
 		return true
+	case "open", "--open":
+		HandleOpenCLI()
+		return true
 	default:
 		return false
 	}
@@ -186,5 +189,24 @@ func HandlePurgeCommand() {
 		fmt.Printf("\n✓ Purge completed successfully\n")
 		fmt.Printf("  Items moved to %s/trash/\n", configDir)
 	}
+	os.Exit(0)
+}
+
+// HandleOpenCLI processes the 'drako open <path>' command from the shell.
+func HandleOpenCLI() {
+	if len(os.Args) < 3 {
+		fmt.Fprintf(os.Stderr, "Usage: drako open <path>\n")
+		os.Exit(1)
+	}
+
+	// Reconstruct the argument or take the last one.
+	path := os.Args[2]
+
+	if err := OpenPath(path); err != nil {
+		fmt.Fprintf(os.Stderr, "Error opening '%s': %v\n", path, err)
+		os.Exit(1)
+	}
+
+	// Success
 	os.Exit(0)
 }

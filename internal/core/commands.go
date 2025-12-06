@@ -107,6 +107,11 @@ func RunCommand(cfg config.Config, selected string) {
 		return
 	}
 
+	if strings.HasPrefix(selected, "drako open") {
+		cli.HandleOpenCommand(selected)
+		return
+	}
+
 	// cmd will hold the prepared command to run. It's a pointer type; zero value is nil.
 	var cmd *exec.Cmd
 	// Pointers to per-command overrides; nil means "use default".

@@ -38,14 +38,9 @@ func letterToColumn(s string) (int, error) {
 // It provides tools to help the user fix a broken configuration.
 func RescueConfig() Config {
 	isWindows := runtime.GOOS == "windows"
-
-	openCmd := "xdg-open"
-	editorCmd := "${EDITOR:-nano}"
 	defaultShell := "bash"
 
 	if isWindows {
-		openCmd = "explorer"
-		editorCmd = "notepad"
 		defaultShell = "pwsh" // Prefer PowerShell on Windows, falling back to cmd if needed by user config
 	}
 
@@ -80,21 +75,21 @@ func RescueConfig() Config {
 			},
 			{
 				Name:        "Edit Config",
-				Command:     fmt.Sprintf("%s ~/.config/drako/config.toml", editorCmd),
+				Command:     "drako open ~/.config/drako/config.toml",
 				Description: "Opens the main configuration file in your default editor.\n\n• Use this to fix syntax errors in config.toml.\n• If this file is broken, Drako falls back to this Rescue mode.\n\nTip: You can switch to a working profile right now with 'o' (prev) or 'p' (next).",
 				Row:         0,
 				Col:         "b", // Center
 			},
 			{
 				Name:        "Documentation",
-				Command:     fmt.Sprintf("%s https://github.com/lucky7xz/drako", openCmd),
+				Command:     "drako open https://github.com/lucky7xz/drako",
 				Description: "Opens the Drako documentation in your browser.\n\n• Check the syntax reference.\n• Find examples of valid profiles.\n\nTip: You can switch to a working profile right now with 'o' (prev) or 'p' (next).",
 				Row:         0,
 				Col:         "c", // Right
 			},
 			{
 				Name:        "Open Config Dir",
-				Command:     fmt.Sprintf("%s ~/.config/drako", openCmd),
+				Command:     "drako open ~/.config/drako",
 				Description: "Opens the configuration directory.\n\n• Delete or fix broken profiles here.\n• Move unfinished profiles to a 'collection' subfolder to hide them.\n\nTip: You can switch to a working profile right now with 'o' (prev) or 'p' (next).",
 				Row:         1,
 				Col:         "b", // Center below Edit

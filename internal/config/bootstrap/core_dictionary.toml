@@ -1,0 +1,142 @@
+# Drako Core Command Dictionary
+# This file maps the 'name' of a command to its platform-specific implementation.
+
+["⬆️ System Update"]
+linux_debian = "sudo apt update && sudo apt upgrade"
+linux_arch = "sudo pacman -Syu"
+linux_fedora = "sudo dnf upgrade"
+macos = "brew upgrade"
+windows = "winget upgrade --all"
+
+["Clean Packages"]
+linux_debian = "sudo apt autoremove"
+linux_arch = "sudo pacman -Sc"
+linux_fedora = "sudo dnf autoremove"
+macos = "brew cleanup"
+windows = "echo 'Windows handles cleanup automatically'"
+
+["Virus Scan (Home)"]
+linux_debian = "sudo freshclam && clamscan -r --bell -i $HOME"
+linux_arch = "sudo freshclam && clamscan -r --bell -i $HOME"
+linux_fedora = "sudo freshclam && clamscan -r --bell -i $HOME"
+macos = "echo 'No clamav installed by default'"
+windows = "Start-Process 'C:\\Program Files\\Windows Defender\\MpCmdRun.exe' -ArgumentList '-Scan -ScanType 2'"
+
+["👀 Process Monitor"]
+linux_debian = "btop"
+linux_arch = "btop"
+linux_fedora = "btop"
+macos = "top -o cpu"
+windows = "taskmgr"
+
+[" 🔎 File Finder"]
+linux_debian = "find . -type f | fzf"
+linux_arch = "find . -type f | fzf"
+linux_fedora = "find . -type f | fzf"
+macos = "find . -type f | grep -v .git"
+windows = "gci -Recurse | Where-Object { ! $_.PSIsContainer } | Out-GridView"
+
+["🌐 Bandwidth"]
+linux_debian = "bmon"
+linux_arch = "bmon"
+linux_fedora = "bmon"
+macos = "nettop -P -L 1"
+windows = "typeperf \"\\Network Interface(*)\\Bytes Total/sec\""
+
+["System Info"]
+linux_debian = "neofetch"
+linux_arch = "neofetch"
+linux_fedora = "neofetch"
+macos = "system_profiler SPSoftwareDataType SPDetailLevel=mini"
+windows = "systeminfo"
+
+["Disk Usage"]
+linux_debian = "baobab"
+linux_arch = "baobab"
+linux_fedora = "baobab"
+macos = "du -h -d 1"
+windows = "drako internal open-url ms-settings:storage"
+
+["Weather"]
+linux_debian = "curl wttr.in"
+linux_arch = "curl wttr.in"
+linux_fedora = "curl wttr.in"
+macos = "curl wttr.in"
+windows = "curl wttr.in"
+
+["Install common tools"]
+linux_debian = "sudo apt install -y btop neofetch clamav fzf bmon"
+linux_arch = "sudo pacman -S --noconfirm btop neofetch clamav fzf bmon"
+linux_fedora = "sudo dnf install -y btop neofetch clamav fzf bmon"
+macos = "brew install btop neofetch clamav fzf bmon"
+windows = "winget install btop neofetch clamav fzf bmon"
+
+["Install micro"]
+linux_debian = "sudo apt install -y micro"
+linux_arch = "sudo pacman -S --noconfirm micro"
+linux_fedora = "sudo dnf install -y micro"
+macos = "brew install micro"
+windows = "winget install micro"
+
+["Set micro as EDITOR"]
+linux_debian = "echo 'export EDITOR=micro' >> ~/.bashrc"
+linux_arch = "echo 'export EDITOR=micro' >> ~/.bashrc"
+linux_fedora = "echo 'export EDITOR=micro' >> ~/.bashrc"
+macos = "echo 'export EDITOR=micro' >> ~/.zshrc"
+windows = "setx EDITOR micro"
+
+["📜 Open .bashrc"]
+linux_debian = "$EDITOR ~/.bashrc"
+linux_arch = "$EDITOR ~/.bashrc"
+linux_fedora = "$EDITOR ~/.bashrc"
+macos = "$EDITOR ~/.zshrc"
+windows = "notepad $PROFILE"
+
+["⚙️ Edit config.toml"]
+linux_debian = "drako internal open-config"
+linux_arch = "drako internal open-config"
+linux_fedora = "drako internal open-config"
+macos = "drako internal open-config"
+windows = "drako internal open-config"
+
+["📁 Browse config dir"]
+linux_debian = "drako internal open-config-dir"
+linux_arch = "drako internal open-config-dir"
+linux_fedora = "drako internal open-config-dir"
+macos = "drako internal open-config-dir"
+windows = "drako internal open-config-dir"
+
+["📜 Open Logs"]
+linux_debian = "drako internal open-file ~/.config/drako/drako.log"
+linux_arch = "drako internal open-file ~/.config/drako/drako.log"
+linux_fedora = "drako internal open-file ~/.config/drako/drako.log"
+macos = "drako internal open-file ~/.config/drako/drako.log"
+windows = "drako internal open-file %APPDATA%\\drako\\drako.log"
+
+["ℹ️ Open Pivots"]
+linux_debian = "drako internal open-file ~/.config/drako/pivot.toml"
+linux_arch = "drako internal open-file ~/.config/drako/pivot.toml"
+linux_fedora = "drako internal open-file ~/.config/drako/pivot.toml"
+macos = "drako internal open-file ~/.config/drako/pivot.toml"
+windows = "drako internal open-file %APPDATA%\\drako\\pivot.toml"
+
+["Go Version"]
+linux_debian = "go version"
+linux_arch = "go version"
+linux_fedora = "go version"
+macos = "go version"
+windows = "go version"
+
+["Which Go"]
+linux_debian = "which go"
+linux_arch = "which go"
+linux_fedora = "which go"
+macos = "which go"
+windows = "where go"
+
+["Alias x=drako"]
+linux_debian = "echo \"alias x='~/go/bin/drako'\" >> ~/.bashrc && echo \"Alias added to ~/.bashrc. Restart shell to use 'x'.\""
+linux_arch = "echo \"alias x='~/go/bin/drako'\" >> ~/.bashrc && echo \"Alias added to ~/.bashrc. Restart shell to use 'x'.\""
+linux_fedora = "echo \"alias x='~/go/bin/drako'\" >> ~/.bashrc && echo \"Alias added to ~/.bashrc. Restart shell to use 'x'.\""
+macos = "echo \"alias x='~/go/bin/drako'\" >> ~/.zshrc && echo \"Alias added. Restart shell to use 'x'.\""
+windows = "echo 'Function x { & \"$env:USERPROFILE\go\bin\drako.exe\" }' >> $PROFILE"
