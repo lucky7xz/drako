@@ -44,6 +44,31 @@ func RescueConfig() Config {
 		defaultShell = "pwsh" // Prefer PowerShell on Windows, falling back to cmd if needed by user config
 	}
 
+	// Resolve config directory for "Open Config Dir" / "Edit Config"
+	// We use the same logic as GetConfigDir, but since we are inside config package,
+	// we assume standard locations.
+	// Since RescueConfig is a fallback, we should try to be helpful.
+	// However, GetConfigDir might return error or different path if not set.
+	// Best effort:
+	configDir, err := GetConfigDir()
+	if err != nil {
+		// Fallback to a safe guess if we can't find it
+		home, _ := os.UserHomeDir()
+		configDir = filepath.Join(home, ".config", "drako")
+		if isWindows {
+			configDir = filepath.Join(home, "AppData", "Roaming", "drako")
+		}
+	}
+
+	configPath := filepath.Join(configDir, "config.toml")
+
+	// We wrap paths in quotes in case of spaces, though drako open handles simple strings.
+	// Actually handling spaces in arguments for "drako open" requires care if we just use string splitting.
+	// But our HandleOpenCommand takes "everything after prefix". So spaces are preserved.
+
+	editCmd := fmt.Sprintf("drako open %s", configPath)
+	openDirCmd := fmt.Sprintf("drako open %s", configDir)
+
 	return Config{
 		X:            3,
 		Y:            3,
@@ -62,7 +87,7 @@ func RescueConfig() Config {
 			{
 				Name:        "Reset Core Config",
 				Command:     "drako purge --target core",
-				Description: "Resets your config.toml to defaults.\n\n• Your old config.toml will be moved to trash/.\n• Use this if you've broken your main configuration file.\n• Drako will exit after this operation.",
+				Description: "Resets your config.toml to defaults.\n\n• Your old config.toml will be moved to trash/.\n• Use this to fix syntax errors in config.toml.\n• Drako will exit after this operation.",
 				Row:         0,
 				Col:         "a", // Left
 			},
@@ -75,7 +100,7 @@ func RescueConfig() Config {
 			},
 			{
 				Name:        "Edit Config",
-				Command:     "drako open ~/.config/drako/config.toml",
+				Command:     editCmd,
 				Description: "Opens the main configuration file in your default editor.\n\n• Use this to fix syntax errors in config.toml.\n• If this file is broken, Drako falls back to this Rescue mode.\n\nTip: You can switch to a working profile right now with 'o' (prev) or 'p' (next).",
 				Row:         0,
 				Col:         "b", // Center
@@ -89,7 +114,7 @@ func RescueConfig() Config {
 			},
 			{
 				Name:        "Open Config Dir",
-				Command:     "drako open ~/.config/drako",
+				Command:     openDirCmd,
 				Description: "Opens the configuration directory.\n\n• Delete or fix broken profiles here.\n• Move unfinished profiles to a 'collection' subfolder to hide them.\n\nTip: You can switch to a working profile right now with 'o' (prev) or 'p' (next).",
 				Row:         1,
 				Col:         "b", // Center below Edit

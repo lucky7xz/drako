@@ -3,13 +3,13 @@ package cli
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
-
-	"github.com/lucky7xz/drako/internal/native"
 )
 
-// OpenPath expands the path and opens it using native.Open.
+// OpenPath expands the path and opens it using the OS default application.
 func OpenPath(target string) error {
 	target = strings.TrimSpace(target)
 	if target == "" {
@@ -22,23 +22,42 @@ func OpenPath(target string) error {
 		if err == nil {
 			target = filepath.Join(home, target[2:])
 		}
+	} else if strings.HasPrefix(target, "~\\") && runtime.GOOS == "windows" {
+		home, err := os.UserHomeDir()
+		if err == nil {
+			target = filepath.Join(home, target[2:])
+		}
 	}
 
-	return native.Open(target)
+	return openNative(target)
+}
+
+// openNative opens the specified URL, file, or directory using the OS default application.
+func openNative(target string) error {
+	var cmd *exec.Cmd
+
+	switch runtime.GOOS {
+	case "linux":
+		cmd = exec.Command("xdg-open", target)
+	case "windows":
+		// Windows 'start' via cmd /c is reliable
+		cmd = exec.Command("cmd", "/c", "start", "", target)
+	case "darwin":
+		cmd = exec.Command("open", target)
+	default:
+		cmd = exec.Command("xdg-open", target)
+	}
+
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to open '%s': %w", target, err)
+	}
+	return nil
 }
 
 // HandleOpenCommand executes the "open" operation from an internal command string.
-// It parses the command string (expected "drako open <path>"), resolves the path,
-// and invokes native.Open.
 func HandleOpenCommand(command string) {
 	// Format: "drako open <path>"
-	parts := strings.Fields(command)
-	if len(parts) < 3 {
-		fmt.Println("Usage: drako open <path>")
-		return
-	}
-
-	// Reconstruct the path in case it had spaces
+	// We handle spaces by taking everything after "drako open "
 	prefix := "drako open "
 	if !strings.HasPrefix(command, prefix) {
 		return
