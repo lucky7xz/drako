@@ -77,8 +77,8 @@ func (m Model) View() string {
 		),
 	)
 	profileBar := m.renderProfileBar()
-	pathBar := m.renderPathBar()
-	childDirs := m.renderChildDirs()
+	pathBar := m.path.RenderPathBar(m.mode == pathMode)
+	childDirs := m.path.RenderChildDirs(m.mode)
 
 	var footer string
 	if layout.ShowFooter {
@@ -329,55 +329,6 @@ func (m Model) renderProfileBar() string {
 	return lipgloss.NewStyle().PaddingTop(1).Render(lipgloss.JoinHorizontal(lipgloss.Left, segments...))
 }
 
-func (m Model) renderPathBar() string {
-	var renderedParts []string
-	for i, component := range m.pathComponents {
-		var style lipgloss.Style
-		if m.mode == pathMode && i == m.selectedPathIndex {
-			style = selectedPathStyle
-		} else {
-			style = pathStyle
-		}
-		renderedParts = append(renderedParts, style.Render(component))
-	}
-
-	separator := pathSeparatorStyle.Render("/")
-	return statusBarStyle.Render(lipgloss.JoinHorizontal(lipgloss.Top, strings.Join(renderedParts, separator)))
-}
-
-func (m Model) renderChildDirs() string {
-	if m.mode != childMode && m.mode != pathMode {
-		return ""
-	}
-	if m.childDirsError != nil {
-		return offlineStyle.Render("  [cannot read directory: permission denied or path invalid]")
-	}
-	if len(m.childDirs) == 0 {
-		return helpStyle.Render("  [no sub-directories]")
-	}
-
-	var rows []string
-	for i, dir := range m.childDirs {
-		if m.mode == childMode && i == m.selectedChildIndex {
-			rows = append(rows, selectedChildDirStyle.Render("› "+dir))
-		} else {
-			rows = append(rows, childDirStyle.Render("  "+dir))
-		}
-	}
-
-	maxVisible := 5
-	start := 0
-	if m.mode == childMode && m.selectedChildIndex >= maxVisible {
-		start = m.selectedChildIndex - maxVisible + 1
-	}
-	end := start + maxVisible
-	if end > len(rows) {
-		end = len(rows)
-	}
-
-	return lipgloss.JoinVertical(lipgloss.Left, rows[start:end]...)
-}
-
 func (m Model) viewInventoryMode() string {
 	// If there's an error, just show that.
 	if m.inventory.err != nil {
@@ -538,8 +489,8 @@ func (m Model) viewDropdownMode() string {
 		),
 	)
 	profileBar := m.renderProfileBar()
-	pathBar := m.renderPathBar()
-	childDirs := m.renderChildDirs()
+	pathBar := m.path.RenderPathBar(false)
+	childDirs := m.path.RenderChildDirs(m.mode)
 
 	var footer string
 	if layout.ShowFooter {

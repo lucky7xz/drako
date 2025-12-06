@@ -5,7 +5,6 @@ import (
 	"log"
 	"math"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -55,8 +54,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case pathChangedMsg:
-		m.updatePathComponents()
-		m.listChildDirs()
+		m.path.UpdatePathComponents()
+		m.path.ListChildDirs()
 		return m, nil
 
 	case reloadProfilesMsg:
@@ -134,9 +133,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case gridMode:
 			return m.updateGridMode(msg)
 		case pathMode:
-			return m.updatePathMode(msg)
+			mode, cmd := m.path.UpdatePathMode(msg, m.Config)
+			m.mode = mode
+			return m, cmd
 		case childMode:
-			return m.updateChildMode(msg)
+			mode, cmd := m.path.UpdateChildMode(msg, m.Config)
+			m.mode = mode
+			return m, cmd
 		case inventoryMode:
 			return m.updateInventoryMode(msg)
 		case dropdownMode:
@@ -336,7 +339,7 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 					Meta: []DetailMeta{
 						{Label: "Exec", Value: execMode},
 						{Label: "Auto-close", Value: fmt.Sprintf("%v", autoClose)},
-						{Label: "CWD", Value: m.currentPath},
+						{Label: "CWD", Value: m.path.CurrentPath},
 					},
 				}
 				m.mode = infoMode
@@ -351,7 +354,7 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			Value:       "Error: command not found",
 			Description: "",
 			Meta: []DetailMeta{
-				{Label: "CWD", Value: m.currentPath},
+				{Label: "CWD", Value: m.path.CurrentPath},
 			},
 		}
 		m.mode = infoMode
@@ -444,68 +447,6 @@ func findFirstPopulatedRow(grid [][]string, col int) int {
 	return 0 // Fallback
 }
 
-func (m Model) updatePathMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch {
-	case IsQuit(m.Config.Keys, msg):
-		m.Quitting = true
-		return m, tea.Quit
-	case IsLeft(m.Config.Keys, msg):
-		if m.selectedPathIndex > 0 {
-			m.selectedPathIndex--
-			m.listChildDirs()
-		}
-	case IsRight(m.Config.Keys, msg):
-		if m.selectedPathIndex < len(m.pathComponents)-1 {
-			m.selectedPathIndex++
-			m.listChildDirs()
-		}
-	case IsDown(m.Config.Keys, msg):
-		if len(m.childDirs) > 0 {
-			m.mode = childMode
-			m.selectedChildIndex = 0
-		}
-	case IsPathGridMode(m.Config.Keys, msg):
-		m.mode = gridMode
-	case IsConfirm(m.Config.Keys, msg):
-		targetPath := m.buildPathFromComponents(m.selectedPathIndex)
-		if err := os.Chdir(targetPath); err == nil {
-			m.currentPath, _ = os.Getwd()
-			m.mode = gridMode
-			return m, func() tea.Msg { return pathChangedMsg{} }
-		}
-	}
-	return m, nil
-}
-
-func (m Model) updateChildMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch {
-	case IsQuit(m.Config.Keys, msg):
-		m.Quitting = true
-		return m, tea.Quit
-	case IsUp(m.Config.Keys, msg):
-		if m.selectedChildIndex > 0 {
-			m.selectedChildIndex--
-		} else {
-			m.mode = pathMode
-		}
-	case IsDown(m.Config.Keys, msg):
-		if m.selectedChildIndex < len(m.childDirs)-1 {
-			m.selectedChildIndex++
-		}
-	case IsPathGridMode(m.Config.Keys, msg):
-		m.mode = gridMode
-	case IsConfirm(m.Config.Keys, msg):
-		parentPath := m.buildPathFromComponents(m.selectedPathIndex)
-		targetPath := filepath.Join(parentPath, m.childDirs[m.selectedChildIndex])
-		if err := os.Chdir(targetPath); err == nil {
-			m.currentPath, _ = os.Getwd()
-			m.mode = gridMode
-			return m, func() tea.Msg { return pathChangedMsg{} }
-		}
-	}
-	return m, nil
-}
-
 func (m Model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 
@@ -583,7 +524,7 @@ func (m Model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				Meta: []DetailMeta{
 					{Label: "Exec", Value: execMode},
 					{Label: "Auto-close", Value: fmt.Sprintf("%v", autoClose)},
-					{Label: "CWD", Value: m.currentPath},
+					{Label: "CWD", Value: m.path.CurrentPath},
 				},
 			}
 			m.mode = infoMode

@@ -4,9 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
-	"runtime"
-	"sort"
 	"strings"
 	"time"
 
@@ -34,11 +31,7 @@ type Model struct {
 	spinner     spinner.Model
 	inputBuffer string
 
-	pathComponents     []string
-	selectedPathIndex  int
-	childDirs          []string
-	childDirsError     error
-	selectedChildIndex int
+	path PathModel
 
 	onlineStatus      string
 	traffic           string
@@ -46,8 +39,6 @@ type Model struct {
 	recvHistory       []uint64
 	timeHistory       []time.Time
 	trafficAvgSeconds float64
-
-	currentPath string
 
 	baseConfig            config.Config
 	Config                config.Config
@@ -208,7 +199,7 @@ func InitialModel() Model {
 		trafficAvgSeconds: 7.5,
 		onlineStatus:      "checking...",
 		traffic:           "calculating...",
-		currentPath:       path,
+		path:              InitPathModel(path),
 		mode:              gridMode,
 		spinner:           s,
 		baseConfig:        bundle.Base,
@@ -222,90 +213,8 @@ func InitialModel() Model {
 		m.profileErrorQueueActive = true
 		m = m.presentNextBrokenProfile()
 	}
-	m.updatePathComponents()
-	m.listChildDirs()
+
 	return m
-}
-
-func (m *Model) updatePathComponents() {
-	home, err := os.UserHomeDir()
-	path := m.currentPath
-	if err == nil {
-		if path == home {
-			path = "~"
-		} else if strings.HasPrefix(path, home+"/") {
-			path = "~/" + strings.TrimPrefix(path, home+"/")
-		}
-	}
-
-	var components []string
-	if path == "/" {
-		components = []string{"/"}
-	} else {
-		components = strings.Split(path, string(os.PathSeparator))
-	}
-
-	if len(components) > 1 && components[0] == "" {
-		components[0] = "/"
-	}
-
-	m.pathComponents = components
-	m.selectedPathIndex = len(m.pathComponents) - 1
-}
-
-func (m *Model) listChildDirs() {
-	m.childDirs = []string{}
-	m.childDirsError = nil
-	path := m.buildPathFromComponents(m.selectedPathIndex)
-
-	files, err := os.ReadDir(path)
-	if err != nil {
-		log.Printf("could not read directory %s: %v", path, err)
-		m.childDirsError = err
-		return
-	}
-
-	for _, f := range files {
-		if f.IsDir() {
-			m.childDirs = append(m.childDirs, f.Name())
-		}
-	}
-	sort.Strings(m.childDirs)
-}
-
-func (m *Model) buildPathFromComponents(index int) string {
-	home, _ := os.UserHomeDir()
-
-	if len(m.pathComponents) == 0 {
-		return m.currentPath
-	}
-
-	if len(m.pathComponents) == 1 && m.pathComponents[0] == "/" {
-		return "/"
-	}
-
-	var pathToJoin []string
-	var result string
-
-	if m.pathComponents[0] == "/" {
-		pathToJoin = m.pathComponents[1 : index+1]
-		result = "/" + filepath.Join(pathToJoin...)
-	} else if m.pathComponents[0] == "~" {
-		pathToJoin = m.pathComponents[1 : index+1]
-		result = filepath.Join(home, filepath.Join(pathToJoin...))
-	} else {
-		pathToJoin = m.pathComponents[:index+1]
-		result = filepath.Join(pathToJoin...)
-	}
-
-	// Windows Drive Root Fix: "C:" -> "C:\"
-	// filepath.Join("C:") returns "C:", which is relative to the current directory on drive C.
-	// We want the root of the drive, so we append the separator.
-	if runtime.GOOS == "windows" && len(pathToJoin) == 1 && strings.HasSuffix(result, ":") {
-		return result + string(os.PathSeparator)
-	}
-
-	return result
 }
 
 func (m *Model) scheduleStatusClearTimer() tea.Cmd {
