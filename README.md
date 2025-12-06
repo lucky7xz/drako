@@ -10,7 +10,7 @@ The terminal is a realm of immense power, but also of high entropy. Commands are
 If Go is installed, installing `drako` is a single command.
 
 ```bash
-go install github.com/lucky7xz/drako@latest  # install drako
+go install github.com/lucky7xz/drako@latest
 ```
 
 ### Install Go
@@ -22,7 +22,7 @@ go install github.com/lucky7xz/drako@latest  # install drako
 - Windows: `scoop install go` or `winget install GoLang.Go`
 
 
-Run `drako`. On its first execution, it will construct your configuration file at `~/.config/drako/config.toml` (or `%APPDATA%\drako\config.toml` on Windows). This is the foundation. Modify it to begin bending your workflow into shape. We also provide a handful of profiles by default, to give you some inspiration. 
+Run `drako`. On its first execution, it will construct your configuration file at `~/.config/drako/config.toml` (or `%APPDATA%\drako\config.toml` on Windows). This is the foundation. Modify it to begin bending your workflow into shape. 
 
 ### Update
 
@@ -34,18 +34,40 @@ GOPROXY=direct go install github.com/lucky7xz/drako/cmd/drako@latest  # install 
 ```
 NOTE: If go binary directory is not in specified in your path, try `~/./go/bin/drako`
 
-NOTE: If newly added/updated bootstrap profiles do not appear after the update command, note that `drako` only creates the bootstrap folder under .config/drako if there is none present alreay. If the old .`.config/drako` directory persists, the new profiles will no be created. You could `purge` you old profiles (see below), or delete them manually. 
+NOTE: If newly added bootstrap profiles do not appear after an update, it is because Drako only attempts to bootstrap if `config.toml` is missing. Even then, it will **not** overwrite existing profile files. To force a full clean-up, use `drako purge --destroyeverything` (or see below for more granular options). Make sure you have backed up your personal work first!
+
+### Shell Integration
+
+To enable `cd` on exit, see [docs/SHELL_INTEGRATION.md](docs/SHELL_INTEGRATION.md). 
+
+## 🧶 Bootstrap & The Weaver
+
+On first run, Drako automatically **bootstraps** your environment with a layered configuration structure. This ensures your keybindings and base settings (The Core) remain consistent across every operating system (Linux, macOS, Windows), while **Profiles** provide the specific tools you need for the task at hand.
+
+```markdown
+~/.config/drako/
+├── config.toml                # [The CORE] Global hotkeys & defaults (Same on every OS)
+└── profiles/
+    ├── dev.profile.toml       # [Overlay] Dev tools
+    └── ops.profile.toml       # [Overlay] Server management
+```
+
+**The Weaver** ensures cross-platform consistency. Inside the Drako binary lies a **Core Template** and a dictionary of OS-specific defaults. When you run Drako for the first time, The Weaver "weaves" these together to generate a `config.toml` perfectly tailored to your operating system (Linux, macOS, or Windows). We also provide a handful of profiles by default, to give you some inspiration (incl. llamacpp, git, etc).
 
 
 ## Navigation
 
-- **Grid Navigation:** Use arrows (always on), `w/a/s/d`, or `h/j/k/l`.
-- **Switch Profile:** Use `Alt` + `1-9` to switch directly.
-- **Cycle Profile:** Use `o` (prev) and `p` (next).
-- **Profile Inventory:** Press `i`.
-- **Lock:** Press `r`.
-- **Grid/Path Toggle:** Press `Tab`.
-- **Quit:** Press `q`.
+- **Grid Navigation:** Use arrows, `w/a/s/d`, or `h/j/k/l`.
+- **Switch Profile:** `Alt` + `1-9` to switch directly.
+- **Cycle Profile:** `o` (prev) and `p` (next).
+- **Profile Inventory:** `i`.
+- **Lock:** `r`.
+- **Grid/Path Toggle:** `Tab`.
+- **Path Mode:**
+    - **Search:** `e` (type to filter, arrows to select, esc to cancel).
+    - **Hidden Files:** `.` to toggle.
+    - **Back:** `q` or `Esc`.
+- **Quit:** `Ctrl+C` (Global), or `q` (Grid Mode).
 
 > **Customization:** Remap keys in `~/.config/drako/config.toml` under `[keys]`. You can also disable WASD/Vim bindings there.
 
@@ -138,10 +160,7 @@ Works with any Git host (GitHub, GitLab, self-hosted). Summoned profiles land in
 If a profile needs extra files (scripts, configs), declare it under `assets = ["relative/path/to/file", ...]`.
 `drako` will copy these assets to `~/.config/drako/assets/<profile_name>/`.
 
-You can reference them in your commands using the `{assets}` token:
-```toml
-command = "python3 {assets}/scanner.py"
-```
+You can then reference them in your commands using their full path.
 This ensures your profile is portable and works on any machine.
 
 ## 🧰 Power Tools
@@ -198,9 +217,9 @@ If your configuration breaks (syntax error, invalid grid), Drako won't crash. It
  - [x] DRY Refactor  
  - [x] Grid Size Safety & Rescue Mode
  - [x] Core Profile Concept
+ - [x] MacOS support (untested)
+ - [x] Windows support (untested)
  - [ ] Full unit test suite
- - [ ] MacOS support
- - [ ] Windows support
  - [ ] Steamdeck support
  - [ ] ARM Support
  - [ ] CI/CD
