@@ -51,9 +51,9 @@ func (m Model) View() string {
 	var helpText string
 	switch m.mode {
 	case pathMode:
-		helpText = "Path Mode | ←/→/ad: Select, ↓/s: Children, Enter: cd, Tab: Grid, r: Start-Lock"
+		helpText = "Path Mode | ←/→/ad: Select, ↓/s: Children, Enter: cd, e: Search, q/Esc: Back"
 	case childMode:
-		helpText = "Child Mode | ↑/↓/ws: Select, Enter: cd, Tab: Grid, r: Start-Lock"
+		helpText = "Child Mode | ↑/↓/ws: Select, Enter: cd, e: Search, q/Esc: Back"
 	default:
 		helpText = "Grid Mode | Enter: Select, e: Explain, Tab: Path, r: Start-Lock, i: Inventory"
 	}

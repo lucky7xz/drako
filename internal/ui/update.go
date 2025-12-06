@@ -97,6 +97,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		key := msg.String()
 		log.Printf("Key pressed: %q", key)
 
+		// Global Emergency Exit: Ctrl+C should always quit (except in Locked Mode, handled below)
+		if key == "ctrl+c" {
+			m.Quitting = true
+			return m, tea.Quit
+		}
+
 		// Update last activity time for any key press (except in locked mode)
 		if m.mode != lockedMode {
 			m.lastActivityTime = time.Now()
@@ -105,6 +111,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Handle locked mode separately
 		if m.mode == lockedMode {
 			return m.updateLockedMode(msg)
+		}
+
+		// If searching in Path/Child mode, bypass global key handlers (lock, tab, etc.)
+		// so that typing keys like 'r' or 'i' goes to the search filter instead.
+		if (m.mode == pathMode || m.mode == childMode) && m.path.Searching {
+			if m.mode == pathMode {
+				mode, cmd := m.path.UpdatePathMode(msg, m.Config)
+				m.mode = mode
+				return m, cmd
+			}
+			mode, cmd := m.path.UpdateChildMode(msg, m.Config)
+			m.mode = mode
+			return m, cmd
 		}
 
 		if IsLock(m.Config.Keys, msg) {
