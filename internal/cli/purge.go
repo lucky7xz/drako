@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -64,10 +65,10 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 	}
 
 	fmt.Printf("\n🗑️  Moving %d items to %s\n", len(items), trashDir)
-	
-	// Require confirmation if interactive? 
+
+	// Require confirmation if interactive?
 	// We assume the caller (HandlePurgeCommand) handled high-level confirmation if needed.
-	// But for safety, let's ask here if it's a big batch? 
+	// But for safety, let's ask here if it's a big batch?
 	// Actually, let's trust the caller. This function performs the Action.
 
 	moved := 0
@@ -100,7 +101,7 @@ func performFullNuke(configDir string) error {
 
 	fmt.Printf("\n💀 DESTROYING EVERYTHING in %s\n", configDir)
 	// The caller (HandlePurgeCommand) should have asked for confirmation.
-	
+
 	if err := os.RemoveAll(configDir); err != nil {
 		return fmt.Errorf("failed to destroy config directory: %w", err)
 	}
@@ -109,7 +110,28 @@ func performFullNuke(configDir string) error {
 
 // moveFileToTrash moves a single file from configDir to trashDir with a timestamp
 func moveFileToTrash(configDir, filename, trashDir string) error {
-	src := filepath.Join(configDir, filename)
+	// SANITIZATION: Prevent path traversal
+	// 1. Clean the path to resolve .. and .
+	src := filepath.Clean(filepath.Join(configDir, filename))
+
+	// 2. Ensure it starts with configDir
+	// We verify that the resolved path is still inside the configDir
+	// Note: We use Abs to be safe against relative configDir setups
+	absConfig, err := filepath.Abs(configDir)
+	if err != nil {
+		return fmt.Errorf("failed to resolve config dir: %w", err)
+	}
+	absSrc, err := filepath.Abs(src)
+	if err != nil {
+		return fmt.Errorf("failed to resolve source path: %w", err)
+	}
+
+	if !strings.HasPrefix(absSrc, absConfig+string(os.PathSeparator)) && absSrc != absConfig {
+		// allow exact match? No, we don't want to trash the dir itself here.
+		// Strict check: must be a child.
+		return fmt.Errorf("security violation: path traversal detected (%s)", filename)
+	}
+
 	if _, err := os.Stat(src); os.IsNotExist(err) {
 		return fmt.Errorf("file not found: %s", filename)
 	}
