@@ -176,9 +176,9 @@ items = [
 ]
 
 [[commands]]
-name = "📜 Open .bashrc"
-description = "This is where all your terminal customizations live. The .bashrc file loads every time you open a terminal and controls your aliases, environment variables, and prompt appearance. It's like the settings panel for your command line experience. I open this file whenever I want to add a new shortcut or tweak how my terminal behaves."
-command = "{{📜 Open .bashrc}}"
+name = "📜 Open Shell Config"
+description = "This is where all your terminal customizations live. The shell config file loads every time you open a terminal and controls your aliases, environment variables, and prompt appearance. It's like the settings panel for your command line experience. I open this file whenever I want to add a new shortcut or tweak how my terminal behaves."
+command = "{{📜 Open Shell Config}}"
 col = "C"
 row = 1
 
