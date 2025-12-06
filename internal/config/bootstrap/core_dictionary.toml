@@ -139,4 +139,4 @@ linux_debian = "echo \"alias x='~/go/bin/drako'\" >> ~/.bashrc && echo \"Alias a
 linux_arch = "echo \"alias x='~/go/bin/drako'\" >> ~/.bashrc && echo \"Alias added to ~/.bashrc. Restart shell to use 'x'.\""
 linux_fedora = "echo \"alias x='~/go/bin/drako'\" >> ~/.bashrc && echo \"Alias added to ~/.bashrc. Restart shell to use 'x'.\""
 macos = "echo \"alias x='~/go/bin/drako'\" >> ~/.zshrc && echo \"Alias added. Restart shell to use 'x'.\""
-windows = "echo 'Function x { & \"$env:USERPROFILE\go\bin\drako.exe\" }' >> $PROFILE"
+windows = "echo 'Function x { & \"$env:USERPROFILE\\go\\bin\\drako.exe\" }' >> $PROFILE"

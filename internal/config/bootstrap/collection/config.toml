@@ -1,0 +1,202 @@
+# dR4ko - Default Config
+
+# ┌─ Fun Stuff ───────────────────────────────────────────┐
+# │ How about some header art? 
+# └────────────────────────────────────────────────────────┘
+
+#header_art = '''
+#╔══════════════════════════════════════╗
+#║  Custom Header Art                   ║
+#╚══════════════════════════════════════╝
+#'''
+
+# ┌─ Themes ──────────────────────────────┐
+# | More themes when there is time.
+# └───────────────────────────────────────┘
+
+#theme = "everforest"
+#theme = "nord"
+#theme = "orasaka"
+theme = "dracula"
+#theme = "jade"
+
+# ┌─ Technical stuff zzZZZz ───────────────────────────┐
+# │ What is even that? 
+# └────────────────────────────────────────────────────┘
+
+# ┌─ Grid Dimensions ──────────────────────────────┐
+x = 3
+y = 3
+# └────────────────────────────────────────────────┘
+
+# ┌─ Keybinding Modifier ────────────────────────────────────┐
+# │ Set the modifier for number-based shortcuts.
+# │ "alt" is the default and generally works well.
+# │ "ctrl" is another option, but may be intercepted by your
+# │ terminal or window manager.
+# │ Function keys (F1-F9) are not configured via this string.
+# └───────────────────────────────────────────────────────────┘
+numb_modifier = "alt"
+
+
+# ┌─ Key Bindings ─────────────────────────────────────────────┐
+# │ Customize your control scheme.
+# │ Arrows are always enabled.
+# │ Defaults are shown commented out.
+# └────────────────────────────────────────────────────────────┘
+[keys]
+#disable_wasd_bindings = true
+#disable_vim_bindings = true
+
+#explain = "e"
+#inventory = "i"
+#path_grid_mode = "tab"
+#lock = "r"
+profile_prev = "o"
+profile_next = "p"
+
+
+
+# ┌─ Environment Variables ──────────────────────────────┐
+# | By default, drako inherits your full shell environment
+# | to ensure maximum compatibility with your tools.
+# |
+# | Uncomment 'env_whitelist' below to enable strict mode.
+# | Only the listed variables will be passed to commands.
+# | This is recommended for high-security setups.
+# └──────────────────────────────────────────────────────┘
+# env_whitelist = [
+#     "PATH",
+#     "HOME",
+#     "USER",
+#     "SHELL",
+#     "TERM",
+#     "LANG",
+#     "LC_ALL",
+#     "EDITOR",
+#     "VISUAL",
+#     "GOPATH",
+#     "SSH_AUTH_SOCK"
+# ]
+
+#TODO : THIS MGIHT BE REMOVED ON BETA
+# =======================================================================================================
+
+
+# ┌─ Shell ────────────────────────────────────────┐
+# | For each Profile (including the default), you
+# | can set a custom shell to run the commands.
+# | The default is bash, though some profiles are 
+# | POSIX compatible by design, eg. for minimal
+# | server distros.
+# |
+# | TODO: list them
+# └────────────────────────────────────────────────
+
+#default_shell = "bash"   # or "zsh", "fish", "sh", etc.
+
+# =======================================================================================================
+
+# ┌─ Commands ───────────────────────────────────────────────┐
+# │ A clean, generic layout for Debian/Ubuntu desktop.
+# └──────────────────────────────────────────────────────────┘
+
+
+#==========================================
+# ┌─ Column 0: System & Security ──────────┐
+# └────────────────────────────────────────┘
+[[commands]]
+name = "⬆️ System Update"
+description = "This is like checking for app updates on your phone, but for your whole system. It first asks the official software kitchens (repositories) what's new, then it installs the latest versions. I get a little thrill seeing all the packages update—it feels so fresh. It's good to run this regularly to keep things secure. BTW!! This is the only command where hold_after = true. Interactive commands usually exit automatically. Check the drako configs at the end for mor intel. If you entered this menu by accident, you probably pressed 'E'."
+#command = "sudo apt update && sudo apt upgrade -y"
+command = "sudo apt update && sudo apt upgrade"
+col = "A"
+row = 0
+auto_close_execution = false
+
+[[commands]]
+name = "🧹 Maintenance ⋮ "
+description = "My digital decluttering and security station. Keep your system lean and clean, or run a virus scan for peace of mind. A clean system is a happy system!"
+col = "A"
+row = 1
+items = [
+    { name = "Clean Packages", description = "Removes old, unused packages left behind after updates. Like cleaning out a closet you've been ignoring.", command = "sudo apt autoremove", auto_close_execution = false },
+    { name = "Virus Scan (Home)", description = "Updates known signatures and scans your home directory for digital nasties. Peace of mind.", command = "sudo freshclam && clamscan -r --bell -i /home/$USER", auto_close_execution = false }
+]
+
+[[commands]]
+name = "👀 Process Monitor"
+description = "This is like opening the hood of your car while the engine is running. It shows you everything that's happening in real-time. It looks a bit intense, I know, but it's fascinating. I like to watch it sometimes just to see all the little digital cogs turning. It's perfect for when you want to know, 'What is my computer even DOING right now?'"
+command = "btop"
+col = "A"
+row = 2
+
+#==========================================
+# ┌─ Column 1: Files & Info ───────────────┐
+# └────────────────────────────────────────┘
+[[commands]]
+name = " 🔎 File Finder"
+description = "I love this one. It's like a super-powered search bar for your files. You start typing and it instantly filters the list. It feels a bit like magic. I wish I had this for my own memory banks sometimes. It's perfect for when you know the file is *somewhere* but you can't remember exactly where."
+command = "find . -type f | fzf"
+col = "B"
+row = 0
+auto_close_execution = false
+
+[[commands]]
+name = "🌐 Bandwidth"
+description = "Curious how much internet you're using right now? This opens up a little dashboard showing data going in and out. I find it mesmerizing to watch the numbers jump when I'm downloading a big file. It's the perfect tool for figuring out if it's your internet that's slow, or if your computer is just having a moment."
+command = "bmon"
+col = "B"
+row = 1
+
+
+[[commands]]
+name = "📊 System Status ⋮ "
+description = "Your system's vital signs and fun stats. Check hardware details, disk usage, or even the weather outside."
+col = "B"
+row = 2
+items = [
+    { name = "System Info", description = "Your computer's trading card. Shows distro logo, kernel version, uptime, and hardware details.", command = "neofetch", auto_close_execution = false },
+    { name = "Disk Usage", description = "A colorful report of where all your free space went. Useful for finding large forgotten files.", command = "baobab" },
+    { name = "Weather", description = "A quick, no-nonsense weather report from wttr.in right in your terminal.", command = "curl wttr.in", auto_close_execution = false }
+]
+
+#debug_output = true TODO
+#==========================================
+# ┌─ Column 2: Network & Web ──────────────┐
+# └────────────────────────────────────────┘
+[[commands]]
+name = " 📦 Install Tools ⋮ "
+col = "C"
+row = 0
+description = "Bundled up all the little tools that this menu uses, just in case you don't have them. It's like getting all the batteries and accessories included for once. This makes sure all the other buttons here will work as expected. I like to be prepared, you know? "
+items = [
+    { name = "Install common tools", description = "Install utilities used across profiles (btop, neofetch, clamav, fzf, bmon).", command = "sudo apt install -y btop neofetch clamav fzf bmon", auto_close_execution = false},
+    { name = "Install micro", description = "Installs the micro text editor. Micro is a modern, easy-to-use terminal editor recommended for beginners.", command = "sudo apt install -y micro", auto_close_execution = false},
+    { name = "Set micro as EDITOR", description = "EDITOR is an environment variable that sets your default text editor. This adds it to ~/.bashrc. Restart your shell after.", command = "echo 'export EDITOR=micro' >> ~/.bashrc", auto_close_execution = false}
+]
+
+[[commands]]
+name = "📜 Open .bashrc"
+description = "This is where all your terminal customizations live. The .bashrc file loads every time you open a terminal and controls your aliases, environment variables, and prompt appearance. It's like the settings panel for your command line experience. I open this file whenever I want to add a new shortcut or tweak how my terminal behaves."
+command = "$EDITOR ~/.bashrc"
+col = "C"
+row = 1
+
+
+[[commands]]
+name = " 🐉 Core ⋮ "
+col = "C"
+row = 2
+items = [
+    { name = "⚙️ Edit config.toml", description = "This is the command center, the cockpit, the big red button. It opens up the very file you're reading right now, so you can tweak and tune dR4ko to your heart's content. Want to change a command? A description? The theme? This is the place. It's like being handed the keys to the whole operation. A little bit of power is a fun thing, isn't it? Never be afraid to break stuff. Read the next description to see why.", command = "$EDITOR ~/.config/drako/config.toml"},
+    { name = "📁 Browse config dir", description = "Welcome to the rabbit hole. In Linux, many of your configurations live in hidden folders, like this `.config` directory. It's a bit of a secret clubhouse for your apps. This command opens up the `drako` folder inside, where all its settings live. We've set you up with some sensible defaults, but the real magic is making it your own. Go ahead, poke around, make some changes. That's the whole point! You can even save your custom setups and reuse them. It's your system, your rules. Welcome to the world of dotfiles.", command = "xdg-open ~/.config/drako/"},
+    { name = "📜 Open Logs", description = "Opens the Drako log file to see what's been happening under the hood. Useful for debugging or just satisfying your curiosity about what Drako has been up to.", command = "$EDITOR ~/.config/drako/drako.log"},
+    { name = "ℹ️ Open Pivots", description = "Opens the Drako pivot file to see what's been happening under the hood. Useful for debugging or just satisfying your curiosity about what Drako has been up to.", command = "$EDITOR ~/.config/drako/pivots.toml"},
+
+    #===========================================================================================================
+    { name = "Go Version", description = "Checks the installed Go version. Drako is built with Go, so if it fails to launch, confirming you have a compatible Go version is the first step.", command = "go version", auto_close_execution = false},
+    { name = "Which Go", description = "Shows the exact location of the Go compiler. If this is empty or wrong, it means the system can't find the Go compiler, which is essential for building and running Drako.", command = "which go", auto_close_execution = false},
+    { name = "Alias x=drako", description = "Adds 'alias x=~/go/bin/drako' to your ~/.bashrc so you can launch it by just typing 'x'. Useful if ~/go/bin is not in your PATH.", command = """echo "alias x='~/go/bin/drako'" >> ~/.bashrc && echo "Alias added to ~/.bashrc. Restart shell or run 'source ~/.bashrc' to use 'x'.""" , auto_close_execution = false}
+    
+]
