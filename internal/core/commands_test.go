@@ -93,20 +93,3 @@ func TestRunCommand_PathFallback(t *testing.T) {
 		t.Fatalf("expected to build cmd with looked-up path, got %v", gotArgs)
 	}
 }
-
-func TestExpandCommandTokens(t *testing.T) {
-	cfg := config.Config{DR4koPath: "/x"}
-	tests := map[string]string{
-		"":                          "",
-		"no_tokens":                 "no_tokens",
-		"cd {dR4ko_path}":           "cd /x",
-		"{dR4ko_path} {dR4ko_path}": "/x /x",
-	}
-	for in, want := range tests {
-		t.Run(in, func(t *testing.T) {
-			if got := config.ExpandCommandTokens(in, cfg); got != want {
-				t.Fatalf("want %q, got %q", want, got)
-			}
-		})
-	}
-}

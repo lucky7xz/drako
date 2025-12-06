@@ -82,11 +82,6 @@ profile_next = "p"
 #TODO : THIS MGIHT BE REMOVED ON BETA
 # =======================================================================================================
 
-# ┌─ Project Path ─────────────────────────────────────────────┐
-# │ Base path for dR4ko project - other tools can inherit this
-# └────────────────────────────────────────────────────────────┘
-dR4ko_path = "/home/$USER/dotfiles/scripts/drako"
-
 
 # ┌─ Shell ────────────────────────────────────────┐
 # | For each Profile (including the default), you

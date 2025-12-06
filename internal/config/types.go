@@ -23,7 +23,6 @@ type Command struct {
 
 // Config represents the main application configuration
 type Config struct {
-	DR4koPath          string      `toml:"dR4ko_path"`
 	Theme              string      `toml:"theme"`
 	HeaderArt          *string     `toml:"header_art"`
 	DefaultShell       string      `toml:"default_shell"`
@@ -40,7 +39,6 @@ type Config struct {
 
 // ProfileOverlay represents the overrides in a profile file
 type ProfileOverlay struct {
-	DR4koPath          *string    `toml:"dR4ko_path"`
 	X                  *int       `toml:"x"`
 	Y                  *int       `toml:"y"`
 	Theme              *string    `toml:"theme"`

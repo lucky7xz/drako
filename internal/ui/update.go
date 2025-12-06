@@ -325,7 +325,7 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				if strings.TrimSpace(cmd.Command) == "" {
 					cmdStr = "Error: no command. ( This might be a folder of commands!)"
 				} else {
-					cmdStr = config.ExpandCommandTokens(cmd.Command, m.Config)
+					cmdStr = cmd.Command
 				}
 
 				m.activeDetail = &DetailState{
@@ -572,7 +572,7 @@ func (m Model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if strings.TrimSpace(item.Command) == "" {
 				cmdStr = "Error: no command configured"
 			} else {
-				cmdStr = config.ExpandCommandTokens(item.Command, m.Config)
+				cmdStr = item.Command
 			}
 
 			m.activeDetail = &DetailState{
@@ -805,7 +805,7 @@ func (m Model) switchToProfileIndex(target int) (Model, tea.Cmd, bool) {
 
 	// Skip missing non-default profiles
 	if norm != "default" && norm != "core" {
-		if !config.FileExists(selected.Path) {
+		if _, err := os.Stat(selected.Path); err != nil {
 			log.Printf("skipping missing profile: %s", selected.Path)
 			return m, nil, false
 		}

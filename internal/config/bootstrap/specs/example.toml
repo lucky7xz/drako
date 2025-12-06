@@ -8,7 +8,8 @@
 # 3. The order of profiles is updated to match this list.
 
 profiles = [
-    "git",       # Enable 'git' profile
+    
+    #"git",       # Enable 'git' profile
     #"unix_101",  # Enable 'unix_101' profile
     "docker_101", # Commented out: 'docker_101' will be moved to inventory
 	"ssh_101",

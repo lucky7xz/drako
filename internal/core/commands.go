@@ -121,7 +121,7 @@ func RunCommand(cfg config.Config, selected string) {
 	if found {
 		if itemCfg == nil {
 			// top-level command
-			commandStr := config.ExpandCommandTokens(parentCmd.Command, cfg)
+			commandStr := parentCmd.Command
 			if commandStr != "" {
 				cmd = buildShellCmd(shell_config, commandStr)
 				autoClosePtr = parentCmd.AutoCloseExecution
@@ -129,7 +129,7 @@ func RunCommand(cfg config.Config, selected string) {
 			}
 		} else {
 			// dropdown item
-			commandStr := config.ExpandCommandTokens(itemCfg.Command, cfg)
+			commandStr := itemCfg.Command
 			if commandStr != "" {
 				cmd = buildShellCmd(shell_config, commandStr)
 				autoClosePtr = itemCfg.AutoCloseExecution

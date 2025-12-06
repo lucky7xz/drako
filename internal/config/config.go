@@ -238,40 +238,8 @@ func CopyCommands(src []Command) []Command {
 	return dst
 }
 
-func ExpandCommandTokens(s string, cfg Config) string {
-	if strings.TrimSpace(s) == "" {
-		return s
-	}
-	s = strings.ReplaceAll(s, "{dR4ko_path}", cfg.DR4koPath)
-	// {assets} resolves to config_dir/assets/<active_profile_name>
-	// cfg.Profile might be empty or "Core", handled by GetConfigDir + Join
-	if strings.Contains(s, "{assets}") {
-		configDir, err := GetConfigDir()
-		if err == nil {
-			profileName := NormalizeProfileName(cfg.Profile)
-			if profileName == "" || profileName == "core" {
-				profileName = "core" // Use 'core' folder for base assets
-			}
-			assetsPath := filepath.Join(configDir, "assets", profileName)
-			s = strings.ReplaceAll(s, "{assets}", assetsPath)
-		}
-	}
-	return s
-}
-
-func FileExists(path string) bool {
-	if strings.TrimSpace(path) == "" {
-		return true
-	}
-	info, err := os.Stat(path)
-	return err == nil && !info.IsDir()
-}
-
 // OverlayIsEmpty returns true if no settings are provided in the overlay.
 func OverlayIsEmpty(ov ProfileOverlay) bool {
-	if ov.DR4koPath != nil {
-		return false
-	}
 	if ov.X != nil {
 		return false
 	}
@@ -380,10 +348,6 @@ func DiscoverProfiles(configDir string) []ProfileInfo {
 
 func ApplyProfileOverlay(base Config, overlay ProfileOverlay) Config {
 	cfg := base
-
-	if overlay.DR4koPath != nil {
-		cfg.DR4koPath = *overlay.DR4koPath
-	}
 
 	if overlay.X != nil {
 		cfg.X = *overlay.X
