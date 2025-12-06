@@ -2,6 +2,9 @@ package ui
 
 import (
 	"fmt"
+	"os"
+	"os/user"
+	"runtime"
 	"strings"
 	"time"
 
@@ -285,8 +288,28 @@ func truncateText(s string, maxLength int) string {
 }
 
 func (m Model) renderProfileBar() string {
+	hostname, _ := os.Hostname()
+	currUser, _ := user.Current()
+	username := "unknown"
+	if currUser != nil {
+		username = currUser.Username
+	} else {
+		// Fallback to environment variable if user lookup fails
+		username = os.Getenv("USER")
+	}
+
+	// Clean up username if it contains full path (rare, but happens on some systems)
+	if idx := strings.LastIndex(username, "\\"); idx != -1 {
+		username = username[idx+1:]
+	}
+
+	osArch := fmt.Sprintf("(%s/%s)", runtime.GOOS, runtime.GOARCH)
+
+	// Format: HOST: user@hostname (linux/amd64) |
+	hostLabel := "HOST: " + username + "@" + hostname + " " + osArch + helpStyle.Render(" | ")
+
 	profileLabel := lipgloss.NewStyle().Render("PROFILE: ")
-	segments := []string{profileLabel + m.activeProfileName()}
+	segments := []string{hostLabel + profileLabel + m.activeProfileName()}
 
 	if m.pivotProfileName != "" {
 		label := fmt.Sprintf("🔒 %s", m.pivotProfileName)
