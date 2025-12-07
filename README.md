@@ -30,7 +30,7 @@ To update `drako` to the latest version, simply run the installation command aga
 
 If you are not getting the latest version, use this command instead:
 ```bash
-GOPROXY=direct go install github.com/lucky7xz/drako/cmd/drako@latest  # install drako
+GOPROXY=direct go install github.com/lucky7xz/drako/cmd/drako@latest  # update drako
 ```
 NOTE: If go binary directory is not in specified in your path, try `~/./go/bin/drako`
 
@@ -43,7 +43,7 @@ NOTE: If newly added bootstrap profiles do not appear after an update, it is bec
 - **Switch Profile:** `Alt` + `1-9` to switch directly.
 - **Cycle Profile:** `o` (prev) and `p` (next).
 - **Profile Inventory:** `i`.
-- **Lock:** `r`.
+- **Lock Current Profile (for launching):** `r`.
 - **Grid/Path Toggle:** `Tab`.
 - **Path Mode:**
     - **Search:** `e` (type to filter, arrows to select, esc to cancel).
