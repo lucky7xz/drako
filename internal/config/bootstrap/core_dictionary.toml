@@ -86,31 +86,31 @@ macos = "echo 'export EDITOR=micro' >> ~/.zshrc"
 windows = "setx EDITOR micro"
 
 ["📜 Open Shell Config"]
-linux_debian = "drako open ~/.bashrc"
-linux_arch = "drako open ~/.bashrc"
-linux_fedora = "drako open ~/.bashrc"
-macos = "drako open ~/.zshrc"
+linux_debian = "$EDITOR ~/.bashrc"
+linux_arch = "$EDITOR ~/.bashrc"
+linux_fedora = "$EDITOR ~/.bashrc"
+macos = "$EDITOR ~/.zshrc"
 windows = "drako open $PROFILE"
 
 ["⚙️ Edit config.toml"]
-linux_debian = "drako open ~/.config/drako/config.toml"
-linux_arch = "drako open ~/.config/drako/config.toml"
-linux_fedora = "drako open ~/.config/drako/config.toml"
-macos = "drako open ~/.config/drako/config.toml"
+linux_debian = "$EDITOR ~/.config/drako/config.toml"
+linux_arch = "$EDITOR ~/.config/drako/config.toml"
+linux_fedora = "$EDITOR ~/.config/drako/config.toml"
+macos = "$EDITOR ~/.config/drako/config.toml"
 windows = "drako open %APPDATA%\\drako\\config.toml"
 
 ["📁 Browse config dir"]
-linux_debian = "drako open ~/.config/drako"
-linux_arch = "drako open ~/.config/drako"
-linux_fedora = "drako open ~/.config/drako"
-macos = "drako open ~/.config/drako"
+linux_debian = "$EDITOR ~/.config/drako"
+linux_arch = "$EDITOR ~/.config/drako"
+linux_fedora = "$EDITOR ~/.config/drako"
+macos = "$EDITOR ~/.config/drako"
 windows = "drako open %APPDATA%\\drako"
 
 ["ℹ️ Open Pivots"]
-linux_debian = "drako open ~/.config/drako/pivot.toml"
-linux_arch = "drako open ~/.config/drako/pivot.toml"
-linux_fedora = "drako open ~/.config/drako/pivot.toml"
-macos = "drako open ~/.config/drako/pivot.toml"
+linux_debian = "$EDITOR ~/.config/drako/pivot.toml"
+linux_arch = "$EDITOR ~/.config/drako/pivot.toml"
+linux_fedora = "$EDITOR ~/.config/drako/pivot.toml"
+macos = "$EDITOR ~/.config/drako/pivot.toml"
 windows = "drako open %APPDATA%\\drako\\pivot.toml"
 
 ["Go Version"]
