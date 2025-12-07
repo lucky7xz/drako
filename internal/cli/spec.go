@@ -19,15 +19,11 @@ type Spec struct {
 func HandleSpecCommand() {
 	if len(os.Args) < 3 {
 		fmt.Fprintf(os.Stderr, "Usage: drako spec <name>\n")
-		fmt.Fprintf(os.Stderr, "  Loads a profile specification from ~/.config/drako/specs/<name>.toml\n")
+		fmt.Fprintf(os.Stderr, "  Loads a profile specification from ~/.config/drako/specs/<name>.spec.toml\n")
 		os.Exit(1)
 	}
 
 	specName := os.Args[2]
-	// Handle .toml extension if provided or not
-	if !strings.HasSuffix(specName, ".toml") {
-		specName += ".toml"
-	}
 
 	configDir, err := config.GetConfigDir()
 	if err != nil {
@@ -35,11 +31,10 @@ func HandleSpecCommand() {
 	}
 
 	specsDir := filepath.Join(configDir, "specs")
-	specPath := filepath.Join(specsDir, specName)
-
-	if _, err := os.Stat(specPath); os.IsNotExist(err) {
-		// Try checking if it's just a name without dir? No, we expect it in specs/
-		fmt.Fprintf(os.Stderr, "Spec not found: %s\n", specPath)
+	// Try resolve the spec path
+	specPath, err := resolveSpecPath(specsDir, specName)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Spec not found: %s\n", specName)
 		fmt.Fprintf(os.Stderr, "Please create a spec file in %s\n", specsDir)
 		fmt.Fprintf(os.Stderr, "Example content:\n")
 		fmt.Fprintf(os.Stderr, "profiles = [\"git\", \"work\"]\n")
@@ -55,22 +50,18 @@ func HandleSpecCommand() {
 		log.Fatalf("failed to apply spec: %v", err)
 	}
 
-	fmt.Printf("✓ Spec '%s' applied successfully.\n", strings.TrimSuffix(specName, ".toml"))
+	fmt.Printf("✓ Spec '%s' applied successfully.\n", strings.TrimSuffix(filepath.Base(specPath), ".spec.toml"))
 	os.Exit(0)
 }
 
 func HandleStashCommand() {
 	if len(os.Args) < 3 {
 		fmt.Fprintf(os.Stderr, "Usage: drako stash <name>\n")
-		fmt.Fprintf(os.Stderr, "  Stashes profiles listed in ~/.config/drako/specs/<name>.toml to inventory\n")
+		fmt.Fprintf(os.Stderr, "  Stashes profiles listed in ~/.config/drako/specs/<name>.spec.toml to inventory\n")
 		os.Exit(1)
 	}
 
 	specName := os.Args[2]
-	// Handle .toml extension if provided or not
-	if !strings.HasSuffix(specName, ".toml") {
-		specName += ".toml"
-	}
 
 	configDir, err := config.GetConfigDir()
 	if err != nil {
@@ -78,10 +69,9 @@ func HandleStashCommand() {
 	}
 
 	specsDir := filepath.Join(configDir, "specs")
-	specPath := filepath.Join(specsDir, specName)
-
-	if _, err := os.Stat(specPath); os.IsNotExist(err) {
-		fmt.Fprintf(os.Stderr, "Spec not found: %s\n", specPath)
+	specPath, err := resolveSpecPath(specsDir, specName)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Spec not found: %s\n", specName)
 		os.Exit(1)
 	}
 
@@ -94,8 +84,24 @@ func HandleStashCommand() {
 		log.Fatalf("failed to stash spec: %v", err)
 	}
 
-	fmt.Printf("✓ Spec '%s' stashed successfully.\n", strings.TrimSuffix(specName, ".toml"))
+	fmt.Printf("✓ Spec '%s' stashed successfully.\n", strings.TrimSuffix(filepath.Base(specPath), ".spec.toml"))
 	os.Exit(0)
+}
+
+// resolveSpecPath attempts to find a spec file with .spec.toml or .toml extension
+// It returns the full path to the found file, or an error if not found.
+func resolveSpecPath(specsDir, name string) (string, error) {
+	// Force .spec.toml extension
+	if !strings.HasSuffix(name, ".spec.toml") {
+		name += ".spec.toml"
+	}
+
+	specPath := filepath.Join(specsDir, name)
+	if _, err := os.Stat(specPath); err == nil {
+		return specPath, nil
+	}
+
+	return "", fmt.Errorf("spec file not found: %s", specPath)
 }
 
 func StashSpec(configDir string, targetProfiles []string) error {

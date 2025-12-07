@@ -186,27 +186,41 @@ func summonFromGit(repoURL, inventoryDir string) error {
 
 	// Find .profile.toml files in the repo
 	var profileFiles []string
+	var specFiles []string
 	err := filepath.Walk(tempDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && strings.HasSuffix(path, ".profile.toml") {
+		if info.IsDir() {
+			return nil
+		}
+		if strings.HasSuffix(path, ".profile.toml") {
 			profileFiles = append(profileFiles, path)
+		} else if strings.HasSuffix(path, ".spec.toml") {
+			specFiles = append(specFiles, path)
 		}
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("failed to search for profile files: %w", err)
+		return fmt.Errorf("failed to search for files: %w", err)
 	}
 
-	if len(profileFiles) == 0 {
-		return fmt.Errorf("no .profile.toml files found in repository")
+	if len(profileFiles) == 0 && len(specFiles) == 0 {
+		return fmt.Errorf("no .profile.toml or .spec.toml files found in repository")
 	}
 
 	// Show what was found
-	fmt.Printf("\nFound %d profile file(s) in repository:\n", len(profileFiles))
-	for _, srcPath := range profileFiles {
-		fmt.Printf("  - %s\n", filepath.Base(srcPath))
+	if len(profileFiles) > 0 {
+		fmt.Printf("\nFound %d profile file(s) in repository:\n", len(profileFiles))
+		for _, srcPath := range profileFiles {
+			fmt.Printf("  - %s\n", filepath.Base(srcPath))
+		}
+	}
+	if len(specFiles) > 0 {
+		fmt.Printf("\nFound %d spec file(s) in repository:\n", len(specFiles))
+		for _, srcPath := range specFiles {
+			fmt.Printf("  - %s\n", filepath.Base(srcPath))
+		}
 	}
 	fmt.Println()
 
@@ -215,6 +229,7 @@ func summonFromGit(repoURL, inventoryDir string) error {
 	skipped := 0
 	cancelled := 0
 
+	// 1. Process Profile Files
 	for _, srcPath := range profileFiles {
 		dstName := filepath.Base(srcPath)
 		dstPath := filepath.Join(inventoryDir, dstName)
@@ -311,12 +326,60 @@ func summonFromGit(repoURL, inventoryDir string) error {
 			profileName := strings.TrimSuffix(dstName, ".profile.toml")
 
 			// We need to pass the profile name to copyAssetsList so it knows where to put them.
-			// However, copyAssetsList signature is fixed for now.
-			// Wait, I can just change copyAssetsList signature since it is internal.
 			aCopied, aSkipped, aMissing, aBytes := copyAssetsList(tempDir, filepath.Dir(srcPath), assets, profileName)
 			fmt.Printf("  Assets: copied=%d, skipped=%d, missing=%d, total=%.1f MB\n",
 				aCopied, aSkipped, aMissing, float64(aBytes)/(1024*1024))
 			log.Printf("Assets for %s: copied=%d, skipped=%d, missing=%d, bytes=%d", dstName, aCopied, aSkipped, aMissing, aBytes)
+		}
+	}
+
+	// 2. Process Spec Files
+	if len(specFiles) > 0 {
+		configDir, _ := config.GetConfigDir()
+		specsDir := filepath.Join(configDir, "specs")
+		if err := os.MkdirAll(specsDir, 0o755); err != nil {
+			fmt.Printf("⚠️  Failed to create specs directory: %v\n", err)
+		} else {
+			fmt.Printf("\nProcessing spec files...\n")
+			for _, srcPath := range specFiles {
+				dstName := filepath.Base(srcPath)
+				dstPath := filepath.Join(specsDir, dstName)
+
+				// Validate spec file content
+				if err := validateSpecFile(srcPath); err != nil {
+					fmt.Printf("⚠️  Skipping %s: %v\n", dstName, err)
+					skipped++
+					continue
+				}
+
+				info, _ := os.Stat(srcPath)
+				size := info.Size()
+
+				overwriting := false
+				if _, err := os.Stat(dstPath); err == nil {
+					overwriting = true
+				}
+
+				fmt.Printf("  File: %s\n", dstName)
+				fmt.Printf("  Size: %d bytes\n", size)
+				fmt.Printf("  Destination: %s\n", specsDir)
+				if overwriting {
+					fmt.Printf("  ⚠️  Warning: Will overwrite existing file\n")
+				}
+
+				if !ConfirmAction(fmt.Sprintf("Summon spec %s?", dstName)) {
+					fmt.Printf("⊘ Cancelled: %s\n", dstName)
+					cancelled++
+					continue
+				}
+
+				if err := copyFile(srcPath, dstPath); err != nil {
+					fmt.Printf("Failed to copy %s: %v\n", dstName, err)
+					continue
+				}
+				fmt.Printf("✓ Summoned spec: %s\n", dstName)
+				summoned++
+			}
 		}
 	}
 
@@ -332,12 +395,12 @@ func summonFromGit(repoURL, inventoryDir string) error {
 
 	if summoned == 0 {
 		if cancelled > 0 {
-			return fmt.Errorf("no profiles summoned (all cancelled by user)")
+			return fmt.Errorf("no items summoned (all cancelled by user)")
 		}
-		return fmt.Errorf("no valid profile files found in repository (%d skipped)", skipped)
+		return fmt.Errorf("no valid items found in repository (%d skipped)", skipped)
 	}
 
-	log.Printf("Successfully summoned %d profile(s) from repository: %s (skipped: %d, cancelled: %d)", summoned, repoURL, skipped, cancelled)
+	log.Printf("Successfully summoned %d item(s) from repository: %s (skipped: %d, cancelled: %d)", summoned, repoURL, skipped, cancelled)
 	return nil
 }
 
@@ -811,5 +874,38 @@ func validateFilename(filename string) error {
 	if !strings.HasSuffix(filename, ".profile.toml") {
 		return fmt.Errorf("filename must end with .profile.toml (got: %s)", filename)
 	}
+	return nil
+}
+
+// validateSpecFile checks if a file is a valid drako spec
+func validateSpecFile(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	if info.Size() > profileMaxSize {
+		return fmt.Errorf("file too large")
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	// Basic TOML validation
+	var temp map[string]interface{}
+	if _, err := toml.Decode(string(data), &temp); err != nil {
+		return fmt.Errorf("invalid TOML: %w", err)
+	}
+
+	// Spec files should expect a 'profiles' key (list of strings)
+	if profiles, ok := temp["profiles"]; ok {
+		if _, isList := profiles.([]interface{}); !isList {
+			return fmt.Errorf("missing or invalid 'profiles' list")
+		}
+	} else {
+		return fmt.Errorf("missing 'profiles' key")
+	}
+
 	return nil
 }
