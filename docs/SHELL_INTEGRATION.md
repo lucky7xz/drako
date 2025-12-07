@@ -38,4 +38,4 @@ Drako can automatically change your shell's current working directory when you e
 
 Now you can use `x` to launch Drako. When you navigate to a directory inside Drako and exit (using `q` or `Ctrl+C`), your shell will be in that directory.
 
-**Note:** This guide is for Bash, Zsh, and Fish. This method is **not usable in Windows** command prompt or PowerShell by default (requires custom scripting not covered here).
+**Note:** This guide is for **Bash**. Zsh, fish windows etc. and require their own custom scripting styles not covered here.

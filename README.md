@@ -36,28 +36,10 @@ NOTE: If go binary directory is not in specified in your path, try `~/./go/bin/d
 
 NOTE: If newly added bootstrap profiles do not appear after an update, it is because Drako only attempts to bootstrap if `config.toml` is missing. Even then, it will **not** overwrite existing profile files. To force a full clean-up, use `drako purge --destroyeverything` (or see below for more granular options). Make sure you have backed up your personal work first!
 
-### Shell Integration
-
-To enable `cd` on exit, see [docs/SHELL_INTEGRATION.md](docs/SHELL_INTEGRATION.md). 
-
-## 🧶 Bootstrap & The Weaver
-
-On first run, Drako automatically **bootstraps** your environment with a layered configuration structure. This ensures your keybindings and base settings (The Core) remain consistent across every operating system (Linux, macOS, Windows), while **Profiles** provide the specific tools you need for the task at hand.
-
-```markdown
-~/.config/drako/
-├── config.toml                # [The CORE] Global hotkeys & defaults (Same on every OS)
-└── profiles/
-    ├── dev.profile.toml       # [Overlay] Dev tools
-    └── ops.profile.toml       # [Overlay] Server management
-```
-
-**The Weaver** ensures cross-platform consistency. Inside the Drako binary lies a **Core Template** and a dictionary of OS-specific defaults. When you run Drako for the first time, The Weaver "weaves" these together to generate a `config.toml` perfectly tailored to your operating system (Linux, macOS, or Windows). We also provide a handful of profiles by default, to give you some inspiration (incl. llamacpp, git, etc).
-
-
-## Navigation
+### 🧭 Navigation
 
 - **Grid Navigation:** Use arrows, `w/a/s/d`, or `h/j/k/l`.
+- **Quick Nativagion:** For example : Pressing `2` and `3` in sequence moves the cursor to the 2nd column, 3rd row.
 - **Switch Profile:** `Alt` + `1-9` to switch directly.
 - **Cycle Profile:** `o` (prev) and `p` (next).
 - **Profile Inventory:** `i`.
@@ -71,45 +53,44 @@ On first run, Drako automatically **bootstraps** your environment with a layered
 
 > **Customization:** Remap keys in `~/.config/drako/config.toml` under `[keys]`. You can also disable WASD/Vim bindings there.
 
-## 🛠️ Configuration Example 
 
-All power emanates from `~/.config/drako/config.toml`.
+### Shell Integration
 
-#### Base Configuration (`config.toml`)
+To enable `cd` on exit, see [docs/SHELL_INTEGRATION.md](docs/SHELL_INTEGRATION.md). 
 
-```toml
-# Grid dimensions
-x = 4
-y = 8
+## ✨ Philosophy
 
-# --- Define your commands ---
-[[commands]]
-name = "File System"
-command = "yazi"
-col = 0
-row = 1
-# auto close is fine here.
+`drako` is built on a few core principles:
 
-[[commands]]
-name = "Git Status"
-command = "git status"
-col = 1
-row = 0
-auto_close_execution = false
+-   **The Grid is Your Command Center:** Commands are mapped to a visual grid for immediate access - great for beginners who are just learning the terminal and need to remember a lot of commands, but also power users who want an arsenal of bash scripts at their fingertips, for example.
+-   **Profiles are Contexts:** A profile is a complete reconfiguration of the grid. Switch from a "Dev" deck (`go build`, `test`) to an "Ops" deck (`nmap`, `ssh`) instantly.
+-   **Portable Configuration:** Your entire setup lives in `~/.config/drako`. Git-manage your own profile folder and `summon` it with `drako summon`. You can deploy your exact control panel to any new machine in an instant.
+-   **Harness, Don't Replace:** It integrates with the tools you already use. If it runs in the terminal, it can be bound to the grid.
 
-[[commands]]
-name = "Update & Upgrade"
-command = "sudo apt update && sudo apt upgrade"
-col = 0
-row = 0
-auto_close_execution = false
+NOTE: A `deck` is a **subset** of a profile, with at least two commands that 'belong together'. We make this distinction because Profiles might include additional settings, such as themes/ascii art, that are not relevant to the grid. As such, a `deck` can refer to the entire collection of commands in a profile, or just a single cell in the grid, which contains at least two commands that 'belong together'. The grid is technically `3-dimensional` and can fit up to 729 (9x9x9) commands in **PER PROFILE**, any of which can be accessed almost instantly using **Quick Navigation**.
 
 
+## 👢 Bootstrap & 🧶 The Weaver
+
+On first run, Drako automatically **bootstraps** the default profile inventory, as well as the `Core` profile (a.k.a. `config.toml`) with a layered configuration structure.
+
+```markdown
+internal/config/bootstrap/      
+├── core_template.toml         # [Template] The skeleton of config.toml
+├── core_dictionary.toml       # [Dictionary] OS-specific command mappings
+└── inventory/                 # [Profiles] Default profile inventory
 ```
 
-#### Profile Overlay (`~/.config/drako/security.profile.toml`)
+**The Weaver** ensures cross-platform consistency. Inside the Drako binary lies a **[Core Template](internal/config/bootstrap/core_template.toml)** and a **[dictionary](internal/config/bootstrap/core_dictionary.toml)** of OS-specific defaults. When you run Drako for the first time, The Weaver "weaves" these together to generate a `config.toml` tailored to your operating system (Linux, macOS, or Windows). We also provide a handful of profiles by default, to give you some inspiration (incl. llamacpp, git, etc).
+
+NOTE: If your OS specific dictionary is missing, feel free to create a pull request!
+
+
+## 📇 Profile Creation Example
 
 Create a new file with the `.profile.toml` extension. `drako` will discover it automatically.
+
+ For example `~/.config/drako/networking.profile.toml`:
 
 ```toml
 # This profile redefines the grid for security tasks.
@@ -119,31 +100,24 @@ y = 4
 [[commands]]
 name = "nmap LAN"
 command = "nmap -sn 192.168.1.0/24"
-col = 0
+col = a
 row = 0
-auto_close_execution = false
+auto_close_execution = false       # Here we want to keep the window open after execution to actaully see the output.
 
 [[commands]]
 name = "Bandwidth"
 command = "bmon"
-col = 0
+col = a
 row = 1
+# auto-close true per default      # Here we want to close the window after execution because bmon is a TUI.
+
 ```
 
+## 🧰 Power Tools
 
----
+Beyond the TUI, Drako provides CLI commands for advanced management.
 
-## ✨ Philosophy
-
-`drako` is built on a few core principles:
-
--   **The Grid is Your Command Deck:** Commands are mapped to a visual grid for immediate, single-keypress access. It beats searching shell history or remembering aliases.
--   **Profiles are Contexts:** A profile is a complete reconfiguration of the grid. Switch from a "Dev" deck (`go build`, `test`) to an "Ops" deck (`nmap`, `ssh`) instantly.
--   **Portable Configuration:** Your entire setup lives in `~/.config/drako`. Git-manage your own profile folder and `summon` it with `drako summon`. You can deploy your exact control panel to any new machine in an instant.
--   **Harness, Don't Replace:** It integrates with the tools you already use. If it runs in the terminal, it can be bound to the grid.
----
-
-## 🪄 Summoning Profiles
+### 🪄 Summoning Profiles
 
 Share and reuse command decks across machines and teams. Instead of manually copying profiles, summon them directly from remote sources:
 
@@ -160,28 +134,24 @@ Works with any Git host (GitHub, GitLab, self-hosted). Summoned profiles land in
 If a profile needs extra files (scripts, configs), declare it under `assets = ["relative/path/to/file", ...]`.
 `drako` will copy these assets to `~/.config/drako/assets/<profile_name>/`.
 
-You can then reference them in your commands using their full path.
-This ensures your profile is portable and works on any machine.
+You can then reference them in your commands using their full path. This can be useful when managing multiple ansible playbooks using drako, for example.
 
-## 🧰 Power Tools
+### 📚 Profile Specs 
 
-Beyond the TUI, Drako provides CLI commands for advanced management.
-
-### `drako spec <name>`
-Apply a "specification" to bulk-manage your profiles.
+Apply a "spec" to bulk-manage your profiles.
 ```bash
 drako spec example
 ```
-This loads `~/.config/drako/specs/example.toml`. Profiles listed in the spec are **equipped** (moved to visible), and all others are **stored** (moved to `inventory/`). This allows you to switch entire contexts (e.g., "Work Mode" vs "Gaming Mode") in one command.
+This loads `~/.config/drako/specs/example.spec.toml`. Profiles listed in the spec are **equipped** (moved to visible), and all others are **stored** (moved to `inventory/`). This allows you to switch entire contexts (e.g., "Work Mode" vs "Gaming Mode") in one command.
 
-### `drako stash <name>`
-The reverse of `spec`.
+The reverse of `spec` is `stash`.
 ```bash
 drako stash example
 ```
 Moves the profiles listed in the spec file **into** the inventory (hides them). Useful for clearing a specific set of profiles without affecting others.
 
-### `drako purge`
+## 🗑️ Purge
+
 Safely reset or remove configurations.
 ```bash
 # Reset Core config to defaults (moves old config to trash/)
@@ -190,7 +160,10 @@ drako purge --target core
 # Remove a specific profile (moves to trash/)
 drako purge --target git
 
-# NUCLEAR OPTION: Delete everything in the .config folder (NO TRASH, NO UNDO)
+# Use interactive mode to purge profiles
+drako purge --interactive
+
+# NUCLEAR OPTION: Delete everything in the .config/drako/ folder (NO TRASH, NO UNDO) 💀
 drako purge --destroyeverything
 ```
 
@@ -232,7 +205,7 @@ If your configuration breaks (syntax error, invalid grid), Drako won't crash. It
 Ideas are welcome. Bugs will be hunted.
 -   **Issues:** Report defects or propose architectural changes.
 -   **Pull Requests:** Fork the repository and submit your work.
--   **Alpha State:** `drako` is currently in ALPHA. It is stable but evolving. This is your opportunity to influence its development.
+-   **Alpha State:** `drako` is currently in (late) ALPHA. It is stable but evolving. This is your opportunity to influence its development.
 
 ---
 
