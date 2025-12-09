@@ -713,7 +713,7 @@ func (m Model) viewInfoMode() string {
 	}
 
 	raw = append(raw, "")
-	raw = append(raw, helpStyle.Render("Press y to copy details • any key to close"))
+	raw = append(raw, helpStyle.Render("Press y to copy command/details to clipboard • any key to close"))
 
 	// Compute max width and pad
 	maxW := 0

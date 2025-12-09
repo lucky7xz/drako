@@ -88,6 +88,26 @@ func HandleStashCommand() {
 	os.Exit(0)
 }
 
+func HandleStripCommand() {
+	if len(os.Args) < 2 {
+		fmt.Fprintf(os.Stderr, "Usage: drako strip\n")
+		fmt.Fprintf(os.Stderr, "  Moves ALL profiles (except Core) to inventory.\n")
+		os.Exit(1)
+	}
+
+	configDir, err := config.GetConfigDir()
+	if err != nil {
+		log.Fatalf("could not get config dir: %v", err)
+	}
+
+	if err := StripAllProfiles(configDir); err != nil {
+		log.Fatalf("failed to strip profiles: %v", err)
+	}
+
+	fmt.Printf("✓ All profiles stripped successfully.\n")
+	os.Exit(0)
+}
+
 // resolveSpecPath attempts to find a spec file with .spec.toml or .toml extension
 // It returns the full path to the found file, or an error if not found.
 func resolveSpecPath(specsDir, name string) (string, error) {
@@ -234,6 +254,55 @@ func ApplySpec(configDir string, targetProfiles []string) error {
 	}
 
 	return config.WritePivotEquippedOrder(configDir, finalOrder)
+}
+
+func StripAllProfiles(configDir string) error {
+	inventoryDir := filepath.Join(configDir, "inventory")
+	if err := os.MkdirAll(inventoryDir, 0755); err != nil {
+		return err
+	}
+
+	// Read current pivot/lock state
+	pf, err := config.ReadPivotProfile(configDir)
+	if err != nil {
+		log.Printf("Warning: could not read pivot profile: %v", err)
+	}
+	// Unlock if locked
+	if pf.Locked != "" {
+		if err := config.WritePivotLocked(configDir, ""); err != nil {
+			log.Printf("Warning: failed to unlock profile: %v", err)
+		}
+	}
+
+	// Move all visible profiles to inventory
+	visEntries, err := os.ReadDir(configDir)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range visEntries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".profile.toml") {
+			continue
+		}
+		name := strings.TrimSuffix(entry.Name(), ".profile.toml")
+		norm := config.NormalizeProfileName(name)
+
+		// Skip Core/Default
+		if norm == "core" || norm == "default" {
+			continue
+		}
+
+		src := filepath.Join(configDir, entry.Name())
+		dst := filepath.Join(inventoryDir, entry.Name())
+		if err := moveFileSafe(src, dst); err != nil {
+			log.Printf("Warning: skipped moving %s: %v", name, err)
+		} else {
+			fmt.Printf("  - Stored: %s\n", name)
+		}
+	}
+
+	// Reset Pivot Order to just Core
+	return config.WritePivotEquippedOrder(configDir, []string{"Core"})
 }
 
 func moveFileSafe(src, dst string) error {

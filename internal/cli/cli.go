@@ -32,6 +32,9 @@ func HandleCLI() bool {
 	case "stash", "--stash":
 		HandleStashCommand()
 		return true
+	case "strip", "--strip":
+		HandleStripCommand()
+		return true
 	case "open", "--open":
 		HandleOpenCLI()
 		return true

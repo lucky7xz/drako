@@ -15,14 +15,10 @@ go install github.com/lucky7xz/drako@latest
 
 ### Install Go
 
-
-- macOS: `brew install go`
-- Arch: `sudo pacman -S go`
 - Debian/Ubuntu: `sudo apt install golang`
+- Arch: `sudo pacman -S go`
+- macOS: `brew install go`
 - Windows: `scoop install go` or `winget install GoLang.Go`
-
-
-Run `drako`. On its first execution, it will construct your configuration file at `~/.config/drako/config.toml` (or `%APPDATA%\drako\config.toml` on Windows). This is the foundation. Modify it to begin bending your workflow into shape. 
 
 ### Update
 
@@ -32,9 +28,8 @@ If you are not getting the latest version, use this command instead:
 ```bash
 GOPROXY=direct go install github.com/lucky7xz/drako/cmd/drako@latest  # update drako
 ```
-NOTE: If go binary directory is not in specified in your path, try `~/./go/bin/drako`
+NOTE: If go binary directory is not in specified in your path, try `~/./go/bin/drako` or add `export PATH=$PATH:~/go/bin` to your bashrc.
 
-NOTE: If newly added bootstrap profiles do not appear after an update, it is because Drako only attempts to bootstrap if `config.toml` is missing. Even then, it will **not** overwrite existing profile files. To force a full clean-up, use `drako purge --destroyeverything` (or see below for more granular options). Make sure you have backed up your personal work first!
 
 ### 🧭 Navigation
 
@@ -58,21 +53,25 @@ NOTE: If newly added bootstrap profiles do not appear after an update, it is bec
 
 To enable `cd` on exit, see [docs/SHELL_INTEGRATION.md](docs/SHELL_INTEGRATION.md). 
 
+
 ## ✨ Philosophy
 
 `drako` is built on a few core principles:
 
--   **The Grid is Your Command Center:** Commands are mapped to a visual grid for immediate access - great for beginners who are just learning the terminal and need to remember a lot of commands, but also power users who want an arsenal of bash scripts at their fingertips, for example.
--   **Profiles are Contexts:** A profile is a complete reconfiguration of the grid. Switch from a "Dev" deck (`go build`, `test`) to an "Ops" deck (`nmap`, `ssh`) instantly.
+-   **The Grid:** The grid is your command center. It is technically `3-dimensional` and can fit up to 729 (9x * 9y * 9z) commands per `profile`, any of which can be accessed almost instantly using **Quick Navigation**.
+-   **Decks & Profiles:** A `profile` consists of a collection of `decks` plus `assets` and configuration. `Decks` are collections of commands that 'belong together'. `Assets` are files that are copied to the profile directory. For example, a profile can have a deck of Docker commands, with with compose files as assets. 
+
 -   **Portable Configuration:** Your entire setup lives in `~/.config/drako`. Git-manage your own profile folder and `summon` it with `drako summon`. You can deploy your exact control panel to any new machine in an instant.
 -   **Harness, Don't Replace:** It integrates with the tools you already use. If it runs in the terminal, it can be bound to the grid.
-
-NOTE: A `deck` is a **subset** of a profile, with at least two commands that 'belong together'. We make this distinction because Profiles might include additional settings, such as themes/ascii art, that are not relevant to the grid. As such, a `deck` can refer to the entire collection of commands in a profile, or just a single cell in the grid, which contains at least two commands that 'belong together'. The grid is technically `3-dimensional` and can fit up to 729 (9x9x9) commands in **PER PROFILE**, any of which can be accessed almost instantly using **Quick Navigation**.
 
 
 ## 👢 Bootstrap & 🧶 The Weaver
 
-On first run, Drako automatically **bootstraps** the default profile inventory, as well as the `Core` profile (a.k.a. `config.toml`) with a layered configuration structure.
+**The Bootstrap:** On first run, `drako` creates `~/.config/drako/config.toml` (or `%APPDATA%\drako\config.toml` on Windows) as the `Core` profile. 
+
+**NOTE:** Bootstrapping only occurs if profiles are missing, and it never overwrites existing profiles. To clean-up, use `drako purge --interactive` or `drako purge --destroyeverything` (backup your work first).
+
+**The Weaver:** Ensures cross-platform consistency. Inside the Drako binary lies a **[Core Template](internal/config/bootstrap/core_template.toml)** and a **[dictionary](internal/config/bootstrap/core_dictionary.toml)** of OS-specific defaults. When you run Drako for the first time, The Weaver "weaves" these together to generate a `config.toml` tailored to your operating system (Linux, macOS, or Windows). We also provide a handful of profiles by default, to give you some inspiration (incl. llamacpp, git, etc).
 
 ```markdown
 internal/config/bootstrap/      
@@ -81,9 +80,7 @@ internal/config/bootstrap/
 └── inventory/                 # [Profiles] Default profile inventory
 ```
 
-**The Weaver** ensures cross-platform consistency. Inside the Drako binary lies a **[Core Template](internal/config/bootstrap/core_template.toml)** and a **[dictionary](internal/config/bootstrap/core_dictionary.toml)** of OS-specific defaults. When you run Drako for the first time, The Weaver "weaves" these together to generate a `config.toml` tailored to your operating system (Linux, macOS, or Windows). We also provide a handful of profiles by default, to give you some inspiration (incl. llamacpp, git, etc).
-
-NOTE: If your OS specific dictionary is missing, feel free to create a pull request!
+**NOTE:** If your OS specific dictionary is missing, feel free to create a pull request!
 
 
 ## 📇 Profile Creation Example
@@ -93,7 +90,7 @@ Create a new file with the `.profile.toml` extension. `drako` will discover it a
  For example `~/.config/drako/networking.profile.toml`:
 
 ```toml
-# This profile redefines the grid for security tasks.
+# You can redefine grid size to fit your needs.
 x = 3
 y = 4
 
@@ -129,7 +126,7 @@ Share and reuse command decks across machines and teams. Instead of manually cop
 drako summon git@github.com:user/my_profile_collection.git
 ```
 
-Works with any Git host (GitHub, GitLab, self-hosted). Summoned profiles land in your inventory, validated for syntax before copying.
+**NOTE:** Works with any Git host (GitHub, GitLab, self-hosted). Summoned profiles land in your inventory, validated for syntax before copying.
 
 If a profile needs extra files (scripts, configs), declare it under `assets = ["relative/path/to/file", ...]`.
 `drako` will copy these assets to `~/.config/drako/assets/<profile_name>/`.
@@ -138,17 +135,19 @@ You can then reference them in your commands using their full path. This can be 
 
 ### 📚 Profile Specs 
 
-Apply a "spec" to bulk-manage your profiles.
-```bash
-drako spec example
-```
-This loads `~/.config/drako/specs/example.spec.toml`. Profiles listed in the spec are **equipped** (moved to visible), and all others are **stored** (moved to `inventory/`). This allows you to switch entire contexts (e.g., "Work Mode" vs "Gaming Mode") in one command.
 
-The reverse of `spec` is `stash`.
+Apply a "spec" to bulk-manage your profiles.
+
 ```bash
+# Load a spec (e.g. ~/.config/drako/specs/example.spec.toml)
+# Profiles listed are EQUIPPED (visible), others are STORED (inventory/).
+# Useful for context switching (e.g. "Work Mode" vs "Gaming Mode").
+drako spec example
+
+# Stash profiles listed in the spec (move to inventory/).
+# Useful for clearing a specific set of profiles without affecting others.
 drako stash example
 ```
-Moves the profiles listed in the spec file **into** the inventory (hides them). Useful for clearing a specific set of profiles without affecting others.
 
 ## 🗑️ Purge
 
