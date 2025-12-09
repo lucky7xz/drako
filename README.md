@@ -147,6 +147,10 @@ drako spec example
 # Stash profiles listed in the spec (move to inventory/).
 # Useful for clearing a specific set of profiles without affecting others.
 drako stash example
+
+# Move all profiles to inventory/ (except Core)
+drako strip
+
 ```
 
 ## 🗑️ Purge
