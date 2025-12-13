@@ -410,15 +410,15 @@ func readAssetsFromProfile(profilePath string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	var overlay config.ProfileOverlay
-	if _, err := toml.Decode(string(data), &overlay); err != nil {
+	var profile config.ProfileFile
+	if _, err := toml.Decode(string(data), &profile); err != nil {
 		return nil, err
 	}
-	if overlay.Assets == nil {
+	if profile.Assets == nil {
 		return nil, nil
 	}
 	var out []string
-	for _, raw := range *overlay.Assets {
+	for _, raw := range *profile.Assets {
 		s := strings.TrimSpace(raw)
 		if s == "" {
 			continue
@@ -855,15 +855,15 @@ func validateProfileFile(path string) error {
 		return fmt.Errorf("failed to read file: %w", err)
 	}
 
-	// Try to parse as profileOverlay (what drako expects)
-	var overlay config.ProfileOverlay
-	if _, err := toml.Decode(string(data), &overlay); err != nil {
+	// Try to parse as ProfileFile (what drako expects)
+	var profile config.ProfileFile
+	if _, err := toml.Decode(string(data), &profile); err != nil {
 		return fmt.Errorf("invalid TOML format: %w", err)
 	}
 
 	// Check if it has at least one profile-related field
-	if config.OverlayIsEmpty(overlay) {
-		return fmt.Errorf("file contains no profile settings (missing x, y, commands, theme, etc.)")
+	if ok, missing := config.ValidateProfileFile(profile); !ok {
+		return fmt.Errorf("file contains no profile settings (missing %s)", strings.Join(missing, ", "))
 	}
 
 	return nil

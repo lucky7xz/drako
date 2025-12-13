@@ -761,25 +761,17 @@ func (m Model) switchToProfileIndex(target int) (Model, tea.Cmd, bool) {
 	}
 
 	selected := m.profiles[target]
-	norm := strings.TrimSpace(strings.ToLower(selected.Name))
 
-	// Skip missing non-default profiles
-	if norm != "default" && norm != "core" {
-		if _, err := os.Stat(selected.Path); err != nil {
-			log.Printf("skipping missing profile: %s", selected.Path)
-			return m, nil, false
-		}
+	// Check for existence
+	if _, err := os.Stat(selected.Path); err != nil {
+		log.Printf("skipping missing profile: %s", selected.Path)
+		return m, nil, false
 	}
 
 	updated := m
 	updated.activeProfileIndex = target
-	if norm == "default" || norm == "core" {
-		_ = os.Unsetenv("DRAKO_PROFILE")
-		updated.Config = m.baseConfig
-	} else {
-		_ = os.Setenv("DRAKO_PROFILE", selected.Name)
-		updated.Config = config.ApplyProfileOverlay(m.baseConfig, selected.Overlay)
-	}
+	_ = os.Setenv("DRAKO_PROFILE", selected.Name)
+	updated.Config = config.ApplyProfileOverlay(m.baseConfig, selected.Profile)
 	updated.applyConfig(updated.Config)
 
 	return updated, nil, true

@@ -21,7 +21,18 @@ type Command struct {
 	Items              []CommandItem `toml:"items"`
 }
 
-// Config represents the main application configuration
+// AppSettings represents the global configuration in config.toml
+type AppSettings struct {
+	DefaultShell       string      `toml:"default_shell"`
+	NumbModifier       string      `toml:"numb_modifier"`
+	Profile            string      `toml:"profile"`
+	LockTimeoutMinutes *int        `toml:"lock_timeout_minutes"`
+	EnvWhitelist       []string    `toml:"env_whitelist"`
+	EnvBlocklist       []string    `toml:"env_blocklist"`
+	Keys               InputConfig `toml:"keys"`
+}
+
+// Config represents the runtime application configuration (Settings + Active Profile)
 type Config struct {
 	Theme              string      `toml:"theme"`
 	HeaderArt          *string     `toml:"header_art"`
@@ -37,24 +48,22 @@ type Config struct {
 	Commands           []Command   `toml:"commands"`
 }
 
-// ProfileOverlay represents the overrides in a profile file
-type ProfileOverlay struct {
-	X                  *int       `toml:"x"`
-	Y                  *int       `toml:"y"`
-	Theme              *string    `toml:"theme"`
-	HeaderArt          *string    `toml:"header_art"`
-	DefaultShell       *string    `toml:"default_shell"`
-	NumbModifier       *string    `toml:"numb_modifier"`
-	LockTimeoutMinutes *int       `toml:"lock_timeout_minutes"`
-	Assets             *[]string  `toml:"assets"`
-	Commands           *[]Command `toml:"commands"`
+// ProfileFile represents the content of a profile file (e.g. core.profile.toml)
+type ProfileFile struct {
+	X         int       `toml:"x"`
+	Y         int       `toml:"y"`
+	Theme     string    `toml:"theme"`
+	HeaderArt *string   `toml:"header_art"`
+	Shell     *string   `toml:"shell"`
+	Assets    *[]string `toml:"assets"`
+	Commands  []Command `toml:"commands"`
 }
 
 // ProfileInfo holds metadata and content of a profile
 type ProfileInfo struct {
 	Name    string
 	Path    string
-	Overlay ProfileOverlay
+	Profile ProfileFile
 }
 
 // ProfileParseError holds details about a broken profile file
@@ -66,6 +75,7 @@ type ProfileParseError struct {
 
 // ConfigBundle packages the base config, effective config, and profile data
 type ConfigBundle struct {
+	Settings    AppSettings
 	Base        Config
 	Config      Config
 	Profiles    []ProfileInfo
@@ -74,4 +84,3 @@ type ConfigBundle struct {
 	LockedName  string
 	Broken      []ProfileParseError
 }
-

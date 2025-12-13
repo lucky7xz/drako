@@ -17,7 +17,21 @@ var bootstrapFS embed.FS
 func bootstrapCopy(dstRoot string) error {
 	log.Printf("bootstrap: running embedded copy (build tag active)")
 
-	// 1. Weave and write config.toml
+	// 1. Write config.toml (Settings)
+	settings, err := bootstrapFS.ReadFile("bootstrap/settings_template.toml")
+	if err != nil {
+		log.Printf("bootstrap warning: settings_template.toml not found: %v", err)
+	} else {
+		targetConfig := filepath.Join(dstRoot, "config.toml")
+		if _, err := os.Stat(targetConfig); os.IsNotExist(err) {
+			if err := os.WriteFile(targetConfig, settings, 0o644); err != nil {
+				return err
+			}
+			log.Printf("bootstrap: generated config.toml")
+		}
+	}
+
+	// 2. Weave and write core.profile.toml (Core Profile)
 	tmpl, err := bootstrapFS.ReadFile("bootstrap/core_template.toml")
 	if err != nil {
 		log.Printf("bootstrap warning: core_template.toml not found: %v", err)
@@ -32,17 +46,17 @@ func bootstrapCopy(dstRoot string) error {
 		if err != nil {
 			log.Printf("bootstrap error: failed to weave config: %v", err)
 		} else {
-			targetConfig := filepath.Join(dstRoot, "config.toml")
-			// Only write if not exists or if we are bootstrapping (checked by caller essentially, but let's be safe)
-			// The caller (LoadConfig) checks if config.toml exists. If not, it calls bootstrapCopy.
-			if err := os.WriteFile(targetConfig, woven, 0o644); err != nil {
-				return err
+			targetProfile := filepath.Join(dstRoot, "core.profile.toml")
+			if _, err := os.Stat(targetProfile); os.IsNotExist(err) {
+				if err := os.WriteFile(targetProfile, woven, 0o644); err != nil {
+					return err
+				}
+				log.Printf("bootstrap: generated core.profile.toml for runtime: %s", runtime.GOOS)
 			}
-			log.Printf("bootstrap: generated config.toml for runtime: %s", runtime.GOOS)
 		}
 	}
 
-	// 2. Copy other files
+	// 3. Copy other files
 	if _, err := fs.ReadDir(bootstrapFS, "bootstrap"); err != nil {
 		log.Printf("bootstrap: no embedded assets found")
 		return nil
@@ -56,7 +70,7 @@ func bootstrapCopy(dstRoot string) error {
 		rel = strings.TrimPrefix(rel, "/")
 
 		// Skip files we handle specially or don't want to expose
-		if rel == "core_template.toml" || rel == "core_dictionary.toml" || rel == "config.toml" {
+		if rel == "core_template.toml" || rel == "settings_template.toml" || rel == "core_dictionary.toml" || rel == "config.toml" || rel == "core.profile.toml" {
 			return nil
 		}
 

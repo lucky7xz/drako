@@ -1,5 +1,8 @@
 ![Demo v0.1.8](docs/demo.gif)
 
+> [!CAUTION]
+> **Breaking Change (v0.2.4)**: You must delete your `~/.config/drako/config.toml` for this version or run `drako purge --destroyeverything` to delete the whole config folder. **Backup your work first!** Don't worry, 
+
 The terminal is a realm of immense power, but also of high entropy. Commands are forgotten, workflows fracture, and focus is lost to the noise. **Drako** is a **TUI-Deck launcher** that enables structure, transforming your terminal into a disciplined, grid-based command center. 
 
 
@@ -67,15 +70,18 @@ To enable `cd` on exit, see [docs/SHELL_INTEGRATION.md](docs/SHELL_INTEGRATION.m
 
 ## 👢 Bootstrap & 🧶 The Weaver
 
-**The Bootstrap:** On first run, `drako` creates `~/.config/drako/config.toml` (or `%APPDATA%\drako\config.toml` on Windows) as the `Core` profile. 
+**The Bootstrap:** On first run, `drako` creates:
+- `config.toml`: Global settings (Keys, Security).
+- `core.profile.toml`: The default command profile.
 
-**NOTE:** Bootstrapping only occurs if profiles are missing, and it never overwrites existing profiles. To clean-up, use `drako purge --interactive` or `drako purge --destroyeverything` (backup your work first).
+**NOTE:** Bootstrapping only occurs if files are missing, and it never overwrites existing profiles. To clean-up, use `drako purge --interactive` or `drako purge --destroyeverything` (backup your work first).
 
-**The Weaver:** Ensures cross-platform consistency. Inside the Drako binary lies a **[Core Template](internal/config/bootstrap/core_template.toml)** and a **[dictionary](internal/config/bootstrap/core_dictionary.toml)** of OS-specific defaults. When you run Drako for the first time, The Weaver "weaves" these together to generate a `config.toml` tailored to your operating system (Linux, macOS, or Windows). We also provide a handful of profiles by default, to give you some inspiration (incl. llamacpp, git, etc).
+**The Weaver:** Ensures cross-platform consistency. Inside the Drako binary lies a **Settings Template**, a **Core Template**, and a **[dictionary](internal/config/bootstrap/core_dictionary.toml)** of OS-specific defaults. When you run Drako for the first time, The Weaver "weaves" these together to create `~/.config/drako/core.profile.toml` tailored to your OS. We also provide a handful of profiles by default, to give you some inspiration (incl. llamacpp, git, etc).
 
 ```markdown
 internal/config/bootstrap/      
-├── core_template.toml         # [Template] The skeleton of config.toml
+├── settings_template.toml     # [Template] Global settings
+├── core_template.toml         # [Template] Default profile commands
 ├── core_dictionary.toml       # [Dictionary] OS-specific command mappings
 └── inventory/                 # [Profiles] Default profile inventory
 ```
@@ -90,9 +96,10 @@ Create a new file with the `.profile.toml` extension. `drako` will discover it a
  For example `~/.config/drako/networking.profile.toml`:
 
 ```toml
-# You can redefine grid size to fit your needs.
+# Define grid size and theme for this profile.
 x = 3
 y = 4
+theme = "dracula"
 
 [[commands]]
 name = "nmap LAN"

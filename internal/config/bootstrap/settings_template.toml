@@ -1,0 +1,71 @@
+# dR4ko - Global Settings
+# This file controls the look and feel of your Drako experience.
+
+
+
+# ┌─ Technical stuff zzZZZz ───────────────────────────┐
+# │ What is even that? 
+# └────────────────────────────────────────────────────┘
+
+
+# ┌─ Keybinding Modifier ────────────────────────────────────┐
+# │ Set the modifier for number-based shortcuts.
+# │ "alt" is the default and generally works well.
+# │ "ctrl" is another option, but may be intercepted by your
+# │ terminal or window manager.
+# │ Function keys (F1-F9) are not configured via this string.
+# └───────────────────────────────────────────────────────────┘
+numb_modifier = "alt"
+
+
+# ┌─ Key Bindings ─────────────────────────────────────────────┐
+# │ Customize your control scheme.
+# │ Arrows are always enabled.
+# │ Defaults are shown commented out.
+# └────────────────────────────────────────────────────────────┘
+[keys]
+#disable_wasd_bindings = true
+#disable_vim_bindings = true
+
+#explain = "e"
+#inventory = "i"
+#path_grid_mode = "tab"
+#lock = "r"
+profile_prev = "o"
+profile_next = "p"
+
+
+
+# ┌─ Environment Variables ──────────────────────────────┐
+# | By default, drako inherits your full shell environment
+# | to ensure maximum compatibility with your tools.
+# |
+# | Uncomment 'env_whitelist' below to enable strict mode.
+# | Only the listed variables will be passed to commands.
+# | This is recommended for high-security setups.
+# └──────────────────────────────────────────────────────┘
+# env_whitelist = [
+#     "PATH",
+#     "HOME",
+#     "USER",
+#     "SHELL",
+#     "TERM",
+#     "LANG",
+#     "LC_ALL",
+#     "EDITOR",
+#     "VISUAL",
+#     "GOPATH",
+#     "SSH_AUTH_SOCK"
+# ]
+
+# ┌─ Shell ────────────────────────────────────────┐
+# | For each Profile (including the default), you
+# | can set a custom shell to run the commands.
+# | The default is bash, though some profiles are 
+# | POSIX compatible by design, eg. for minimal
+# | server distros.
+# |
+# | TODO: list them
+# └────────────────────────────────────────────────
+
+#default_shell = "bash"   # or "zsh", "fish", "sh", etc.

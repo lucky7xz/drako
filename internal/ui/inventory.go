@@ -80,7 +80,9 @@ func InitInventoryModel(configDir string) inventoryModel {
 
 	// Build visible list including the special "Core" entry
 	// Persisted equipped_order uses canonical names (e.g., "Core", "nw_pro")
-	var visible []string // contains filenames for overlays and the literal "Core"
+	// Build visible list
+	// Persisted equipped_order uses canonical names (e.g., "core", "nw_pro")
+	var visible []string // contains filenames for overlays
 	if pf, err := config.ReadPivotProfile(configDir); err == nil && len(pf.EquippedOrder) > 0 {
 		// Map canonical name -> filename
 		nameToFile := make(map[string]string, len(visibleFiles))
@@ -93,19 +95,14 @@ func InitInventoryModel(configDir string) inventoryModel {
 		for n, f := range nameToFile {
 			remaining[n] = f
 		}
-		addedCore := false
+
 		for _, n := range pf.EquippedOrder {
-			if n == "Default" || n == "Core" {
-				visible = append(visible, "Core")
-				addedCore = true
-				continue
-			}
 			if f, ok := remaining[n]; ok {
 				visible = append(visible, f)
 				delete(remaining, n)
 			}
 		}
-		// Append any leftovers alphabetically by name; if Core wasn't listed, append it at the end
+		// Append any leftovers alphabetically by name
 		var restNames []string
 		for n := range remaining {
 			restNames = append(restNames, n)
@@ -114,13 +111,10 @@ func InitInventoryModel(configDir string) inventoryModel {
 		for _, n := range restNames {
 			visible = append(visible, remaining[n])
 		}
-		if !addedCore {
-			visible = append(visible, "Core")
-		}
 	} else {
-		// No saved order: Core first, then files alphabetically
+		// No saved order: files alphabetically
 		sort.Strings(visibleFiles)
-		visible = append([]string{"Core"}, visibleFiles...)
+		visible = append(visible, visibleFiles...)
 	}
 
 	return inventoryModel{
@@ -137,11 +131,8 @@ func ApplyInventoryChangesCmd(configDir string, m inventoryModel) tea.Cmd {
 		inventoryDir := filepath.Join(configDir, "inventory")
 		moves := map[string]string{} // from -> to
 
-		// Find files to move from visible to inventory (skip Core)
+		// Find files to move from visible to inventory
 		for _, file := range m.initialVisible {
-			if file == "Core" || file == "Default" {
-				continue
-			}
 			if !Contains(m.visible, file) {
 				moves[filepath.Join(configDir, file)] = filepath.Join(inventoryDir, file)
 			}
@@ -171,10 +162,6 @@ func ApplyInventoryChangesCmd(configDir string, m inventoryModel) tea.Cmd {
 		// Persist the current visible order into pivot.toml as equipped_order (canonical names)
 		order := make([]string, 0, len(m.visible))
 		for _, v := range m.visible {
-			if v == "Core" || v == "Default" {
-				order = append(order, "Core")
-				continue
-			}
 			order = append(order, strings.TrimSuffix(v, ".profile.toml"))
 		}
 		if err := config.WritePivotEquippedOrder(configDir, order); err != nil {
