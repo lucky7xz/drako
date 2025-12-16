@@ -108,9 +108,9 @@ func WeaveConfig(templateContent, dictionaryContent []byte) ([]byte, error) {
 // DistroKeywords maps a runtime target key to a list of identifying strings found in /etc/os-release.
 // To add a new distro, simply append its keywords to the appropriate list or create a new entry.
 var DistroKeywords = map[string][]string{
-	"linux_arch":   {"arch", "manjaro", "endeavouros", "cachy"},
+	"linux_arch":   {"arch", "manjaro", "endeavouros", "cachy", "garuda", "omarchy"},
 	"linux_fedora": {"fedora", "rhel", "centos", "nobara"},
-	"linux_debian": {"debian", "ubuntu", "pop", "mint", "kali"},
+	"linux_debian": {"debian", "ubuntu", "pop", "mint", "kali", "mx", "zorin", "elementary", "neon"},
 }
 
 func detectRuntimeTarget() string {

@@ -165,16 +165,17 @@ macos = "$EDITOR ~/.config/drako/config.toml"
 windows = "drako open %APPDATA%\\drako\\config.toml"
 
 ["📁 Browse config dir"]
-linux_debian = "drako open ~/.config/drako"
-linux_arch = "drako open ~/.config/drako"
-linux_fedora = "drako open ~/.config/drako"
+linux_generic = "drako open ~/.config/drako"
 macos = "drako open ~/.config/drako"
 windows = "drako open %APPDATA%\\drako"
 
+["📜 Open Logs"]
+linux_generic = "$EDITOR ~/.config/drako/drako.log"
+macos = "$EDITOR ~/.config/drako/drako.log"
+windows = "drako open %APPDATA%\\drako\\drako.log"
+
 ["ℹ️ Open Pivots"]
-linux_debian = "$EDITOR ~/.config/drako/pivot.toml"
-linux_arch = "$EDITOR ~/.config/drako/pivot.toml"
-linux_fedora = "$EDITOR ~/.config/drako/pivot.toml"
+linux_generic = "$EDITOR ~/.config/drako/pivot.toml"
 macos = "$EDITOR ~/.config/drako/pivot.toml"
 windows = "drako open %APPDATA%\\drako\\pivot.toml"
 
