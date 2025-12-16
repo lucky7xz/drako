@@ -16,7 +16,7 @@ numb_modifier = "alt"
 # │ Available themes:
 # │   - dracula (default)    - nord
 # │   - dracula2             - everforest
-# │   - jade                 - olasaka
+# │   - jade                 - orasaka
 # └──────────────────────────────────────────────────────────────────┘
 
 theme = "dracula"
@@ -24,7 +24,7 @@ theme = "dracula"
 #theme = "nord"
 #theme = "dracula2"
 #theme = "everforest"
-#theme = "olasaka"
+#theme = "orasaka"
 
 
 # ┌─ Key Bindings ─────────────────────────────────────────────┐
