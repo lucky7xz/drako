@@ -1,7 +1,7 @@
 ![Demo v0.1.8](docs/demo.gif)
 
 > [!CAUTION]
-> **Breaking Change (v0.2.4)**: You must delete your `~/.config/drako/config.toml` for this version or run `drako purge --destroyeverything` to delete the whole config folder. **Backup your work first!** Don't worry, 
+> **Breaking Change (v0.2.4)**: You must delete your `~/.config/drako/config.toml` or run `drako purge --destroyeverything` to delete the whole config folder. This is because config.toml has now been split intro `core.profile.toml` (only os-adaptive profile as of now) and `config.toml` (global settings). **Backup your work first before upgrading!**
 
 The terminal is a realm of immense power, but also of high entropy. Commands are forgotten, workflows fracture, and focus is lost to the noise. **Drako** is a **TUI-Deck launcher** that enables structure, transforming your terminal into a disciplined, grid-based command center. 
 
