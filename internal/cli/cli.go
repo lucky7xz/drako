@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	"github.com/lucky7xz/drako/internal/config" // drako.chronyx.xyz
 )
@@ -117,24 +119,73 @@ func HandlePurgeCommand() {
 		os.Exit(1)
 	}
 
+	// Safety Check: Reject unrecognized positional arguments
+	if purgeCmd.NArg() > 0 {
+		fmt.Printf("Error: Unrecognized argument(s): %v\n", purgeCmd.Args())
+		fmt.Println("\nTo purge a specific profile, use: drako purge --target <name>")
+		fmt.Println("To purge Core config, use:        drako purge --target core")
+		fmt.Println("To select interactively, use:     drako purge --interactive")
+		os.Exit(1)
+	}
+
 	// Setup options based on flags
 	opts := PurgeOptions{
 		DestroyEverything: *destroyEverything,
 	}
 
 	if *interactive {
-		fmt.Print("Enter profile name to purge (e.g. 'git'): ")
-		var name string
-		if _, err := fmt.Scanln(&name); err != nil {
+		// Scan for profiles
+		entries, err := os.ReadDir(configDir)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error reading config dir: %v\n", err)
+			os.Exit(1)
+		}
+		var profiles []string
+		for _, e := range entries {
+			if !e.IsDir() && strings.HasSuffix(e.Name(), ".profile.toml") {
+				name := strings.TrimSuffix(e.Name(), ".profile.toml")
+				if name != "core" { // Core is handled separately or explicitly
+					profiles = append(profiles, name)
+				}
+			}
+		}
+		// Also create specific option for Core if it exists
+		// Actually, let's just list profiles. Core can be treated as one if found?
+		// User requirement: "list and ask for input via number"
+
+		fmt.Println("Select profile to purge:")
+		for i, p := range profiles {
+			fmt.Printf("%d. %s\n", i+1, p)
+		}
+		if len(profiles) == 0 {
+			fmt.Println("(No additional profiles found)")
+		}
+
+		fmt.Print("\nEnter number (or name): ")
+		var input string
+		if _, err := fmt.Scanln(&input); err != nil {
 			fmt.Println("\nInput cancelled.")
 			os.Exit(0)
 		}
-		name = filepath.Base(name) // Basic sanitization
-		if name == "" {
-			fmt.Println("No profile name provided.")
+
+		// Try parsing number
+		if num, err := strconv.Atoi(input); err == nil {
+			if num >= 1 && num <= len(profiles) {
+				opts.TargetProfile = profiles[num-1]
+			} else {
+				fmt.Println("Invalid number selection.")
+				os.Exit(1)
+			}
+		} else {
+			// Assume name
+			opts.TargetProfile = input
+		}
+
+		if opts.TargetProfile == "" {
+			fmt.Println("No profile selected.")
 			os.Exit(1)
 		}
-		opts.TargetProfile = name
+
 	} else if *target == "core" {
 		opts.TargetCore = true
 	} else if *target != "" {
