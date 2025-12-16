@@ -585,7 +585,7 @@ func (m Model) updateInfoMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(cmds...)
 		}
 		m.profileErrorQueueActive = false
-		m.mode = m.previousMode
+		m.mode = gridMode    // Safe fallback
 		m.activeDetail = nil // Clear detail state
 		return m, tea.Batch(cmds...)
 	}

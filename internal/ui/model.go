@@ -138,12 +138,22 @@ func (m *Model) applyBundle(bundle config.ConfigBundle) {
 // presentNextBrokenProfile pops the next pending broken profile error and configures infoMode to display it.
 func (m Model) presentNextBrokenProfile() Model {
 	if len(m.pendingProfileErrors) == 0 {
+		// Queue exhausted. Safe reset to Grid Mode to avoid invalid states.
+		m.mode = gridMode
+		m.activeDetail = nil
+		m.profileErrorQueueActive = false
 		return m
 	}
 	e := m.pendingProfileErrors[0]
 	m.pendingProfileErrors = m.pendingProfileErrors[1:]
 
-	m.previousMode = m.mode
+	// Capture previous mode only if we are transitioning FROM a valid mode.
+	// If we are already in infoMode (chained errors), we keep the original previousMode.
+	// However, since we now force return to Grid Mode at the end, this is less critical
+	// but good for hygiene if we ever change the exit logic.
+	if m.mode != infoMode {
+		m.previousMode = m.mode
+	}
 
 	desc := "This profile has an error and was hidden from selection.\n\n"
 	if strings.Contains(e.Err, "empty profile file") {
