@@ -7,7 +7,7 @@
 
 ["⬆️ System Update"]
 linux_debian = "sudo apt update && sudo apt upgrade"
-linux_arch = "sudo pacman -Su"
+linux_arch = "sudo pacman -Syu"
 linux_fedora = "sudo dnf upgrade"
 macos = "brew upgrade"
 windows = "winget upgrade --all"
@@ -33,9 +33,8 @@ windows = "echo 'Windows handles cleanup automatically'"
 # -i (Infected): This stands for "Infected only." By default, clamscan prints every single safe file it checks, which creates a messy wall of text. This flag forces it to stay silent unless it finds a virus.
 
 # $HOME: This is a variable that points to your current user's home directory (e.g., /home/username or /Users/username).
-linux_arch = "sudo freshclam && clamscan -r --bell -i $HOME"
-linux_fedora = "sudo freshclam && clamscan -r --bell -i $HOME"
-linux_debian = """
+
+linux_generic = """
 # Check if ClamAV is installed first
 if ! command -v freshclam &> /dev/null || ! command -v clamscan &> /dev/null; then
     echo "❌ Error: ClamAV is not installed. Run the install command from Cell [C-0] first."
@@ -71,23 +70,7 @@ windows = "Start-Process 'C:\\Program Files\\Windows Defender\\MpCmdRun.exe' -Ar
 # ==================================================================
 
 ["👀 Process Monitor"]
-
-# TODO : 3in1
-linux_arch = """
-btop 2>/dev/null || {
-    echo "btop not available. Defaulting to top..."
-    top
-}
-"""
-
-linux_debian = """
-btop 2>/dev/null || {
-    echo "btop not available. Defaulting to top..."
-    top
-}
-"""
-
-linux_fedora = """
+linux_generic = """
 btop 2>/dev/null || {
     echo "btop not available. Defaulting to top..."
     top
@@ -109,39 +92,37 @@ windows = "taskmgr"
 # ==================================================================
 
 [" 🔎 File Finder"]
-# TODO : lf/ranger?
-# TODO : 3in1
-linux_debian = "find . -type f | fzf"
-linux_arch = "find . -type f | fzf"
-linux_fedora = "find . -type f | fzf"
+linux_generic = "find . -type f | fzf"
 macos = "find . -type f | grep -v .git"
 windows = "gci -Recurse | Where-Object { ! $_.PSIsContainer } | Out-GridView"
 
 ["🌐 Bandwidth"]
-linux_debian = "bmon"
-linux_arch = "bmon"
-linux_fedora = "bmon"
+linux_generic = "bmon"
 macos = "nettop -P -L 1"
 windows = "typeperf \"\\Network Interface(*)\\Bytes Total/sec\""
 
 ["System Info"]
-linux_debian = "neofetch"
-linux_arch = "neofetch"
-linux_fedora = "neofetch"
+linux_generic = """
+neofetch 2>/dev/null || {
+    echo "neofetch not available. Defaulting to lshw..."
+    lshw -short
+}
+"""
 macos = "system_profiler SPSoftwareDataType SPDetailLevel=mini"
 windows = "systeminfo"
 
 ["Disk Usage"]
-linux_debian = "duf"
-linux_arch = "duf"
-linux_fedora = "duf"
+linux_generic = """
+duf 2>/dev/null || {
+    echo "duf not available. Defaulting to du..."
+    du -h -d 1
+}
+"""
 macos = "du -h -d 1"
 windows = "drako internal open-url ms-settings:storage"
 
 ["Weather"]
-linux_debian = "curl wttr.in"
-linux_arch = "curl wttr.in"
-linux_fedora = "curl wttr.in"
+linux_generic = "curl wttr.in"
 macos = "curl wttr.in"
 windows = "curl wttr.in"
 
@@ -150,30 +131,26 @@ windows = "curl wttr.in"
 # ==================================================================
 
 ["Install common tools"]
-linux_debian = "sudo apt install btop bmon duf neofetch clamav fzf "
-linux_arch = "sudo pacman -Su btop neofetch clamav fzf bmon"
-linux_fedora = "sudo dnf install btop neofetch clamav fzf bmon"
-macos = "brew install btop neofetch fzf bmon"
-windows = "winget install btop neofetch clamav fzf bmon"
+linux_debian = "sudo apt install btop bmon neofetch clamav fzf "
+linux_arch = "sudo pacman -S btop bmon neofetch clamav fzf "
+linux_fedora = "sudo dnf install btop bmon neofetch clamav fzf "
+macos = "brew install btop bmon neofetch fzf"
+windows = "winget install btop bmon neofetch fzf"
 
 ["Install micro"]
 linux_debian = "sudo apt install micro"
-linux_arch = "sudo pacman -Su micro"
+linux_arch = "sudo pacman -S micro"
 linux_fedora = "sudo dnf install micro"
 macos = "brew install micro"
 windows = "winget install micro"
 
 ["Set micro as EDITOR"]
-linux_debian = "echo 'export EDITOR=micro' >> ~/.bashrc"
-linux_arch = "echo 'export EDITOR=micro' >> ~/.bashrc"
-linux_fedora = "echo 'export EDITOR=micro' >> ~/.bashrc"
-macos = "echo 'export EDITOR=micro' >> ~/.zshrc"
+linux_generic = "echo 'export EDITOR=micro' >> ~/.bashrc && echo \"Alias added to ~/.bashrc. Restart shell to use 'x'.\""
+macos = "echo 'export EDITOR=micro' >> ~/.zshrc && echo \"Alias added to ~/.zshrc. Restart shell to use 'x'.\""
 windows = "setx EDITOR micro"
 
 ["📜 Open Shell Config"]
-linux_debian = "$EDITOR ~/.bashrc"
-linux_arch = "$EDITOR ~/.bashrc"
-linux_fedora = "$EDITOR ~/.bashrc"
+linux_generic = "$EDITOR ~/.bashrc"
 macos = "$EDITOR ~/.zshrc"
 windows = "drako open $PROFILE"
 
@@ -182,17 +159,16 @@ windows = "drako open $PROFILE"
 # ==================================================================
 
 ["⚙️ Edit config.toml"]
-linux_debian = "$EDITOR ~/.config/drako/config.toml"
-linux_arch = "$EDITOR ~/.config/drako/config.toml"
-linux_fedora = "$EDITOR ~/.config/drako/config.toml"
+linux_generic = "$EDITOR ~/.config/drako/config.toml"
+
 macos = "$EDITOR ~/.config/drako/config.toml"
 windows = "drako open %APPDATA%\\drako\\config.toml"
 
 ["📁 Browse config dir"]
-linux_debian = "$EDITOR ~/.config/drako"
-linux_arch = "$EDITOR ~/.config/drako"
-linux_fedora = "$EDITOR ~/.config/drako"
-macos = "$EDITOR ~/.config/drako"
+linux_debian = "drako open ~/.config/drako"
+linux_arch = "drako open ~/.config/drako"
+linux_fedora = "drako open ~/.config/drako"
+macos = "drako open ~/.config/drako"
 windows = "drako open %APPDATA%\\drako"
 
 ["ℹ️ Open Pivots"]
@@ -202,21 +178,12 @@ linux_fedora = "$EDITOR ~/.config/drako/pivot.toml"
 macos = "$EDITOR ~/.config/drako/pivot.toml"
 windows = "drako open %APPDATA%\\drako\\pivot.toml"
 
-
-# ==================================================================
-# ==================================================================
-
-["Alias x=drako"]
-linux_debian = "echo \"alias x='~/go/bin/drako'\" >> ~/.bashrc && echo \"Alias added to ~/.bashrc. Restart shell to use 'x'.\""
-linux_arch = "echo \"alias x='~/go/bin/drako'\" >> ~/.bashrc && echo \"Alias added to ~/.bashrc. Restart shell to use 'x'.\""
-linux_fedora = "echo \"alias x='~/go/bin/drako'\" >> ~/.bashrc && echo \"Alias added to ~/.bashrc. Restart shell to use 'x'.\""
-macos = "echo \"alias x='~/go/bin/drako'\" >> ~/.zshrc && echo \"Alias added. Restart shell to use 'x'.\""
-windows = "echo 'Function x { & \"$env:USERPROFILE\\go\\bin\\drako.exe\" }' >> $PROFILE"
-
 ["Go Version"]
-linux_debian = "go version"
-linux_arch = "go version"
-linux_fedora = "go version"
+linux_generic = "go version"
 macos = "go version"
 windows = "go version"  
 
+["Alias x=drako"]
+linux_generic = "echo \"alias x='~/go/bin/drako'\" >> ~/.bashrc && echo \"Alias added to ~/.bashrc. Restart shell to use 'x'.\""
+acos = "echo \"alias x='~/go/bin/drako'\" >> ~/.zshrc && echo \"Alias added. Restart shell to use 'x'.\""
+windows = "echo 'Function x { & \"$env:USERPROFILE\\go\\bin\\drako.exe\" }' >> $PROFILE"

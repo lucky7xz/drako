@@ -29,23 +29,45 @@ func WeaveConfig(templateContent, dictionaryContent []byte) ([]byte, error) {
 		placeholderRaw := fmt.Sprintf("{{%s}}", cmdName)
 		placeholderQuoted := fmt.Sprintf("\"{{%s}}\"", cmdName)
 
+		// ================================================================
+		// Command Replacement
+		// ================================================================
+		// Priority Chain:
+		// 1. Specific Target (e.g. linux_arch)
+		// 2. Linux Generic (e.g. linux_generic)
+		// 3. Linux Debian (Safety net ONLY if distro is unknown/generic)
+		// 4. Error with Link
+
 		cmd, ok := variants[targetKey]
 		if !ok {
-			// Fallback logic
+			// Specific key missing. Try fallbacks.
 			if runtime.GOOS == "linux" {
-				if val, ok := variants["linux_debian"]; ok {
+				// Try Generic first
+				if val, ok := variants["linux_generic"]; ok {
 					cmd = val
 				} else {
-					cmd = fmt.Sprintf("echo 'Command not supported on %s'", targetKey)
+					// Try Debian only if we are treating this as an unknown/generic distro
+					if targetKey == "linux_generic" {
+						if val, ok := variants["linux_debian"]; ok {
+							cmd = val
+						} else {
+							cmd = getErrorCommand(cmdName, targetKey)
+						}
+					} else {
+						// Known distro, strictly NO debian fallback
+						cmd = getErrorCommand(cmdName, targetKey)
+					}
 				}
 			} else {
-				cmd = fmt.Sprintf("echo 'Command not supported on %s'", targetKey)
+				cmd = getErrorCommand(cmdName, targetKey)
 			}
 		}
 
+		// ================================================================
 		// Heuristic: Check if the placeholder is likely inside a TOML inline table (items = [ { ... } ])
 		// Inline tables must remain on a single line, so we cannot use multi-line strings """...""".
 		// We scan the template to see if the placeholder line contains a '{'.
+		// ================================================================
 		isInline := false
 		lines := strings.Split(woven, "\n")
 		for _, line := range lines {
@@ -80,6 +102,17 @@ func WeaveConfig(templateContent, dictionaryContent []byte) ([]byte, error) {
 	return []byte(woven), nil
 }
 
+// ================================================================
+// Runtime Detection
+// ================================================================
+// DistroKeywords maps a runtime target key to a list of identifying strings found in /etc/os-release.
+// To add a new distro, simply append its keywords to the appropriate list or create a new entry.
+var DistroKeywords = map[string][]string{
+	"linux_arch":   {"arch", "manjaro", "endeavouros", "cachy"},
+	"linux_fedora": {"fedora", "rhel", "centos", "nobara"},
+	"linux_debian": {"debian", "ubuntu", "pop", "mint", "kali"},
+}
+
 func detectRuntimeTarget() string {
 	switch runtime.GOOS {
 	case "windows":
@@ -89,27 +122,31 @@ func detectRuntimeTarget() string {
 	case "linux":
 		return detectLinuxDistro()
 	default:
-		return "linux_debian" // Fallback
+		return "linux_generic"
 	}
 }
 
+// ================================================================
+// Linux Distro Detection
+// ================================================================
 func detectLinuxDistro() string {
-	// Simple check of /etc/os-release
 	data, err := os.ReadFile("/etc/os-release")
 	if err != nil {
-		return "linux_debian"
+		return "linux_generic"
 	}
-	content := string(data)
-	contentLower := strings.ToLower(content)
+	content := strings.ToLower(string(data))
 
-	if strings.Contains(contentLower, "arch") || strings.Contains(contentLower, "manjaro") || strings.Contains(contentLower, "endeavouros") {
-		return "linux_arch"
+	// Check against our map
+	for key, keywords := range DistroKeywords {
+		for _, kw := range keywords {
+			if strings.Contains(content, kw) {
+				return key
+			}
+		}
 	}
-	if strings.Contains(contentLower, "fedora") || strings.Contains(contentLower, "rhel") || strings.Contains(contentLower, "centos") {
-		return "linux_fedora"
-	}
-	// Default to debian/ubuntu family for everything else (Ubuntu, Pop!_OS, Mint, Debian, Kali)
-	return "linux_debian"
+
+	// No specific distro matched
+	return "linux_generic"
 }
 
 func escapeForTomlString(s string) string {
@@ -117,8 +154,11 @@ func escapeForTomlString(s string) string {
 	s = strings.ReplaceAll(s, "\\", "\\\\")
 	// Escape double quotes
 	s = strings.ReplaceAll(s, "\"", "\\\"")
-	// Escape newlines to make it a valid single-line TOML string
-	s = strings.ReplaceAll(s, "\n", "\\n")
-	s = strings.ReplaceAll(s, "\r", "") // Strip CR
 	return s
+}
+
+func getErrorCommand(name, target string) string {
+	link := "https://github.com/lucky7xz/drako/blob/main/internal/config/bootstrap/core_dictionary.toml"
+	// utilize read to pause execution so user can see it
+	return fmt.Sprintf("echo '❌ Could not find command %q for OS %q.' && echo 'Check the dictionary: %s' && read -p 'Press [Enter] to continue...'", name, target, link)
 }
