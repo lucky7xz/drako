@@ -686,6 +686,7 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 			Theme:              base.Theme,
 			Keys:               base.Keys,
 		},
+		Base:        base,
 		Config:      effective,
 		Profiles:    profiles,
 		ActiveIndex: activeIndex,

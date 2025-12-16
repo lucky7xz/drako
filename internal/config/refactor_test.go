@@ -58,6 +58,10 @@ func TestRefactorBootstrap(t *testing.T) {
 	if len(bundle.Config.Commands) == 0 {
 		t.Errorf("Bundle.Config should have commands loaded from profile, got 0")
 	}
+	// Verify Base is populated (Critical for profile switching)
+	if len(bundle.Base.Keys.NavUp) == 0 {
+		t.Errorf("Bundle.Base.Keys.NavUp is empty! (Fix missing field in LoadConfig return)")
+	}
 
 	// Check if defaults are loaded
 	if bundle.Config.Theme != "dracula" {

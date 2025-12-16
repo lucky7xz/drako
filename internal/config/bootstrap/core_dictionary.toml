@@ -92,12 +92,36 @@ windows = "taskmgr"
 # ==================================================================
 
 [" 🔎 File Finder"]
-linux_generic = "find . -type f | fzf"
-macos = "find . -type f | grep -v .git"
+linux_generic = "fzf --preview 'head -n 50 {}' --preview-window=right:50%:wrap --border --header '🔎 START TYPING TO SEARCH...'"
+macos = "fzf --preview 'head -n 50 {}' --preview-window=right:50%:wrap --border --header '🔎 START TYPING TO SEARCH...'"
 windows = "gci -Recurse | Where-Object { ! $_.PSIsContainer } | Out-GridView"
 
 ["🌐 Bandwidth"]
-linux_generic = "bmon"
+linux_generic = """
+bmon 2>/dev/null || {
+    echo "bmon not available. Starting fallback monitor..."
+    sleep 1
+    while true; do
+        clear
+        cat /proc/net/dev | awk '
+        NR>2 {
+            # Capture stats
+            recv[$1]=$2; trans[$1]=$10;
+        }
+        END {
+            # Header
+            printf "%-10s %15s %15s\\n", "IFACE", "RX (Bytes)", "TX (Bytes)"
+            print "---------------------------------------------"
+            # Print (Note: This is a simplified snapshot view)
+            for (i in recv) {
+                printf "%-10s %15s %15s\\n", i, recv[i], trans[i]
+            }
+        }'
+        echo ""
+        echo "Update: 1s | Press Ctrl+C to stop"
+        sleep 1
+    done
+}"""
 macos = "nettop -P -L 1"
 windows = "typeperf \"\\Network Interface(*)\\Bytes Total/sec\""
 
