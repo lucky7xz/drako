@@ -74,6 +74,8 @@ type Model struct {
 	lockProgress      int
 	lockPumpGoal      int
 	lockLastDirection int
+
+	acknowledgedErrors map[string]bool
 }
 
 func (m *Model) applyConfig(cfg config.Config) {
@@ -137,15 +139,37 @@ func (m *Model) applyBundle(bundle config.ConfigBundle) {
 
 // presentNextBrokenProfile pops the next pending broken profile error and configures infoMode to display it.
 func (m Model) presentNextBrokenProfile() Model {
+	// Filter out already acknowledged errors
+	for len(m.pendingProfileErrors) > 0 {
+		e := m.pendingProfileErrors[0]
+		if m.acknowledgedErrors[e.Path] { // Track by Path to be specific
+			m.pendingProfileErrors = m.pendingProfileErrors[1:]
+			continue
+		}
+		break
+	}
+
 	if len(m.pendingProfileErrors) == 0 {
-		// Queue exhausted. Safe reset to Grid Mode to avoid invalid states.
+		// Queue exhausted.
+		if m.profileErrorQueueActive {
+			// Trigger Rescue Mode if we just finished processing a queue
+			rescueCfg := config.RescueConfig()
+			rescueCfg.ApplyDefaults()
+			m.applyConfig(rescueCfg)
+		}
+
+		// Safe reset to Grid Mode
 		m.mode = gridMode
 		m.activeDetail = nil
 		m.profileErrorQueueActive = false
 		return m
 	}
+
 	e := m.pendingProfileErrors[0]
 	m.pendingProfileErrors = m.pendingProfileErrors[1:]
+
+	// Mark as acknowledged
+	m.acknowledgedErrors[e.Path] = true
 
 	// Capture previous mode only if we are transitioning FROM a valid mode.
 	// If we are already in infoMode (chained errors), we keep the original previousMode.
@@ -204,18 +228,19 @@ func InitialModel() Model {
 	s := spinner.New()
 	s.Spinner = spinner.Line
 	m := Model{
-		cursorRow:         0,
-		cursorCol:         0,
-		trafficAvgSeconds: 7.5,
-		onlineStatus:      "checking...",
-		traffic:           "calculating...",
-		path:              InitPathModel(path),
-		mode:              gridMode,
-		spinner:           s,
-		baseConfig:        bundle.Base,
-		lastActivityTime:  time.Now(),
-		modeBeforeLock:    gridMode,
-		lockPumpGoal:      defaultLockPumpGoal,
+		cursorRow:          0,
+		cursorCol:          0,
+		trafficAvgSeconds:  7.5,
+		onlineStatus:       "checking...",
+		traffic:            "calculating...",
+		path:               InitPathModel(path),
+		mode:               gridMode,
+		spinner:            s,
+		baseConfig:         bundle.Base,
+		lastActivityTime:   time.Now(),
+		modeBeforeLock:     gridMode,
+		lockPumpGoal:       defaultLockPumpGoal,
+		acknowledgedErrors: make(map[string]bool),
 	}
 	m.applyBundle(bundle)
 	if len(bundle.Broken) > 0 {

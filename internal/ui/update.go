@@ -580,13 +580,8 @@ func (m Model) updateInfoMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				cmds = append(cmds, copyToClipboardCmd(m.activeDetail.Value))
 			}
 		}
-		if len(m.pendingProfileErrors) > 0 {
-			m = m.presentNextBrokenProfile()
-			return m, tea.Batch(cmds...)
-		}
-		m.profileErrorQueueActive = false
-		m.mode = gridMode    // Safe fallback
-		m.activeDetail = nil // Clear detail state
+		// Always delegate to presentNextBrokenProfile to handle queue exhaustion and Rescue Trigger
+		m = m.presentNextBrokenProfile()
 		return m, tea.Batch(cmds...)
 	}
 	switch key {

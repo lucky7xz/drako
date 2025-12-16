@@ -22,42 +22,42 @@ var (
 │  ┃  ✘  ┃ ┏━┫ ━━ ┃   ◄┃  %s  ┃  │
 │  ┗━━━━━┻━┛ ┗━╱╲━┻━━┻━┻━━━━━┛  │
 ◄═══════════════════════════════► 
-     ◄═════[  龙狼志  ]═════►      
+     ◄═════[  啸龙志  ]═════►      
 ╰───────────────────────────────╯
 `
 
 	activeHeaderArt = ""
 
-	headerStyle           lipgloss.Style
-	helpStyle             lipgloss.Style
-	statusBarStyle        lipgloss.Style
-	onlineStyle           lipgloss.Style
-	offlineStyle          lipgloss.Style
-	cellStyle             lipgloss.Style
-	selectedCellStyle     lipgloss.Style
-	pathStyle             lipgloss.Style
-	selectedPathStyle     lipgloss.Style
-	childDirStyle         lipgloss.Style
-	selectedChildDirStyle lipgloss.Style
-	pathSeparatorStyle    lipgloss.Style
-	lockBadgeStyle        lipgloss.Style
-	statusPositiveStyle   lipgloss.Style
-	statusNegativeStyle   lipgloss.Style
-	titleStyle            lipgloss.Style
-	listHeaderStyle       lipgloss.Style
-	itemStyle             lipgloss.Style
-	selectedItemStyle     lipgloss.Style
-	selectedCursorStyle   lipgloss.Style
-	buttonStyle           lipgloss.Style
-	selectedButtonStyle   lipgloss.Style
-	rescueButtonStyle     lipgloss.Style
+	headerStyle               lipgloss.Style
+	helpStyle                 lipgloss.Style
+	statusBarStyle            lipgloss.Style
+	onlineStyle               lipgloss.Style
+	offlineStyle              lipgloss.Style
+	cellStyle                 lipgloss.Style
+	selectedCellStyle         lipgloss.Style
+	pathStyle                 lipgloss.Style
+	selectedPathStyle         lipgloss.Style
+	childDirStyle             lipgloss.Style
+	selectedChildDirStyle     lipgloss.Style
+	pathSeparatorStyle        lipgloss.Style
+	lockBadgeStyle            lipgloss.Style
+	statusPositiveStyle       lipgloss.Style
+	statusNegativeStyle       lipgloss.Style
+	titleStyle                lipgloss.Style
+	listHeaderStyle           lipgloss.Style
+	itemStyle                 lipgloss.Style
+	selectedItemStyle         lipgloss.Style
+	selectedCursorStyle       lipgloss.Style
+	buttonStyle               lipgloss.Style
+	selectedButtonStyle       lipgloss.Style
+	rescueButtonStyle         lipgloss.Style
 	selectedRescueButtonStyle lipgloss.Style
-	errorTitleStyle       lipgloss.Style
-	errorTextStyle        lipgloss.Style
-	themeNameStyle        lipgloss.Style
-	whiteStyle            lipgloss.Style
-	footerStyle           lipgloss.Style
-	dropdownPopupStyle    lipgloss.Style
+	errorTitleStyle           lipgloss.Style
+	errorTextStyle            lipgloss.Style
+	themeNameStyle            lipgloss.Style
+	whiteStyle                lipgloss.Style
+	footerStyle               lipgloss.Style
+	dropdownPopupStyle        lipgloss.Style
 )
 
 func applyThemeStyles(cfg config.Config) {
@@ -315,9 +315,9 @@ func styleLineSegment(segment string, primaryStyle lipgloss.Style) string {
 			continue
 		}
 
-		// Check for Chinese characters "龙狼志"
-		if i+2 < len(runes) && string(runes[i:i+3]) == "龙狼志" {
-			styledLine.WriteString(whiteStyle.Render("龙狼志"))
+		// Check for Chinese characters "啸龙志"
+		if i+2 < len(runes) && string(runes[i:i+3]) == "啸龙志" {
+			styledLine.WriteString(whiteStyle.Render("啸龙志"))
 			i += 2 // Skip next 2 chars (loop will increment by 1)
 			continue
 		}

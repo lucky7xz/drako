@@ -624,7 +624,7 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 		return temp, nil
 	}
 
-	if useFactoryDefaults || (len(broken) > 0 && NormalizeProfileName(selected.Name) == "core") {
+	if useFactoryDefaults {
 		// Fall back to factory defaults (3x3).
 		effective = RescueConfig()
 		// ApplyDefaults will init controls too

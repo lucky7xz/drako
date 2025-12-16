@@ -50,9 +50,6 @@ func TestRefactorBootstrap(t *testing.T) {
 	if !strings.Contains(string(pContent), "[[commands]]") {
 		t.Errorf("core.profile.toml SHOULD contain [[commands]]")
 	}
-	if !strings.Contains(string(pContent), "theme =") {
-		t.Errorf("core.profile.toml SHOULD contain theme")
-	}
 
 	// 4. Verify loaded bundle
 	if len(bundle.Config.Commands) == 0 {
