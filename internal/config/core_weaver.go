@@ -26,13 +26,13 @@ func WeaveConfig(templateContent, dictionaryContent []byte) ([]byte, error) {
 	woven := string(templateContent)
 
 	for cmdName, variants := range dict {
-		placeholder := fmt.Sprintf("{{%s}}", cmdName)
+		placeholderRaw := fmt.Sprintf("{{%s}}", cmdName)
+		placeholderQuoted := fmt.Sprintf("\"{{%s}}\"", cmdName)
 
 		cmd, ok := variants[targetKey]
 		if !ok {
 			// Fallback logic
 			if runtime.GOOS == "linux" {
-				// Try linux_debian as a generic fallback if specific distro missing
 				if val, ok := variants["linux_debian"]; ok {
 					cmd = val
 				} else {
@@ -43,25 +43,38 @@ func WeaveConfig(templateContent, dictionaryContent []byte) ([]byte, error) {
 			}
 		}
 
-		// Escape double quotes in the command string since it will be inside a TOML string
-		// actually, if the template has `command = "{{Key}}"`
-		// and we replace `{{Key}}` with `echo "hello"`, result is `command = "echo "hello""` -> Syntax Error.
-		// We should probably rely on the template having `command = "{{Key}}"` and we insert the RAW string?
-		// No, usually TOML templates might look like `command = "{{Key}}"`
-		// If we replace `{{Key}}` with `something`, we need to be careful about quotes.
-		//
-		// Strategy:
-		// The dictionary values are raw strings like: `sudo apt update`
-		// The template acts like: `command = "{{⬆️ System Update}}"`
-		// If we blindly replace, we might break TOML syntax if the value contains quotes.
-		//
-		// Better approach: escape the value logic so it fits in a TOML string?
-		// Or maybe the template placeholder should NOT have quotes?
-		// In `core_template.toml`, it is: `command = "{{⬆️ System Update}}"`
-		// So we are inside quotes. We need to escape existing quotes in our replacement.
+		// Heuristic: Check if the placeholder is likely inside a TOML inline table (items = [ { ... } ])
+		// Inline tables must remain on a single line, so we cannot use multi-line strings """...""".
+		// We scan the template to see if the placeholder line contains a '{'.
+		isInline := false
+		lines := strings.Split(woven, "\n")
+		for _, line := range lines {
+			if strings.Contains(line, cmdName) && strings.Contains(line, "{") {
+				isInline = true
+				break
+			}
+		}
 
-		escapedCmd := escapeForTomlString(cmd)
-		woven = strings.ReplaceAll(woven, placeholder, escapedCmd)
+		// Determine replacement strategy
+		var replacement string
+		if strings.Contains(cmd, "\n") && !isInline {
+			// Multi-line: Use triple quotes (ONLY if not in inline table)
+			replacement = fmt.Sprintf("\"\"\"\n%s\"\"\"", cmd)
+		} else {
+			// Single-line: Use double quotes and escape newlines
+			// We use escapeForTomlString but we MUST escape newlines manually for single-line strings
+			escaped := escapeForTomlString(cmd)
+			escaped = strings.ReplaceAll(escaped, "\n", "\\n")
+			escaped = strings.ReplaceAll(escaped, "\r", "")
+			replacement = fmt.Sprintf("\"%s\"", escaped)
+		}
+
+		// Apply replacement
+		if strings.Contains(woven, placeholderQuoted) {
+			woven = strings.ReplaceAll(woven, placeholderQuoted, replacement)
+		} else {
+			woven = strings.ReplaceAll(woven, placeholderRaw, replacement)
+		}
 	}
 
 	return []byte(woven), nil
@@ -104,5 +117,8 @@ func escapeForTomlString(s string) string {
 	s = strings.ReplaceAll(s, "\\", "\\\\")
 	// Escape double quotes
 	s = strings.ReplaceAll(s, "\"", "\\\"")
+	// Escape newlines to make it a valid single-line TOML string
+	s = strings.ReplaceAll(s, "\n", "\\n")
+	s = strings.ReplaceAll(s, "\r", "") // Strip CR
 	return s
 }

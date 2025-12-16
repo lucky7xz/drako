@@ -1,9 +1,13 @@
 # Drako Core Command Dictionary
 # This file maps the 'name' of a command to its platform-specific implementation.
 
+
+# ==================================================================
+# ==================================================================
+
 ["⬆️ System Update"]
 linux_debian = "sudo apt update && sudo apt upgrade"
-linux_arch = "sudo pacman -Syu"
+linux_arch = "sudo pacman -Su"
 linux_fedora = "sudo dnf upgrade"
 macos = "brew upgrade"
 windows = "winget upgrade --all"
@@ -15,21 +19,98 @@ linux_fedora = "sudo dnf autoremove"
 macos = "brew cleanup"
 windows = "echo 'Windows handles cleanup automatically'"
 
+
+# ==================================================================
+# ==================================================================
+
 ["Virus Scan (Home)"]
-linux_debian = "sudo freshclam && clamscan -r --bell -i $HOME"
+# clamscan: The command-line virus scanner itself.
+
+# -r (Recursive): Tells the scanner to not just look at the files inside your Home folder, but to go into every sub-folder (Documents, Downloads, Desktop, etc.) and scan those too.
+
+# --bell: Triggers a system sound (beep) if a virus is found. Useful if you want to leave the scan running in the background and just listen for alerts.
+
+# -i (Infected): This stands for "Infected only." By default, clamscan prints every single safe file it checks, which creates a messy wall of text. This flag forces it to stay silent unless it finds a virus.
+
+# $HOME: This is a variable that points to your current user's home directory (e.g., /home/username or /Users/username).
 linux_arch = "sudo freshclam && clamscan -r --bell -i $HOME"
 linux_fedora = "sudo freshclam && clamscan -r --bell -i $HOME"
-macos = "echo 'No clamav installed by default'"
+linux_debian = """
+# Check if ClamAV is installed first
+if ! command -v freshclam &> /dev/null || ! command -v clamscan &> /dev/null; then
+    echo "❌ Error: ClamAV is not installed. Run the install command from Cell [C-0] first."
+    sleep 1
+    exit 1
+fi
+
+echo "🛡️  Initiating Security Protocol..."
+echo "-----------------------------------"
+
+# Step 1: Update
+echo "📦 [1/2] Updating Virus Definitions..."
+sudo freshclam || echo "⚠️  Update had warnings, proceeding to scan anyway..."
+
+# Step 2: Scan
+echo "-----------------------------------"
+echo "🔍 [2/2] Scanning $HOME recursively..."
+echo "ℹ️  NOTE: The scanner is in 'Infected-Only' mode."
+echo "ℹ️  NOTE: In this mode, silence is GOOD. You will only see output if a threat is detected."
+echo "⏳  Scanning now (this may take several minutes)..."
+
+# Run scan
+clamscan -r --bell -i "$HOME"
+
+echo "-----------------------------------"
+echo "✅ Scan complete."
+"""
+
+
+macos = "echo 'No virus scanning needed by default'"
 windows = "Start-Process 'C:\\Program Files\\Windows Defender\\MpCmdRun.exe' -ArgumentList '-Scan -ScanType 2'"
+# ==================================================================
+# ==================================================================
 
 ["👀 Process Monitor"]
-linux_debian = "btop"
-linux_arch = "btop"
-linux_fedora = "btop"
-macos = "top -o cpu"
+
+# TODO : 3in1
+linux_arch = """
+btop 2>/dev/null || {
+    echo "btop not available. Defaulting to top..."
+    top
+}
+"""
+
+linux_debian = """
+btop 2>/dev/null || {
+    echo "btop not available. Defaulting to top..."
+    top
+}
+"""
+
+linux_fedora = """
+btop 2>/dev/null || {
+    echo "btop not available. Defaulting to top..."
+    top
+}
+"""
+
+# MacOS
+# Logic: Falls back to 'top -o cpu' which is better for Mac
+macos = """
+btop 2>/dev/null || {
+    echo "btop not available. Defaulting to top..."
+    top -o cpu
+}
+"""
 windows = "taskmgr"
 
+
+# ==================================================================
+# ==================================================================
+
 [" 🔎 File Finder"]
+# TODO : lf/ranger?
+# TODO : 3in1
 linux_debian = "find . -type f | fzf"
 linux_arch = "find . -type f | fzf"
 linux_fedora = "find . -type f | fzf"
@@ -51,9 +132,9 @@ macos = "system_profiler SPSoftwareDataType SPDetailLevel=mini"
 windows = "systeminfo"
 
 ["Disk Usage"]
-linux_debian = "baobab"
-linux_arch = "baobab"
-linux_fedora = "baobab"
+linux_debian = "duf"
+linux_arch = "duf"
+linux_fedora = "duf"
 macos = "du -h -d 1"
 windows = "drako internal open-url ms-settings:storage"
 
@@ -64,17 +145,21 @@ linux_fedora = "curl wttr.in"
 macos = "curl wttr.in"
 windows = "curl wttr.in"
 
+
+# ==================================================================
+# ==================================================================
+
 ["Install common tools"]
-linux_debian = "sudo apt install -y btop neofetch clamav fzf bmon"
-linux_arch = "sudo pacman -S --noconfirm btop neofetch clamav fzf bmon"
-linux_fedora = "sudo dnf install -y btop neofetch clamav fzf bmon"
-macos = "brew install btop neofetch clamav fzf bmon"
+linux_debian = "sudo apt install btop bmon duf neofetch clamav fzf "
+linux_arch = "sudo pacman -Su btop neofetch clamav fzf bmon"
+linux_fedora = "sudo dnf install btop neofetch clamav fzf bmon"
+macos = "brew install btop neofetch fzf bmon"
 windows = "winget install btop neofetch clamav fzf bmon"
 
 ["Install micro"]
-linux_debian = "sudo apt install -y micro"
-linux_arch = "sudo pacman -S --noconfirm micro"
-linux_fedora = "sudo dnf install -y micro"
+linux_debian = "sudo apt install micro"
+linux_arch = "sudo pacman -Su micro"
+linux_fedora = "sudo dnf install micro"
 macos = "brew install micro"
 windows = "winget install micro"
 
@@ -91,6 +176,10 @@ linux_arch = "$EDITOR ~/.bashrc"
 linux_fedora = "$EDITOR ~/.bashrc"
 macos = "$EDITOR ~/.zshrc"
 windows = "drako open $PROFILE"
+
+
+# ==================================================================
+# ==================================================================
 
 ["⚙️ Edit config.toml"]
 linux_debian = "$EDITOR ~/.config/drako/config.toml"
@@ -113,12 +202,9 @@ linux_fedora = "$EDITOR ~/.config/drako/pivot.toml"
 macos = "$EDITOR ~/.config/drako/pivot.toml"
 windows = "drako open %APPDATA%\\drako\\pivot.toml"
 
-["Go Version"]
-linux_debian = "go version"
-linux_arch = "go version"
-linux_fedora = "go version"
-macos = "go version"
-windows = "go version"  
+
+# ==================================================================
+# ==================================================================
 
 ["Alias x=drako"]
 linux_debian = "echo \"alias x='~/go/bin/drako'\" >> ~/.bashrc && echo \"Alias added to ~/.bashrc. Restart shell to use 'x'.\""
@@ -126,3 +212,11 @@ linux_arch = "echo \"alias x='~/go/bin/drako'\" >> ~/.bashrc && echo \"Alias add
 linux_fedora = "echo \"alias x='~/go/bin/drako'\" >> ~/.bashrc && echo \"Alias added to ~/.bashrc. Restart shell to use 'x'.\""
 macos = "echo \"alias x='~/go/bin/drako'\" >> ~/.zshrc && echo \"Alias added. Restart shell to use 'x'.\""
 windows = "echo 'Function x { & \"$env:USERPROFILE\\go\\bin\\drako.exe\" }' >> $PROFILE"
+
+["Go Version"]
+linux_debian = "go version"
+linux_arch = "go version"
+linux_fedora = "go version"
+macos = "go version"
+windows = "go version"  
+

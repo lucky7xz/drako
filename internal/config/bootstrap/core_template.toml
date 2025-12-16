@@ -32,7 +32,7 @@ auto_close_execution = false
 
 [[commands]]
 name = "🧹 Maintenance ⋮ "
-description = "My digital decluttering and security station. Keep your system lean and clean, or run a virus scan for peace of mind. A clean system is a happy system!"
+description = "The digital decluttering and security station. Keep your system lean and clean, or run a virus scan for peace of mind. A clean system is a happy system!"
 col = "A"
 row = 1
 items = [
@@ -73,7 +73,7 @@ col = "B"
 row = 2
 items = [
     { name = "System Info", description = "Your computer's trading card. Shows distro logo, kernel version, uptime, and hardware details.", command = "{{System Info}}", auto_close_execution = false },
-    { name = "Disk Usage", description = "A colorful report of where all your free space went. Useful for finding large forgotten files.", command = "{{Disk Usage}}" },
+    { name = "Disk Usage", description = "A colorful report of where all your free space went. Useful for finding large forgotten files.", command = "{{Disk Usage}}", auto_close_execution = false },
     { name = "Weather", description = "A quick, no-nonsense weather report from wttr.in right in your terminal.", command = "{{Weather}}", auto_close_execution = false }
 ]
 

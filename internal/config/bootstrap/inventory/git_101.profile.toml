@@ -18,7 +18,7 @@ items = [
     { name = "Full Status", command = "git status", auto_close_execution = false },
     { name = "Short Status", command = "git status -s", auto_close_execution = false },
     { name = "Stage All", description = "Stages all modified and new files in the current directory.", command = "git add .", auto_close_execution = false },
-    { name = "Interactive Staging", description = "Allows you to interactively choose which changes to stage. Perfect for splitting a large change into smaller commits.", command = "git add -p", auto_close_execution = false }
+    { name = "Interactive Staging", description = "Allows you to interactively choose which changes to stage. Good for splitting a large change into smaller commits.", command = "git add -p", auto_close_execution = false }
 ]
 
 [[commands]]

@@ -21,6 +21,7 @@ items = [
     { name = "Start Service", command = "sudo systemctl start ssh", description = "Turn on SSH now.", auto_close_execution = false },
     { name = "Enable on Boot", command = "sudo systemctl enable ssh", description = "Ensure SSH starts automatically when the server restarts.", auto_close_execution = false },
     { name = "Restart Service", command = "sudo systemctl restart ssh", description = "Run this after changing config files to apply changes.", auto_close_execution = false }
+    { name = "Install Service", command = "sudo apt install openssh-server", description = "Installs openshh server from apt repository.", auto_close_execution = false }
 ]
 
 [[commands]]

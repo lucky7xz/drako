@@ -29,6 +29,7 @@ type AppSettings struct {
 	LockTimeoutMinutes *int        `toml:"lock_timeout_minutes"`
 	EnvWhitelist       []string    `toml:"env_whitelist"`
 	EnvBlocklist       []string    `toml:"env_blocklist"`
+	Theme              string      `toml:"theme"` // Global Fallback Theme
 	Keys               InputConfig `toml:"keys"`
 }
 

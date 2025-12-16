@@ -1,13 +1,6 @@
 # dR4ko - Global Settings
 # This file controls the look and feel of your Drako experience.
 
-
-
-# ┌─ Technical stuff zzZZZz ───────────────────────────┐
-# │ What is even that? 
-# └────────────────────────────────────────────────────┘
-
-
 # ┌─ Keybinding Modifier ────────────────────────────────────┐
 # │ Set the modifier for number-based shortcuts.
 # │ "alt" is the default and generally works well.
@@ -16,6 +9,22 @@
 # │ Function keys (F1-F9) are not configured via this string.
 # └───────────────────────────────────────────────────────────┘
 numb_modifier = "alt"
+
+
+# ┌─ Theme ──────────────────────────────────────────────────────────┐
+# │ Select the color palette for the UI.
+# │ Available themes:
+# │   - dracula (default)    - nord
+# │   - dracula2             - everforest
+# │   - jade                 - olasaka
+# └──────────────────────────────────────────────────────────────────┘
+
+theme = "dracula"
+#theme = "jade"
+#theme = "nord"
+#theme = "dracula2"
+#theme = "everforest"
+#theme = "olasaka"
 
 
 # ┌─ Key Bindings ─────────────────────────────────────────────┐
