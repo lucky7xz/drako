@@ -357,7 +357,9 @@ func ApplyProfileOverlay(base Config, profile ProfileFile) Config {
 
 	cfg.X = profile.X
 	cfg.Y = profile.Y
-	cfg.Theme = profile.Theme
+	if strings.TrimSpace(profile.Theme) != "" {
+		cfg.Theme = profile.Theme
+	}
 	if profile.HeaderArt != nil {
 		cfg.HeaderArt = profile.HeaderArt
 	}
@@ -518,6 +520,7 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 			LockTimeoutMinutes: settings.LockTimeoutMinutes,
 			EnvWhitelist:       settings.EnvWhitelist,
 			EnvBlocklist:       settings.EnvBlocklist,
+			Theme:              settings.Theme,
 			Keys:               settings.Keys,
 			Commands:           []Command{}, // Explicitly empty
 		}
