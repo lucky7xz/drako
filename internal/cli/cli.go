@@ -134,51 +134,80 @@ func HandlePurgeCommand() {
 	}
 
 	if *interactive {
-		// Scan for profiles
-		entries, err := os.ReadDir(configDir)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error reading config dir: %v\n", err)
-			os.Exit(1)
+		// Struct to hold profile info
+		type startProfile struct {
+			DisplayName  string // "git (Equipped)" or "git (Inventory)"
+			RelativePath string // "git.profile.toml" or "inventory/git.profile.toml"
 		}
-		var profiles []string
-		for _, e := range entries {
-			if !e.IsDir() && strings.HasSuffix(e.Name(), ".profile.toml") {
-				name := strings.TrimSuffix(e.Name(), ".profile.toml")
-				if name != "core" { // Core is handled separately or explicitly
-					profiles = append(profiles, name)
+		var validProfiles []startProfile
+
+		// Helper to scan a directory
+		scanDir := func(dir string, isInventory bool) {
+			entries, err := os.ReadDir(dir)
+			if err != nil {
+				return // Ignore errors (e.g. missing dir)
+			}
+			for _, e := range entries {
+				if !e.IsDir() && strings.HasSuffix(e.Name(), ".profile.toml") {
+					name := strings.TrimSuffix(e.Name(), ".profile.toml")
+
+					relPath := e.Name()
+					label := name
+					if isInventory {
+						relPath = filepath.Join("inventory", e.Name())
+						label = fmt.Sprintf("%s (Inventory)", name)
+					} else {
+						label = fmt.Sprintf("%s (Equipped)", name)
+					}
+
+					validProfiles = append(validProfiles, startProfile{
+						DisplayName:  label,
+						RelativePath: relPath,
+					})
 				}
 			}
 		}
-		// Also create specific option for Core if it exists
-		// Actually, let's just list profiles. Core can be treated as one if found?
-		// User requirement: "list and ask for input via number"
+
+		// 1. Scan Root (Equipped)
+		scanDir(configDir, false)
+
+		// 2. Scan Inventory
+		scanDir(filepath.Join(configDir, "inventory"), true)
+
+		// Sort by Display Name for consistency
+		// sort.Slice? We need to import sort. Or just leave as is (root first then inventory).
+		// Let's keep it simple: Root first, then Inventory.
 
 		fmt.Println("Select profile to purge:")
-		for i, p := range profiles {
-			fmt.Printf("%d. %s\n", i+1, p)
+		for i, p := range validProfiles {
+			fmt.Printf("%d. %s\n", i+1, p.DisplayName)
 		}
-		if len(profiles) == 0 {
-			fmt.Println("(No additional profiles found)")
+		if len(validProfiles) == 0 {
+			fmt.Println("(No profiles found)")
+			os.Exit(0)
 		}
 
-		fmt.Print("\nEnter number (or name): ")
+		fmt.Print("\nEnter number: ")
 		var input string
 		if _, err := fmt.Scanln(&input); err != nil {
 			fmt.Println("\nInput cancelled.")
 			os.Exit(0)
 		}
 
-		// Try parsing number
+		// Parse number
 		if num, err := strconv.Atoi(input); err == nil {
-			if num >= 1 && num <= len(profiles) {
-				opts.TargetProfile = profiles[num-1]
+			if num >= 1 && num <= len(validProfiles) {
+				selected := validProfiles[num-1]
+				opts.TargetProfile = selected.RelativePath
+				// Note: if user selected "core", logic elsewhere might need to be aware if we wanted TargetCore=true behavior
+				// BUT user said "core is just another profile", so we let it flow as TargetProfile="core.profile.toml"
 			} else {
-				fmt.Println("Invalid number selection.")
+				fmt.Println("Invalid selection.")
 				os.Exit(1)
 			}
 		} else {
-			// Assume name
-			opts.TargetProfile = input
+			fmt.Println("Invalid input. Please enter a number.")
+			os.Exit(1)
 		}
 
 		if opts.TargetProfile == "" {
