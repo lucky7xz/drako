@@ -19,44 +19,15 @@ Y = 3
 # ┌─ COLUMN A: Setup ─────────────────────────────────────────────────────────────────────────────────────────────────┐
 # │ Compile llama.cpp from source and manage the build directory.
 # └─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
 [[commands]]
-name = "̶📦 ̶B̶u̶i̶l̶d̶ ̶f̶r̶o̶m̶ ̶S̶o̶u̶r̶c̶e̶"
-description = "Compile llama.cpp using modern CMake. Creates a 'llama.cpp' directory in your home folder."
+name = "📥 Setup Tutorial"
+description = "Access the official GitHub releases page to download pre-compiled binaries for your machine. Rename the unzipped binary folder to 'llama.cpp'."
 col = "A"
 row = 0
 items = [
-    { name = "Build (Basic)", description = "Clones the repo and builds the standard version.", command = """
-#!/bin/bash
-set -e
-if [ ! -d "$HOME/llama.cpp" ]; then
-  git clone https://github.com/ggerganov/llama.cpp.git "$HOME/llama.cpp"
-fi
-cd "$HOME/llama.cpp"
-cmake -B build
-cmake --build build -j
-echo "Build complete! Binaries are in $HOME/llama.cpp/build/bin"
-""", auto_close_execution = false },
-    { name = "Build (CUDA)", description = "Builds with NVIDIA CUDA support for GPU acceleration.", command = """
-#!/bin/bash
-set -e
-if [ ! -d "$HOME/llama.cpp" ]; then
-  git clone https://github.com/ggerganov/llama.cpp.git "$HOME/llama.cpp"
-fi
-cd "$HOME/llama.cpp"
-cmake -B build -DLLAMA_CUDA=ON
-cmake --build build -j
-echo "Build complete! Binaries are in $HOME/llama.cpp/build/bin"
-""", auto_close_execution = false },
-    { name = "Clean Build", description = "Removes the build directory to start fresh.", command = "rm -rf $HOME/llama.cpp/build", auto_close_execution = true }
-]
-
-[[commands]]
-name = "📥 Manual Download & Unpack"
-description = "Access the official GitHub releases page to download pre-compiled binaries."
-col = "A"
-row = 1
-items = [
-  { name = "Open Releases Page", description = "Opens the latest llama.cpp releases page in your browser. Download a pre-compiled release, unpack it, and rename the main directory to 'llama.cpp', placing it in your home folder (~/llama.cpp) to match the expected paths in Quick Start.", command = "xdg-open https://github.com/ggerganov/llama.cpp/releases/latest >/dev/null 2>&1 &", auto_close_execution = true }
+  { name = "Open Releases Page", description = "Opens the latest llama.cpp releases page in your browser. Download a pre-compiled release, unpack it, and rename the main directory to 'llama.cpp', placing it in your home folder (~/llama.cpp/llama-server, llama-cli, ...etc) to match the expected paths in Quick Start.", command = "xdg-open https://github.com/ggerganov/llama.cpp/releases/latest >/dev/null 2>&1 &", auto_close_execution = true },
+  { name = "Open Target Directory", description ="Once the compressed file is downloaded, move the compressed file to this destination. Unpack the file and rename the folder to 'llama.cpp'. Make sure the binary files are not in a subfolder!", command = "xdg-open $HOME", auto_close_execution = true }
 ]
 
 [[commands]]
@@ -67,12 +38,16 @@ row = 2
 items = [
   { name = "Stop All Servers", description = "Finds and terminates all running llama-server instances.", command = """
 #!/bin/bash
-if pgrep -f "llama-server" > /dev/null; then
-    pkill -f "llama-server"
-    echo "All llama-server processes have been stopped."
+
+# Check for either llama-server OR llama-cli
+if pgrep -f "llama-server|llama-cli" > /dev/null; then
+    # Kill both matches at once
+    pkill -f "llama-server|llama-cli"
+    echo "All llama-server and llama-cli processes have been stopped."
 else
-    echo "No llama-server processes were found running."
+    echo "No llama processes (server or cli) were found running."
 fi
+
 """, auto_close_execution = false }
 ]
 
@@ -81,62 +56,41 @@ fi
 # │ Run inference and benchmarks directly on your local machine.
 # └─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 [[commands]]
-name = "📥 Install Models"
-description = "Launch a server to download models. These commands run in the foreground so you can see download progress and accept licenses. Once the model download is complete (server starts), you can safely Ctrl+C. Models are saved to ~/.cache/huggingface/hub/ or ~/.cache/llama.cpp."
+name = "🦙 Quick Start (TUI)"
+description = "Launch a command to download models. These commands run in the foreground so you can see download progress. Once the model download is complete (TUI starts), you can safely Ctrl+C. Models are saved to ~/.cache/llama.cpp."
 col = "B"
 row = 0
 items = [
-    { name = "Download & Run CPU (Qwen3-0.6B)", description = "Downloads the small and fast Qwen3-0.6B model in the foreground.", command = "$HOME/llama.cpp/build/bin/llama-server -hf ggml-org/Qwen3-0.6B-GGUF --jinja -c 0 --host 127.0.0.1 --port 8033", auto_close_execution = false },
+    { name = "Download & Run CPU (Qwen3-0.6B)", description = "Downloads the small and fast Qwen3-0.6B model in the foreground.", command = "x-terminal-emulator -e $HOME/llama.cpp/llama-cli -hf ggml-org/Qwen3-0.6B-GGUF --jinja -c 0 > /dev/null 2>&1 &" },
     #{ name = "Download & Run CPU (Qwen2.5-VL-3B)", description = "Downloads the Qwen2.5-VL-3B Vision Language model in the foreground.", command = "$HOME/llama.cpp/build/bin/llama-server -hf ggml-org/Qwen2.5-VL-3B-Instruct-GGUF --jinja -c 0 --host 127.0.0.1 --port 8033", auto_close_execution = false },
-    { name = "Download & Run CPU (Qwen2.5-Omni-3B-GGUF)", description = "Downloads the Qwen2.5-Omni-3B-GGUF model in the foreground.", command = "$HOME/llama.cpp/build/bin/llama-server -hf ggml-org/Qwen2.5-Omni-3B-GGUF --jinja -c 16000 --host 127.0.0.1 --port 8033", auto_close_execution = false },
-    { name = "Download & Run CPU (Qwen3-4B-Thinking)", description = "Downloads the Qwen3-4B-Thinking-2507-Q8_0 model in the foreground.", command = "$HOME/llama.cpp/build/bin/llama-server -hf ggml-org/Qwen3-4B-Thinking-2507-Q8_0-GGUF --jinja -c 16000 --host 127.0.0.1 --port 8033", auto_close_execution = false },
+    { name = "Download & Run CPU (Qwen2.5-Omni-3B-GGUF)", description = "Downloads the Qwen2.5-Omni-3B-GGUF model in the foreground.", command = "x-terminal-emulator -e $HOME/llama.cpp/llama-cli -hf ggml-org/Qwen2.5-Omni-3B-GGUF --jinja -c 0 > /dev/null 2>&1 &"},
+    { name = "[MacOS] Download & Run CPU (Qwen2.5-Omni-3B-GGUF)", description = "Downloads the Qwen2.5-Omni-3B-GGUF model in the foreground. [MacOS] This command serves as an example of how one could implement related commands, since x-terminal-emulator is not an option. Better MacOS support will come in time.", command = "echo '$HOME/llama.cpp/llama-cli -hf ggml-org/Qwen2.5-Omni-3B-GGUF --jinja -c 0' > /tmp/llama_launch.command && chmod +x /tmp/llama_launch.command && open /tmp/llama_launch.command > /dev/null 2>&1 &"},
+    { name = "Download & Run CPU (Qwen3-4B-Thinking)", description = "Downloads the Qwen3-4B-Thinking-2507-Q8_0 model in the foreground.", command = "x-terminal-emulator -e $HOME/llama.cpp/llama-cli -hf ggml-org/Qwen3-4B-Thinking-2507-Q8_0-GGUF --jinja -c 16000 > /dev/null 2>&1 &"},
    # { name = "Download & Run CPU (Ministral 3B)", description = "Downloads the Ministral 3B Reasoning model in the foreground.", command = "$HOME/llama.cpp/build/bin/llama-server -hf ggml-org/Ministral-3-3B-Reasoning-2512-GGUF --jinja -c 8192 --host 127.0.0.1 --port 8033", auto_close_execution = false },
    # { name = "Download & Run CPU (Ministral 8B)", description = "Downloads the Ministral 8B Reasoning model in the foreground.", command = "$HOME/llama.cpp/build/bin/llama-server -hf ggml-org/Ministral-3-8B-Reasoning-2512-GGUF --jinja -c 8192 --host 127.0.0.1 --port 8033", auto_close_execution = false },
-    { name = "Download & Run GPU (GPT-OSS-20B)", description = "Downloads GPT-OSS-20B (MXFP4). Optimized for NVIDIA 3060 (12GB). Runs in foreground.", command = "$HOME/llama.cpp/build/bin/llama-server -hf ggml-org/gpt-oss-20b-GGUF --jinja -c 8192 -ngl 10 --n-cpu-moe 12 -b 2048 -ub 2048 --cont-batching --no-mmap --host 0.0.0.0 --port 8033", auto_close_execution = false }
+    { name = "Download & Run GPU (GPT-OSS-20B)", description = "Downloads GPT-OSS-20B (MXFP4). Optimized for NVIDIA 3060 (12GB). Runs in foreground.", command = "x-terminal-emulator -e $HOME/llama.cpp/llama-cli -hf ggml-org/gpt-oss-20b-GGUF --jinja -c 8192 -ngl 10 --n-cpu-moe 12 -b 2048 -ub 2048 --cont-batching --no-mmap > /dev/null 2>&1 &" }
 ]
 
 [[commands]]
-name = "🦙 Quick Start"
-description = "Launch the server with sensible defaults. Assumes models are already downloaded. These run in the background."
+name = "🌐 Launch WebUI Service"
+description = "Launch the server with sensible defaults. Assumes models are already downloaded. These run in the background.WebUI access :  http://127.0.0.1:8033"
 col = "B"
 row = 1
 items = [
-    {name = "Open Local WebUI", description = "Opens the LLamaCPP WebUI address in your Browser.", command = "xdg-open http://127.0.0.1:8033/ > /dev/null 2>&1 &"},
-    { name = "Start CPU (Qwen3-0.6B)", description = "Launches the small and fast Qwen3-0.6B model.", command = "$HOME/llama.cpp/build/bin/llama-server -hf ggml-org/Qwen3-0.6B-GGUF --jinja -c 0 --host 127.0.0.1 --port 8033 > ~/llama.cpp/server.log 2>&1 &", auto_close_execution = false },
+    {name = "Open Local WebUI)", description = "Opens the LLamaCPP WebUI address in your Browser.", command = "xdg-open http://127.0.0.1:8033/ > /dev/null 2>&1 &"},
+    { name = "Start CPU (Qwen3-0.6B)", description = "Launches the small and fast Qwen3-0.6B model.", command = "$HOME/llama.cpp/llama-server -hf ggml-org/Qwen3-0.6B-GGUF --jinja -c 0 --host 127.0.0.1 --port 8033 > ~/llama.cpp/server.log 2>&1 &", auto_close_execution = false },
     #{ name = "Start CPU (Qwen2.5-VL-3B)", description = "Launches the Qwen2.5-VL-3B Vision Language model.", command = "$HOME/llama.cpp/build/bin/llama-server -hf ggml-org/Qwen2.5-VL-3B-Instruct-GGUF --jinja -c 0 --host 127.0.0.1 --port 8033 > ~/llama.cpp/server.log 2>&1 &", auto_close_execution = false },
-    { name = "Start CPU (Qwen2.5-Omni-3B-GGUF)", description = "Launches the Qwen2.5-Omni-3B-GGUF model.", command = "$HOME/llama.cpp/build/bin/llama-server -hf ggml-org/Qwen2.5-Omni-3B-GGUF --jinja -c 16000 --host 127.0.0.1 --port 8033 > ~/llama.cpp/server.log 2>&1 &", auto_close_execution = false },
-    { name = "Start CPU (Qwen3-4B-Thinking)", description = "Launches the Qwen3-4B-Thinking-2507-Q8_0 model.", command = "$HOME/llama.cpp/build/bin/llama-server -hf ggml-org/Qwen3-4B-Thinking-2507-Q8_0-GGUF --jinja -c 16000 --host 127.0.0.1 --port 8033 > ~/llama.cpp/server.log 2>&1 &", auto_close_execution = false },
+    { name = "Start CPU (Qwen2.5-Omni-3B-GGUF)", description = "Launches the Qwen2.5-Omni-3B-GGUF model.", command = "$HOME/llama.cpp/llama-server -hf ggml-org/Qwen2.5-Omni-3B-GGUF --jinja -c 0 --host 127.0.0.1 --port 8033 > ~/llama.cpp/server.log 2>&1 &", auto_close_execution = false },
+    { name = "Start CPU (Qwen3-4B-Thinking)", description = "Launches the Qwen3-4B-Thinking-2507-Q8_0 model.", command = "$HOME/llama.cpp/llama-server -hf ggml-org/Qwen3-4B-Thinking-2507-Q8_0-GGUF --jinja -c 16000 --host 127.0.0.1 --port 8033 > ~/llama.cpp/server.log 2>&1 &", auto_close_execution = false },
     #{ name = "Start CPU (Ministral 3B)", description = "Launches the Ministral 3B Reasoning model.", command = "$HOME/llama.cpp/build/bin/llama-server -hf ggml-org/Ministral-3-3B-Reasoning-2512-GGUF --jinja -c 8192 --host 127.0.0.1 --port 8033 > ~/llama.cpp/server.log 2>&1 &", auto_close_execution = false },
 #    { name = "Start CPU (Ministral 8B)", description = "Launches the Ministral 8B Reasoning model.", command = "$HOME/llama.cpp/build/bin/llama-server -hf ggml-org/Ministral-3-8B-Reasoning-2512-GGUF --jinja -c 8192 --host 127.0.0.1 --port 8033 > ~/llama.cpp/server.log 2>&1 &", auto_close_execution = false },
-    { name = "Start GPU Server (GPT-OSS-20B)", description = "Launches GPT-OSS-20B. Optimized for NVIDIA 3060 (12GB). Network available (0.0.0.0).", command = "$HOME/llama.cpp/build/bin/llama-server -hf ggml-org/gpt-oss-20b-GGUF --jinja -c 8192 -ngl 10 --n-cpu-moe 12 -b 2048 -ub 2048 --cont-batching --no-mmap --host 0.0.0.0 --port 8033 > ~/llama.cpp/server.log 2>&1 &", auto_close_execution = false },
+    { name = "Start GPU Server (GPT-OSS-20B)", description = "Launches GPT-OSS-20B. Optimized for NVIDIA 3060 (12GB). Network available (0.0.0.0).", command = "$HOME/llama.cpp/llama-server -hf ggml-org/gpt-oss-20b-GGUF --jinja -c 8192 -ngl 10 --n-cpu-moe 12 -b 2048 -ub 2048 --cont-batching --no-mmap --host 0.0.0.0 --port 8033 > ~/llama.cpp/server.log 2>&1 &", auto_close_execution = false },
    #{ name = "Open Remote WebUI", description = "Opens a (remote) LLamaCPP WebUI address in your Browser.", command = "xdg-open http://0.0.0.0:8033/ > /dev/null 2>&1 &"},
 ]
 
-[[commands]]
-name = "̶🛠️ ̶C̶u̶s̶t̶o̶m̶ ̶&̶ ̶C̶L̶I̶"
-description = "Run a custom server or interact directly with a model via the command line."
-col = "B"
-row = 2
-items = [
-    { name = "Custom CPU Server", description = "Prompts for model, GPU layers, and context size.", command = """
-#!/bin/bash
-read -p 'Enter HF Model Repo ID (e.g., ggml-org/Qwen2-7B-Instruct-GGUF): ' model_repo
-read -p 'Enter number of GPU layers (e.g., 35): ' ngl
-read -p 'Enter context size (e.g., 4096): ' ctx_size
-$HOME/llama.cpp/build/bin/llama-server -hf "$model_repo" -c "$ctx_size" --host 127.0.0.1 --port 8033 > ~/llama.cpp/server.log 2>&1 &
-""", auto_close_execution = false },
-    { name = "Custom GPU Server", description = "Prompts for model, GPU layers, and context size.", command = """
-#!/bin/bash
-read -p 'Enter HF Model Repo ID (e.g., ggml-org/Qwen2-7B-Instruct-GGUF): ' model_repo
-read -p 'Enter number of GPU layers (e.g., 35): ' ngl
-read -p 'Enter context size (e.g., 4096): ' ctx_size
-$HOME/llama.cpp/build/bin/llama-server -hf "$model_repo" -c "$ctx_size" -ngl "$ngl" --host 127.0.0.1 --port 8033 > ~/llama.cpp/server.log 2>&1 &
-""", auto_close_execution = false }
-]
-
 #=======================================================================================================================
-# ┌─ COLUMN C: Docker & Docs ─────────────────────────────────────────────────────────────────────────────────────────┐
-# │ Manage containerized servers and access documentation.
+# ┌─ COLUMN C: Models & Docs ─────────────────────────────────────────────────────────────────────────────────────────┐
+# │ Manage Models
 # └─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 [[commands]]
 name = "💾 Manage Models"
