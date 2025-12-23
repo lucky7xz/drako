@@ -83,7 +83,15 @@ description = "Bundled up all the little tools that this menu uses, just in case
 items = [
     { name = "Install common tools", description = "Install utilities used across profiles (btop, neofetch, clamav, fzf, bmon).", command = "{{Install common tools}}", auto_close_execution = false},
     { name = "Install micro", description = "Installs the micro text editor. Micro is a modern, easy-to-use terminal editor recommended for beginners.", command = "{{Install micro}}", auto_close_execution = false},
-    { name = "Set micro as EDITOR", description = "EDITOR is an environment variable that sets your default text editor. This adds it to ~/.bashrc. Restart your shell after.", command = "{{Set micro as EDITOR}}", auto_close_execution = false}
+    { name = "Set micro as EDITOR", description = "EDITOR is an environment variable that sets your default text editor. This adds it to ~/.bashrc. Restart your shell after.", command = "{{Set micro as EDITOR}}", auto_close_execution = false},
+
+ { name = "Add go/bin to PATH", description = "Appends '~/go/bin' to your PATH variable in ~/.bashrc, ~/.zshrc, or PowerShell Profile. Ensures Go binaries can be run globally.", command = "{{Add go/bin to PATH}}", auto_close_execution = false },
+
+    { name = "🃏 Summon '101 Series' Command Deck", description = "Downloads the 101 command deck from github to your inventory using the drako CLI command.", command = "{{🃏 Summon '101 Series' Command Deck}}", auto_close_execution = false},
+    
+    { name = "🃏 Summon 'ggml' Command Deck", description = "Downloads the ggml command deck from github to your inventory using the drako CLI command.", command = "{{🃏 Summon 'ggml' Command Deck}}", auto_close_execution = false},
+    
+    { name = "🃏 Summon Private Deck", description = "Downloads the [input] command deck from github to your inventory using the drako CLI command. Requires SSH keys", command = "{{🃏 Summon Private Deck}}", auto_close_execution = false},
 ]
 
 [[commands]]
@@ -99,14 +107,14 @@ name = " 🐉 Core ⋮ "
 col = "C"
 row = 2
 items = [
-    { name = "⚙️ Edit config.toml", description = "This is the command center, the cockpit, the big red button. It opens up the very file you're reading right now, so you can tweak and tune dR4ko to your heart's content. Want to change a command? A description? The theme? This is the place. It's like being handed the keys to the whole operation. A little bit of power is a fun thing, isn't it? Never be afraid to break stuff. Read the next description to see why.", command = "{{⚙️ Edit config.toml}}"},
+    { name = "⚙️  Edit config.toml ", description = "This is the command center, the cockpit, the big red button. It opens up the very file you're reading right now, so you can tweak and tune dR4ko to your heart's content. Want to change a command? A description? The theme? This is the place. It's like being handed the keys to the whole operation. A little bit of power is a fun thing, isn't it? Never be afraid to break stuff. Read the next description to see why.", command = "{{⚙️ Edit config.toml}}"},
     { name = "📁 Browse config dir", description = "Welcome to the rabbit hole. In Linux, many of your configurations live in hidden folders, like this `.config` directory. It's a bit of a secret clubhouse for your apps. This command opens up the `drako` folder inside, where all its settings live. We've set you up with some sensible defaults, but the real magic is making it your own. Go ahead, poke around, make some changes. That's the whole point! You can even save your custom setups and reuse them. It's your system, your rules. Welcome to the world of dotfiles.", command = "{{📁 Browse config dir}}"},
     { name = "📜 Open Logs", description = "Opens the Drako log file to see what's been happening under the hood. Useful for debugging or just satisfying your curiosity about what Drako has been up to.", command = "{{📜 Open Logs}}"},
-    { name = "ℹ️ Open Pivots", description = "Opens the Drako pivot file to see what's been happening under the hood. Useful for debugging or just satisfying your curiosity about what Drako has been up to.", command = "{{ℹ️ Open Pivots}}"},
+    { name = "ℹ️  Open Pivot ", description = "Opens the Drako pivot file to see what's been happening under the hood. Useful for debugging or just satisfying your curiosity about what Drako has been up to.", command = "{{ℹ️ Open Pivots}}"},
 
     #===========================================================================================================
     { name = "Go Version", description = "Checks the installed Go version. Drako is built with Go, so if it fails to launch, confirming you have a compatible Go version is the first step.", command = "{{Go Version}}", auto_close_execution = false},
-    { name = "Which Go", description = "Shows the exact location of the Go compiler. If this is empty or wrong, it means the system can't find the Go compiler, which is essential for building and running Drako.", command = "{{Which Go}}", auto_close_execution = false},
-    { name = "Alias x=drako", description = "Adds 'alias x=~/go/bin/drako' to your ~/.bashrc so you can launch it by just typing 'x'. Useful if ~/go/bin is not in your PATH.", command = "{{Alias x=drako}}" , auto_close_execution = false}
+    { name = "Alias x=drako", description = "Adds 'alias x=~/go/bin/drako' to your ~/.bashrc so you can launch it by just typing 'x'. Useful if ~/go/bin is not in your PATH.", command = "{{Alias x=drako}}" , auto_close_execution = false},
+    { name = "Add go/bin to PATH", description = "Appends '~/go/bin' to your PATH variable in ~/.bashrc, ~/.zshrc, or PowerShell Profile. Ensures Go binaries can be run globally.", command = "{{Add go/bin to PATH}}", auto_close_execution = false }
     
 ]

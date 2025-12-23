@@ -173,6 +173,40 @@ linux_generic = "echo 'export EDITOR=micro' >> ~/.bashrc && echo \"Alias added t
 macos = "echo 'export EDITOR=micro' >> ~/.zshrc && echo \"Alias added to ~/.zshrc. Restart shell to use 'x'.\""
 windows = "setx EDITOR micro"
 
+["🃏 Summon 'ggml' Command Deck"]
+linux_generic = "drako summon https://github.com/lucky7xz/ggml-deck.git"
+macos = "drako summon https://github.com/lucky7xz/ggml-deck.git"
+windows = "drako summon https://github.com/lucky7xz/ggml-deck.git"
+
+["🃏 Summon '101 Series' Command Deck"]
+linux_generic = "drako summon https://github.com/lucky7xz/101-deck.git"
+macos = "drako summon https://github.com/lucky7xz/101-deck.git"
+windows = "drako summon https://github.com/lucky7xz/101-deck.git"
+
+["🃏 Summon Private Deck"]
+linux_generic = '''
+echo "Enter GitHub Username:"
+read username
+echo "Enter Repository Name:"
+read reponame
+echo "Summoning from git@github.com:$username/$reponame.git..."
+drako summon "git@github.com:$username/$reponame.git"
+'''
+macos = '''
+echo "Enter GitHub Username:"
+read username
+echo "Enter Repository Name:"
+read reponame
+echo "Summoning from git@github.com:$username/$reponame.git..."
+drako summon "git@github.com:$username/$reponame.git"
+'''
+windows = '''
+$username = Read-Host -Prompt "Enter GitHub Username"
+$reponame = Read-Host -Prompt "Enter Repository Name"
+Write-Host "Summoning from git@github.com:$username/$reponame.git..."
+drako summon "git@github.com:$username/$reponame.git"
+'''
+
 ["📜 Open Shell Config"]
 linux_generic = "$EDITOR ~/.bashrc"
 macos = "$EDITOR ~/.zshrc"
@@ -182,7 +216,7 @@ windows = "drako open $PROFILE"
 # ==================================================================
 # ==================================================================
 
-["⚙️ Edit config.toml"]
+["⚙️  Edit config.toml"]
 linux_generic = "$EDITOR ~/.config/drako/config.toml"
 
 macos = "$EDITOR ~/.config/drako/config.toml"
@@ -198,7 +232,7 @@ linux_generic = "$EDITOR ~/.config/drako/drako.log"
 macos = "$EDITOR ~/.config/drako/drako.log"
 windows = "drako open %APPDATA%\\drako\\drako.log"
 
-["ℹ️ Open Pivots"]
+["ℹ️  Open Pivots"]
 linux_generic = "$EDITOR ~/.config/drako/pivot.toml"
 macos = "$EDITOR ~/.config/drako/pivot.toml"
 windows = "drako open %APPDATA%\\drako\\pivot.toml"
@@ -209,6 +243,31 @@ macos = "go version"
 windows = "go version"  
 
 ["Alias x=drako"]
-linux_generic = "echo \"alias x='~/go/bin/drako'\" >> ~/.bashrc && echo \"Alias added to ~/.bashrc. Restart shell to use 'x'.\""
-acos = "echo \"alias x='~/go/bin/drako'\" >> ~/.zshrc && echo \"Alias added. Restart shell to use 'x'.\""
-windows = "echo 'Function x { & \"$env:USERPROFILE\\go\\bin\\drako.exe\" }' >> $PROFILE"
+linux_generic = '''
+echo "alias x='~/go/bin/drako'" >> ~/.bashrc
+echo "Alias added to ~/.bashrc. Restart shell to use 'x'."
+'''
+macos = '''
+echo "alias x='~/go/bin/drako'" >> ~/.zshrc
+echo "Alias added. Restart shell to use 'x'."
+'''
+windows = '''
+echo 'Function x { & "$env:USERPROFILE\go\bin\drako.exe" }' >> $PROFILE
+'''
+
+["Add go/bin to PATH"]
+
+linux_generic = '''
+echo 'export PATH=$PATH:~/go/bin' >> ~/.bashrc
+echo "Path added to ~/.bashrc. Restart shell to take effect."
+'''
+
+acos = '''
+echo 'export PATH=$PATH:~/go/bin' >> ~/.zshrc
+echo "Path added to ~/.zshrc. Restart shell to take effect."
+'''
+
+windows = '''
+echo '$env:PATH += ";$env:USERPROFILE\go\bin"' >> $PROFILE
+Write-Host "Path added to PowerShell Profile. Restart shell to take effect."
+'''
