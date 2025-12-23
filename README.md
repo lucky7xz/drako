@@ -76,14 +76,19 @@ To enable `cd` on exit, see [docs/SHELL_INTEGRATION.md](docs/SHELL_INTEGRATION.m
 
 **NOTE:** Bootstrapping only occurs if files are missing, and it never overwrites existing profiles. To clean-up, use `drako purge --interactive` or `drako purge --destroyeverything` (backup your work first).
 
-**The Weaver:** Ensures cross-platform consistency. Inside the Drako binary lies a **Settings Template**, a **Core Template**, and a **[dictionary](internal/config/bootstrap/core_dictionary.toml)** of OS-specific defaults. When you run Drako for the first time, The Weaver "weaves" these together to create `~/.config/drako/core.profile.toml` tailored to your OS. We also provide a handful of profiles by default, to give you some inspiration (incl. llamacpp, git, etc).
+**The Weaver:** Ensures cross-platform consistency. Inside the Drako binary lies a **Settings Template**, a **Core Template**, and a **[dictionary](internal/config/bootstrap/core_dictionary.toml)** of OS-specific defaults. When you run Drako for the first time, The Weaver "weaves" these together to create `~/.config/drako/core.profile.toml` tailored to your OS.
+
+**Clean Slate:** The default inventory is intentionally minimal to avoid cluttering your workspace. You can summon curated command decks directly from the **Install Tools** menu in the Core profile, or use the CLI to summon them manually:
+
+- **101 Series** ([Source](https://github.com/lucky7xz/101-deck)): `drako summon https://github.com/lucky7xz/101-deck.git`
+- **GGML** ([Source](https://github.com/lucky7xz/ggml-deck)): `drako summon https://github.com/lucky7xz/ggml-deck.git`
 
 ```markdown
 internal/config/bootstrap/      
 ├── settings_template.toml     # [Template] Global settings
 ├── core_template.toml         # [Template] Default profile commands
 ├── core_dictionary.toml       # [Dictionary] OS-specific command mappings
-└── inventory/                 # [Profiles] Default profile inventory
+└── inventory/                 # [Profiles] Minimal default inventory (ssh-utils)
 ```
 
 **NOTE:** If your OS specific dictionary is missing, feel free to create a pull request!
