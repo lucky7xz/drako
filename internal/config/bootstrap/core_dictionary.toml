@@ -259,15 +259,18 @@ echo 'Function x { & "$env:USERPROFILE\go\bin\drako.exe" }' >> $PROFILE
 
 linux_generic = '''
 echo 'export PATH=$PATH:~/go/bin' >> ~/.bashrc
+echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
 echo "Path added to ~/.bashrc. Restart shell to take effect."
 '''
 
 acos = '''
 echo 'export PATH=$PATH:~/go/bin' >> ~/.zshrc
+echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.zshrc
 echo "Path added to ~/.zshrc. Restart shell to take effect."
 '''
 
 windows = '''
-echo '$env:PATH += ";$env:USERPROFILE\go\bin"' >> $PROFILE
+Add-Content $PROFILE '$env:PATH += ";$env:USERPROFILE\go\bin"'
+Add-Content $PROFILE '$env:PATH += ";C:\Program Files\Go\bin"'
 Write-Host "Path added to PowerShell Profile. Restart shell to take effect."
 '''
