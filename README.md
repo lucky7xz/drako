@@ -71,8 +71,8 @@ To enable `cd` on exit, see [docs/SHELL_INTEGRATION.md](docs/SHELL_INTEGRATION.m
 ## 👢 Bootstrap & 🧶 The Weaver
 
 **The Bootstrap:** On first run, `drako` creates:
-- `config.toml`: Global settings (Keys, Security).
-- `core.profile.toml`: The default command profile.
+- `config.toml`: Global settings (Input Keys, Global Theme).
+- `core.profile.toml`: The default command profile (Process Monitor, System Info, etc.)
 
 **NOTE:** Bootstrapping only occurs if files are missing, and it never overwrites existing profiles. To clean-up, use `drako purge --interactive` or `drako purge --destroyeverything` (backup your work first).
 
