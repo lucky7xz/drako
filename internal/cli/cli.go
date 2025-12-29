@@ -109,9 +109,17 @@ func HandlePurgeCommand() {
 	// Parse purge specific flags
 	// We need a custom flagset to parse args after "drako purge"
 	purgeCmd := flag.NewFlagSet("purge", flag.ExitOnError)
-	target := purgeCmd.String("target", "", "Target to purge: 'core' or profile name (e.g. 'git')")
+
+	var target string
+	purgeCmd.StringVar(&target, "target", "", "Target to purge: 'core' or profile name (e.g. 'git')")
+	purgeCmd.StringVar(&target, "t", "", "Alias for --target")
+
+	var interactive bool
+	purgeCmd.BoolVar(&interactive, "interactive", false, "Interactively select a profile to purge")
+	purgeCmd.BoolVar(&interactive, "i", false, "Alias for --interactive")
+
+	// destroyEverything is dangerous, let's keep it long-only for safety
 	destroyEverything := purgeCmd.Bool("destroyeverything", false, "DANGEROUS: Delete entire config directory (no trash)")
-	interactive := purgeCmd.Bool("interactive", false, "Interactively select a profile to purge")
 
 	// Parse args starting from index 2 (skipping "drako" and "purge")
 	if err := purgeCmd.Parse(os.Args[2:]); err != nil {
@@ -133,7 +141,7 @@ func HandlePurgeCommand() {
 		DestroyEverything: *destroyEverything,
 	}
 
-	if *interactive {
+	if interactive {
 		// Struct to hold profile info
 		type startProfile struct {
 			DisplayName  string // "git (Equipped)" or "git (Inventory)"
@@ -215,10 +223,10 @@ func HandlePurgeCommand() {
 			os.Exit(1)
 		}
 
-	} else if *target == "core" {
+	} else if target == "core" {
 		opts.TargetCore = true
-	} else if *target != "" {
-		opts.TargetProfile = *target
+	} else if target != "" {
+		opts.TargetProfile = target
 	} else if !*destroyEverything {
 		// Legacy behavior: "drako purge" without args -> Standard cleanup (preserve config.toml)
 		// BUT WAIT, the user wants "Full Circle" safe purge.

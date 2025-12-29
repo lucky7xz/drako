@@ -155,11 +155,11 @@ windows = "curl wttr.in"
 # ==================================================================
 
 ["Install common tools"]
-linux_debian = "sudo apt install btop bmon neofetch clamav fzf "
-linux_arch = "sudo pacman -S btop bmon neofetch clamav fzf "
-linux_fedora = "sudo dnf install btop bmon neofetch clamav fzf "
-macos = "brew install btop bmon neofetch fzf"
-windows = "winget install btop bmon neofetch fzf"
+linux_debian = "sudo apt install btop bmon neofetch clamav fzf duf"
+linux_arch = "sudo pacman -S btop bmon neofetch clamav fzf duf"
+linux_fedora = "sudo dnf install btop bmon neofetch clamav fzf duf"
+macos = "brew install btop bmon neofetch fzf duf"
+windows = "winget install btop bmon neofetch fzf duf"
 
 ["Install micro"]
 linux_debian = "sudo apt install micro"
