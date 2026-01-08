@@ -229,12 +229,6 @@ func HandlePurgeCommand() {
 		opts.TargetProfile = target
 	} else if !*destroyEverything {
 		// Legacy behavior: "drako purge" without args -> Standard cleanup (preserve config.toml)
-		// BUT WAIT, the user wants "Full Circle" safe purge.
-		// Let's default to standard cleanup but now it MOVES to trash instead of delete.
-		// And it EXCLUDES config.toml by default (just like old PurgeConfig(..., false))
-		// Wait, if no target is specified, do we clean everything else?
-		// Old behavior: "PurgeConfig(..., false)" -> Deleted everything EXCEPT config.toml
-		// Let's keep that behavior for "drako purge" with no args, but SAFE (trash).
 	}
 
 	// Logging setup

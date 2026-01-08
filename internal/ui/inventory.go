@@ -10,6 +10,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/core"
 )
 
 // reloadProfilesMsg signals the app to reload the configuration.
@@ -22,13 +23,12 @@ func (e inventoryErrorMsg) Error() string { return e.err.Error() }
 
 // inventoryModel holds the state for the inventory management TUI.
 type inventoryModel struct {
-	visible     []string // Profiles in the main config dir
-	inventory   []string // Profiles in the inventory subdir
-	cursor      int      // Position in the current list
-	focusedList int      // 0 for visible, 1 for inventory, 2 for apply, 3 for rescue
-	heldItem    *string  // The profile being moved
-	status      string   // Feedback message for the user
-	err         error    // Any error that has occurred
+	State *core.InventoryState
+
+	cursor      int    // Position in the current list
+	focusedList int    // 0 for visible, 1 for inventory, 2 for apply, 3 for rescue
+	status      string // Feedback message for the user
+	err         error  // Any error that has occurred
 
 	// Keep the initial state to calculate the diff on apply
 	initialVisible   []string
@@ -80,8 +80,6 @@ func InitInventoryModel(configDir string) inventoryModel {
 
 	// Build visible list including the special "Core" entry
 	// Persisted equipped_order uses canonical names (e.g., "Core", "nw_pro")
-	// Build visible list
-	// Persisted equipped_order uses canonical names (e.g., "core", "nw_pro")
 	var visible []string // contains filenames for overlays
 	if pf, err := config.ReadPivotProfile(configDir); err == nil && len(pf.EquippedOrder) > 0 {
 		// Map canonical name -> filename
@@ -117,9 +115,10 @@ func InitInventoryModel(configDir string) inventoryModel {
 		visible = append(visible, visibleFiles...)
 	}
 
+	state := core.NewInventoryState(visible, inventory)
+
 	return inventoryModel{
-		visible:          visible,
-		inventory:        inventory,
+		State:            state,
 		initialVisible:   append([]string{}, visible...),
 		initialInventory: append([]string{}, inventory...),
 	}
@@ -128,21 +127,11 @@ func InitInventoryModel(configDir string) inventoryModel {
 // ApplyInventoryChangesCmd calculates the necessary file moves and executes them.
 func ApplyInventoryChangesCmd(configDir string, m inventoryModel) tea.Cmd {
 	return func() tea.Msg {
-		inventoryDir := filepath.Join(configDir, "inventory")
-		moves := map[string]string{} // from -> to
 
-		// Find files to move from visible to inventory
-		for _, file := range m.initialVisible {
-			if !Contains(m.visible, file) {
-				moves[filepath.Join(configDir, file)] = filepath.Join(inventoryDir, file)
-			}
-		}
-
-		// Find files to move from inventory to visible
-		for _, file := range m.initialInventory {
-			if !Contains(m.inventory, file) {
-				moves[filepath.Join(inventoryDir, file)] = filepath.Join(configDir, file)
-			}
+		// Use core logic to calculate moves
+		moves, err := m.State.CalculateMoves(configDir, m.initialVisible, m.initialInventory)
+		if err != nil {
+			return inventoryErrorMsg{err: fmt.Errorf("calc moves failed: %w", err)}
 		}
 
 		// Pre-flight check for conflicts
@@ -160,8 +149,9 @@ func ApplyInventoryChangesCmd(configDir string, m inventoryModel) tea.Cmd {
 		}
 
 		// Persist the current visible order into pivot.toml as equipped_order (canonical names)
-		order := make([]string, 0, len(m.visible))
-		for _, v := range m.visible {
+		currentVisible, _ := m.State.GetList(core.ListVisible)
+		order := make([]string, 0, len(*currentVisible))
+		for _, v := range *currentVisible {
 			order = append(order, strings.TrimSuffix(v, ".profile.toml"))
 		}
 		if err := config.WritePivotEquippedOrder(configDir, order); err != nil {

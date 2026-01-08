@@ -264,7 +264,7 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		targetIndex := num - 1 // Convert to 0-based index
 
 		if m.navigationTimer == nil { // This is the first number press (column selection)
-			lastCol := findLastPopulatedCol(m.grid)
+			lastCol := core.FindLastPopulatedCol(m.grid)
 			targetCol := min(targetIndex, lastCol)
 
 			// Ensure the target column is valid before proceeding
@@ -272,7 +272,7 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 
-			targetRow := findFirstPopulatedRow(m.grid, targetCol)
+			targetRow := core.FindFirstPopulatedRow(m.grid, targetCol)
 
 			m.cursorCol = targetCol
 			m.cursorRow = targetRow
@@ -288,7 +288,7 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.navigationTimer.Stop()
 			m.navigationTimer = nil
 
-			lastRow := findLastPopulatedRow(m.grid, m.cursorCol)
+			lastRow := core.FindLastPopulatedRow(m.grid, m.cursorCol)
 			targetRow := min(targetIndex, lastRow)
 
 			m.cursorRow = targetRow
@@ -420,50 +420,6 @@ func min(a, b int) int {
 		return a
 	}
 	return b
-}
-
-func findLastPopulatedCol(grid [][]string) int {
-	lastCol := -1
-	if len(grid) == 0 {
-		return lastCol
-	}
-	for r := 0; r < len(grid); r++ {
-		for c := 0; c < len(grid[r]); c++ {
-			if grid[r][c] != "" && c > lastCol {
-				lastCol = c
-			}
-		}
-	}
-	return lastCol
-}
-
-func findLastPopulatedRow(grid [][]string, col int) int {
-	lastRow := -1
-	if len(grid) == 0 || col < 0 {
-		return lastRow
-	}
-	for r := 0; r < len(grid); r++ {
-		if col < len(grid[r]) {
-			if grid[r][col] != "" {
-				lastRow = r
-			}
-		}
-	}
-	return lastRow
-}
-
-func findFirstPopulatedRow(grid [][]string, col int) int {
-	if len(grid) == 0 || col < 0 {
-		return 0
-	}
-	for r := 0; r < len(grid); r++ {
-		if col < len(grid[r]) {
-			if grid[r][col] != "" {
-				return r
-			}
-		}
-	}
-	return 0 // Fallback
 }
 
 func (m Model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -612,7 +568,7 @@ func (m Model) updateLockedMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 
-	dir := pumpDirectionForKey(key)
+	dir := core.PumpDirectionForKey(key)
 	if dir == 0 {
 		return m, nil
 	}
@@ -637,17 +593,6 @@ func (m Model) updateLockedMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
-}
-
-func pumpDirectionForKey(key string) int {
-	switch key {
-	case "left", "h", "a":
-		return -1
-	case "right", "l", "d":
-		return 1
-	default:
-		return 0
-	}
 }
 
 func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -685,10 +630,8 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case IsRight(m.Config.Keys, msg):
 		if inv.focusedList < 2 {
-			list := inv.visible
-			if inv.focusedList == 1 {
-				list = inv.inventory
-			}
+			listPtr, _ := inv.State.GetList(inv.focusedList)
+			list := *listPtr
 			if inv.cursor < len(list)-1 {
 				inv.cursor++
 			}
@@ -710,36 +653,23 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		currentList := &inv.visible
-		if inv.focusedList == 1 {
-			currentList = &inv.inventory
-		}
-
-		if inv.heldItem == nil {
+		if inv.State.HeldItem == nil {
 			// Pick up
-			if len(*currentList) > 0 {
-				item := (*currentList)[inv.cursor]
-				inv.heldItem = &item
-				*currentList = append((*currentList)[:inv.cursor], (*currentList)[inv.cursor+1:]...)
+			if err := inv.State.PickUpItem(inv.focusedList, inv.cursor); err != nil {
+				inv.status = err.Error()
+			} else {
 				// Adjust cursor if it's now out of bounds
-				if inv.cursor >= len(*currentList) && len(*currentList) > 0 {
-					inv.cursor = len(*currentList) - 1
+				listPtr, _ := inv.State.GetList(inv.focusedList)
+				if inv.cursor >= len(*listPtr) && len(*listPtr) > 0 {
+					inv.cursor = len(*listPtr) - 1
 				}
 			}
 		} else {
 			// Place
-			// Prevent placing Default into Inventory list (focusedList==1)
-			if inv.focusedList == 1 && inv.heldItem != nil && *inv.heldItem == "Default" {
-				inv.status = "Default cannot be moved to Inventory"
+			if err := inv.State.PlaceItem(inv.focusedList, inv.cursor); err != nil {
+				inv.status = err.Error()
 				return m, nil
 			}
-			// Ensure cursor is valid for placement
-			if inv.cursor > len(*currentList) {
-				inv.cursor = len(*currentList)
-			}
-			// Insert the held item at the cursor position
-			*currentList = append((*currentList)[:inv.cursor], append([]string{*inv.heldItem}, (*currentList)[inv.cursor:]...)...)
-			inv.heldItem = nil
 		}
 	}
 
@@ -782,11 +712,9 @@ func (m Model) handleProfileCycle(direction int) (tea.Model, tea.Cmd) {
 	// Only try up to 'total' times.
 	// Start from 1 to avoid re-selecting the current profile immediately.
 	for i := 1; i <= total; i++ {
-		next := (current + i*direction) % total
-		if next < 0 {
-			next += total
-		}
-		nextModel, cmd, ok := m.switchToProfileIndex(next)
+		target := core.CalculateNextProfileIndex(current, direction*i, total)
+
+		nextModel, cmd, ok := m.switchToProfileIndex(target)
 		if ok {
 			return nextModel, cmd
 		}

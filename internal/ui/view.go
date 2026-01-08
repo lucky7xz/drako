@@ -10,6 +10,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/core"
 )
 
 func (m Model) View() string {
@@ -324,8 +325,6 @@ func (m Model) renderProfileBar() string {
 		segments = append(segments, style.Render(m.profileStatusMessage))
 	}
 
-	//segments = append(segments, helpStyle.Render(" \n\n		Press i for Inventory"))
-
 	return lipgloss.NewStyle().PaddingTop(1).Render(lipgloss.JoinHorizontal(lipgloss.Left, segments...))
 }
 
@@ -345,14 +344,17 @@ func (m Model) viewInventoryMode() string {
 	var s strings.Builder
 	s.WriteString(titleStyle.Render("Inventory Management") + "\n\n")
 
-	// Render Visible Grid
-	s.WriteString(listHeaderStyle.Render("Equipped Profiles") + "\n")
-	s.WriteString(m.renderInventoryGrid(m.inventory.visible, 0))
+	visiblePtr, _ := m.inventory.State.GetList(core.ListVisible)
+	visible := *visiblePtr
+	inventoryPtr, _ := m.inventory.State.GetList(core.ListInventory)
+	inventory := *inventoryPtr
+
+	// Draw visible list
+	s.WriteString(m.renderInventoryGrid(visible, 0))
 	s.WriteString("\n\n")
 
-	// Render Inventory Grid
-	s.WriteString(listHeaderStyle.Render("Inventory") + "\n")
-	s.WriteString(m.renderInventoryGrid(m.inventory.inventory, 1))
+	// Draw inventory list
+	s.WriteString(m.renderInventoryGrid(inventory, 1))
 	s.WriteString("\n\n")
 
 	// Render Apply Button
@@ -372,8 +374,8 @@ func (m Model) viewInventoryMode() string {
 
 	// Render Held Item Status
 	heldItemStatus := " " // Reserve space
-	if m.inventory.heldItem != nil {
-		heldItemStatus = helpStyle.Render("Holding: ") + selectedItemStyle.Render(*m.inventory.heldItem)
+	if m.inventory.State.HeldItem != nil {
+		heldItemStatus = helpStyle.Render("Holding: ") + selectedItemStyle.Render(*m.inventory.State.HeldItem)
 	}
 	s.WriteString("\n\n" + heldItemStatus)
 
