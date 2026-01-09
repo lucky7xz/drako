@@ -171,3 +171,84 @@ func Contains(slice []string, item string) bool {
 	}
 	return false
 }
+
+func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	inv := &m.inventory
+
+	if inv.err != nil {
+		// Any key dismisses an error
+		m.mode = gridMode
+		inv.err = nil
+		return m, nil
+	}
+
+	switch {
+	case IsCancel(m.Config.Keys, msg):
+		m = m.presentNextBrokenProfile() // Return to next error or grid
+		return m, nil
+	case Matches(m.Config.Keys, msg, "ctrl+c"):
+		m.Quitting = true
+		return m, tea.Quit
+
+	// Navigation
+	case IsUp(m.Config.Keys, msg):
+		if inv.focusedList > 0 {
+			inv.focusedList--
+			inv.cursor = 0
+		}
+	case IsDown(m.Config.Keys, msg):
+		if inv.focusedList < 3 {
+			inv.focusedList++
+			inv.cursor = 0
+		}
+	case IsLeft(m.Config.Keys, msg):
+		if inv.focusedList < 2 && inv.cursor > 0 {
+			inv.cursor--
+		}
+	case IsRight(m.Config.Keys, msg):
+		if inv.focusedList < 2 {
+			listPtr, _ := inv.State.GetList(inv.focusedList)
+			list := *listPtr
+			if inv.cursor < len(list)-1 {
+				inv.cursor++
+			}
+		}
+	case IsPathGridMode(m.Config.Keys, msg): // Reuse tab for focus cycle
+		inv.focusedList = (inv.focusedList + 1) % 4 // 0: visible, 1: inventory, 2: apply, 3: rescue
+		inv.cursor = 0
+
+	// Lift and Place
+	case IsConfirm(m.Config.Keys, msg):
+		if inv.focusedList == 2 { // Apply button is focused
+			return m, ApplyInventoryChangesCmd(m.configDir, m.inventory)
+		}
+		if inv.focusedList == 3 { // Rescue Mode button
+			m.mode = gridMode
+			rescueCfg := config.RescueConfig()
+			rescueCfg.ApplyDefaults()
+			m.applyConfig(rescueCfg)
+			return m, nil
+		}
+
+		if inv.State.HeldItem == nil {
+			// Pick up
+			if err := inv.State.PickUpItem(inv.focusedList, inv.cursor); err != nil {
+				inv.status = err.Error()
+			} else {
+				// Adjust cursor if it's now out of bounds
+				listPtr, _ := inv.State.GetList(inv.focusedList)
+				if inv.cursor >= len(*listPtr) && len(*listPtr) > 0 {
+					inv.cursor = len(*listPtr) - 1
+				}
+			}
+		} else {
+			// Place
+			if err := inv.State.PlaceItem(inv.focusedList, inv.cursor); err != nil {
+				inv.status = err.Error()
+				return m, nil
+			}
+		}
+	}
+
+	return m, nil
+}
