@@ -11,9 +11,9 @@ import (
 
 // PurgeOptions defines the scope of the purge operation
 type PurgeOptions struct {
-	DestroyEverything bool   // Nuke ~/.config/drako entirely
-	TargetProfile     string // Delete/Move specific profile (e.g. "git" or "core")
-	TargetConfig      bool   // Reset config.toml
+	DestroyEverything bool     // Nuke ~/.config/drako entirely
+	TargetProfiles    []string // Delete/Move specific profiles (e.g. "git", "core")
+	TargetConfig      bool     // Reset config.toml
 }
 
 // PurgeConfig executes the purge operation based on the options.
@@ -25,6 +25,12 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 		return performFullNuke(configDir)
 	}
 
+	// Safety check: if no targets selected
+	if len(opts.TargetProfiles) == 0 && !opts.TargetConfig && !opts.DestroyEverything {
+		// This should be caught by caller, but good to be safe
+		return fmt.Errorf("no target specified (use --target, --config, or --destroyeverything)")
+	}
+
 	// Ensure trash directory exists
 	trashDir := filepath.Join(configDir, "trash")
 	if err := os.MkdirAll(trashDir, 0o755); err != nil {
@@ -34,22 +40,24 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 	// Case 1: Reset Core Config (config.toml)
 	if opts.TargetConfig {
 		log.Printf("Purging Core config (config.toml)")
-		return moveFileToTrash(configDir, "config.toml", trashDir)
+		if err := moveFileToTrash(configDir, "config.toml", trashDir); err != nil {
+			log.Printf("Failed to purge config.toml: %v", err)
+		}
 	}
 
-	// Case 2: Target Specific Profile
-	if opts.TargetProfile != "" {
-		log.Printf("Purging Profile: %s", opts.TargetProfile)
-		filename := opts.TargetProfile
+	// Case 2: Target Specific Profiles
+	for _, target := range opts.TargetProfiles {
+		log.Printf("Purging Profile: %s", target)
+		filename := target
 		if filepath.Ext(filename) != ".toml" {
 			filename = filename + ".profile.toml"
 		}
-		return moveFileToTrash(configDir, filename, trashDir)
+		if err := moveFileToTrash(configDir, filename, trashDir); err != nil {
+			log.Printf("Failed to purge %s: %v", target, err)
+		}
 	}
 
-	// Strict Safety: No default actions. Explicit target required.
-
-	return fmt.Errorf("no target specified (use --target, --config, or --destroyeverything)")
+	return nil
 }
 
 // performFullNuke implements the "Destroy Everything" logic (Old --all)

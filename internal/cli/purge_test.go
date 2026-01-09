@@ -81,7 +81,7 @@ func TestPurgeConfig_TargetProfile(t *testing.T) {
 	}
 
 	opts := PurgeOptions{
-		TargetProfile: "core",
+		TargetProfiles: []string{"core"},
 	}
 
 	if err := PurgeConfig(tmpDir, opts); err != nil {
@@ -113,8 +113,8 @@ func TestPurgeConfig_SafetyCheck(t *testing.T) {
 	os.WriteFile(profileFile, []byte(""), 0644)
 
 	opts := PurgeOptions{
-		TargetProfile: "",
-		TargetConfig:  false,
+		TargetProfiles: []string{},
+		TargetConfig:   false,
 		// No args = Safety check (should fail or do nothing)
 	}
 

@@ -1,8 +1,10 @@
 package cli
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -111,51 +113,55 @@ func HandlePurgeCommand() {
 // ExecutePurge parses flags and executes the purge logic.
 // It is exported so internal commands can call it without spawning a subprocess.
 func ExecutePurge(args []string) error {
-	configDir, err := config.GetConfigDir()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
-		return err
-	}
-
 	opts, interactive, err := ParsePurgeFlags(args)
 	if err != nil {
 		return err
 	}
 
 	if interactive {
-		if err := runInteractivePurgeSelection(configDir, opts); err != nil {
+		configDir, err := config.GetConfigDir()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
+			return err
+		}
+		// Pass stdin/stdout for interactive mode
+		if err := runInteractivePurgeSelection(configDir, opts, os.Stdin, os.Stdout); err != nil {
 			return err
 		}
 	}
 
 	// Logging setup
-	setupPurgeLogging(configDir, opts.DestroyEverything)
+	setupPurgeLogging(opts.DestroyEverything)
 
 	log.Printf("Purge command invoked: %+v", opts)
 
 	// Confirmations
 	confirmMsg := ""
+	configDir, _ := config.GetConfigDir() // Ignore error as we checked above or it will fail in PurgeConfig
+
 	if opts.DestroyEverything {
 		confirmMsg = fmt.Sprintf("💀 This will DESTROY EVERYTHING in %s.\n   NO UNDO. NO TRASH.\n   Are you absolutely sure?", configDir)
 	} else if opts.TargetConfig {
 		confirmMsg = "⚠️  This will reset your Core Configuration (config.toml). Proceed?"
-	} else if opts.TargetProfile != "" {
-		confirmMsg = fmt.Sprintf("⚠️  This will remove profile '%s'. Proceed?", opts.TargetProfile)
+	} else if len(opts.TargetProfiles) > 0 {
+		confirmMsg = fmt.Sprintf("⚠️  This will remove %d profile(s): %s. Proceed?", len(opts.TargetProfiles), strings.Join(opts.TargetProfiles, ", "))
 	} else {
 		// Strict Safety: If no target is specified, PurgeConfig will error.
-		// We catch this case below to provide a helpful usage message before confirmation.
+		// We catch this case below to provide a helpful usage message.
 	}
 
-	// Validate strict safety here to avoid prompting for confirmation on invalid input.
-
-	if !opts.DestroyEverything && !opts.TargetConfig && opts.TargetProfile == "" {
+	if !opts.DestroyEverything && !opts.TargetConfig && len(opts.TargetProfiles) == 0 {
 		printPurgeUsage()
 		return fmt.Errorf("no target specified")
 	}
 
-	if !ConfirmAction(confirmMsg) {
-		log.Printf("Purge cancelled by user")
-		return nil
+	// Interactive mode handles its own confirmations per item, unless it's a bulk action from flags.
+	// If flags were used, we confirm once here.
+	if !interactive {
+		if !ConfirmAction(confirmMsg) {
+			log.Printf("Purge cancelled by user")
+			return nil
+		}
 	}
 
 	if err := PurgeConfig(configDir, *opts); err != nil {
@@ -181,8 +187,12 @@ func printPurgeUsage() {
 	fmt.Println("Destroy ~/.config/drako directory:   `drako purge --destroyeverything`")
 }
 
-func setupPurgeLogging(configDir string, destroyEverything bool) {
+func setupPurgeLogging(destroyEverything bool) {
 	if !destroyEverything {
+		configDir, err := config.GetConfigDir()
+		if err != nil {
+			return
+		}
 		logPath := filepath.Join(configDir, "drako.log")
 		logFile, err := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 		if err != nil {
@@ -194,8 +204,8 @@ func setupPurgeLogging(configDir string, destroyEverything bool) {
 	}
 }
 
-// runInteractivePurgeSelection handles the UI for selecting a profile
-func runInteractivePurgeSelection(configDir string, opts *PurgeOptions) error {
+// IO Dependencies injected
+func runInteractivePurgeSelection(configDir string, opts *PurgeOptions, input io.Reader, output io.Writer) error {
 	// Struct to hold profile info
 	type startProfile struct {
 		DisplayName  string
@@ -236,36 +246,107 @@ func runInteractivePurgeSelection(configDir string, opts *PurgeOptions) error {
 	// 2. Scan Inventory
 	scanDir(filepath.Join(configDir, "inventory"), true)
 
-	fmt.Println("Select profile to purge:")
-	for i, p := range validProfiles {
-		fmt.Printf("%d. %s\n", i+1, p.DisplayName)
-	}
 	if len(validProfiles) == 0 {
-		fmt.Println("(No profiles found)")
+		fmt.Fprintln(output, "(No profiles found)")
 		return nil // No-op
 	}
 
-	fmt.Print("\nEnter number: ")
-	var input string
-	if _, err := fmt.Scanln(&input); err != nil {
-		fmt.Println("\nInput cancelled.")
-		return nil
+	fmt.Fprintln(output, "Select profile(s) to purge:")
+	for i, p := range validProfiles {
+		fmt.Fprintf(output, "%d. %s\n", i+1, p.DisplayName)
 	}
 
-	// Parse number
-	if num, err := strconv.Atoi(input); err == nil {
-		if num >= 1 && num <= len(validProfiles) {
-			selected := validProfiles[num-1]
-			opts.TargetProfile = selected.RelativePath
-			return nil
-		} else {
-			fmt.Println("Invalid selection.")
-			return fmt.Errorf("invalid selection")
-		}
-	} else {
-		fmt.Println("Invalid input. Please enter a number.")
-		return fmt.Errorf("invalid input")
+	fmt.Fprint(output, "\nEnter numbers (e.g. '1, 3', '1-5'): ")
+
+	// Read full line
+	bufReader := bufio.NewReader(input)
+	line, err := bufReader.ReadString('\n')
+	if err != nil {
+		fmt.Fprintln(output, "\nInput cancelled.")
+		return nil
 	}
+	line = strings.TrimSpace(line)
+	if line == "" {
+		return fmt.Errorf("no selection made")
+	}
+
+	// Parse Batch Input
+	// Supports: "1", "1,3", "1, 3", "1-3", "1, 3-5"
+	parts := strings.Split(line, ",")
+	var selectedIndices []int
+
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+
+		// Check for range
+		if strings.Contains(part, "-") {
+			rangeParts := strings.Split(part, "-")
+			if len(rangeParts) != 2 {
+				fmt.Fprintf(output, "Invalid range format: %s\n", part)
+				continue
+			}
+			start, err1 := strconv.Atoi(strings.TrimSpace(rangeParts[0]))
+			end, err2 := strconv.Atoi(strings.TrimSpace(rangeParts[1]))
+			if err1 != nil || err2 != nil {
+				fmt.Fprintf(output, "Invalid numbers in range: %s\n", part)
+				continue
+			}
+			if start > end {
+				start, end = end, start // swap
+			}
+			for i := start; i <= end; i++ {
+				selectedIndices = append(selectedIndices, i)
+			}
+		} else {
+			// Single number
+			num, err := strconv.Atoi(part)
+			if err != nil {
+				fmt.Fprintf(output, "Invalid number: %s\n", part)
+				continue
+			}
+			selectedIndices = append(selectedIndices, num)
+		}
+	}
+
+	// Process selections
+	count := 0
+	// Deduplicate indices using map
+	seen := make(map[int]bool)
+
+	for _, idx := range selectedIndices {
+		if seen[idx] {
+			continue
+		}
+		seen[idx] = true
+
+		if idx < 1 || idx > len(validProfiles) {
+			fmt.Fprintf(output, "Warning: %d is out of range (1-%d)\n", idx, len(validProfiles))
+			continue
+		}
+
+		profile := validProfiles[idx-1]
+
+		// Individual Confirmation
+		fmt.Fprintf(output, "Delete %s? [y/N]: ", profile.DisplayName)
+		confirmRaw, _ := bufReader.ReadString('\n')
+		confirm := strings.ToLower(strings.TrimSpace(confirmRaw))
+
+		if confirm == "y" || confirm == "yes" {
+			opts.TargetProfiles = append(opts.TargetProfiles, profile.RelativePath)
+			count++
+		} else {
+			fmt.Fprintln(output, "Skipped.")
+		}
+	}
+
+	if count == 0 {
+		fmt.Fprintln(output, "No profiles selected for deletion.")
+	}
+
+	return nil
 }
 
 // HandleOpenCLI processes the 'drako open <path>' command from the shell.
@@ -317,7 +398,11 @@ func ParsePurgeFlags(args []string) (*PurgeOptions, bool, error) {
 	opts := &PurgeOptions{
 		DestroyEverything: *destroyEverything,
 		TargetConfig:      targetConfig,
-		TargetProfile:     target,
+		TargetProfiles:    []string{},
+	}
+
+	if target != "" {
+		opts.TargetProfiles = append(opts.TargetProfiles, target)
 	}
 
 	return opts, interactive, nil
