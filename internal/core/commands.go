@@ -212,74 +212,29 @@ func RunCommand(cfg config.Config, selected string) {
 }
 
 func handleInternalPurge(command string) {
-	// Parse the command string manually since we're bypassing the shell
+	// Parse the command string
 	// Expected format: "drako purge --target core" or "drako purge --interactive"
 	parts := strings.Fields(command)
-
-	// We need to parse flags again, locally.
-	// Since we can't reuse the flag.FlagSet from cli.HandlePurgeCommand easily without hacking os.Args
-	// We will manually construct the opts or helper logic.
-
-	configDir, err := config.GetConfigDir()
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		pause("\nPress any key...")
+	if len(parts) < 2 {
+		log.Printf("Invalid purge command: %s", command)
 		return
 	}
 
-	opts := cli.PurgeOptions{}
-	interactive := false
+	// We strip "drako purge" (first 2 args) to match what os.Args[2:] would provide
+	args := parts[2:]
 
-	// Simple manual parsing for the internal use case
-	for i := 0; i < len(parts); i++ {
-		if parts[i] == "--target" && i+1 < len(parts) {
-			val := parts[i+1]
-			if val == "core" {
-				opts.TargetCore = true
-			} else {
-				opts.TargetProfile = val
-			}
-		}
-		if parts[i] == "--destroyeverything" {
-			opts.DestroyEverything = true
-		}
-		if parts[i] == "--interactive" {
-			interactive = true
-		}
-	}
-
-	if interactive {
-		fmt.Print("Enter profile name to reset (e.g. 'git'): ")
-		var name string
-		if _, err := fmt.Scanln(&name); err != nil {
-			// Handle EOF or empty input gracefully
-			fmt.Println("\nInput cancelled.")
-			return
-		}
-		name = strings.TrimSpace(name)
-		if name == "" {
-			fmt.Println("No profile name provided.")
-			return
-		}
-		opts.TargetProfile = name
-	}
-
-	// Execute with confirmation
-	confirmMsg := "⚠️  Confirm reset of Core configuration?"
-	if opts.TargetProfile != "" {
-		confirmMsg = fmt.Sprintf("⚠️  Confirm removal of profile '%s'?", opts.TargetProfile)
-	}
-
-	if !cli.ConfirmAction(confirmMsg) {
-		return
-	}
-
-	if err := cli.PurgeConfig(configDir, opts); err != nil {
-		fmt.Printf("\nError: %v\n", err)
+	// Call the reusable CLI function
+	if err := cli.ExecutePurge(args); err != nil {
+		// Log error but don't os.Exit here normally?
+		// Note: ExecutePurge prints errors to stderr.
+		fmt.Printf("\nInternal Purge Error: %v\n", err)
 		pause("\nPress any key...")
 	} else {
-		fmt.Printf("\n✓ Operation successful.\n")
-		// Since we modified config, we should probably exit to let the loop reload or just exit
+		// Success case
+		// Depending on what purged, we might need to exit
+		// cli.ExecutePurge prints success messages.
+		fmt.Printf("\npress any key to exit...")
+		pause("") // wait for user
 		os.Exit(0)
 	}
 }

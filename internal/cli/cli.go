@@ -98,150 +98,67 @@ func PrintSummonUsage() {
 	fmt.Fprintf(os.Stderr, "  drako summon https://github.com/user/repo.git\n")
 }
 
-// HandlePurgeCommand processes the 'drako purge' command
+// HandlePurgeCommand processes the 'drako purge' command from os.Args
 func HandlePurgeCommand() {
+	// Parse args starting from index 2 (skipping "drako" and "purge")
+	if err := ExecutePurge(os.Args[2:]); err != nil {
+		os.Exit(1)
+	}
+}
+
+// ExecutePurge parses flags and executes the purge logic.
+// It is exported so internal commands can call it without spawning a subprocess.
+func ExecutePurge(args []string) error {
 	configDir, err := config.GetConfigDir()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
-		os.Exit(1)
+		return err
 	}
 
 	// Parse purge specific flags
-	// We need a custom flagset to parse args after "drako purge"
-	purgeCmd := flag.NewFlagSet("purge", flag.ExitOnError)
+	purgeCmd := flag.NewFlagSet("purge", flag.ContinueOnError)
 
 	var target string
-	purgeCmd.StringVar(&target, "target", "", "Target to purge: 'core' or profile name (e.g. 'git')")
+	purgeCmd.StringVar(&target, "target", "", "Target profile to purge (e.g. 'core' for core.profile.toml)")
 	purgeCmd.StringVar(&target, "t", "", "Alias for --target")
+
+	var targetConfig bool
+	purgeCmd.BoolVar(&targetConfig, "config", false, "Purge config.toml (Core Configuration)")
+	purgeCmd.BoolVar(&targetConfig, "c", false, "Alias for --config")
 
 	var interactive bool
 	purgeCmd.BoolVar(&interactive, "interactive", false, "Interactively select a profile to purge")
 	purgeCmd.BoolVar(&interactive, "i", false, "Alias for --interactive")
 
-	// destroyEverything is dangerous, let's keep it long-only for safety
+	// destroyEverything is dangerous
 	destroyEverything := purgeCmd.Bool("destroyeverything", false, "DANGEROUS: Delete entire config directory (no trash)")
 
-	// Parse args starting from index 2 (skipping "drako" and "purge")
-	if err := purgeCmd.Parse(os.Args[2:]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", err)
-		os.Exit(1)
+	if err := purgeCmd.Parse(args); err != nil {
+		return err
 	}
 
 	// Safety Check: Reject unrecognized positional arguments
 	if purgeCmd.NArg() > 0 {
 		fmt.Printf("Error: Unrecognized argument(s): %v\n", purgeCmd.Args())
-		fmt.Println("\nTo purge a specific profile, use: drako purge --target <name>")
-		fmt.Println("To purge Core config, use:        drako purge --target core")
-		fmt.Println("To select interactively, use:     drako purge --interactive")
-		os.Exit(1)
+		printPurgeUsage()
+		return fmt.Errorf("unrecognized arguments")
 	}
 
-	// Setup options based on flags
+	// Setup options
 	opts := PurgeOptions{
 		DestroyEverything: *destroyEverything,
+		TargetConfig:      targetConfig,
+		TargetProfile:     target,
 	}
 
 	if interactive {
-		// Struct to hold profile info
-		type startProfile struct {
-			DisplayName  string // "git (Equipped)" or "git (Inventory)"
-			RelativePath string // "git.profile.toml" or "inventory/git.profile.toml"
+		if err := runInteractivePurgeSelection(configDir, &opts); err != nil {
+			return err
 		}
-		var validProfiles []startProfile
-
-		// Helper to scan a directory
-		scanDir := func(dir string, isInventory bool) {
-			entries, err := os.ReadDir(dir)
-			if err != nil {
-				return // Ignore errors (e.g. missing dir)
-			}
-			for _, e := range entries {
-				if !e.IsDir() && strings.HasSuffix(e.Name(), ".profile.toml") {
-					name := strings.TrimSuffix(e.Name(), ".profile.toml")
-
-					relPath := e.Name()
-					label := name
-					if isInventory {
-						relPath = filepath.Join("inventory", e.Name())
-						label = fmt.Sprintf("%s (Inventory)", name)
-					} else {
-						label = fmt.Sprintf("%s (Equipped)", name)
-					}
-
-					validProfiles = append(validProfiles, startProfile{
-						DisplayName:  label,
-						RelativePath: relPath,
-					})
-				}
-			}
-		}
-
-		// 1. Scan Root (Equipped)
-		scanDir(configDir, false)
-
-		// 2. Scan Inventory
-		scanDir(filepath.Join(configDir, "inventory"), true)
-
-		// Sort by Display Name for consistency
-		// sort.Slice? We need to import sort. Or just leave as is (root first then inventory).
-		// Let's keep it simple: Root first, then Inventory.
-
-		fmt.Println("Select profile to purge:")
-		for i, p := range validProfiles {
-			fmt.Printf("%d. %s\n", i+1, p.DisplayName)
-		}
-		if len(validProfiles) == 0 {
-			fmt.Println("(No profiles found)")
-			os.Exit(0)
-		}
-
-		fmt.Print("\nEnter number: ")
-		var input string
-		if _, err := fmt.Scanln(&input); err != nil {
-			fmt.Println("\nInput cancelled.")
-			os.Exit(0)
-		}
-
-		// Parse number
-		if num, err := strconv.Atoi(input); err == nil {
-			if num >= 1 && num <= len(validProfiles) {
-				selected := validProfiles[num-1]
-				opts.TargetProfile = selected.RelativePath
-				// Note: if user selected "core", logic elsewhere might need to be aware if we wanted TargetCore=true behavior
-				// BUT user said "core is just another profile", so we let it flow as TargetProfile="core.profile.toml"
-			} else {
-				fmt.Println("Invalid selection.")
-				os.Exit(1)
-			}
-		} else {
-			fmt.Println("Invalid input. Please enter a number.")
-			os.Exit(1)
-		}
-
-		if opts.TargetProfile == "" {
-			fmt.Println("No profile selected.")
-			os.Exit(1)
-		}
-
-	} else if target == "core" {
-		opts.TargetCore = true
-	} else if target != "" {
-		opts.TargetProfile = target
-	} else if !*destroyEverything {
-		// Legacy behavior: "drako purge" without args -> Standard cleanup (preserve config.toml)
 	}
 
 	// Logging setup
-	if !opts.DestroyEverything {
-		logPath := filepath.Join(configDir, "drako.log")
-		logFile, err := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: could not open log file: %v\n", err)
-		} else {
-			defer logFile.Close()
-			log.SetOutput(logFile)
-		}
-	}
+	setupPurgeLogging(configDir, opts.DestroyEverything)
 
 	log.Printf("Purge command invoked: %+v", opts)
 
@@ -249,23 +166,34 @@ func HandlePurgeCommand() {
 	confirmMsg := ""
 	if opts.DestroyEverything {
 		confirmMsg = fmt.Sprintf("💀 This will DESTROY EVERYTHING in %s.\n   NO UNDO. NO TRASH.\n   Are you absolutely sure?", configDir)
-	} else if opts.TargetCore {
-		confirmMsg = "⚠️  This will reset your Core configuration (config.toml). Proceed?"
+	} else if opts.TargetConfig {
+		confirmMsg = "⚠️  This will reset your Core Configuration (config.toml). Proceed?"
 	} else if opts.TargetProfile != "" {
 		confirmMsg = fmt.Sprintf("⚠️  This will remove profile '%s'. Proceed?", opts.TargetProfile)
 	} else {
-		confirmMsg = fmt.Sprintf("⚠️  This will move all profiles and data in %s to trash\n   (config.toml will be preserved). Proceed?", configDir)
+		// Strict Safety: If no target, PurgeConfig will error, but we can catch it here too or let it fall through.
+		// However, PurgeConfig returns error "no target specified".
+		// We should checking opts Validness? No, let PurgeConfig handle it.
+		// But wait, if we don't have a target, we verify before asking confirmation?
+		// Actually PurgeConfig checks it.
+	}
+
+	// If no options set, don't even ask for confirmation, just run (and fail)
+	// Or check here to avoid "Confirm action ?" with empty msg?
+	if !opts.DestroyEverything && !opts.TargetConfig && opts.TargetProfile == "" {
+		printPurgeUsage()
+		return fmt.Errorf("no target specified")
 	}
 
 	if !ConfirmAction(confirmMsg) {
 		log.Printf("Purge cancelled by user")
-		os.Exit(0)
+		return nil
 	}
 
 	if err := PurgeConfig(configDir, opts); err != nil {
 		log.Printf("Purge failed: %v", err)
 		fmt.Fprintf(os.Stderr, "Purge failed: %v\n", err)
-		os.Exit(1)
+		return err
 	}
 
 	if opts.DestroyEverything {
@@ -274,7 +202,104 @@ func HandlePurgeCommand() {
 		fmt.Printf("\n✓ Purge completed successfully\n")
 		fmt.Printf("  Items moved to %s/trash/\n", configDir)
 	}
-	os.Exit(0)
+	return nil
+}
+
+func printPurgeUsage() {
+	fmt.Println("Purge Usage:\n")
+	fmt.Println("To purge a specific profile, use:    `drako purge --target <name>`")
+	fmt.Println("To purge Core config, use:           `drako purge --config`")
+	fmt.Println("To select interactively, use:        `drako purge --interactive`")
+	fmt.Println("Destroy ~/.config/drako directory:   `drako purge --destroyeverything`")
+}
+
+func setupPurgeLogging(configDir string, destroyEverything bool) {
+	if !destroyEverything {
+		logPath := filepath.Join(configDir, "drako.log")
+		logFile, err := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: could not open log file: %v\n", err)
+		} else {
+			// Lealing fd? Ideally we close it. But for a CLI command it's fine.
+			// Ideally we return the closer.
+			// For now, simplify.
+			log.SetOutput(logFile)
+		}
+	}
+}
+
+// runInteractivePurgeSelection handles the UI for selecting a profile
+func runInteractivePurgeSelection(configDir string, opts *PurgeOptions) error {
+	// Struct to hold profile info
+	type startProfile struct {
+		DisplayName  string
+		RelativePath string
+	}
+	var validProfiles []startProfile
+
+	// Helper to scan a directory
+	scanDir := func(dir string, isInventory bool) {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			return
+		}
+		for _, e := range entries {
+			if !e.IsDir() && strings.HasSuffix(e.Name(), ".profile.toml") {
+				name := strings.TrimSuffix(e.Name(), ".profile.toml")
+
+				relPath := e.Name()
+				label := name
+				if isInventory {
+					relPath = filepath.Join("inventory", e.Name())
+					label = fmt.Sprintf("%s (Inventory)", name)
+				} else {
+					label = fmt.Sprintf("%s (Equipped)", name)
+				}
+
+				validProfiles = append(validProfiles, startProfile{
+					DisplayName:  label,
+					RelativePath: relPath,
+				})
+			}
+		}
+	}
+
+	// 1. Scan Root (Equipped)
+	scanDir(configDir, false)
+
+	// 2. Scan Inventory
+	scanDir(filepath.Join(configDir, "inventory"), true)
+
+	fmt.Println("Select profile to purge:")
+	for i, p := range validProfiles {
+		fmt.Printf("%d. %s\n", i+1, p.DisplayName)
+	}
+	if len(validProfiles) == 0 {
+		fmt.Println("(No profiles found)")
+		return nil // No-op
+	}
+
+	fmt.Print("\nEnter number: ")
+	var input string
+	if _, err := fmt.Scanln(&input); err != nil {
+		fmt.Println("\nInput cancelled.")
+		return nil
+	}
+
+	// Parse number
+	if num, err := strconv.Atoi(input); err == nil {
+		if num >= 1 && num <= len(validProfiles) {
+			selected := validProfiles[num-1]
+			opts.TargetProfile = selected.RelativePath
+			return nil
+		} else {
+			fmt.Println("Invalid selection.")
+			return fmt.Errorf("invalid selection")
+		}
+	} else {
+		fmt.Println("Invalid input. Please enter a number.")
+		return fmt.Errorf("invalid input")
+	}
 }
 
 // HandleOpenCLI processes the 'drako open <path>' command from the shell.

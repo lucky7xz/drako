@@ -607,7 +607,7 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	switch {
 	case IsCancel(m.Config.Keys, msg):
-		m.mode = gridMode
+		m = m.presentNextBrokenProfile() // Return to next error or grid
 		return m, nil
 	case Matches(m.Config.Keys, msg, "ctrl+c"):
 		m.Quitting = true

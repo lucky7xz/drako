@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 )
@@ -13,8 +12,8 @@ import (
 // PurgeOptions defines the scope of the purge operation
 type PurgeOptions struct {
 	DestroyEverything bool   // Nuke ~/.config/drako entirely
-	TargetProfile     string // Delete/Move specific profile (e.g. "git")
-	TargetCore        bool   // Reset config.toml
+	TargetProfile     string // Delete/Move specific profile (e.g. "git" or "core")
+	TargetConfig      bool   // Reset config.toml
 }
 
 // PurgeConfig executes the purge operation based on the options.
@@ -32,8 +31,8 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 		return fmt.Errorf("failed to create trash directory: %w", err)
 	}
 
-	// Case 1: Reset Core (config.toml)
-	if opts.TargetCore {
+	// Case 1: Reset Core Config (config.toml)
+	if opts.TargetConfig {
 		log.Printf("Purging Core config (config.toml)")
 		return moveFileToTrash(configDir, "config.toml", trashDir)
 	}
@@ -51,45 +50,9 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 		return moveFileToTrash(configDir, filename, trashDir)
 	}
 
-	// Default Behavior (Legacy): Purge everything EXCEPT config.toml
-	// This mimics the old "PurgeConfig(..., false)" behavior but SAFER (moves to trash)
-	log.Printf("Purging all items (except config.toml and trash/)")
-	items, err := collectPurgeItems(configDir, false) // false = preserve config.toml
-	if err != nil {
-		return fmt.Errorf("failed to scan directory: %w", err)
-	}
-
-	if len(items) == 0 {
-		fmt.Println("\n✓ Nothing to purge - config directory is already clean")
-		return nil
-	}
-
-	fmt.Printf("\n🗑️  Moving %d items to %s\n", len(items), trashDir)
-
-	// Require confirmation if interactive?
-	// We assume the caller (HandlePurgeCommand) handled high-level confirmation if needed.
-	// But for safety, let's ask here if it's a big batch?
-	// Actually, let's trust the caller. This function performs the Action.
-
-	moved := 0
-	failed := 0
-	for _, item := range items {
-		name := filepath.Base(item)
-		if name == "trash" {
-			continue // Don't trash the trash
-		}
-		if err := moveToTrash(item, trashDir); err != nil {
-			log.Printf("Failed to trash %s: %v", name, err)
-			failed++
-		} else {
-			moved++
-		}
-	}
-
-	if failed > 0 {
-		return fmt.Errorf("purge completed with %d failures", failed)
-	}
-	return nil
+	// Strict Safety: If we reach here, no target was specified.
+	// We DO NOT default to purging everything anymore.
+	return fmt.Errorf("no target specified (use --target, --config, or --destroyeverything)")
 }
 
 // performFullNuke implements the "Destroy Everything" logic (Old --all)
@@ -149,36 +112,6 @@ func moveToTrash(srcPath, trashDir string) error {
 	}
 	fmt.Printf("  ✓ Moved %s to trash\n", filename)
 	return nil
-}
-
-// collectPurgeItems scans configDir and returns all items (optionally including config.toml if nukeAll is true)
-func collectPurgeItems(configDir string, nukeAll bool) ([]string, error) {
-	var items []string
-
-	entries, err := os.ReadDir(configDir)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, entry := range entries {
-		name := entry.Name()
-
-		// Skip config.toml unless nukeAll is true
-		if name == "config.toml" && !nukeAll {
-			continue
-		}
-		if name == "trash" {
-			continue
-		}
-
-		fullPath := filepath.Join(configDir, name)
-		items = append(items, fullPath)
-	}
-
-	// Sort for consistent display
-	sort.Strings(items)
-
-	return items, nil
 }
 
 // countFilesInDir recursively counts files in a directory
