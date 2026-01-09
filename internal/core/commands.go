@@ -225,14 +225,10 @@ func handleInternalPurge(command string) {
 
 	// Call the reusable CLI function
 	if err := cli.ExecutePurge(args); err != nil {
-		// Log error but don't os.Exit here normally?
-		// Note: ExecutePurge prints errors to stderr.
 		fmt.Printf("\nInternal Purge Error: %v\n", err)
 		pause("\nPress any key...")
 	} else {
 		// Success case
-		// Depending on what purged, we might need to exit
-		// cli.ExecutePurge prints success messages.
 		fmt.Printf("\npress any key to exit...")
 		pause("") // wait for user
 		os.Exit(0)

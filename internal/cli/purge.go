@@ -40,9 +40,6 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 	// Case 2: Target Specific Profile
 	if opts.TargetProfile != "" {
 		log.Printf("Purging Profile: %s", opts.TargetProfile)
-		// Profile could be "git.profile.toml" or just "git"
-		// We should try to find the matching file
-		// For now, assume simple name matching
 		filename := opts.TargetProfile
 		if filepath.Ext(filename) != ".toml" {
 			filename = filename + ".profile.toml"
@@ -50,8 +47,8 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 		return moveFileToTrash(configDir, filename, trashDir)
 	}
 
-	// Strict Safety: If we reach here, no target was specified.
-	// We DO NOT default to purging everything anymore.
+	// Strict Safety: No default actions. Explicit target required.
+
 	return fmt.Errorf("no target specified (use --target, --config, or --destroyeverything)")
 }
 
@@ -90,8 +87,6 @@ func moveFileToTrash(configDir, filename, trashDir string) error {
 	}
 
 	if !strings.HasPrefix(absSrc, absConfig+string(os.PathSeparator)) && absSrc != absConfig {
-		// allow exact match? No, we don't want to trash the dir itself here.
-		// Strict check: must be a child.
 		return fmt.Errorf("security violation: path traversal detected (%s)", filename)
 	}
 

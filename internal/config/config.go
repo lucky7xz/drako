@@ -85,23 +85,23 @@ func RescueConfig() Config {
 		},
 		Commands: []Command{
 			{
-				Name:        "Reset Core Config",
+				Name:        "Reset Core (config & profile)",
 				Command:     "drako purge --config",
-				Description: "Resets your config.toml to defaults.\n\n• Your old config.toml will be moved to trash/.\n• Use this to fix syntax errors in config.toml.\n• Drako will exit after this operation.",
+				Description: "Resets config.toml to defaults.\n\n• Your old config.toml will be moved to trash/. Note that if the Core profile has been removed, this will reinitialize it too\n• Use this to fix syntax errors in config.toml.\n• Drako will exit after this operation.",
 				Row:         0,
 				Col:         "a", // Left
 			},
 			{
-				Name:        "Reset Core Profile",
+				Name:        "Remove Core Profile",
 				Command:     "drako purge --target core",
-				Description: "Resets your core.profile.toml.\n\n• Use this if the core profile layout is broken.",
+				Description: "Removes your core.profile.toml.\n\n• Use this if the core profile layout is broken.",
 				Row:         1,
 				Col:         "a", // Left below Reset Core
 			},
 			{
-				Name:        "Reset Another Profile",
+				Name:        "Remove Another Profile",
 				Command:     "drako purge --interactive",
-				Description: "Select a profile to reset/delete.\n\n• Useful if a specific profile is broken and crashing Drako.\n• The profile will be moved to trash/.",
+				Description: "Select a profile to remove.\n\n• Useful if a specific profile is broken and crashing Drako.\n• The profile will be moved to trash/.",
 				Row:         2,
 				Col:         "a", // Left below Reset Core Profile
 			},

@@ -102,6 +102,8 @@ func PrintSummonUsage() {
 func HandlePurgeCommand() {
 	// Parse args starting from index 2 (skipping "drako" and "purge")
 	if err := ExecutePurge(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		printPurgeUsage()
 		os.Exit(1)
 	}
 }
@@ -115,44 +117,13 @@ func ExecutePurge(args []string) error {
 		return err
 	}
 
-	// Parse purge specific flags
-	purgeCmd := flag.NewFlagSet("purge", flag.ContinueOnError)
-
-	var target string
-	purgeCmd.StringVar(&target, "target", "", "Target profile to purge (e.g. 'core' for core.profile.toml)")
-	purgeCmd.StringVar(&target, "t", "", "Alias for --target")
-
-	var targetConfig bool
-	purgeCmd.BoolVar(&targetConfig, "config", false, "Purge config.toml (Core Configuration)")
-	purgeCmd.BoolVar(&targetConfig, "c", false, "Alias for --config")
-
-	var interactive bool
-	purgeCmd.BoolVar(&interactive, "interactive", false, "Interactively select a profile to purge")
-	purgeCmd.BoolVar(&interactive, "i", false, "Alias for --interactive")
-
-	// destroyEverything is dangerous
-	destroyEverything := purgeCmd.Bool("destroyeverything", false, "DANGEROUS: Delete entire config directory (no trash)")
-
-	if err := purgeCmd.Parse(args); err != nil {
+	opts, interactive, err := ParsePurgeFlags(args)
+	if err != nil {
 		return err
 	}
 
-	// Safety Check: Reject unrecognized positional arguments
-	if purgeCmd.NArg() > 0 {
-		fmt.Printf("Error: Unrecognized argument(s): %v\n", purgeCmd.Args())
-		printPurgeUsage()
-		return fmt.Errorf("unrecognized arguments")
-	}
-
-	// Setup options
-	opts := PurgeOptions{
-		DestroyEverything: *destroyEverything,
-		TargetConfig:      targetConfig,
-		TargetProfile:     target,
-	}
-
 	if interactive {
-		if err := runInteractivePurgeSelection(configDir, &opts); err != nil {
+		if err := runInteractivePurgeSelection(configDir, opts); err != nil {
 			return err
 		}
 	}
@@ -171,15 +142,12 @@ func ExecutePurge(args []string) error {
 	} else if opts.TargetProfile != "" {
 		confirmMsg = fmt.Sprintf("⚠️  This will remove profile '%s'. Proceed?", opts.TargetProfile)
 	} else {
-		// Strict Safety: If no target, PurgeConfig will error, but we can catch it here too or let it fall through.
-		// However, PurgeConfig returns error "no target specified".
-		// We should checking opts Validness? No, let PurgeConfig handle it.
-		// But wait, if we don't have a target, we verify before asking confirmation?
-		// Actually PurgeConfig checks it.
+		// Strict Safety: If no target is specified, PurgeConfig will error.
+		// We catch this case below to provide a helpful usage message before confirmation.
 	}
 
-	// If no options set, don't even ask for confirmation, just run (and fail)
-	// Or check here to avoid "Confirm action ?" with empty msg?
+	// Validate strict safety here to avoid prompting for confirmation on invalid input.
+
 	if !opts.DestroyEverything && !opts.TargetConfig && opts.TargetProfile == "" {
 		printPurgeUsage()
 		return fmt.Errorf("no target specified")
@@ -190,7 +158,7 @@ func ExecutePurge(args []string) error {
 		return nil
 	}
 
-	if err := PurgeConfig(configDir, opts); err != nil {
+	if err := PurgeConfig(configDir, *opts); err != nil {
 		log.Printf("Purge failed: %v", err)
 		fmt.Fprintf(os.Stderr, "Purge failed: %v\n", err)
 		return err
@@ -206,7 +174,7 @@ func ExecutePurge(args []string) error {
 }
 
 func printPurgeUsage() {
-	fmt.Println("Purge Usage:\n")
+	fmt.Println("Purge Usage:")
 	fmt.Println("To purge a specific profile, use:    `drako purge --target <name>`")
 	fmt.Println("To purge Core config, use:           `drako purge --config`")
 	fmt.Println("To select interactively, use:        `drako purge --interactive`")
@@ -220,9 +188,7 @@ func setupPurgeLogging(configDir string, destroyEverything bool) {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: could not open log file: %v\n", err)
 		} else {
-			// Lealing fd? Ideally we close it. But for a CLI command it's fine.
-			// Ideally we return the closer.
-			// For now, simplify.
+			// Note: We leave the log file open for the duration of the command.
 			log.SetOutput(logFile)
 		}
 	}
@@ -319,4 +285,40 @@ func HandleOpenCLI() {
 
 	// Success
 	os.Exit(0)
+}
+
+// ParsePurgeFlags processes raw arguments and returns PurgeOptions and interactive state.
+// This separates valid parsing from execution logic, enabling easier testing.
+func ParsePurgeFlags(args []string) (*PurgeOptions, bool, error) {
+	purgeCmd := flag.NewFlagSet("purge", flag.ContinueOnError)
+
+	var target string
+	purgeCmd.StringVar(&target, "target", "", "Target profile to purge")
+	purgeCmd.StringVar(&target, "t", "", "Alias for --target")
+
+	var targetConfig bool
+	purgeCmd.BoolVar(&targetConfig, "config", false, "Purge config.toml")
+	purgeCmd.BoolVar(&targetConfig, "c", false, "Alias for --config")
+
+	var interactive bool
+	purgeCmd.BoolVar(&interactive, "interactive", false, "Interactive mode")
+	purgeCmd.BoolVar(&interactive, "i", false, "Alias for --interactive")
+
+	destroyEverything := purgeCmd.Bool("destroyeverything", false, "Destroy everything")
+
+	if err := purgeCmd.Parse(args); err != nil {
+		return nil, false, err
+	}
+
+	if purgeCmd.NArg() > 0 {
+		return nil, false, fmt.Errorf("unrecognized arguments: %v", purgeCmd.Args())
+	}
+
+	opts := &PurgeOptions{
+		DestroyEverything: *destroyEverything,
+		TargetConfig:      targetConfig,
+		TargetProfile:     target,
+	}
+
+	return opts, interactive, nil
 }
