@@ -180,7 +180,17 @@ func (m Model) presentNextBrokenProfile() Model {
 	}
 
 	desc := "This profile has an error and was hidden from selection.\n\n"
-	if strings.Contains(e.Err, "empty profile file") {
+	if e.Name == "config.toml" || strings.HasSuffix(e.Path, "config.toml") {
+		// Specific message for the main config
+		desc = "If your config.toml is invalid, **Rescue Mode** can be helpful.\n" +
+			"**Warning:** Default keybindings are in effect. Your custom keys may not work (since the config.toml which stores them is invalid).\n\n" +
+			"Available Actions:\n" +
+			"• **Edit Config**: Open the config.toml in your default editor and fix the syntax error.\n" +
+			"• **Reset Config**: The command `drako reset -c` will delete the config.toml. Drako reinstantiates it with default settings.\n" +
+			"• **Documentation**: View default controls on Documentation website.\n\n" +
+			"• **Exit Rescue Mode**: You can still keep using drako by exiting rescue mode (the button on the bottom, the error will keep showing up though)."
+
+	} else if strings.Contains(e.Err, "empty profile file") {
 		desc += "The file is completely empty. Either add valid TOML configuration or move/delete the file via Inventory (i).\n\n"
 	} else if strings.Contains(e.Err, "no settings found") {
 		desc += "The file exists but contains no configuration settings. Either add valid TOML configuration or move/delete the file via Inventory (i).\n\n"
