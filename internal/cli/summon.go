@@ -26,6 +26,47 @@ const (
 	assetMaxFileCount  = 500              // safety cap
 )
 
+// FileDownloader defines the interface for downloading a file
+type FileDownloader interface {
+	DownloadFile(url, destPath string) error
+}
+
+// RepoCloner defines the interface for cloning a git repository
+type RepoCloner interface {
+	CloneRepo(url, destDir string) error
+	CheckGitAvailable() error
+}
+
+// UIInterface abstraction for user confirmation
+type UIInterface interface {
+	Confirm(prompt string) bool
+}
+
+// Summoner handles the logic for summoning profiles
+type Summoner struct {
+	ConfigDir  string
+	Downloader FileDownloader
+	Cloner     RepoCloner
+	UI         UIInterface
+}
+
+// NewSummoner creates a new Summoner with real dependencies
+func NewSummoner(configDir string) *Summoner {
+	return &Summoner{
+		ConfigDir:  configDir,
+		Downloader: &HTTPDownloader{},
+		Cloner:     &GitCloner{},
+		UI:         &RealUI{},
+	}
+}
+
+// RealUI implements UIInterface using stdin/stdout
+type RealUI struct{}
+
+func (ui *RealUI) Confirm(prompt string) bool {
+	return ConfirmAction(prompt)
+}
+
 // ConfirmAction prompts the user to confirm an action
 func ConfirmAction(prompt string) bool {
 	fmt.Printf("%s [y/N]: ", prompt)
@@ -38,70 +79,78 @@ func ConfirmAction(prompt string) bool {
 	return response == "y" || response == "yes"
 }
 
-// SummonProfile downloads a profile from a URL and saves it to the inventory directory.
-// Supports:
-//   - HTTP/HTTPS URLs (raw file downloads) - user provides file URL
-//   - Git repository URLs (clones whole repo) - user provides repo URL
+// SummonProfile Entry Point (Legacy Wrapper)
 func SummonProfile(sourceURL, configDir string) error {
-	// Inventory directory is where summoned profiles go
-	inventoryDir := filepath.Join(configDir, "inventory")
+	summoner := NewSummoner(configDir)
+	return summoner.Summon(sourceURL)
+}
+
+// Summon executes the summoning logic
+func (s *Summoner) Summon(sourceURL string) error {
+	inventoryDir := filepath.Join(s.ConfigDir, "inventory")
 	if err := os.MkdirAll(inventoryDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create inventory directory: %w", err)
 	}
 
-	// Check if it's a git repository (user wants whole repo)
 	if isGitURL(sourceURL) {
-		// Check if git is available
-		if err := checkGitAvailable(); err != nil {
+		if err := s.Cloner.CheckGitAvailable(); err != nil {
 			return err
 		}
 
-		// Warn if SSH URL but no SSH keys
 		if isSSHURL(sourceURL) {
 			warnIfNoSSHKeys()
 		}
 
-		// Confirm before cloning
 		fmt.Printf("\nYou are about to clone a git repository:\n")
 		fmt.Printf("  Source: %s\n", sourceURL)
 		fmt.Printf("  Destination: %s\n", inventoryDir)
 		fmt.Printf("  Action: Find and copy all .profile.toml files\n\n")
 
-		if !ConfirmAction("Proceed with cloning?") {
+		if !s.UI.Confirm("Proceed with cloning?") {
 			return fmt.Errorf("operation cancelled by user")
 		}
 
-		return summonFromGit(sourceURL, inventoryDir)
+		return s.summonFromGit(sourceURL, inventoryDir)
 	}
 
-	// Otherwise, treat as HTTP/HTTPS file download (user wants single file)
-	// Extract filename for confirmation
+	// HTTP/HTTPS Download
 	filename := extractFilenameFromURL(sourceURL)
 	if filename == "" || !strings.HasSuffix(filename, ".profile.toml") {
 		filename = "personal.profile.toml"
 	}
 
+	// Safety: Check Equipped Collision
+	if err := s.checkEquippedCollision(filename); err != nil {
+		return err
+	}
+
+	dstPath := filepath.Join(inventoryDir, filename)
 	fmt.Printf("\nYou are about to download a profile:\n")
 	fmt.Printf("  Source: %s\n", sourceURL)
-	fmt.Printf("  Destination: %s/%s\n", inventoryDir, filename)
+	fmt.Printf("  Destination: %s\n", dstPath)
 
-	// Check if file exists
-	dstPath := filepath.Join(inventoryDir, filename)
 	if _, err := os.Stat(dstPath); err == nil {
 		fmt.Printf("  ⚠️  Warning: %s already exists and will be overwritten\n", filename)
 	}
 	fmt.Println()
 
-	if !ConfirmAction("Proceed with download?") {
+	if !s.UI.Confirm("Proceed with download?") {
 		return fmt.Errorf("operation cancelled by user")
 	}
 
-	return summonFromHTTP(sourceURL, inventoryDir)
+	return s.summonFromHTTP(sourceURL, inventoryDir)
+}
+
+// checkEquippedCollision ensures we don't summon a profile that conflicts with an actively equipped one (in root)
+func (s *Summoner) checkEquippedCollision(filename string) error {
+	equippedPath := filepath.Join(s.ConfigDir, filename)
+	if _, err := os.Stat(equippedPath); err == nil {
+		return fmt.Errorf("safety violation: '%s' is currently EQUIPPED (in root). Cannot overwrite active profile from inventory summon. Please unequip or stash it first", filename)
+	}
+	return nil
 }
 
 // isGitURL checks if the URL points to a git repository.
-// User is smart: if they want a repo, they provide a repo URL.
-// If they want a file, they provide a file URL.
 func isGitURL(urlStr string) bool {
 	// SSH format: git@github.com:user/repo.git
 	if strings.HasPrefix(urlStr, "git@") {
@@ -121,15 +170,6 @@ func isGitURL(urlStr string) bool {
 // isSSHURL checks if the URL uses SSH protocol
 func isSSHURL(urlStr string) bool {
 	return strings.HasPrefix(urlStr, "git@") || strings.HasPrefix(urlStr, "ssh://")
-}
-
-// checkGitAvailable verifies that git is installed and accessible
-func checkGitAvailable() error {
-	cmd := exec.Command("git", "--version")
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("git is not installed or not in PATH. Please install git to summon from repositories.\n\nInstall git:\n  - Linux: sudo apt install git (Debian/Ubuntu) or sudo dnf install git (RHEL/Fedora)\n  - macOS: xcode-select --install\n  - Windows: https://git-scm.com/download/win")
-	}
-	return nil
 }
 
 // warnIfNoSSHKeys checks if SSH keys are configured and warns if not
@@ -162,8 +202,31 @@ func warnIfNoSSHKeys() {
 	}
 }
 
+// GitCloner implements RepoCloner using exec.Command
+type GitCloner struct{}
+
+func (c *GitCloner) CheckGitAvailable() error {
+	cmd := exec.Command("git", "--version")
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("git is not installed or not in PATH")
+	}
+	return nil
+}
+
+func (c *GitCloner) CloneRepo(url, destDir string) error {
+	fmt.Printf("Cloning repository...\n")
+	// Use -- to prevent argument injection if repoURL starts with a hyphen
+	cmd := exec.Command("git", "clone", "--", url, destDir)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to clone repository: %w", err)
+	}
+	return nil
+}
+
 // summonFromGit clones a profile repository
-func summonFromGit(repoURL, inventoryDir string) error {
+func (s *Summoner) summonFromGit(repoURL, inventoryDir string) error {
 	// Extract filename from URL or use default
 	filename := extractFilenameFromURL(repoURL)
 	if !strings.HasSuffix(filename, ".profile.toml") {
@@ -174,14 +237,9 @@ func summonFromGit(repoURL, inventoryDir string) error {
 	tempDir := filepath.Join(inventoryDir, ".summon-temp")
 	defer os.RemoveAll(tempDir)
 
-	// Clone the repository
-	fmt.Printf("Cloning repository...\n")
-	// Use -- to prevent argument injection if repoURL starts with a hyphen
-	cmd := exec.Command("git", "clone", "--", repoURL, tempDir)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to clone repository: %w", err)
+	// Clone the repository using injected Cloner
+	if err := s.Cloner.CloneRepo(repoURL, tempDir); err != nil {
+		return err
 	}
 
 	// Find .profile.toml files in the repo
@@ -236,6 +294,14 @@ func summonFromGit(repoURL, inventoryDir string) error {
 
 		// Validate filename
 		if err := validateFilename(dstName); err != nil {
+			fmt.Printf("⚠️  Skipping %s: %v\n", dstName, err)
+			skipped++
+			continue
+		}
+
+		// Safety Check: Equipped Collision
+		// Ensure this profile doesn't conflict with what is actively equipped in root
+		if err := s.checkEquippedCollision(dstName); err != nil {
 			fmt.Printf("⚠️  Skipping %s: %v\n", dstName, err)
 			skipped++
 			continue
@@ -695,8 +761,61 @@ func isPathWithinBase(base, target string) (bool, error) {
 	return !strings.HasPrefix(rel, ".."), nil
 }
 
+// HTTPDownloader implements FileDownloader using http package
+type HTTPDownloader struct{}
+
+// DownloadFile downloads a file from URL to destPath
+func (d *HTTPDownloader) DownloadFile(sourceURL, dstPath string) error {
+	fmt.Printf("Downloading from %s...\n", sourceURL)
+
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	req, err := http.NewRequest("GET", sourceURL, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("User-Agent", "drako-summon/1.0")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to download: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("server returned status %d", resp.StatusCode)
+	}
+
+	if resp.ContentLength > profileMaxSize {
+		return fmt.Errorf("file too large (%d bytes, max %d bytes)", resp.ContentLength, profileMaxSize)
+	}
+
+	// Create temporary file first
+	tempPath := dstPath + ".tmp"
+	tempFile, err := os.Create(tempPath)
+	if err != nil {
+		return fmt.Errorf("failed to create temp file: %w", err)
+	}
+	defer func() {
+		tempFile.Close()
+		os.Remove(tempPath)
+	}()
+
+	written, err := io.CopyN(tempFile, resp.Body, profileMaxSize+1)
+	if err != nil && err != io.EOF {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+	if written > profileMaxSize {
+		return fmt.Errorf("file too large (>%d bytes). This is not a valid profile", profileMaxSize)
+	}
+	return nil
+}
+
 // summonFromHTTP downloads a profile file from an HTTP/HTTPS URL
-func summonFromHTTP(sourceURL, inventoryDir string) error {
+func (s *Summoner) summonFromHTTP(sourceURL, inventoryDir string) error {
 	// Extract filename from URL or use default
 	filename := extractFilenameFromURL(sourceURL)
 	if filename == "" || !strings.HasSuffix(filename, ".profile.toml") {
@@ -710,57 +829,27 @@ func summonFromHTTP(sourceURL, inventoryDir string) error {
 
 	dstPath := filepath.Join(inventoryDir, filename)
 
-	fmt.Printf("Downloading from %s...\n", sourceURL)
+	// Use the injected downloader
+	// We download to a temp location handled by the downloader or here?
+	// The RealDownloader above downloads to dstPath.tmp. Wait.
+	// The current impl does tmp file handling inside.
+	// Let's rely on the downloader to do the heavy lifting of network IO.
+	// But validation happens AFTER download? Yes.
 
-	// Create HTTP client with timeout
-	client := &http.Client{
-		Timeout: 30 * time.Second,
-	}
+	// To keep it simple, we let the downloader download to the final path? No, validation.
+	// Let's download to a temp path ourselves.
 
-	req, err := http.NewRequest("GET", sourceURL, nil)
+	tempFile, err := os.CreateTemp("", "drako-summon-*.toml")
 	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
+		return err
 	}
+	tempPath := tempFile.Name()
+	tempFile.Close() // close immediately, downloader will open
+	defer os.Remove(tempPath)
 
-	// Add User-Agent header
-	req.Header.Set("User-Agent", "drako-summon/1.0")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("failed to download: %w", err)
+	if err := s.Downloader.DownloadFile(sourceURL, tempPath); err != nil {
+		return err
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("server returned status %d", resp.StatusCode)
-	}
-
-	// Check Content-Length if provided
-	if resp.ContentLength > profileMaxSize {
-		return fmt.Errorf("file too large (%d bytes, max %d bytes)", resp.ContentLength, profileMaxSize)
-	}
-
-	// Create temporary file first
-	tempPath := dstPath + ".tmp"
-	tempFile, err := os.Create(tempPath)
-	if err != nil {
-		return fmt.Errorf("failed to create temp file: %w", err)
-	}
-	defer func() {
-		tempFile.Close()
-		os.Remove(tempPath) // Clean up temp file if it still exists
-	}()
-
-	// Copy response body to temp file with size limit
-	written, err := io.CopyN(tempFile, resp.Body, profileMaxSize+1)
-	if err != nil && err != io.EOF {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-	if written > profileMaxSize {
-		return fmt.Errorf("file too large (>%d bytes). This is not a valid profile", profileMaxSize)
-	}
-
-	tempFile.Close()
 
 	// Validate the downloaded file
 	fmt.Printf("Validating profile...\n")
@@ -769,12 +858,33 @@ func summonFromHTTP(sourceURL, inventoryDir string) error {
 	}
 
 	// Move temp file to final destination
-	if err := os.Rename(tempPath, dstPath); err != nil {
+	// We need to copy/move it manually since it's cross-device potentially (tmp vs home)
+	if err := copyFile(tempPath, dstPath); err != nil {
 		return fmt.Errorf("failed to finalize file: %w", err)
 	}
 
 	fmt.Printf("✓ Summoned: %s\n", filename)
 	log.Printf("Successfully summoned profile: %s from %s", filename, sourceURL)
+	return nil
+}
+
+// Helper to copy file (since os.Rename might fail across partitions)
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	if _, err := io.Copy(out, in); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -806,24 +916,6 @@ func extractFilenameFromURL(urlStr string) string {
 	}
 
 	return ""
-}
-
-// copyFile copies a file from src to dst
-func copyFile(src, dst string) error {
-	srcFile, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer srcFile.Close()
-
-	dstFile, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer dstFile.Close()
-
-	_, err = io.Copy(dstFile, srcFile)
-	return err
 }
 
 // Profile size limits
