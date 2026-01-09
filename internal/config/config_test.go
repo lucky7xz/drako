@@ -144,3 +144,87 @@ func TestBootstrap_GeneratesFiles(t *testing.T) {
 		t.Error("Bootstrap failed to create core.profile.toml")
 	}
 }
+
+// TestLoadConfig_HandlesBrokenConfig ensures that if config.toml is corrupted,
+// the application does NOT crash and returns a Rescue config with an error.
+func TestLoadConfig_HandlesBrokenConfig(t *testing.T) {
+	// Setup Temp Dir
+	tmpDir, err := os.MkdirTemp("", "drako_broken_config_test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Mock Environment
+	t.Setenv("XDG_CONFIG_HOME", tmpDir)
+	t.Setenv("HOME", tmpDir)
+	configDir := filepath.Join(tmpDir, "drako")
+	os.MkdirAll(configDir, 0755)
+
+	// Create a corrupted config.toml
+	configPath := filepath.Join(configDir, "config.toml")
+	os.WriteFile(configPath, []byte("NOT TOML! ["), 0644)
+
+	// Run LoadConfig - Should NOT PANIC
+	bundle := LoadConfig(nil)
+
+	// Assertions
+	// 1. Check for Broken report
+	if len(bundle.Broken) == 0 {
+		t.Error("LoadConfig failed to report the broken config file")
+	} else {
+		errName := bundle.Broken[0].Name
+		if errName != "config.toml" {
+			t.Errorf("Expected broken profile error for 'config.toml', got '%s'", errName)
+		}
+	}
+
+	// 2. Check if we have Safe/Rescue defaults
+	if bundle.Base.DefaultShell != "bash" && bundle.Base.DefaultShell != "pwsh" {
+		t.Errorf("Expected rescue default shell, got '%s'", bundle.Base.DefaultShell)
+	}
+
+	// 3. Verify that the UI will get a valid config to render (Rescue Commands)
+	// RescueConfig initializes Commands.
+	if len(bundle.Base.Commands) == 0 {
+		// Base commands are usually empty in LoadConfig unless defaults applied?
+		// LoadConfig applies defaults to base.
+		// commands in base are usually empty because they come from profile.
+		// BUT RescueConfig provides commands!
+		// However, LoadConfig logic sets commands to empty [] explicitly for base.
+		// Wait, let's check LoadConfig logic:
+		// "base = RescueConfig()" -> base has commands.
+		// Then later: "base.Commands = []Command{}"?
+		// No, LoadConfig "Convert Settings to Base" explicitly sets empty commands.
+		// BUT in our fix case:
+		// "base = RescueConfig()"
+		// We do NOT wipe base.Commands in the error path!
+		// But let's check the code:
+		// if error { base = RescueConfig() ... } else { ... base = Config{ ... Commands: [] } }
+		// So in error case, base HAS commands from RescueConfig.
+	}
+
+	// Effective config logic in LoadConfig:
+	// "effective = base"
+	// Then tries to load profile.
+	// If profiles are broken/missing -> useFactoryDefaults = true
+	// "effective = RescueConfig()"
+	// "effective.ApplyDefaults()"
+
+	// So ultimately effective config should have Rescue commands.
+	if len(bundle.Config.Commands) == 0 {
+		t.Error("Effective config should have rescue commands in broken config mode")
+	}
+
+	// Check if commands contain "Reset Core" which is typical for Rescue
+	hasReset := false
+	for _, cmd := range bundle.Config.Commands {
+		if strings.Contains(cmd.Name, "Reset") || strings.Contains(cmd.Command, "purge") {
+			hasReset = true
+			break
+		}
+	}
+	if !hasReset {
+		t.Error("Rescue config missing purge/reset command")
+	}
+}

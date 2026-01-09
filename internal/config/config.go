@@ -487,6 +487,7 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 	requestedPivot := strings.TrimSpace(pf.Locked)
 
 	var base Config
+	var broken []ProfileParseError // Define broken early so we can append config errors
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		// This case is redundant if bootstrapCopy works, but kept for safety
@@ -509,29 +510,43 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 		log.Printf("Loading config from: %s", configPath)
 		configBytes, err := os.ReadFile(configPath)
 		if err != nil {
-			fatalf("could not read config file: %v", err)
-		}
-		configString := os.ExpandEnv(string(configBytes))
+			// Instead of fatal, we fallback to Rescue
+			log.Printf("could not read config file: %v", err)
+			base = RescueConfig()
+			broken = append(broken, ProfileParseError{
+				Name: "config.toml",
+				Path: configPath,
+				Err:  fmt.Sprintf("Could not read config: %v", err),
+			})
+		} else {
+			configString := os.ExpandEnv(string(configBytes))
 
-		var settings AppSettings
-		if _, err := toml.Decode(configString, &settings); err != nil {
-			fatalf("could not decode config file: %v", err)
+			var settings AppSettings
+			if _, err := toml.Decode(configString, &settings); err != nil {
+				// Broken TOML
+				log.Printf("could not decode config file: %v", err)
+				base = RescueConfig()
+				broken = append(broken, ProfileParseError{
+					Name: "config.toml",
+					Path: configPath,
+					Err:  fmt.Sprintf("SYNTAX ERROR: %v", err),
+				})
+			} else {
+				// Convert Settings to Base Config (Commands are empty)
+				base = Config{
+					DefaultShell:       settings.DefaultShell,
+					NumbModifier:       settings.NumbModifier,
+					Profile:            settings.Profile,
+					LockTimeoutMinutes: settings.LockTimeoutMinutes,
+					EnvWhitelist:       settings.EnvWhitelist,
+					EnvBlocklist:       settings.EnvBlocklist,
+					Theme:              settings.Theme,
+					Keys:               settings.Keys,
+					Commands:           []Command{}, // Explicitly empty
+				}
+				log.Printf("Loaded base settings")
+			}
 		}
-
-		// Convert Settings to Base Config (Commands are empty)
-		// Base config initially lacks Layout/Theme (will be filled by Profile or Defaults)
-		base = Config{
-			DefaultShell:       settings.DefaultShell,
-			NumbModifier:       settings.NumbModifier,
-			Profile:            settings.Profile,
-			LockTimeoutMinutes: settings.LockTimeoutMinutes,
-			EnvWhitelist:       settings.EnvWhitelist,
-			EnvBlocklist:       settings.EnvBlocklist,
-			Theme:              settings.Theme,
-			Keys:               settings.Keys,
-			Commands:           []Command{}, // Explicitly empty
-		}
-		log.Printf("Loaded base settings")
 	}
 
 	// Apply defaults to the base config immediately
@@ -546,7 +561,9 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 		// base.ApplyDefaults()
 	}
 
-	profiles, broken := DiscoverProfilesWithErrors(configDir)
+	profiles, profileErrors := DiscoverProfilesWithErrors(configDir)
+	broken = append(broken, profileErrors...)
+
 	// Reorder profiles based on pivot equipped_order
 	if len(pf.EquippedOrder) > 0 {
 		remaining := map[string]ProfileInfo{}
