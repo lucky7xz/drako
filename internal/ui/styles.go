@@ -44,6 +44,7 @@ var (
 	statusPositiveStyle       lipgloss.Style
 	statusNegativeStyle       lipgloss.Style
 	titleStyle                lipgloss.Style
+	inventoryTitleStyle       lipgloss.Style
 	listHeaderStyle           lipgloss.Style
 	itemStyle                 lipgloss.Style
 	selectedItemStyle         lipgloss.Style
@@ -154,7 +155,16 @@ func applyThemeStyles(cfg config.Config) {
 	titleStyle = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.TitleFG)).
 		Bold(true).
+		Bold(true).
 		Padding(0, 1)
+
+	inventoryTitleStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(ui.TitleFG)).
+		Bold(true).
+		Border(lipgloss.DoubleBorder()).
+		BorderForeground(lipgloss.Color(ui.GridBorder)).
+		Padding(0, 1).
+		MarginBottom(1)
 
 	listHeaderStyle = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.ListHeaderFG)).

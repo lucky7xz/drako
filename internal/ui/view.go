@@ -342,7 +342,8 @@ func (m Model) viewInventoryMode() string {
 	}
 
 	var s strings.Builder
-	s.WriteString(titleStyle.Render("Inventory Management") + "\n\n")
+	// Title
+	s.WriteString(inventoryTitleStyle.Render("Inventory Management") + "\n\n")
 
 	visiblePtr, _ := m.inventory.State.GetList(core.ListVisible)
 	visible := *visiblePtr
@@ -350,10 +351,12 @@ func (m Model) viewInventoryMode() string {
 	inventory := *inventoryPtr
 
 	// Draw visible list
+	s.WriteString(listHeaderStyle.Render("Equipped Items") + "\n")
 	s.WriteString(m.renderInventoryGrid(visible, 0))
 	s.WriteString("\n\n")
 
 	// Draw inventory list
+	s.WriteString(listHeaderStyle.Render("Inventory Items") + "\n")
 	s.WriteString(m.renderInventoryGrid(inventory, 1))
 	s.WriteString("\n\n")
 
