@@ -1,10 +1,32 @@
 ![Demo v0.1.8](docs/demo.gif)
 
-> [!CAUTION]
-> **Breaking Change (v0.2.4)**: You must delete your `~/.config/drako/config.toml` or run `drako purge --destroyeverything` to delete the whole config folder. This is because config.toml has now been split intro `core.profile.toml` (only os-adaptive profile as of now) and `config.toml` (global settings). **Backup your work first before upgrading!**
+The terminal is a realm of immense power, but also of high entropy. Commands are forgotten, workflows fracture, and focus is lost to the noise. **Drako** is a **Command-Deck launcher** that enables structure, transforming your terminal into a disciplined, grid-based command center. 
 
-The terminal is a realm of immense power, but also of high entropy. Commands are forgotten, workflows fracture, and focus is lost to the noise. **Drako** is a **TUI-Deck launcher** that enables structure, transforming your terminal into a disciplined, grid-based command center. 
+## ✨ TLDR; 
 
+`drako` is built on a few core principles:
+
+-   **Harness, Don't Replace:** It integrates with the tools you already use. If it runs in the terminal, it can be bound to the grid.
+-   **The Grid:** Your keyboard-based command center. It is technically `3-dimensional` and can fit up to 729 (9x * 9y * 9z) commands per `grid`, any of which can be accessed almost instantly using **Quick Navigation** (see below). Cycle through command grids or stash them in the `inventory` folder using `i`.
+-   **Profiles, Decks, & Assets:** A `profile` consists of a `grid configuration` (size etc), a collection of commands (the `deck`), and `assets` (optional). Example: A `profile` can have a `deck` of Docker commands, and have Docker compose files as its `assets`. 
+-   **Portable Specs:** All `profile` files exist in `~/.config/drako/`. You can download new `profile` setups from any `git` repository to your `inventory` folder using `drako summon`. You can even have multiple such `profiles` in a single repo (`specs`). Git-manage your own `spec` folder and `summon` your own control panel in an instant.
+
+### 🧭 Navigation
+
+- **Grid Navigation:** Use arrows, `w/a/s/d`, or `h/j/k/l` (customizable in config.toml).
+- **Quick Nativagion:** For example : Pressing `2` and `3` in quick sequence moves the cursor to the 2nd column, 3rd row.
+- **Switch Profile:** `Alt` + `1-9` to switch directly.
+- **Cycle Profile:** `o` (prev) and `p` (next).
+- **Profile Inventory:** `i`.
+- **Lock Current Profile (for launching):** `r`.
+- **Grid/Path Toggle:** `Tab`.
+- **Path Mode:**
+    - **Search:** `e` (type to filter, arrows to select, esc to cancel).
+    - **Hidden Files:** `.` to toggle.
+    - **Back:** `q` or `Esc`.
+- **Quit:** `Ctrl+C` (Global), or `q` (Grid Mode).
+
+> **Customization:** Remap keys in `~/.config/drako/config.toml` under `[keys]`.
 
 ## 🚀 Quick Start
 
@@ -33,39 +55,9 @@ GOPROXY=direct go install github.com/lucky7xz/drako/cmd/drako@latest  # update d
 ```
 NOTE: If go binary directory is not in specified in your path, try `~/./go/bin/drako` or add `export PATH=$PATH:~/go/bin` to your bashrc.
 
-
-### 🧭 Navigation
-
-- **Grid Navigation:** Use arrows, `w/a/s/d`, or `h/j/k/l`.
-- **Quick Nativagion:** For example : Pressing `2` and `3` in sequence moves the cursor to the 2nd column, 3rd row.
-- **Switch Profile:** `Alt` + `1-9` to switch directly.
-- **Cycle Profile:** `o` (prev) and `p` (next).
-- **Profile Inventory:** `i`.
-- **Lock Current Profile (for launching):** `r`.
-- **Grid/Path Toggle:** `Tab`.
-- **Path Mode:**
-    - **Search:** `e` (type to filter, arrows to select, esc to cancel).
-    - **Hidden Files:** `.` to toggle.
-    - **Back:** `q` or `Esc`.
-- **Quit:** `Ctrl+C` (Global), or `q` (Grid Mode).
-
-> **Customization:** Remap keys in `~/.config/drako/config.toml` under `[keys]`. You can also disable WASD/Vim bindings there.
-
-
 ### Shell Integration
 
 To enable `cd` on exit, see [docs/SHELL_INTEGRATION.md](docs/SHELL_INTEGRATION.md). 
-
-
-## ✨ Philosophy
-
-`drako` is built on a few core principles:
-
--   **The Grid:** The grid is your command center. It is technically `3-dimensional` and can fit up to 729 (9x * 9y * 9z) commands per `profile`, any of which can be accessed almost instantly using **Quick Navigation**.
--   **Decks & Profiles:** A `profile` consists of a collection of `decks` plus `assets` and configuration. `Decks` are collections of commands that 'belong together'. `Assets` are files that are copied to the profile directory. For example, a profile can have a deck of Docker commands, with with compose files as assets. 
-
--   **Portable Configuration:** Your entire setup lives in `~/.config/drako`. Git-manage your own profile folder and `summon` it with `drako summon`. You can deploy your exact control panel to any new machine in an instant.
--   **Harness, Don't Replace:** It integrates with the tools you already use. If it runs in the terminal, it can be bound to the grid.
 
 
 ## 👢 Bootstrap & 🧶 The Weaver
@@ -74,7 +66,7 @@ To enable `cd` on exit, see [docs/SHELL_INTEGRATION.md](docs/SHELL_INTEGRATION.m
 - `config.toml`: Global settings (Input Keys, Global Theme).
 - `core.profile.toml`: The default command profile (Process Monitor, System Info, etc.)
 
-**NOTE:** Bootstrapping only occurs if files are missing, and it never overwrites existing profiles. To clean-up, use `drako purge --interactive` or `drako purge --destroyeverything` (backup your work first).
+**NOTE:** Bootstrapping only occurs if files (config.toml and core.profile.toml) are missing. To clean-up, use `drako purge --interactive` or `drako purge --destroyeverything` (backup your work first).
 
 **The Weaver:** Ensures cross-platform consistency. Inside the Drako binary lies a **Settings Template**, a **Core Template**, and a **[dictionary](internal/config/bootstrap/core_dictionary.toml)** of OS-specific defaults. When you run Drako for the first time, The Weaver "weaves" these together to create `~/.config/drako/core.profile.toml` tailored to your OS.
 
@@ -169,7 +161,7 @@ drako strip
 
 Safely reset or remove configurations.
 ```bash
-# Reset Core config to defaults (moves old config to trash/)
+# Remove Core profile (moves to trash/)
 drako purge --target core
 
 # Remove a specific profile (moves to trash/)
@@ -177,6 +169,9 @@ drako purge --target git
 
 # Use interactive mode to purge profiles
 drako purge --interactive
+
+# Remove config.toml specifically (to trash/)
+drako purge --config
 
 # NUCLEAR OPTION: Delete everything in the .config/drako/ folder (NO TRASH, NO UNDO) 💀
 drako purge --destroyeverything
