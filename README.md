@@ -1,6 +1,6 @@
 ![Demo v0.1.8](docs/demo.gif)
 
-The terminal is a realm of immense power, but also of high entropy. Commands are forgotten, workflows fracture, and focus is lost to the noise. **Drako** is a **Command-Deck launcher** that enables structure, transforming your terminal into a disciplined, grid-based command center. 
+**Drako** is a **Command-Deck launcher** that enables structure, transforming your terminal into a disciplined, grid-based command center. 🧇
 
 ## ✨ TLDR; 
 
@@ -130,7 +130,7 @@ Share and reuse command decks across machines and teams. Instead of manually cop
 drako summon git@github.com:user/my_profile_collection.git
 ```
 
-**NOTE:** Works with any Git host (GitHub, GitLab, self-hosted). Summoned profiles land in your inventory, validated for syntax before copying.
+**NOTE:** Works with any Git host (GitHub, GitLab, self-hosted). Summoned profiles land in `inventory/`, validated before copying.
 
 If a profile needs extra files (scripts, configs), declare it under `assets = ["relative/path/to/file", ...]`.
 `drako` will copy these assets to `~/.config/drako/assets/<profile_name>/`.
@@ -200,11 +200,11 @@ If your configuration breaks (syntax error, invalid grid), Drako won't crash. It
  - [x] DRY Refactor  
  - [x] Grid Size Safety & Rescue Mode
  - [x] Core Profile Concept
- - [x] MacOS support (untested)
- - [x] Windows support (untested)
- - [ ] Full unit test suite
+ - [~] MacOS support (untested)
+ - [~] Windows support (untested)
+ - [~] Full unit test suite
  - [ ] Steamdeck support
- - [ ] ARM Support
+ - [~] ARM Support
  - [ ] CI/CD
  - [ ] Auto Update
 
