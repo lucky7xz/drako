@@ -280,3 +280,8 @@ Add-Content $PROFILE '$env:PATH += ";$env:USERPROFILE\go\bin"'
 Add-Content $PROFILE '$env:PATH += ";C:\Program Files\Go\bin"'
 Write-Host "Path added to PowerShell Profile. Restart shell to take effect."
 '''
+
+["Reload Shell"]
+linux_generic = "source ~/.bashrc"
+macos = "source ~/.zshrc"
+windows = ""
