@@ -42,6 +42,9 @@ func HandleCLI() bool {
 	case "open", "--open":
 		HandleOpenCLI()
 		return true
+	case "version", "--version", "-v":
+		fmt.Printf("%s %s\n", config.AppName, config.Version)
+		return true
 	default:
 		return false
 	}

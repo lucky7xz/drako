@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/core"
 )
 
@@ -20,9 +21,14 @@ func (m Model) viewInventoryMode() string {
 		)
 	}
 
+	// Calculate layout to determine visibility of header/footer
+	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config)
+
 	var s strings.Builder
-	// Title
-	s.WriteString(inventoryTitleStyle.Render("Inventory Management") + "\n\n")
+	// Title (Header)
+	if layout.ShowHeader {
+		s.WriteString(inventoryTitleStyle.Render("Inventory Management") + "\n\n")
+	}
 
 	visiblePtr, _ := m.inventory.State.GetList(core.ListVisible)
 	visible := *visiblePtr
@@ -61,9 +67,16 @@ func (m Model) viewInventoryMode() string {
 	}
 	s.WriteString("\n\n" + heldItemStatus)
 
-	// Render Help
-	help := helpStyle.Render("\n\n↑/↓/jk: Switch Grid | ←/→/hl: Move | space/enter: Lift/Place | tab: Focus Apply | q/esc: Back")
-	s.WriteString(help)
+	// Footer Section (Help + Version)
+	if layout.ShowFooter {
+		// Render Help
+		help := helpStyle.Render("\n\n↑/↓/tab: Switch Grid | ←/→: Move | space/enter: Lift/Place | q/esc: Back")
+		s.WriteString(help)
+
+		// Render Version
+		version := helpStyle.Render("\n\n" + config.AppName + "|" + config.Version)
+		s.WriteString(version)
+	}
 
 	return appStyle.Render(
 		lipgloss.Place(m.termWidth, m.termHeight, lipgloss.Center, lipgloss.Center, s.String()),
