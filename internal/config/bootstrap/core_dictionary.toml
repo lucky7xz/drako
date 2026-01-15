@@ -127,9 +127,15 @@ windows = "typeperf \"\\Network Interface(*)\\Bytes Total/sec\""
 
 ["System Info"]
 linux_generic = """
-neofetch 2>/dev/null || {
-    echo "neofetch not available. Defaulting to lshw..."
-    lshw -short
+fastfetch 2>/dev/null || neofetch 2>/dev/null || {
+    if command -v lshw &> /dev/null; then
+        echo "fastfetch/neofetch not found. Using lshw..."
+        lshw -short
+    else
+        echo "System Info Tools missing. Fallback:"
+        uname -sr
+        grep PRETTY_NAME /etc/os-release 2>/dev/null | cut -d= -f2- | sed 's/"//g'
+    fi
 }
 """
 macos = "system_profiler SPSoftwareDataType SPDetailLevel=mini"
@@ -156,7 +162,7 @@ windows = "curl wttr.in"
 
 ["Install common tools"]
 linux_debian = "sudo apt install btop bmon neofetch clamav fzf duf"
-linux_arch = "sudo pacman -S btop bmon neofetch clamav fzf duf"
+linux_arch = "sudo pacman -S btop bmon fastfetch clamav fzf duf"
 linux_fedora = "sudo dnf install btop bmon neofetch clamav fzf duf"
 macos = "brew install btop bmon neofetch fzf duf"
 windows = "winget install btop bmon neofetch fzf duf"
