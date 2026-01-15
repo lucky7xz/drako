@@ -50,7 +50,7 @@ func Run() {
 
 	// Check if CLI command was invoked (e.g., drako sync <url>)
 	// Note: HandleCLI parses os.Args directly.
-	if cli.HandleCLI() {
+	if cli.HandleCLI(cleanArgs) {
 		return
 	}
 

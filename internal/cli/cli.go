@@ -15,44 +15,65 @@ import (
 )
 
 // HandleCLI checks if the program was invoked with CLI arguments (not TUI mode).
-// Returns true if a CLI command was handled, false if it should proceed to TUI.
-func HandleCLI() bool {
-	if len(os.Args) <= 1 {
+// Returns true if a CLI command was handled (or errored out), false if it should proceed to TUI.
+func HandleCLI(args []string) bool {
+	if len(args) <= 1 {
 		return false
 	}
 
-	command := os.Args[1]
+	command := args[1]
 
 	switch command {
 	case "summon", "--summon":
-		HandleSummonCommand()
+		HandleSummonCommand(args)
 		return true
 	case "purge", "--purge":
-		HandlePurgeCommand()
+		HandlePurgeCommand(args)
 		return true
 	case "spec", "--spec":
-		HandleSpecCommand()
+		HandleSpecCommand(args)
 		return true
 	case "stash", "--stash":
-		HandleStashCommand()
+		HandleStashCommand(args)
 		return true
 	case "strip", "--strip":
-		HandleStripCommand()
+		HandleStripCommand(args)
 		return true
 	case "open", "--open":
-		HandleOpenCLI()
+		HandleOpenCLI(args)
 		return true
 	case "version", "--version", "-v":
 		fmt.Printf("%s %s\n", config.AppName, config.Version)
 		return true
+	case "help", "--help", "-h":
+		PrintUsage()
+		return true
 	default:
-		return false
+		// If we have an argument that isn't a known command, it's an error.
+		// We print usage and exit with 1.
+		fmt.Printf("Unknown command or argument: '%s'\n\n", command)
+		PrintUsage()
+		os.Exit(1)
+		return true // unreachable
 	}
 }
 
+func PrintUsage() {
+	fmt.Printf("Usage: drako <command> [arguments]\n\n")
+	fmt.Printf("Commands:\n")
+	fmt.Printf("  summon <url>   Summon a profile from a URL\n")
+	fmt.Printf("  purge          Delete profiles or config\n")
+	fmt.Printf("  spec           Manage specs\n")
+	fmt.Printf("  stash          Stash current profile\n")
+	fmt.Printf("  strip          Strip comments from profiles\n")
+	fmt.Printf("  open <path>    Open a file or directory\n")
+	fmt.Printf("  version        Show version information\n")
+	fmt.Printf("  help           Show this help message\n")
+}
+
 // HandleSummonCommand processes the 'drako summon <url>' command
-func HandleSummonCommand() {
-	if len(os.Args) < 3 {
+func HandleSummonCommand(args []string) {
+	if len(args) < 3 {
 		PrintSummonUsage()
 		os.Exit(1)
 	}
@@ -77,7 +98,7 @@ func HandleSummonCommand() {
 		log.SetOutput(logFile)
 	}
 
-	sourceURL := os.Args[2]
+	sourceURL := args[2]
 	log.Printf("Attempting to summon profile from: %s", sourceURL)
 
 	if err := SummonProfile(sourceURL, configDir); err != nil {
@@ -103,10 +124,10 @@ func PrintSummonUsage() {
 	fmt.Fprintf(os.Stderr, "  drako summon https://github.com/user/repo.git\n")
 }
 
-// HandlePurgeCommand processes the 'drako purge' command from os.Args
-func HandlePurgeCommand() {
+// HandlePurgeCommand processes the 'drako purge' command from args
+func HandlePurgeCommand(args []string) {
 	// Parse args starting from index 2 (skipping "drako" and "purge")
-	if err := ExecutePurge(os.Args[2:]); err != nil {
+	if err := ExecutePurge(args[2:]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		printPurgeUsage()
 		os.Exit(1)
@@ -353,14 +374,14 @@ func runInteractivePurgeSelection(configDir string, opts *PurgeOptions, input io
 }
 
 // HandleOpenCLI processes the 'drako open <path>' command from the shell.
-func HandleOpenCLI() {
-	if len(os.Args) < 3 {
+func HandleOpenCLI(args []string) {
+	if len(args) < 3 {
 		fmt.Fprintf(os.Stderr, "Usage: drako open <path>\n")
 		os.Exit(1)
 	}
 
 	// Reconstruct the argument or take the last one.
-	path := os.Args[2]
+	path := args[2]
 
 	if err := OpenPath(path); err != nil {
 		fmt.Fprintf(os.Stderr, "Error opening '%s': %v\n", path, err)

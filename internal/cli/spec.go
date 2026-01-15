@@ -16,14 +16,14 @@ type Spec struct {
 	Profiles []string `toml:"profiles"`
 }
 
-func HandleSpecCommand() {
-	if len(os.Args) < 3 {
+func HandleSpecCommand(args []string) {
+	if len(args) < 3 {
 		fmt.Fprintf(os.Stderr, "Usage: drako spec <name>\n")
 		fmt.Fprintf(os.Stderr, "  Loads a profile specification from ~/.config/drako/specs/<name>.spec.toml\n")
 		os.Exit(1)
 	}
 
-	specName := os.Args[2]
+	specName := args[2]
 
 	configDir, err := config.GetConfigDir()
 	if err != nil {
@@ -54,14 +54,14 @@ func HandleSpecCommand() {
 	os.Exit(0)
 }
 
-func HandleStashCommand() {
-	if len(os.Args) < 3 {
+func HandleStashCommand(args []string) {
+	if len(args) < 3 {
 		fmt.Fprintf(os.Stderr, "Usage: drako stash <name>\n")
 		fmt.Fprintf(os.Stderr, "  Stashes profiles listed in ~/.config/drako/specs/<name>.spec.toml to inventory\n")
 		os.Exit(1)
 	}
 
-	specName := os.Args[2]
+	specName := args[2]
 
 	configDir, err := config.GetConfigDir()
 	if err != nil {
@@ -88,8 +88,8 @@ func HandleStashCommand() {
 	os.Exit(0)
 }
 
-func HandleStripCommand() {
-	if len(os.Args) < 2 {
+func HandleStripCommand(args []string) {
+	if len(args) < 2 {
 		fmt.Fprintf(os.Stderr, "Usage: drako strip\n")
 		fmt.Fprintf(os.Stderr, "  Moves ALL profiles (except Core) to inventory.\n")
 		os.Exit(1)
