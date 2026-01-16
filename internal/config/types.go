@@ -27,6 +27,7 @@ type AppSettings struct {
 	NumbModifier       string      `toml:"numb_modifier"`
 	Profile            string      `toml:"profile"`
 	LockTimeoutMinutes *int        `toml:"lock_timeout_minutes"`
+	AutoLockEnabled    *bool       `toml:"auto_lock_enabled"`
 	EnvWhitelist       []string    `toml:"env_whitelist"`
 	EnvBlocklist       []string    `toml:"env_blocklist"`
 	Theme              string      `toml:"theme"` // Global Fallback Theme
@@ -43,6 +44,7 @@ type Config struct {
 	Y                  int         `toml:"y"`
 	Profile            string      `toml:"profile"`
 	LockTimeoutMinutes *int        `toml:"lock_timeout_minutes"`
+	AutoLockEnabled    *bool       `toml:"auto_lock_enabled"`
 	EnvWhitelist       []string    `toml:"env_whitelist"`
 	EnvBlocklist       []string    `toml:"env_blocklist"`
 	Keys               InputConfig `toml:"keys"`

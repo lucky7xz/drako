@@ -1,5 +1,31 @@
 # dR4ko - Global Settings
-# This file controls the look and feel of your Drako experience.
+
+# ┌─ Theme ──────────────────────────────────────────────────────────┐
+# │ Select the color palette for the UI.
+# │ Available themes:
+# └──────────────────────────────────────────────────────────────────┘
+
+theme = "dracula"
+#theme = "jade"
+#theme = "nord"
+#theme = "dracula2"
+#theme = "everforest"
+#theme = "orasaka"
+
+# ┌─ Auto Lock Session ──────────────────────────────────────────────────┐
+# │ When enabled, drako will automatically lock after a period of inactivity.
+# │ This prevents accidental key presses after a period of idle periods.
+# │
+# │ Recommended: Keep it enabled (default)
+# └────────────────────────────────────────────────────────────┘
+#auto_lock_enabled = false
+#lock_timeout_minutes = 1 #
+
+# ┌─ Key Bindings ─────────────────────────────────────────────┐
+# │ Customize your control scheme.
+# │ Arrows are always enabled.
+# │ Defaults are shown commented out.
+# └────────────────────────────────────────────────────────────┘
 
 # ┌─ Keybinding Modifier ────────────────────────────────────┐
 # │ Set the modifier for number-based shortcuts.
@@ -10,28 +36,6 @@
 # └───────────────────────────────────────────────────────────┘
 numb_modifier = "alt"
 
-
-# ┌─ Theme ──────────────────────────────────────────────────────────┐
-# │ Select the color palette for the UI.
-# │ Available themes:
-# │   - dracula (default)    - nord
-# │   - dracula2             - everforest
-# │   - jade                 - orasaka
-# └──────────────────────────────────────────────────────────────────┘
-
-theme = "dracula"
-#theme = "jade"
-#theme = "nord"
-#theme = "dracula2"
-#theme = "everforest"
-#theme = "orasaka"
-
-
-# ┌─ Key Bindings ─────────────────────────────────────────────┐
-# │ Customize your control scheme.
-# │ Arrows are always enabled.
-# │ Defaults are shown commented out.
-# └────────────────────────────────────────────────────────────┘
 [keys]
 #disable_wasd_bindings = true
 #disable_vim_bindings = true
@@ -42,8 +46,6 @@ theme = "dracula"
 #lock = "r"
 profile_prev = "o"
 profile_next = "p"
-
-
 
 # ┌─ Environment Variables ──────────────────────────────┐
 # | By default, drako inherits your full shell environment

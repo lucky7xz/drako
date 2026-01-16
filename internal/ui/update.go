@@ -241,7 +241,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case lockCheckMsg:
 		// Check if we should auto-lock
-		if m.mode != lockedMode && m.lockTimeoutMins > 0 {
+		autoLockEnabled := m.Config.AutoLockEnabled == nil || *m.Config.AutoLockEnabled
+		if autoLockEnabled && m.mode != lockedMode && m.lockTimeoutMins > 0 {
 			elapsed := time.Since(m.lastActivityTime)
 			if elapsed >= time.Duration(m.lockTimeoutMins)*time.Minute {
 				log.Printf("Auto-locking after %v of inactivity", elapsed)

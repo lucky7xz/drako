@@ -70,11 +70,13 @@ func RescueConfig() Config {
 	openDirCmd := fmt.Sprintf("drako open %s", configDir)
 
 	return Config{
-		X:            3,
-		Y:            3,
-		Theme:        "dracula", // A safe, dark theme
-		NumbModifier: "alt",
-		DefaultShell: defaultShell,
+		X:                  3,
+		Y:                  3,
+		Theme:              "dracula", // A safe, dark theme
+		NumbModifier:       "alt",
+		DefaultShell:       defaultShell,
+		LockTimeoutMinutes: func() *int { i := 5; return &i }(),
+		AutoLockEnabled:    func() *bool { b := true; return &b }(),
 		Keys: InputConfig{
 			Explain:      "e",
 			Inventory:    "i",
@@ -158,6 +160,11 @@ func (c *Config) ApplyDefaults() {
 	if strings.TrimSpace(c.Theme) == "" {
 		c.Theme = defaults.Theme
 	}
+
+	if c.AutoLockEnabled == nil {
+		enabled := true
+		c.AutoLockEnabled = &enabled
+	} // Default to true
 
 	// Apply key defaults if missing
 	if strings.TrimSpace(c.Keys.Explain) == "" {
@@ -538,6 +545,7 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 					NumbModifier:       settings.NumbModifier,
 					Profile:            settings.Profile,
 					LockTimeoutMinutes: settings.LockTimeoutMinutes,
+					AutoLockEnabled:    settings.AutoLockEnabled,
 					EnvWhitelist:       settings.EnvWhitelist,
 					EnvBlocklist:       settings.EnvBlocklist,
 					Theme:              settings.Theme,
@@ -545,6 +553,16 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 					Commands:           []Command{}, // Explicitly empty
 				}
 				log.Printf("Loaded base settings")
+				if settings.LockTimeoutMinutes != nil {
+					log.Printf("DEBUG: LockTimeoutMinutes = %d", *settings.LockTimeoutMinutes)
+				} else {
+					log.Printf("DEBUG: LockTimeoutMinutes is nil")
+				}
+				if settings.AutoLockEnabled != nil {
+					log.Printf("DEBUG: AutoLockEnabled = %v", *settings.AutoLockEnabled)
+				} else {
+					log.Printf("DEBUG: AutoLockEnabled is nil")
+				}
 			}
 		}
 	}
