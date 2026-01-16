@@ -68,14 +68,21 @@ func (m Model) viewInventoryMode() string {
 	s.WriteString("\n\n" + heldItemStatus)
 
 	// Footer Section (Help + Version)
+	var footer string
 	if layout.ShowFooter {
 		// Render Help
-		help := helpStyle.Render("\n\n↑/↓/tab: Switch Grid | ←/→: Move | space/enter: Lift/Place | q/esc: Back")
-		s.WriteString(help)
+		help := helpStyle.Render("↑/↓/tab: Switch Grid | ←/→: Move | space/enter: Lift/Place | q/esc: Back")
 
 		// Render Version
-		version := helpStyle.Render("\n\n" + config.AppName + "|" + config.Version)
-		s.WriteString(version)
+		version := helpStyle.Render(config.AppName + "|" + config.Version)
+
+		// Combine help and version with spacing
+		footer = lipgloss.JoinVertical(lipgloss.Center, help, version)
+
+		// Apply footer margins
+		footer = footerStyle.Render(footer)
+
+		s.WriteString(footer)
 	}
 
 	return appStyle.Render(

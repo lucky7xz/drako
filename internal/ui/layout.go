@@ -30,8 +30,8 @@ func CalculateLayout(termW, termH int, cfg config.Config) Layout {
 
 	// Calculate estimated height of footer elements (Help, Status, Profile, Path)
 	// This is roughly 8-10 lines depending on state.
-	// Let's assume a safe minimum for the footer area.
-	footerHeight := 10
+	// We increase this request to ensure plenty of breathing room for the grid.
+	footerHeight := 14
 
 	// Total height needed for everything including header
 	fullHeight := gridHeight + LayoutHeaderHeight + footerHeight + LayoutVertPadding

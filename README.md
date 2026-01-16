@@ -1,6 +1,6 @@
 ![Demo v0.1.8](docs/demo.gif)
 
-**Drako** is a **Command-Deck launcher** that enables structure, transforming your terminal into a disciplined, grid-based command center. 🧇
+**drako** represents an entirely new species of terminal tools: the customizable **Command-Deck Launcher**. It is not a menu, nor a shell history. It is a brutalist **architectural framework for any CLI-based workflow**, solidifying your scattered commands, TUIs, and scripts into a cohesive control surface. As such, CLI-driven workflows become remarkably easy to document, distribute, teach, and scale across a team.
 
 ## ✨ TLDR; 
 
@@ -53,7 +53,10 @@ If you are not getting the latest version, use this command instead:
 ```bash
 GOPROXY=direct go install github.com/lucky7xz/drako/cmd/drako@latest  # update drako
 ```
-NOTE: If go binary directory is not in specified in your path, try `~/./go/bin/drako` or add `export PATH=$PATH:~/go/bin` to your bashrc.
+[!NOTE] New to Go? Unlike apt or brew, Go installs tools into your home folder (~/go/bin) rather than the system root. You must add this directory to your shell's PATH to run `drako` directly. You can lauch drako with `~/go/bin/drako`. In the `Settings` Cell (`core profile`), you can find a command called `Add go/bin to PATH` that will write the necessary changes to your shell config file.
+
+> [!NOTE]
+> **Emoji Support:** drako profiles sometimes use emojis as visual indicators. Modern terminals (Ghostty, WezTerm etc.) may support them by default. Others (older Linux terminals) may require installing a "Nerd Font" (e.g., [Nerd Fonts](https://www.nerdfonts.com/)) or specific emoji font packages (e.g., `fonts-noto-color-emoji`).
 
 ### Shell Integration
 
