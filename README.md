@@ -1,4 +1,4 @@
-![Demo v0.1.8](docs/demo.gif)
+[![Drako Demo](https://thumbnails.odycdn.com/card/s:1280:720/quality:85/plain/https://thumbs.odycdn.com/062593cf8684531dd375ddf14c28cc81.webp)](https://odysee.com/lucky7xz-drako:e)
 
 **drako** represents an entirely new species of terminal tools: the customizable **Command-Deck Launcher**. It is not a menu, nor a shell history. It is a brutalist **architectural framework for any CLI-based workflow**, solidifying your scattered commands, TUIs, and scripts into a cohesive control surface. As such, CLI-driven workflows become remarkably easy to document, distribute, teach, and scale across a team.
 
