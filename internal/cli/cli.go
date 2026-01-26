@@ -167,6 +167,8 @@ func ExecutePurge(args []string) error {
 		confirmMsg = fmt.Sprintf("💀 This will DESTROY EVERYTHING in %s.\n   NO UNDO. NO TRASH.\n   Are you absolutely sure?", configDir)
 	} else if opts.TargetConfig {
 		confirmMsg = "⚠️  This will reset your Core Configuration (config.toml). Proceed?"
+	} else if opts.TargetLogs {
+		confirmMsg = "💀 This will PERMANENTLY DELETE your log files (history.log, drako.log). Proceed?"
 	} else if len(opts.TargetProfiles) > 0 {
 		confirmMsg = fmt.Sprintf("⚠️  This will remove %d profile(s): %s. Proceed?", len(opts.TargetProfiles), strings.Join(opts.TargetProfiles, ", "))
 	} else {
@@ -174,7 +176,7 @@ func ExecutePurge(args []string) error {
 		// We catch this case below to provide a helpful usage message.
 	}
 
-	if !opts.DestroyEverything && !opts.TargetConfig && len(opts.TargetProfiles) == 0 {
+	if !opts.DestroyEverything && !opts.TargetConfig && !opts.TargetLogs && len(opts.TargetProfiles) == 0 {
 		printPurgeUsage()
 		return fmt.Errorf("no target specified")
 	}
@@ -409,6 +411,10 @@ func ParsePurgeFlags(args []string) (*PurgeOptions, bool, error) {
 	purgeCmd.BoolVar(&interactive, "interactive", false, "Interactive mode")
 	purgeCmd.BoolVar(&interactive, "i", false, "Alias for --interactive")
 
+	var targetLogs bool
+	purgeCmd.BoolVar(&targetLogs, "logs", false, "Purge logs")
+	purgeCmd.BoolVar(&targetLogs, "l", false, "Alias for --logs")
+
 	destroyEverything := purgeCmd.Bool("destroyeverything", false, "Destroy everything")
 
 	if err := purgeCmd.Parse(args); err != nil {
@@ -422,6 +428,7 @@ func ParsePurgeFlags(args []string) (*PurgeOptions, bool, error) {
 	opts := &PurgeOptions{
 		DestroyEverything: *destroyEverything,
 		TargetConfig:      targetConfig,
+		TargetLogs:        targetLogs,
 		TargetProfiles:    []string{},
 	}
 

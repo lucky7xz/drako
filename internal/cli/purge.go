@@ -14,6 +14,7 @@ type PurgeOptions struct {
 	DestroyEverything bool     // Nuke ~/.config/drako entirely
 	TargetProfiles    []string // Delete/Move specific profiles (e.g. "git", "core")
 	TargetConfig      bool     // Reset config.toml
+	TargetLogs        bool     // Purge logs (history.log and drako.log)
 }
 
 // PurgeConfig executes the purge operation based on the options.
@@ -26,9 +27,9 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 	}
 
 	// Safety check: if no targets selected
-	if len(opts.TargetProfiles) == 0 && !opts.TargetConfig && !opts.DestroyEverything {
+	if len(opts.TargetProfiles) == 0 && !opts.TargetConfig && !opts.TargetLogs && !opts.DestroyEverything {
 		// This should be caught by caller, but good to be safe
-		return fmt.Errorf("no target specified (use --target, --config, or --destroyeverything)")
+		return fmt.Errorf("no target specified (use --target, --config, --logs, or --destroyeverything)")
 	}
 
 	// Ensure trash directory exists
@@ -45,7 +46,28 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 		}
 	}
 
-	// Case 2: Target Specific Profiles
+	// Case 2: Purge Logs
+	if opts.TargetLogs {
+		log.Printf("Purging Logs (Permanent Delete)")
+		logFiles := []string{
+			"history.log", "history.log.old",
+			"drako.log", "drako.log.old",
+		}
+		for _, f := range logFiles {
+			path := filepath.Join(configDir, f)
+			// Permanent deletion as requested
+			if err := os.Remove(path); err != nil {
+				// Don't log normal "not found" errors to avoid clutter, unless debugging
+				if !os.IsNotExist(err) {
+					log.Printf("Failed to delete log %s: %v", f, err)
+				}
+			} else {
+				fmt.Printf("  💀 Deleted %s\n", f)
+			}
+		}
+	}
+
+	// Case 3: Target Specific Profiles
 	for _, target := range opts.TargetProfiles {
 		log.Printf("Purging Profile: %s", target)
 		filename := target

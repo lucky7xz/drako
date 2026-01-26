@@ -183,6 +183,9 @@ func RunCommand(cfg config.Config, selected string) {
 		}
 
 		logPath := filepath.Join(cfgDir, "history.log")
+		// Rotate if > 1MB
+		RotateLogIfNeeded(logPath, 1024*1024)
+
 		f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 		if err != nil {
 			log.Printf("logging error: could not open history.log: %v", err)
@@ -191,18 +194,6 @@ func RunCommand(cfg config.Config, selected string) {
 		defer f.Close()
 
 		timestamp := time.Now().Format("2006-01-02 15:04:05")
-		// We log the "selected" string which is the command name/key, or the specific shell command string if available?
-		// The requirement was "command that will be executed".
-		// If it's a shell command, cmd.Args might be ["bash", "-lc", "echo hi"].
-		// If it's a binary, it might be ["/bin/ls"].
-		// Let's log the raw command string if we have it from config, otherwise the selected name.
-
-		// logStr := selected // UNUSED: using 'selected' directly below
-		// If we built a shell command, the actual executed string is often more useful.
-		// For shell commands, the 3rd arg is usually the command string.
-		// But let's stick to what the user "ran" (the input) + maybe the resolved command if different?
-		// For simplicity and readability, let's log the 'selected' command name/input,
-		// and if we have a resolved command string from config, log that too.
 
 		var executedStr string
 		if cmd.Args != nil {
