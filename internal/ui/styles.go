@@ -238,9 +238,16 @@ func applyThemeStyles(cfg config.Config) {
 
 // renderHeaderArt renders the header with x and Chinese characters in white
 func renderHeaderArt(spinnerView string) string {
-	// Use a placeholder for the spinner
+	var formattedArt string
 	placeholder := "SPINNERPLACEHOLDER"
-	formattedArt := fmt.Sprintf(activeHeaderArt, placeholder)
+
+	// Only inject the spinner if the template asks for it
+	if strings.Contains(activeHeaderArt, "%s") {
+		formattedArt = fmt.Sprintf(activeHeaderArt, placeholder)
+	} else {
+		formattedArt = activeHeaderArt
+	}
+
 	lines := strings.Split(formattedArt, "\n")
 
 	// Get the primary color from headerStyle
