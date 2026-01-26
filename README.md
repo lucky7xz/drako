@@ -53,7 +53,8 @@ If you are not getting the latest version, use this command instead:
 ```bash
 GOPROXY=direct go install github.com/lucky7xz/drako/cmd/drako@latest  # update drako
 ```
-[!NOTE] New to Go? Unlike apt or brew, Go installs tools into your home folder (~/go/bin) rather than the system root. You must add this directory to your shell's PATH to run `drako` directly. You can lauch drako with `~/go/bin/drako`. In the `Settings` Cell (`core profile`), you can find a command called `Add go/bin to PATH` that will write the necessary changes to your shell config file.
+> [!NOTE] 
+> **New to Go?** Unlike apt or brew, Go installs tools into your home folder (`~/go/bin`) rather than the system root. You must add this directory to your shell's PATH to run `drako` directly. You can lauch drako with `~/go/bin/drako`. In the `Settings` Cell (`core profile`), you can find a command called `Add go/bin to PATH` that will write the necessary changes to your shell config file.
 
 > [!NOTE]
 > **Emoji Support:** drako profiles sometimes use emojis as visual indicators. Modern terminals (Ghostty, WezTerm etc.) may support them by default. Others (older Linux terminals) may require installing a "Nerd Font" (e.g., [Nerd Fonts](https://www.nerdfonts.com/)) or specific emoji font packages (e.g., `fonts-noto-color-emoji`).

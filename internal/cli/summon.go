@@ -799,6 +799,9 @@ func (d *HTTPDownloader) DownloadFile(sourceURL, dstPath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %w", err)
 	}
+	// TODO: Fix bug - allow renaming .tmp file to final destination instead of deleting it
+	// TODO: Check if http.Client is safe and doesn't follow redirects to local files
+
 	defer func() {
 		tempFile.Close()
 		os.Remove(tempPath)
@@ -838,7 +841,7 @@ func (s *Summoner) summonFromHTTP(sourceURL, inventoryDir string) error {
 
 	// To keep it simple, we let the downloader download to the final path? No, validation.
 	// Let's download to a temp path ourselves.
-
+	// TODO Check reasoning tokens
 	tempFile, err := os.CreateTemp("", "drako-summon-*.toml")
 	if err != nil {
 		return err

@@ -5,7 +5,9 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/lucky7xz/drako/internal/cli"
 	"github.com/lucky7xz/drako/internal/config"
@@ -163,6 +165,56 @@ func RunCommand(cfg config.Config, selected string) {
 			return
 		}
 	}
+
+	// --- LOGGING START ---
+	// Log the command execution to history.log in the config directory
+	// We do this best-effort; failures to log should not stop execution.
+	func() {
+		cfgDir, err := config.GetConfigDir()
+		if err != nil {
+			log.Printf("logging error: could not get config dir: %v", err)
+			return
+		}
+
+		// Ensure the directory exists (it should, but safety first)
+		if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+			log.Printf("logging error: could not create config dir: %v", err)
+			return
+		}
+
+		logPath := filepath.Join(cfgDir, "history.log")
+		f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+		if err != nil {
+			log.Printf("logging error: could not open history.log: %v", err)
+			return
+		}
+		defer f.Close()
+
+		timestamp := time.Now().Format("2006-01-02 15:04:05")
+		// We log the "selected" string which is the command name/key, or the specific shell command string if available?
+		// The requirement was "command that will be executed".
+		// If it's a shell command, cmd.Args might be ["bash", "-lc", "echo hi"].
+		// If it's a binary, it might be ["/bin/ls"].
+		// Let's log the raw command string if we have it from config, otherwise the selected name.
+
+		// logStr := selected // UNUSED: using 'selected' directly below
+		// If we built a shell command, the actual executed string is often more useful.
+		// For shell commands, the 3rd arg is usually the command string.
+		// But let's stick to what the user "ran" (the input) + maybe the resolved command if different?
+		// For simplicity and readability, let's log the 'selected' command name/input,
+		// and if we have a resolved command string from config, log that too.
+
+		var executedStr string
+		if cmd.Args != nil {
+			executedStr = strings.Join(cmd.Args, " ")
+		}
+
+		entry := fmt.Sprintf("[%s] %s (exec: %s)\n", timestamp, selected, executedStr)
+		if _, err := f.WriteString(entry); err != nil {
+			log.Printf("logging error: count not write to history.log: %v", err)
+		}
+	}()
+	// --- LOGGING END ---
 
 	// Resolve flags after overrides may have been set.
 	autoClose := boolOrDefault(autoClosePtr, true)

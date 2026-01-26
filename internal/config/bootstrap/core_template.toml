@@ -111,7 +111,7 @@ items = [
 
     #===========================================================================================================
     { name = "Go Version", description = "Checks the installed Go version. Drako is built with Go, so if it fails to launch, confirming you have a compatible Go version is the first step.", command = "{{Go Version}}", auto_close_execution = false},
-    { name = "Reload Shell", description = "Run this command to reload your shell. This will apply any changes you've made to your shell configuration.", command = "{{Reload Shell}}", auto_close_execution = false},
+    { name = "Reload Shell", description = "NOTE: Since drako will run this command as a child process, it won't actually affect your current shell session (!). Use this to copy the command: press 'y' to copy, 'q' to quit, then 'Ctrl+Shift+V' paste in your terminal to reload and apply changes.", command = "{{Reload Shell}}", auto_close_execution = false},
     { name = "Alias x=drako (<-- Recommended)", description = "Adds 'alias x=~/go/bin/drako' to your ~/.bashrc so you can launch it by just typing 'x'. Useful if ~/go/bin is not in your PATH.", command = "{{Alias x=drako}}" , auto_close_execution = false},
     { name = "Add go/bin to PATH (<-- Recommended)", description = "Appends '~/go/bin' to your PATH variable in ~/.bashrc, ~/.zshrc, or PowerShell Profile. Ensures Go binaries can be run globally.", command = "{{Add go/bin to PATH}}", auto_close_execution = false},
     { name = "Set micro as EDITOR", description = "EDITOR is an environment variable that sets your default text editor. This adds it to ~/.bashrc. Restart your shell after.", command = "{{Set micro as EDITOR}}", auto_close_execution = false},
