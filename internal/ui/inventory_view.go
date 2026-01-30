@@ -74,7 +74,7 @@ func (m Model) viewInventoryMode() string {
 		help := helpStyle.Render("↑/↓/tab: Switch Grid | ←/→: Move | space/enter: Lift/Place | q/esc: Back")
 
 		// Render Version
-		version := helpStyle.Render(config.AppName + "|" + config.Version)
+		version := helpStyle.Render(config.AppName + " | " + config.Version)
 
 		// Combine help and version with spacing
 		footer = lipgloss.JoinVertical(lipgloss.Center, help, version)

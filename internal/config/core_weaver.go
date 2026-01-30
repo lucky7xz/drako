@@ -111,6 +111,7 @@ var DistroKeywords = map[string][]string{
 	"linux_arch":   {"arch", "manjaro", "endeavouros", "cachy", "garuda", "omarchy"},
 	"linux_fedora": {"fedora", "rhel", "centos", "nobara"},
 	"linux_debian": {"debian", "ubuntu", "pop", "mint", "kali", "mx", "zorin", "elementary", "neon"},
+	"linux_void":   {"void"},
 }
 
 func detectRuntimeTarget() string {

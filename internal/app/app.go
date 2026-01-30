@@ -65,6 +65,9 @@ func Run() {
 		os.Exit(1)
 	}
 	logPath := filepath.Join(configDir, "drako.log")
+	// Rotate if > 1MB
+	core.RotateLogIfNeeded(logPath, 1024*1024)
+
 	f, err := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		fmt.Printf("could not open log file: %v", err)

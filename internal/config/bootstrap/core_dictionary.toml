@@ -9,6 +9,7 @@
 linux_debian = "sudo apt update && sudo apt upgrade"
 linux_arch = "sudo pacman -Syu"
 linux_fedora = "sudo dnf upgrade"
+linux_void = "sudo xbps-install -Su"
 macos = "brew upgrade"
 windows = "winget upgrade --all"
 
@@ -16,6 +17,7 @@ windows = "winget upgrade --all"
 linux_debian = "sudo apt autoremove"
 linux_arch = "sudo pacman -Sc"
 linux_fedora = "sudo dnf autoremove"
+linux_void = "sudo xbps-remove -Oo"
 macos = "brew cleanup"
 windows = "echo 'Windows handles cleanup automatically'"
 
@@ -164,6 +166,7 @@ windows = "curl wttr.in"
 linux_debian = "sudo apt install btop bmon neofetch clamav fzf duf"
 linux_arch = "sudo pacman -S btop bmon fastfetch clamav fzf duf"
 linux_fedora = "sudo dnf install btop bmon neofetch clamav fzf duf"
+linux_void = "sudo xbps-install -S btop bmon fastfetch clamav fzf duf"
 macos = "brew install btop bmon neofetch fzf duf"
 windows = "winget install btop bmon neofetch fzf duf"
 
@@ -171,12 +174,13 @@ windows = "winget install btop bmon neofetch fzf duf"
 linux_debian = "sudo apt install micro"
 linux_arch = "sudo pacman -S micro"
 linux_fedora = "sudo dnf install micro"
+linux_void = "sudo xbps-install -S micro"
 macos = "brew install micro"
 windows = "winget install micro"
 
 ["Set micro as EDITOR"]
-linux_generic = "echo 'export EDITOR=micro' >> ~/.bashrc && echo \"Alias added to ~/.bashrc. Restart shell to use 'x'.\""
-macos = "echo 'export EDITOR=micro' >> ~/.zshrc && echo \"Alias added to ~/.zshrc. Restart shell to use 'x'.\""
+linux_generic = "echo 'export EDITOR=micro' >> ~/.bashrc && echo \"Alias added to ~/.bashrc. Restart shell.\""
+macos = "echo 'export EDITOR=micro' >> ~/.zshrc && echo \"Alias added to ~/.zshrc. Restart shell.\""
 windows = "setx EDITOR micro"
 
 ["🃏 Summon 'ggml' Command Deck"]
@@ -237,6 +241,12 @@ windows = "drako open %APPDATA%\\drako"
 linux_generic = "$EDITOR ~/.config/drako/drako.log"
 macos = "$EDITOR ~/.config/drako/drako.log"
 windows = "drako open %APPDATA%\\drako\\drako.log"
+
+["📜 Open History Logs"]
+linux_generic = "$EDITOR ~/.config/drako/history.log"
+macos = "$EDITOR ~/.config/drako/history.log"
+windows = "drako open %APPDATA%\\drako\\history.log"
+
 
 ["ℹ️  Open Pivots"]
 linux_generic = "$EDITOR ~/.config/drako/pivot.toml"
