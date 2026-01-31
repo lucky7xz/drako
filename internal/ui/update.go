@@ -61,6 +61,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		bundle := config.LoadConfig(nil)
 		m.applyBundle(bundle)
 		if len(bundle.Broken) > 0 {
+			if m.GlassrootMode {
+				os.Exit(1)
+			}
 			m.pendingProfileErrors = append(m.pendingProfileErrors, bundle.Broken...)
 			m.profileErrorQueueActive = true
 			m = m.presentNextBrokenProfile()
@@ -75,6 +78,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		bundle := config.LoadConfig(nil)
 		m.applyBundle(bundle)
 		if len(bundle.Broken) > 0 {
+			if m.GlassrootMode {
+				os.Exit(1)
+			}
 			m.pendingProfileErrors = append(m.pendingProfileErrors, bundle.Broken...)
 			m.profileErrorQueueActive = true
 			m = m.presentNextBrokenProfile()
@@ -120,6 +126,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				IsPathGridMode(m.Config.Keys, msg) {
 				return m, nil
 			}
+		}
+
+		if IsLock(m.Config.Keys, msg) {
+			cmd := m.toggleProfileLock()
+			return m, cmd
 		}
 
 		// Profile switching with configurable modifier + Number or ~ (Shift + `)
