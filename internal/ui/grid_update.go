@@ -61,10 +61,18 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case IsQuit(m.Config.Keys, msg):
 		m.Quitting = true
 		return m, tea.Quit
+
+	// Glassroot Cases - handled in update.go
+	// ====================
 	case IsInventory(m.Config.Keys, msg):
 		m.mode = inventoryMode
 		m.inventory = InitInventoryModel(m.configDir)
 		return m, nil
+
+	case IsPathGridMode(m.Config.Keys, msg):
+		m.mode = pathMode
+	// ====================
+
 	case IsUp(m.Config.Keys, msg):
 		m.moveCursor(-1, 0)
 	case IsDown(m.Config.Keys, msg):
@@ -73,8 +81,6 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.moveCursor(0, -1)
 	case IsRight(m.Config.Keys, msg):
 		m.moveCursor(0, 1)
-	case IsPathGridMode(m.Config.Keys, msg):
-		m.mode = pathMode
 	case IsExplain(m.Config.Keys, msg):
 		selectedChoice := m.grid[m.cursorRow][m.cursorCol]
 		if strings.TrimSpace(selectedChoice) == "" {
@@ -168,13 +174,6 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 	return m, nil
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 func (m *Model) moveCursor(rowDir, colDir int) {

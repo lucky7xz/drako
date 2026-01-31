@@ -146,11 +146,17 @@ func (m Model) renderProfileBar() string {
 	hostLabel := "HOST: " + username + "@" + hostname + " " + osArch + helpStyle.Render(" | ")
 
 	profileLabel := lipgloss.NewStyle().Render("PROFILE: ")
-	segments := []string{hostLabel + profileLabel + m.activeProfileName()}
+	segments := []string{hostLabel + profileLabel + m.activeProfileName() + helpStyle.Render(" | ")}
 
 	if m.pivotProfileName != "" {
 		label := fmt.Sprintf("🔒 %s", m.pivotProfileName)
 		segments = append(segments, lockBadgeStyle.Render(label))
+	}
+
+	if m.GlassrootMode {
+		// Glassroot indicator next to lock/profile
+		glassIndicator := lipgloss.NewStyle().Foreground(lipgloss.Color("#A8E6CF")).Render("🧊 G-ROOT")
+		segments = append(segments, glassIndicator)
 	}
 
 	if m.profileStatusMessage != "" {

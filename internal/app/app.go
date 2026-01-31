@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/cli"
@@ -17,42 +16,34 @@ import (
 
 // Run wires everything together. It keeps the program running so that after a command
 // finishes we jump back into the TUI without losing state or the screen layout.
+
 func Run() {
-	// Simple manual flag check for --cwd-file since standard flag package
-	// might interfere with other CLI logic if not careful.
-	// We want to extract it before HandleCLI or anything else.
-	var cwdFile string
-	cleanArgs := []string{}
-	skipNext := false
+	glassrootMode := false
+	isTuiMode := false
 
-	for i, arg := range os.Args {
-		if skipNext {
-			skipNext = false
-			continue
+	// CLI handling
+	// =======================================
+	// Check for TUI-specific flags (Glassroot)
+	// If present, we short-circuit the CLI handler entirely.
+	for _, arg := range os.Args {
+		if arg == "--glassroot" {
+			isTuiMode = true
+			glassrootMode = true
+			break
 		}
-		if arg == "--cwd-file" {
-			if i+1 < len(os.Args) {
-				cwdFile = os.Args[i+1]
-				skipNext = true
-			}
-			continue
-		}
-		if strings.HasPrefix(arg, "--cwd-file=") {
-			cwdFile = strings.TrimPrefix(arg, "--cwd-file=")
-			continue
-		}
-		cleanArgs = append(cleanArgs, arg)
 	}
-	// Temporarily override args for downstream parsers if needed,
-	// but standard cli.HandleCLI uses flag package?
-	// It parses its own flags.
-	// For now, we just intercept our special integration flag.
 
-	// Check if CLI command was invoked (e.g., drako sync <url>)
-	// Note: HandleCLI parses os.Args directly.
-	if cli.HandleCLI(cleanArgs) {
-		return
+	// 1. If NOT in TUI mode, try to handle as a CLI command (e.g. "drako summon", "drako purge")
+	if !isTuiMode {
+		if cli.HandleCLI(os.Args) {
+			// HandleCLI returns true/false to indicate success.
+			// Either way, we exit here. No TUI.
+			return
+		}
 	}
+
+	// 2. If we are here, we are launching the TUI.
+	// =======================================
 
 	// Proceed with TUI mode
 	configDir, err := config.GetConfigDir()
@@ -64,8 +55,11 @@ func Run() {
 		fmt.Printf("could not create config dir: %v", err)
 		os.Exit(1)
 	}
-	logPath := filepath.Join(configDir, "drako.log")
+	// =======================================
+	// Logging setup
+
 	// Rotate if > 1MB
+	logPath := filepath.Join(configDir, "drako.log")
 	core.RotateLogIfNeeded(logPath, 1024*1024)
 
 	f, err := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
@@ -76,14 +70,14 @@ func Run() {
 	defer f.Close()
 	log.SetOutput(f)
 
-	// Keep track of the last known directory
-	lastCwd, _ := os.Getwd()
-
+	// Start of TUI Loop
 	for {
+
 		// Start the TUI program (Model/View/Update is now in internal/ui)
 		// We initialize with the *current* directory which might have changed
 		// from manual Chdir or from internal logic
-		program := tea.NewProgram(ui.InitialModel())
+
+		program := tea.NewProgram(ui.InitialModel(glassrootMode))
 
 		result, err := program.Run()
 		if err != nil {
@@ -98,26 +92,7 @@ func Run() {
 			return
 		}
 
-		// Update our last known CWD from the model state
-		// We access via state.Path.CurrentPath (exposed via PathModel)
-		// Wait, state is ui.Model, field is 'path', which is not exported?
-		// We need to export 'Path' in Model, or access CurrentPath logic.
-		// Ah, in previous step I named field 'path' (lowercase).
-		// I must update model.go to export 'Path' or access method.
-		// Actually, I can rely on os.Getwd() since Model does chdir!
-		// Let's verify: UI calls os.Chdir() on confirm.
-		// So os.Getwd() here is sufficient.
-		if wd, err := os.Getwd(); err == nil {
-			lastCwd = wd
-		}
-
 		if state.Quitting {
-			// Write the final CWD if requested
-			if cwdFile != "" {
-				if err := os.WriteFile(cwdFile, []byte(lastCwd), 0644); err != nil {
-					log.Printf("Failed to write cwd file: %v", err)
-				}
-			}
 			return
 		}
 

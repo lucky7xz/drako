@@ -112,23 +112,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateLockedMode(msg)
 		}
 
-		// If searching in Path/Child mode, bypass global key handlers (lock, tab, etc.)
-		// so that typing keys like 'r' or 'i' goes to the search filter instead.
-		if (m.mode == pathMode || m.mode == childMode) && m.path.Searching {
-			if m.mode == pathMode {
-				mode, cmd := m.path.UpdatePathMode(msg, m.Config)
-				m.mode = mode
-				return m, cmd
+		// 1. Centralized Glassroot "Gatekeeper"
+		// Intercept restricted actions (Lock, Inventory, Path) early.
+		if m.GlassrootMode {
+			if IsLock(m.Config.Keys, msg) ||
+				IsInventory(m.Config.Keys, msg) ||
+				IsPathGridMode(m.Config.Keys, msg) {
+				return m, nil
 			}
-			mode, cmd := m.path.UpdateChildMode(msg, m.Config)
-			m.mode = mode
-			return m, cmd
 		}
 
-		if IsLock(m.Config.Keys, msg) {
-			cmd := m.toggleProfileLock()
-			return m, cmd
-		}
 		// Profile switching with configurable modifier + Number or ~ (Shift + `)
 		if m.mode == gridMode || m.mode == childMode {
 			if ok, target := IsProfileSwitch(m.Config.Keys, msg, m.Config.NumbModifier); ok {
@@ -366,7 +359,10 @@ func (m Model) updateInfoMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.profileErrorQueueActive {
 		var cmds []tea.Cmd
 		if key == "y" {
-			if m.activeDetail != nil {
+			if m.GlassrootMode {
+				// Block copy in glassroot mode
+				// Fallthrough effectively, but prevent copy command
+			} else if m.activeDetail != nil {
 				cmds = append(cmds, copyToClipboardCmd(m.activeDetail.Value))
 			}
 		}
@@ -376,6 +372,9 @@ func (m Model) updateInfoMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 	switch key {
 	case "y":
+		if m.GlassrootMode {
+			return m, nil
+		}
 		if m.activeDetail != nil {
 			prev := m.previousMode
 			m.mode = prev
@@ -446,6 +445,7 @@ func (m Model) switchToProfileIndex(target int) (Model, tea.Cmd, bool) {
 		return m, nil, false
 	}
 
+	// TODO
 	updated := m
 	updated.activeProfileIndex = target
 	_ = os.Setenv("DRAKO_PROFILE", selected.Name)

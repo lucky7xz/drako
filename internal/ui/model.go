@@ -31,6 +31,8 @@ type Model struct {
 	spinner     spinner.Model
 	inputBuffer string
 
+	GlassrootMode bool
+
 	path PathModel
 
 	onlineStatus      string
@@ -227,13 +229,19 @@ func (m Model) activeProfileName() string {
 	return name
 }
 
-func InitialModel() Model {
+func InitialModel(glassrootMode bool) Model {
 	path, err := os.Getwd()
 	if err != nil {
 		path = "could not get path"
 	}
 
 	bundle := config.LoadConfig(nil)
+
+	if glassrootMode && len(bundle.Broken) > 0 {
+		// In Glassroot mode, we do not expose TOML contents or enter Rescue Mode.
+		// If any profile is broken, we exit immediately and silently.
+		os.Exit(1)
+	}
 
 	s := spinner.New()
 	s.Spinner = spinner.Line
@@ -251,6 +259,7 @@ func InitialModel() Model {
 		modeBeforeLock:     gridMode,
 		lockPumpGoal:       defaultLockPumpGoal,
 		acknowledgedErrors: make(map[string]bool),
+		GlassrootMode:      glassrootMode,
 	}
 	m.applyBundle(bundle)
 	if len(bundle.Broken) > 0 {
