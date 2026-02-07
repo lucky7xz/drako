@@ -79,10 +79,10 @@ func (m Model) renderGrid() string {
 	// --- Add Row Indicators and Final Assembly ---
 	var finalRows []string
 	// Calculate the padding needed for the largest row number.
-	maxRowNumWidth := len(fmt.Sprintf("%d", len(renderedRows)-1))
+	maxRowNumWidth := len(fmt.Sprintf("%d", len(renderedRows)))
 	rowPrefix := strings.Repeat(" ", maxRowNumWidth+1) // Padding for continuation lines: "[0] ❭ "
 	for i, row := range renderedRows {
-		rowNum := fmt.Sprintf("%*d❭", maxRowNumWidth, i)
+		rowNum := fmt.Sprintf("%*d❭", maxRowNumWidth, i+1)
 		// Split the row into lines and add proper prefix to each line
 		lines := strings.Split(row, "\n")
 		for j, line := range lines {

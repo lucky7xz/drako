@@ -65,9 +65,9 @@ func TestView_GridMode(t *testing.T) {
 	if !strings.Contains(output, "[A]") {
 		t.Error("View output missing column header '[A]'")
 	}
-	// Check for Row Number indicators (e.g., 0❭)
-	if !strings.Contains(output, "0❭") {
-		t.Errorf("View output missing row number '0❭'. Got:\n%s", output)
+	// Check for Row Number indicators (e.g., 1❭)
+	if !strings.Contains(output, "1❭") {
+		t.Errorf("View output missing row number '1❭'. Got:\n%s", output)
 	}
 }
 
