@@ -44,12 +44,20 @@ func (m Model) viewDropdownMode() string {
 	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config)
 	header := ""
 	if layout.ShowHeader {
-		header = renderHeaderArt(m.spinner.View())
+		// Use command-based header if enabled
+		headerCfg := HeaderConfig{
+			Enabled:  m.Config.HeaderCommandEnabled,
+			Command:  m.Config.HeaderCommand,
+			Args:     m.Config.HeaderCommandArgs,
+			Timeout:  time.Duration(m.Config.HeaderCommandTimeout) * time.Second,
+			Fallback: m.Config.HeaderFallback,
+		}
+		header = RenderCommandHeader(headerCfg, m.spinner.View())
 	}
 	grid := m.renderGrid()
 	mainContent := lipgloss.JoinVertical(lipgloss.Center, header, grid)
 
-	helpText := "Dropdown Mode | ↑/↓/ws: Select, Enter: Execute, Esc/q: Cancel"
+	helpText := "Dropdown Mode | ←/→/ws: Select, Enter: Execute, Esc/q: Cancel"
 	help := helpStyle.Render(helpText)
 
 	// Adjust footer rendering for layout?
@@ -129,7 +137,7 @@ func (m Model) renderDropdownPopup() string {
 	for i, item := range m.dropdownItems {
 		var line string
 		if i == m.dropdownSelectedIdx {
-			line = cursorSel.Render("► ") + textSel.Render(item.Name)
+			line = cursorSel.Render("▶ ") + textSel.Render(item.Name)
 		} else {
 			line = gap.Render("  ") + textNorm.Render(item.Name)
 		}
@@ -242,7 +250,15 @@ func (m Model) viewInfoMode() string {
 	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config)
 	header := ""
 	if layout.ShowHeader {
-		header = renderHeaderArt(m.spinner.View())
+		// Use command-based header if enabled
+		headerCfg := HeaderConfig{
+			Enabled:  m.Config.HeaderCommandEnabled,
+			Command:  m.Config.HeaderCommand,
+			Args:     m.Config.HeaderCommandArgs,
+			Timeout:  time.Duration(m.Config.HeaderCommandTimeout) * time.Second,
+			Fallback: m.Config.HeaderFallback,
+		}
+		header = RenderCommandHeader(headerCfg, m.spinner.View())
 	}
 
 	// Build info lines with same background rules to avoid black gaps

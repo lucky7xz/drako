@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucky7xz/drako/internal/config"
@@ -38,18 +39,28 @@ func (m Model) View() string {
 
 	header := ""
 	if layout.ShowHeader {
-		header = renderHeaderArt(m.spinner.View())
+		// Use command-based header if enabled
+		headerCfg := HeaderConfig{
+			Enabled:  m.Config.HeaderCommandEnabled,
+			Command:  m.Config.HeaderCommand,
+			Args:     m.Config.HeaderCommandArgs,
+			Timeout:  time.Duration(m.Config.HeaderCommandTimeout) * time.Second,
+			Fallback: m.Config.HeaderFallback,
+		}
+		header = RenderCommandHeader(headerCfg, m.spinner.View())
 	}
+
 	counter := m.renderProfileCounter()
+	profileButtons := m.renderProfileButtons()
 	grid := m.renderGrid()
-	mainContent := lipgloss.JoinVertical(lipgloss.Center, header, counter, grid)
+	mainContent := lipgloss.JoinVertical(lipgloss.Center, header, counter, profileButtons, grid)
 
 	var helpText string
 	switch m.mode {
 	case pathMode:
-		helpText = "Path Mode | ←/→/ad: Select, ↓/s: Children, Enter: cd, e: Search, q/Esc: Back"
+		helpText = "Path Mode | ←/→/ad: Select, ↑/s: Children, Enter: cd, e: Search, q/Esc: Back"
 	case childMode:
-		helpText = "Child Mode | ↑/↓/ws: Select, Enter: cd, e: Search, q/Esc: Back"
+		helpText = "Child Mode | ←/→/ws: Select, Enter: cd, e: Search, q/Esc: Back"
 	default:
 		helpText = "Grid Mode | Enter: Select, e: Explain, Tab: Path, r: Start-Lock, i: Inventory"
 	}
