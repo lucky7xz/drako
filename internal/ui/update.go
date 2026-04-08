@@ -84,6 +84,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.pendingProfileErrors = append(m.pendingProfileErrors, bundle.Broken...)
 			m.profileErrorQueueActive = true
 			m = m.presentNextBrokenProfile()
+		} else {
+			// Recovery: if everything is fixed, return to grid mode
+			m.mode = gridMode
+			m.activeDetail = nil
+			m.profileErrorQueueActive = false
+			m.acknowledgedErrors = make(map[string]bool)
 		}
 		// Restart the watcher for the next change
 		configDir, _ := config.GetConfigDir()
@@ -97,6 +103,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
 		return m, cmd
+
+	case tea.MouseMsg:
+		if m.mode == gridMode || m.mode == pathMode || m.mode == childMode {
+			return m.resolveMouseClick(msg)
+		}
+		return m, nil
 
 	case tea.KeyMsg:
 		key := msg.String()

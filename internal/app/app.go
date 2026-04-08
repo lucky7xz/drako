@@ -77,7 +77,7 @@ func Run() {
 		// We initialize with the *current* directory which might have changed
 		// from manual Chdir or from internal logic
 
-		program := tea.NewProgram(ui.InitialModel(glassrootMode))
+		program := tea.NewProgram(ui.InitialModel(glassrootMode), tea.WithMouseCellMotion(), tea.WithAltScreen())
 
 		result, err := program.Run()
 		if err != nil {

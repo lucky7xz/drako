@@ -8,7 +8,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/charmbracelet/lipgloss"
 )
 
 func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -19,7 +19,7 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		targetIndex := num - 1 // Convert to 0-based index
 
 		if m.navigationTimer == nil { // This is the first number press (column selection)
-			lastCol := core.FindLastPopulatedCol(m.grid)
+			lastCol := len(m.grid[0]) - 1
 			targetCol := min(targetIndex, lastCol)
 
 			// Ensure the target column is valid before proceeding
@@ -27,12 +27,21 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 
-			targetRow := core.FindFirstPopulatedRow(m.grid, targetCol)
-
 			m.cursorCol = targetCol
-			m.cursorRow = targetRow
+			// Snap Row to first populated in this column
+			m.cursorRow = 0
+			for r := 0; r < len(m.grid); r++ {
+				if strings.TrimSpace(m.grid[r][targetCol]) != "" {
+					m.cursorRow = r
+					break
+				}
+			}
 
-			m.navigationTimer = time.NewTimer(500 * time.Millisecond)
+			timeoutMs := m.Config.GridSelectionTimeoutMs
+			if timeoutMs <= 0 {
+				timeoutMs = 500
+			}
+			m.navigationTimer = time.NewTimer(time.Duration(timeoutMs) * time.Millisecond)
 
 			return m, func() tea.Msg {
 				<-m.navigationTimer.C
@@ -43,7 +52,7 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.navigationTimer.Stop()
 			m.navigationTimer = nil
 
-			lastRow := core.FindLastPopulatedRow(m.grid, m.cursorCol)
+			lastRow := len(m.grid) - 1
 			targetRow := min(targetIndex, lastRow)
 
 			m.cursorRow = targetRow
@@ -216,4 +225,123 @@ func (m *Model) moveCursor(rowDir, colDir int) {
 		m.cursorRow = bestRow
 		m.cursorCol = bestCol
 	}
+}
+func (m Model) resolveMouseClick(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	if msg.Action != tea.MouseActionPress {
+		return m, nil
+	}
+
+	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config)
+
+	// --- 1. Measure Exact Component Dimensions ---
+
+	var (
+		headerContent  string
+		counterContent string
+		buttonsContent string
+		gridContent    string
+		footerContent  string
+	)
+
+	if layout.ShowHeader {
+		headerContent = renderDefaultHeaderArt(m.spinner.View())
+	}
+	counterContent = m.renderProfileCounter()
+	buttonsContent = m.renderProfileButtons()
+	gridContent = m.renderGrid() // This includes grid header and all rows
+
+	if layout.ShowFooter {
+		helpText := "Grid Mode | Enter: Select, e: Explain, Tab: Path, r: Start-Lock, i: Inventory"
+		help := helpStyle.Render(helpText)
+		footerContent = m.renderCombinedFooter(help)
+	}
+
+	hHeight, hWidth := lipgloss.Height(headerContent), lipgloss.Width(headerContent)
+	cHeight, cWidth := lipgloss.Height(counterContent), lipgloss.Width(counterContent)
+	bHeight, bWidth := lipgloss.Height(buttonsContent), lipgloss.Width(buttonsContent)
+	gHeight, gWidth := lipgloss.Height(gridContent), lipgloss.Width(gridContent)
+	fHeight, fWidth := lipgloss.Height(footerContent), lipgloss.Width(footerContent)
+
+	// --- 2. Calculate Centering Offsets ---
+
+	totalHeight := hHeight + cHeight + bHeight + gHeight + fHeight
+	widest := max(hWidth, cWidth, bWidth, gWidth, fWidth)
+
+	yOffset := (m.termHeight - totalHeight) / 2
+	xOffset := (m.termWidth - widest) / 2
+
+	// --- 3. Hit Detection ---
+
+	// Profile Buttons Detection
+	buttonsY := yOffset + hHeight + cHeight
+	if msg.Y == buttonsY {
+		currentX := xOffset + (widest-bWidth)/2
+		for i := 0; i < len(m.profiles); i++ {
+			// Re-render single button to get its exact width
+			style := profileButtonStyle
+			if i == m.activeProfileIndex {
+				style = activeProfileButtonStyle
+			}
+			profile := m.profiles[i]
+			label := fmt.Sprintf("%d", i+1)
+			if strings.TrimSpace(profile.Profile.Icon) != "" {
+				label = profile.Profile.Icon
+			}
+			btnWidth := lipgloss.Width(style.Render(fmt.Sprintf(" %s ", label)))
+
+			if msg.X >= currentX && msg.X < currentX+btnWidth {
+				if updated, cmd, ok := m.switchToProfileIndex(i); ok {
+					return updated, cmd
+				}
+				break
+			}
+			currentX += btnWidth
+		}
+	}
+
+	// Grid Detection
+	gridYStart := yOffset + hHeight + cHeight + bHeight + 1 // +1 skips grid header
+	gridYEnd := gridYStart + (len(m.grid) * GridCellHeight)
+
+	if msg.Y >= gridYStart && msg.Y < gridYEnd {
+		blockXStart := xOffset + (widest-gWidth)/2
+
+		maxRowNumWidth := len(fmt.Sprintf("%d", len(m.grid)))
+		rowPrefixWidth := maxRowNumWidth + 1
+
+		gridXStart := blockXStart + rowPrefixWidth
+
+		// Recalculate dynamic cellWidth matching renderGrid
+		maxCellContentWidth := 0
+		for _, row := range m.grid {
+			for _, cell := range row {
+				w := lipgloss.Width(cell)
+				if w > maxCellContentWidth {
+					maxCellContentWidth = w
+				}
+			}
+		}
+		if maxCellContentWidth > GridMaxTextWidth {
+			maxCellContentWidth = GridMaxTextWidth
+		}
+		actualCellWidth := maxCellContentWidth + 4
+
+		if msg.X >= gridXStart && msg.X < blockXStart+gWidth {
+			clickedCol := (msg.X - gridXStart) / actualCellWidth
+			clickedRow := (msg.Y - gridYStart) / GridCellHeight
+
+			if clickedRow < len(m.grid) && clickedCol < len(m.grid[0]) {
+				// Double-click execution: if clicking already-selected cell, execute it
+				if clickedCol == m.cursorCol && clickedRow == m.cursorRow {
+					// Same cell - execute the command
+					return m.updateGridMode(tea.KeyMsg{Type: tea.KeyEnter})
+				}
+				// Different cell - just select it
+				m.cursorCol = clickedCol
+				m.cursorRow = clickedRow
+			}
+		}
+	}
+
+	return m, nil
 }
