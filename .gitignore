@@ -22,4 +22,6 @@ xyz.*
 #*.log
 #
 ## Compiled binary if it's in the root
-#drako
+/drako
+files/
+*.zip
