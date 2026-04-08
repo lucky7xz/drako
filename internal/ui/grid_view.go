@@ -32,8 +32,14 @@ func (m Model) renderGrid() string {
 	var headerParts []string
 	if len(m.grid) > 0 {
 		for c := 0; c < len(m.grid[0]); c++ {
-			headerLabel := fmt.Sprintf("[%s]", columnToLetter(c))
-			styledLabel := titleStyle.Render(headerLabel)
+			headerLabel := fmt.Sprintf("[%d]", c+1)
+
+			// Dynamic Highlighting: Highlight Columns when waiting for Column (Timer nil)
+			styleForHeader := helpStyle
+			if m.navigationTimer == nil {
+				styleForHeader = titleStyle
+			}
+			styledLabel := styleForHeader.Render(headerLabel)
 
 			// Let lipgloss handle the centering of the styled text.
 			headerContentWidth := totalCellWidth - 2 // for ┌ and ┐
@@ -67,7 +73,7 @@ func (m Model) renderGrid() string {
 			// The cell style itself has padding, so we just need to render the content.
 			paddedContent := lipgloss.NewStyle().
 				Width(maxContentWidth).
-				Align(lipgloss.Left).
+				Align(lipgloss.Center).
 				Render(truncatedContent)
 
 			renderedCell := style.Render(paddedContent)
@@ -79,14 +85,22 @@ func (m Model) renderGrid() string {
 	// --- Add Row Indicators and Final Assembly ---
 	var finalRows []string
 	// Calculate the padding needed for the largest row number.
-	maxRowNumWidth := len(fmt.Sprintf("%d", len(renderedRows)-1))
+	maxRowNumWidth := len(fmt.Sprintf("%d", len(renderedRows)))
 	rowPrefix := strings.Repeat(" ", maxRowNumWidth+1) // Padding for continuation lines: "[0] ❭ "
 	for i, row := range renderedRows {
-		rowNum := fmt.Sprintf("%*d❭", maxRowNumWidth, i)
+		rowNumRaw := fmt.Sprintf("%*d❭", maxRowNumWidth, i+1)
+
+		// Dynamic Highlighting: Highlight Rows when waiting for Row (Timer active)
+		styleForRow := inactiveHeaderStyle
+		if m.navigationTimer != nil {
+			styleForRow = titleStyle
+		}
+		rowNum := styleForRow.Render(rowNumRaw)
+
 		// Split the row into lines and add proper prefix to each line
 		lines := strings.Split(row, "\n")
 		for j, line := range lines {
-			if j == 0 {
+			if j == 1 {
 				lines[j] = rowNum + line
 			} else {
 				lines[j] = rowPrefix + line
@@ -96,7 +110,9 @@ func (m Model) renderGrid() string {
 	}
 
 	// Create padding for the header to align it with the grid body.
-	headerPadding := strings.Repeat(" ", maxRowNumWidth+1) // +5 for "[0] ❭ "
+	sampleRowNum := inactiveHeaderStyle.Render(fmt.Sprintf("%*d❭", maxRowNumWidth, 1))
+	headerPaddingWidth := lipgloss.Width(sampleRowNum)
+	headerPadding := strings.Repeat(" ", headerPaddingWidth)
 	paddedHeader := headerPadding + fullHeader
 
 	gridBody := lipgloss.JoinVertical(lipgloss.Center, finalRows...)
@@ -113,15 +129,31 @@ func columnToLetter(col int) string {
 
 func (m Model) renderProfileCounter() string {
 	y := len(m.profiles)
-	if y > 9 {
-		y = 9
-	}
 	x := m.activeProfileIndex + 1
-	if x > 9 {
-		x = 9
-	}
 	counter := fmt.Sprintf("< %d / %d >", x, y)
 	return titleStyle.Render(counter)
+}
+
+func (m Model) renderProfileButtons() string {
+	var buttons []string
+	for i := 0; i < len(m.profiles); i++ {
+		style := profileButtonStyle
+		if i == m.activeProfileIndex {
+			style = activeProfileButtonStyle
+		}
+
+		profile := m.profiles[i]
+		label := fmt.Sprintf("%d", i+1)
+		if strings.TrimSpace(profile.Profile.Icon) != "" {
+			label = profile.Profile.Icon
+		}
+
+		// Standardize padding for better click targets
+		btn := style.Render(fmt.Sprintf(" %s ", label))
+		buttons = append(buttons, btn)
+	}
+
+	return lipgloss.JoinHorizontal(lipgloss.Top, buttons...)
 }
 
 func (m Model) renderProfileBar() string {
