@@ -6,14 +6,14 @@ import "github.com/lucky7xz/drako/internal/config"
 const (
 	// Grid Geometry Defaults (used for fallbacks or min sizing)
 	GridCellWidth    = 29
-	GridCellHeight   = 4
+	GridCellHeight   = 3
 	GridMaxTextWidth = 25
 
 	// UI Elements Height
-	LayoutHeaderHeight = 10 // Logo + spacing
-	LayoutStatusHeight = 5  // Status bar + network + path
-	LayoutSideMargin   = 4  // Left + Right margins
-	LayoutVertPadding  = 2  // Top + Bottom padding
+	LayoutHeaderHeight = 9 // Logo + spinner
+	LayoutStatusHeight = 6 // Status bar + network + path + help
+	LayoutSideMargin   = 4 // Left + Right margins
+	LayoutVertPadding  = 2 // Top + Bottom padding
 )
 
 // Layout controls the visibility of UI elements based on terminal size.
