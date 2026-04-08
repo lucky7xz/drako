@@ -15,7 +15,7 @@ Y = 3
 name = "🚦 SSH Service"
 description = "Turn the SSH server on, off, or check if it's alive."
 col = "A"
-row = 0
+row = 1
 items = [
     { name = "Is it running?", command = "systemctl status ssh", description = "Checks if the SSH daemon is active.", auto_close_execution = false },
     { name = "Start Service", command = "sudo systemctl start ssh", description = "Turn on SSH now.", auto_close_execution = false },
@@ -30,7 +30,7 @@ items = [
 name = "🧱 Firewall (UFW)"
 description = "Control who gets in. Essential security."
 col = "A"
-row = 1
+row = 2
 items = [
     { name = "Check Status", command = "sudo ufw status verbose", description = "See exactly which ports are open or closed.", auto_close_execution = false },
     { name = "Allow SSH (22)", command = "sudo ufw allow ssh", description = "Open port 22 so you don't lock yourself out.", auto_close_execution = false },
@@ -43,7 +43,7 @@ items = [
 name = "📝 Config & Logs"
 description = "Edit server settings and see who is trying to log in."
 col = "A"
-row = 2
+row = 3
 items = [
     { name = "Edit Config", command = "sudo nano /etc/ssh/sshd_config", description = "Change ports, disable root login, etc. (Requires restart).", auto_close_execution = false },
     { name = "Check Auth Log", command = "tail -f /var/log/auth.log", description = "Watch live login attempts. Great for spotting hackers or debugging failures.", auto_close_execution = false },
@@ -60,7 +60,7 @@ items = [
 name = "🔌 Connect (Input)"
 description = "Log in to servers. Prompts you for the target info."
 col = "B"
-row = 0
+row = 1
 items = [
     { name = "Standard Login", command = "read -p 'Enter user@host: ' target; ssh \"$target\"", description = "The basic connection command.", auto_close_execution = false },
     { name = "Custom Port Login", command = "read -p 'Enter user@host: ' target; read -p 'Port: ' port; ssh -p \"$port\" \"$target\"", description = "For servers not on default port 22.", auto_close_execution = false },
@@ -72,7 +72,7 @@ items = [
 name = "🔑 Key Gen"
 description = "Create and list your digital identity keys."
 col = "B"
-row = 1
+row = 2
 items = [
     { name = "Generate New Key", command = "ssh-keygen -t ed25519", description = "Creates a modern, secure key pair. Just press Enter for defaults.", auto_close_execution = false },
     { name = "List My Keys", command = "ls -l ~/.ssh/id_*", description = "Show your public (.pub) and private keys.", auto_close_execution = false },
@@ -84,7 +84,7 @@ items = [
 name = "🚀 Deploy Keys"
 description = "Install your key on a server to enable passwordless login."
 col = "B"
-row = 2
+row = 3
 items = [
     { name = "Copy ID (Default)", command = "read -p 'Enter user@host: ' target; ssh-copy-id \"$target\"", description = "Uploads your default public key to the target.", auto_close_execution = false },
     { name = "Copy Specific ID", command = "read -p 'Enter user@host: ' target; read -p 'Key path (start with ~/.ssh/): ' key; ssh-copy-id -i \"$key\" \"$target\"", description = "Upload a specific key file.", auto_close_execution = false },
@@ -101,7 +101,7 @@ items = [
 name = "📦 SCP (File Copy)"
 description = "Simple file copy. Good for single files. Prompts for inputs."
 col = "C"
-row = 0
+row = 1
 items = [
     { name = "Upload File", command = "read -p 'Local File: ' l; read -p 'Remote user@host:/path: ' r; scp \"$l\" \"$r\"", description = "Send a file UP to the server.", auto_close_execution = false },
     { name = "Download File", command = "read -p 'Remote user@host:/file: ' r; read -p 'Local Path: ' l; scp \"$r\" \"$l\"", description = "Pull a file DOWN from the server.", auto_close_execution = false },
@@ -112,7 +112,7 @@ items = [
 name = "🔄 Rsync (Sync)"
 description = "Smart sync. Only copies changed parts. The professional choice."
 col = "C"
-row = 1
+row = 2
 items = [
     { name = "Sync UP to Remote", command = "read -p 'Local Folder: ' l; read -p 'Remote user@host:/path: ' r; rsync -avzP \"$l\" \"$r\"", description = "Push changes to server. -a (archive), -v (verbose), -z (compress), -P (progress).", auto_close_execution = false },
     { name = "Sync DOWN from Remote", command = "read -p 'Remote user@host:/path: ' r; read -p 'Local Folder: ' l; rsync -avzP \"$r\" \"$l\"", description = "Pull changes from server.", auto_close_execution = false },
@@ -123,7 +123,7 @@ items = [
 name = "⏩ Rsync Advanced"
 description = "Mirroring and exclusion. Power tools for backups."
 col = "C"
-row = 2
+row = 3
 items = [
     { name = "Mirror (Delete)", command = "read -p 'Local: ' l; read -p 'Remote: ' r; rsync -avz --delete \"$l\" \"$r\"", description = "WARNING: Deletes files on remote that don't exist locally. Makes exact mirror.", auto_close_execution = false },
     { name = "Exclude Pattern", command = "read -p 'Local: ' l; read -p 'Remote: ' r; read -p 'Exclude pattern (e.g. *.tmp): ' ex; rsync -avz --exclude \"$ex\" \"$l\" \"$r\"", description = "Syncs but skips files matching the pattern.", auto_close_execution = false }

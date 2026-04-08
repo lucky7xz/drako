@@ -21,14 +21,14 @@ name = "⬆️ System Update"
 description = "Queries the repositories for fresh versions and pulls them into your system. Your digital infrastructure sheds old scales for new ones—staying sharp, staying current. The machinery needs to evolve or rust settles in."
 command = "{{⬆️ System Update}}"
 col = "A"
-row = 0
+row = 1
 auto_close_execution = false
 
 [[commands]]
 name = "🧹 Maintenance ⋮ "
 description = "Maintenance and threat scanning. Clear out the debris, hunt for what shouldn't be there. A lean system moves faster."
 col = "A"
-row = 1
+row = 2
 items = [
     { name = "Clean Packages", description = "Clears out the old scales your system sheds during updates. Removes what's no longer needed so nothing rots in the corners.", command = "{{Clean Packages}}", auto_close_execution = false },
     { name = "Virus Scan (Home)", description = "Updates threat signatures and prowls through your home directory. Hunting for what doesn't belong.", command = "{{Virus Scan (Home)}}", auto_close_execution = false }
@@ -39,7 +39,7 @@ name = "👀 Process Monitor"
 description = "Everything running right now, laid bare. Watch processes pulse, memory flow, CPU cycles burn. The system breathing beneath the surface. See what's moving in real-time."
 command = "{{👀 Process Monitor}}"
 col = "A"
-row = 2
+row = 3
 
 #==========================================
 # ┌─ Column 1: Files & Info ───────────────┐
@@ -49,7 +49,7 @@ name = " 🔎 File Finder"
 description = "Type and watch it hunt through thousands of files instantly. When your filesystem sprawls like endlessly, this cuts straight to what you're tracking. Fast, precise, relentless."
 command = "{{ 🔎 File Finder}}"
 col = "B"
-row = 0
+row = 1
 auto_close_execution = false
 
 [[commands]]
@@ -57,14 +57,14 @@ name = "🌐 Bandwidth"
 description = "Curious how much internet you're using right now? This opens up a little dashboard showing data going in and out. I find it mesmerizing to watch the numbers jump when I'm downloading a big file."
 command = "{{🌐 Bandwidth}}"
 col = "B"
-row = 1
+row = 2
 
 
 [[commands]]
 name = "📊 System Status ⋮ "
 description = "Vital signs and stats. Hardware details, disk territories mapped, or the weather beyond your screen. Information at different scales."
 col = "B"
-row = 2
+row = 3
 items = [
     { name = "System Info", description = "The bones of your machine. Distro, kernel version, uptime, hardware beneath the surface. See what you're running on.", command = "{{System Info}}", auto_close_execution = false },
     { name = "Disk Usage", description = "Map of your storage. See where space went, find what's been forgotten in dusty corners.", command = "{{Disk Usage}}", auto_close_execution = false },
@@ -78,7 +78,7 @@ items = [
 [[commands]]
 name = " 📦 Install Tools ⋮ "
 col = "C"
-row = 0
+row = 1
 description = "Bundled up all the little tools that this menu uses, just in case you don't have them. It's like getting all the batteries and accessories included for once. This makes sure all the other buttons here will work as expected. I like to be prepared, you know? "
 items = [
     { name = "Install common tools", description = "The core utilities—btop, neofetch, clamav, fzf, bmon. Tools that keep the machinery visible and responsive.", command = "{{Install common tools}}", auto_close_execution = false},
@@ -96,13 +96,13 @@ name = "📜 Open Shell Config"
 description = "This is where all your terminal customizations live. The shell config file loads every time you open a terminal and controls your aliases, environment variables, and prompt appearance. It's like the settings panel for your command line experience. I open this file whenever I want to add a new shortcut or tweak how my terminal behaves."
 command = "{{📜 Open Shell Config}}"
 col = "C"
-row = 1
+row = 2
 
 
 [[commands]]
 name = " 🐉 Settings ⋮ "
 col = "C"
-row = 2
+row = 3
 description = "The dragon's lair. Tweak the internal mechanics, adjust your environment, and refine how you interact with the system. This is where you make the machine yours."
 items = [
     { name = "⚙️  Edit config.toml ", description = "The file you're reading right now. Key bindings, themes, etc.—all controlled here. Change anything. Break things. That's the point. Power lives in plain text files. Rescue mode can help you restore a broken config.", command = "{{⚙️  Edit config.toml}}"},
