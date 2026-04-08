@@ -83,7 +83,8 @@ func (m *PathModel) ListChildDirs() {
 		if m.Filter != "" && !strings.Contains(strings.ToLower(name), strings.ToLower(m.Filter)) {
 			continue
 		}
-		if f.IsDir() {
+		info, err := os.Stat(filepath.Join(path, name))
+		if err == nil && info.IsDir() {
 			m.ChildDirs = append(m.ChildDirs, name)
 		}
 	}
@@ -165,7 +166,7 @@ func (pm *PathModel) UpdatePathMode(msg tea.KeyMsg, cfg config.Config) (navMode,
 	switch {
 	case msg.String() == "q" || msg.String() == "esc":
 		return gridMode, nil // Return to grid mode (no brainer improvement)
-	case msg.String() == "e":
+	case msg.String() == "e" || msg.String() == "/":
 		pm.Searching = true
 		pm.Filter = ""
 		pm.ListChildDirs() // Refresh logic just in case
@@ -174,6 +175,15 @@ func (pm *PathModel) UpdatePathMode(msg tea.KeyMsg, cfg config.Config) (navMode,
 		if pm.SelectedPathIndex > 0 {
 			pm.SelectedPathIndex--
 			pm.ListChildDirs()
+		} else {
+			// Already at root-most visible part?
+			// Navigate to ".." (Parent of CurrentPath) if possible
+			parent := filepath.Dir(pm.CurrentPath)
+			if parent != pm.CurrentPath {
+				pm.CurrentPath = parent
+				pm.UpdatePathComponents()
+				pm.ListChildDirs()
+			}
 		}
 	case IsRight(cfg.Keys, msg):
 		if pm.SelectedPathIndex < len(pm.PathComponents)-1 {
@@ -257,7 +267,7 @@ func (pm *PathModel) UpdateChildMode(msg tea.KeyMsg, cfg config.Config) (navMode
 	switch {
 	case msg.String() == "q" || msg.String() == "esc":
 		return gridMode, nil // Return to grid mode
-	case msg.String() == "e":
+	case msg.String() == "e" || msg.String() == "/":
 		pm.Searching = true
 		pm.Filter = ""
 		pm.ListChildDirs()
@@ -271,6 +281,32 @@ func (pm *PathModel) UpdateChildMode(msg tea.KeyMsg, cfg config.Config) (navMode
 		if pm.SelectedChildIndex < len(pm.ChildDirs)-1 {
 			pm.SelectedChildIndex++
 		}
+	case IsRight(cfg.Keys, msg):
+		// Enter directory
+		if len(pm.ChildDirs) > 0 {
+			parentPath := pm.BuildPathFromComponents(pm.SelectedPathIndex)
+			targetPath := filepath.Join(parentPath, pm.ChildDirs[pm.SelectedChildIndex])
+			if err := os.Chdir(targetPath); err == nil {
+				pm.CurrentPath, _ = os.Getwd()
+				pm.UpdatePathComponents()
+				pm.ListChildDirs()
+				pm.SelectedChildIndex = 0
+				return childMode, nil
+			}
+		}
+	case IsLeft(cfg.Keys, msg):
+		// Go to Parent
+		parent := filepath.Dir(pm.CurrentPath)
+		if parent != pm.CurrentPath {
+			if err := os.Chdir(parent); err == nil {
+				pm.CurrentPath, _ = os.Getwd()
+				pm.UpdatePathComponents()
+				pm.ListChildDirs()
+				pm.SelectedChildIndex = 0
+				return childMode, nil
+			}
+		}
+		return pathMode, nil
 	case IsPathGridMode(cfg.Keys, msg):
 		return gridMode, nil
 	case IsConfirm(cfg.Keys, msg):
