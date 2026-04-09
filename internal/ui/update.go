@@ -105,6 +105,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case tea.MouseMsg:
+		if m.mode == dropdownMode {
+			if msg.Type == tea.MouseWheelUp {
+				if m.dropdownSelectedIdx > 0 {
+					m.dropdownSelectedIdx--
+				}
+				return m, nil
+			}
+			if msg.Type == tea.MouseWheelDown {
+				if m.dropdownSelectedIdx < len(m.dropdownItems)-1 {
+					m.dropdownSelectedIdx++
+				}
+				return m, nil
+			}
+		}
 		if m.mode == gridMode || m.mode == pathMode || m.mode == childMode || m.mode == dropdownMode {
 			return m.resolveMouseClick(msg)
 		}
