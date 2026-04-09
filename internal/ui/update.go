@@ -105,7 +105,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case tea.MouseMsg:
-		if m.mode == gridMode || m.mode == pathMode || m.mode == childMode {
+		if m.mode == gridMode || m.mode == pathMode || m.mode == childMode || m.mode == dropdownMode {
 			return m.resolveMouseClick(msg)
 		}
 		return m, nil

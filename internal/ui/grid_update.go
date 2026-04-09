@@ -231,6 +231,10 @@ func (m Model) resolveMouseClick(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	if m.mode == dropdownMode {
+		return m.resolveDropdownMouseClick(msg)
+	}
+
 	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config)
 
 	// --- 1. Measure Exact Component Dimensions ---
@@ -340,6 +344,46 @@ func (m Model) resolveMouseClick(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 				m.cursorCol = clickedCol
 				m.cursorRow = clickedRow
 			}
+		}
+	}
+
+	return m, nil
+}
+
+func (m Model) resolveDropdownMouseClick(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	if msg.Action != tea.MouseActionPress {
+		return m, nil
+	}
+
+	var raw []string
+	for _, item := range m.dropdownItems {
+		raw = append(raw, item.Name)
+	}
+	content := lipgloss.JoinVertical(lipgloss.Left, raw...)
+	popupHeight := lipgloss.Height(content)
+	popupWidth := lipgloss.Width(content)
+
+	popupYStart := (m.termHeight - popupHeight) / 2
+	popupYEnd := popupYStart + popupHeight
+	popupXStart := (m.termWidth - popupWidth) / 2
+	popupXEnd := popupXStart + popupWidth
+
+	if msg.Y < popupYStart || msg.Y >= popupYEnd || msg.X < popupXStart || msg.X >= popupXEnd {
+		m.mode = gridMode
+		m.dropdownItems = nil
+		return m, nil
+	}
+
+	localY := msg.Y - popupYStart
+	cellHeight := 1
+
+	if localY >= 0 && localY < len(m.dropdownItems)*cellHeight {
+		clickedIdx := localY / cellHeight
+		if clickedIdx >= 0 && clickedIdx < len(m.dropdownItems) {
+			item := m.dropdownItems[clickedIdx]
+			m.Selected = item.Name
+			m.dropdownItems = nil
+			return m, tea.Quit
 		}
 	}
 
