@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"math"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -235,6 +236,11 @@ func (m Model) resolveMouseClick(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		return m.resolveDropdownMouseClick(msg)
 	}
 
+	// Handle path mode and child mode mouse clicks
+	if m.mode == pathMode || m.mode == childMode {
+		return m.resolvePathMouseClick(msg)
+	}
+
 	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config)
 
 	// --- 1. Measure Exact Component Dimensions ---
@@ -388,4 +394,124 @@ func (m Model) resolveDropdownMouseClick(msg tea.MouseMsg) (tea.Model, tea.Cmd) 
 	}
 
 	return m, nil
+}
+// resolvePathMouseClick handles mouse clicks in path mode and child mode
+func (m Model) resolvePathMouseClick(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config)
+
+	// Calculate positions
+	var (
+		headerContent    string
+		counterContent   string
+		buttonsContent   string
+		gridContent      string
+		footerContent    string
+		pathBarContent   string
+		childDirsContent string
+	)
+
+	if layout.ShowHeader {
+		headerContent = renderDefaultHeaderArt(m.spinner.View())
+	}
+	counterContent = m.renderProfileCounter()
+	buttonsContent = m.renderProfileButtons()
+	gridContent = m.renderGrid()
+
+	// Path mode elements
+	pathBarContent = m.path.RenderPathBar(true)
+	childDirsContent = m.path.RenderChildDirs(m.mode)
+
+	if layout.ShowFooter {
+		helpText := "Path Mode | ←/→/ad: Select, ↑/s: Children, Enter: cd, e: Search, q/Esc: Back"
+		help := helpStyle.Render(helpText)
+		footerContent = m.renderCombinedFooter(help)
+	}
+
+	// Calculate heights
+	hHeight := lipgloss.Height(headerContent)
+	cHeight := lipgloss.Height(counterContent)
+	bHeight := lipgloss.Height(buttonsContent)
+	gHeight := lipgloss.Height(gridContent)
+	pHeight := lipgloss.Height(pathBarContent)
+	cdHeight := lipgloss.Height(childDirsContent)
+	fHeight := lipgloss.Height(footerContent)
+
+	// Calculate y offset for footer section
+	// Footer starts after: header + counter + buttons + grid + spacing
+	footerY := hHeight + cHeight + bHeight + gHeight + 2 // +2 for spacing
+	pathBarY := footerY
+	childDirsY := pathBarY + pHeight
+
+	// Click on path bar - navigate to that path component
+	if msg.Y == pathBarY && msg.X >= 0 {
+		// Calculate which path component was clicked
+		components := m.path.PathComponents
+		if len(components) > 0 {
+			// Click on the first component (home or root)
+			if msg.X < 15 {
+				m.path.SelectedPathIndex = 0
+				m.path.ListChildDirs()
+				return m, nil
+			}
+			// Try to detect which component
+			accumX := 0
+			for i, comp := range components {
+				compWidth := lipgloss.Width(comp) + 1 // +1 for separator
+				if msg.X >= accumX && msg.X < accumX+compWidth {
+					m.path.SelectedPathIndex = i
+					m.path.ListChildDirs()
+					return m, nil
+				}
+				accumX += compWidth
+			}
+			// Click on last part - go to current directory
+			m.path.SelectedPathIndex = len(components) - 1
+			m.path.ListChildDirs()
+		}
+		return m, nil
+	}
+
+	// Click on child directories (in child mode or path mode)
+	if msg.Y >= childDirsY && msg.Y < childDirsY+cdHeight && len(m.path.ChildDirs) > 0 {
+		// Calculate which child was clicked
+		localY := msg.Y - childDirsY
+		clickedIndex := localY
+
+		if clickedIndex >= 0 && clickedIndex < len(m.path.ChildDirs) {
+			// Clicked on a directory - enter it or select it
+			m.path.SelectedChildIndex = clickedIndex
+
+			// If double-click or enter action, navigate into directory
+			parentPath := m.path.BuildPathFromComponents(m.path.SelectedPathIndex)
+			targetPath := parentPath + "/" + m.path.ChildDirs[clickedIndex]
+
+			if err := m.path.ChangeDir(targetPath); err == nil {
+				m.path.CurrentPath, _ = os.Getwd()
+				m.path.UpdatePathComponents()
+				m.path.ListChildDirs()
+				m.path.SelectedChildIndex = 0
+
+				if m.mode == pathMode {
+					m.mode = childMode
+				}
+			}
+			return m, nil
+		}
+	}
+
+	// Click on help/footer area - go back to grid
+	if msg.Y >= footerY+fHeight-2 {
+		// Click on footer area returns to grid
+	}
+
+	return m, nil
+}
+
+// ChangeDir is a helper to change directory and update path model
+func (pm *PathModel) ChangeDir(targetPath string) error {
+	if err := os.Chdir(targetPath); err != nil {
+		return err
+	}
+	pm.CurrentPath, _ = os.Getwd()
+	return nil
 }
