@@ -504,6 +504,10 @@ func (m Model) switchToProfileIndex(target int) (Model, tea.Cmd, bool) {
 			log.Printf("warning: could not change to working directory %s: %v", targetDir, err)
 		} else {
 			log.Printf("changed working directory to: %s", targetDir)
+			// Update path model to reflect new working directory
+			updated.path.CurrentPath, _ = os.Getwd()
+			updated.path.UpdatePathComponents()
+			updated.path.ListChildDirs()
 		}
 	}
 
