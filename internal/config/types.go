@@ -26,6 +26,7 @@ type AppSettings struct {
 	DefaultShell           string      `toml:"default_shell"`
 	NumbModifier           string      `toml:"numb_modifier"`
 	Profile                string      `toml:"profile"`
+	WorkingDirectory       *string     `toml:"working_directory"`
 	LockTimeoutMinutes     *int        `toml:"lock_timeout_minutes"`
 	AutoLockEnabled        *bool       `toml:"auto_lock_enabled"`
 	GridSelectionTimeoutMs int         `toml:"grid_selection_timeout_ms"`
@@ -50,6 +51,7 @@ type Config struct {
 	X                      int         `toml:"x"`
 	Y                      int         `toml:"y"`
 	Profile                string      `toml:"profile"`
+	WorkingDirectory       *string     `toml:"working_directory"`
 	LockTimeoutMinutes     *int        `toml:"lock_timeout_minutes"`
 	AutoLockEnabled        *bool       `toml:"auto_lock_enabled"`
 	EnvWhitelist           []string    `toml:"env_whitelist"`
@@ -60,14 +62,15 @@ type Config struct {
 
 // ProfileFile represents the content of a profile file (e.g. core.profile.toml)
 type ProfileFile struct {
-	X         int       `toml:"x"`
-	Y         int       `toml:"y"`
-	Theme     string    `toml:"theme"`
-	Icon      string    `toml:"icon"`
-	HeaderArt *string   `toml:"header_art"`
-	Shell     *string   `toml:"shell"`
-	Assets    *[]string `toml:"assets"`
-	Commands  []Command `toml:"commands"`
+	X                  int       `toml:"x"`
+	Y                  int       `toml:"y"`
+	Theme              string    `toml:"theme"`
+	Icon               string    `toml:"icon"`
+	HeaderArt          *string   `toml:"header_art"`
+	Shell              *string   `toml:"shell"`
+	Assets             *[]string `toml:"assets"`
+	WorkingDirectory   *string   `toml:"working_directory"`
+	Commands           []Command `toml:"commands"`
 }
 
 // ProfileInfo holds metadata and content of a profile

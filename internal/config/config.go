@@ -395,6 +395,9 @@ func ApplyProfileOverlay(base Config, profile ProfileFile) Config {
 	if profile.Shell != nil {
 		cfg.DefaultShell = *profile.Shell
 	}
+	if profile.WorkingDirectory != nil {
+		cfg.WorkingDirectory = profile.WorkingDirectory
+	}
 	// Commands are mandatory in ProfileFile basically
 	cfg.Commands = CopyCommands(profile.Commands)
 
@@ -559,6 +562,7 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 					DefaultShell:           settings.DefaultShell,
 					NumbModifier:           settings.NumbModifier,
 					Profile:                settings.Profile,
+					WorkingDirectory:       settings.WorkingDirectory,
 					LockTimeoutMinutes:     settings.LockTimeoutMinutes,
 					AutoLockEnabled:        settings.AutoLockEnabled,
 					EnvWhitelist:           settings.EnvWhitelist,
@@ -741,6 +745,7 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 			DefaultShell:           base.DefaultShell,
 			NumbModifier:           base.NumbModifier,
 			Profile:                base.Profile,
+			WorkingDirectory:       base.WorkingDirectory,
 			LockTimeoutMinutes:     base.LockTimeoutMinutes,
 			EnvWhitelist:           base.EnvWhitelist,
 			EnvBlocklist:           base.EnvBlocklist,

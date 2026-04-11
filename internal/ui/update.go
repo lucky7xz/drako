@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -488,6 +489,23 @@ func (m Model) switchToProfileIndex(target int) (Model, tea.Cmd, bool) {
 	_ = os.Setenv("DRAKO_PROFILE", selected.Name)
 	updated.Config = config.ApplyProfileOverlay(m.baseConfig, selected.Profile)
 	updated.applyConfig(updated.Config)
+
+	// Change working directory if profile has working_directory set
+	if updated.Config.WorkingDirectory != nil && strings.TrimSpace(*updated.Config.WorkingDirectory) != "" {
+		targetDir := *updated.Config.WorkingDirectory
+		// Expand user home directory if needed
+		if strings.HasPrefix(targetDir, "~") {
+			home, err := os.UserHomeDir()
+			if err == nil {
+				targetDir = filepath.Join(home, strings.TrimPrefix(targetDir, "~"))
+			}
+		}
+		if err := os.Chdir(targetDir); err != nil {
+			log.Printf("warning: could not change to working directory %s: %v", targetDir, err)
+		} else {
+			log.Printf("changed working directory to: %s", targetDir)
+		}
+	}
 
 	return updated, nil, true
 }

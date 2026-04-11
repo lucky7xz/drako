@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -262,6 +263,24 @@ func InitialModel(glassrootMode bool) Model {
 		GlassrootMode:      glassrootMode,
 	}
 	m.applyBundle(bundle)
+
+	// Apply initial working directory if set
+	if m.Config.WorkingDirectory != nil && strings.TrimSpace(*m.Config.WorkingDirectory) != "" {
+		targetDir := *m.Config.WorkingDirectory
+		// Expand user home directory if needed
+		if strings.HasPrefix(targetDir, "~") {
+			home, err := os.UserHomeDir()
+			if err == nil {
+				targetDir = filepath.Join(home, strings.TrimPrefix(targetDir, "~"))
+			}
+		}
+		if err := os.Chdir(targetDir); err != nil {
+			log.Printf("warning: could not change to initial working directory %s: %v", targetDir, err)
+		} else {
+			log.Printf("set initial working directory to: %s", targetDir)
+		}
+	}
+
 	if len(bundle.Broken) > 0 {
 		m.pendingProfileErrors = append(m.pendingProfileErrors, bundle.Broken...)
 		m.profileErrorQueueActive = true
