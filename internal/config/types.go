@@ -34,6 +34,12 @@ type AppSettings struct {
 	EnvBlocklist           []string    `toml:"env_blocklist"`
 	Theme                  string      `toml:"theme"` // Global Fallback Theme
 	Keys                   InputConfig `toml:"keys"`
+	HeaderCommandEnabled   bool        `toml:"header_command_enabled"`
+	HeaderCommand          string      `toml:"header_command"`
+	HeaderCommandArgs      []string    `toml:"header_command_args"`
+	HeaderCommandTimeout   int         `toml:"header_command_timeout"`
+	HeaderFallback         string      `toml:"header_fallback"`
+	HeaderCommandMaxLines  int         `toml:"header_command_max_lines"`
 }
 
 // Config represents the runtime application configuration (Settings + Active Profile)
@@ -45,6 +51,7 @@ type Config struct {
 	HeaderCommandArgs      []string    `toml:"header_command_args"`
 	HeaderCommandTimeout   int         `toml:"header_command_timeout"`
 	HeaderFallback         string      `toml:"header_fallback"`
+	HeaderCommandMaxLines  int         `toml:"header_command_max_lines"`
 	GridSelectionTimeoutMs int         `toml:"grid_selection_timeout_ms"`
 	DefaultShell           string      `toml:"default_shell"`
 	NumbModifier           string      `toml:"numb_modifier"`
@@ -62,15 +69,20 @@ type Config struct {
 
 // ProfileFile represents the content of a profile file (e.g. core.profile.toml)
 type ProfileFile struct {
-	X                  int       `toml:"x"`
-	Y                  int       `toml:"y"`
-	Theme              string    `toml:"theme"`
-	Icon               string    `toml:"icon"`
-	HeaderArt          *string   `toml:"header_art"`
-	Shell              *string   `toml:"shell"`
-	Assets             *[]string `toml:"assets"`
-	WorkingDirectory   *string   `toml:"working_directory"`
-	Commands           []Command `toml:"commands"`
+	X                    int       `toml:"x"`
+	Y                    int       `toml:"y"`
+	Theme                string    `toml:"theme"`
+	Icon                 string    `toml:"icon"`
+	HeaderArt            *string   `toml:"header_art"`
+	Shell                *string   `toml:"shell"`
+	Assets               *[]string `toml:"assets"`
+	WorkingDirectory     *string   `toml:"working_directory"`
+	Commands             []Command `toml:"commands"`
+	HeaderCommandEnabled *bool     `toml:"header_command_enabled"`
+	HeaderCommand        *string   `toml:"header_command"`
+	HeaderCommandArgs    []string  `toml:"header_command_args"`
+	HeaderCommandTimeout *int      `toml:"header_command_timeout"`
+	HeaderFallback       *string   `toml:"header_fallback"`
 }
 
 // ProfileInfo holds metadata and content of a profile

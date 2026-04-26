@@ -6,9 +6,18 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+)
+
+var (
+	headerCache      string
+	headerCacheTime  time.Time
+	headerCacheCmd   string
+	headerCacheMutex sync.Mutex
+	headerCacheTTL   = 500 * time.Millisecond
 )
 
 // HeaderConfig holds configuration for dynamic command-based header
@@ -18,16 +27,15 @@ type HeaderConfig struct {
 	Args     []string      // Command arguments
 	Timeout  time.Duration // Maximum execution time (default: 2s)
 	Fallback string        // Fallback text if command fails
+	MaxLines int           // Maximum lines to display (0 = unlimited, capped at 15)
 }
 
 // ExecuteHeaderCommand runs a command and returns its stdout as header text
 func ExecuteHeaderCommand(cmd string, args []string, timeout time.Duration) (string, error) {
-	// Set default timeout if not specified
 	if timeout == 0 {
 		timeout = 2 * time.Second
 	}
 
-	// Create command with timeout context
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
@@ -38,29 +46,34 @@ func ExecuteHeaderCommand(cmd string, args []string, timeout time.Duration) (str
 	command.Stdout = &stdout
 	command.Stderr = &stderr
 
-	// Execute command
 	err := command.Run()
 	if err != nil {
 		return "", fmt.Errorf("command failed: %v (stderr: %s)", err, stderr.String())
 	}
 
-	// Return stdout, trimmed
 	output := strings.TrimSpace(stdout.String())
 	return output, nil
 }
 
-// RenderCommandHeader executes command and formats it as centered header
+// RenderCommandHeader executes command and formats it as centered header with caching
 func RenderCommandHeader(cfg HeaderConfig, spinnerView string) string {
 	if !cfg.Enabled || cfg.Command == "" {
-		// Return default header art if command is not configured
 		return renderDefaultHeaderArt(spinnerView)
 	}
 
-	// Execute the command
+	headerCacheMutex.Lock()
+	defer headerCacheMutex.Unlock()
+
+	now := time.Now()
+	cmdKey := cfg.Command + strings.Join(cfg.Args, "|")
+
+	if cmdKey == headerCacheCmd && now.Sub(headerCacheTime) < headerCacheTTL {
+		return formatHeaderOutput(headerCache, cfg, spinnerView)
+	}
+
 	output, err := ExecuteHeaderCommand(cfg.Command, cfg.Args, cfg.Timeout)
 
 	if err != nil {
-		// Use fallback if provided, otherwise use default header
 		if cfg.Fallback != "" {
 			output = cfg.Fallback
 		} else {
@@ -68,11 +81,29 @@ func RenderCommandHeader(cfg HeaderConfig, spinnerView string) string {
 		}
 	}
 
-	// Center the output
+	headerCacheCmd = cmdKey
+	headerCache = output
+	headerCacheTime = now
+
+	return formatHeaderOutput(output, cfg, spinnerView)
+}
+
+func formatHeaderOutput(output string, cfg HeaderConfig, spinnerView string) string {
 	var result strings.Builder
 	lines := strings.Split(output, "\n")
 
-	for _, line := range lines {
+	maxLines := cfg.MaxLines
+	if maxLines == 0 {
+		maxLines = 15
+	}
+	if maxLines > 15 {
+		maxLines = 15
+	}
+
+	for i, line := range lines {
+		if i >= maxLines {
+			break
+		}
 		centered := lipgloss.NewStyle().
 			Width(80).
 			Align(lipgloss.Center).
@@ -84,24 +115,7 @@ func RenderCommandHeader(cfg HeaderConfig, spinnerView string) string {
 	return result.String()
 }
 
-// renderDefaultHeaderArt is the original static ASCII art header
+// renderDefaultHeaderArt delegates to renderHeaderArt (respects header_art config)
 func renderDefaultHeaderArt(spinnerView string) string {
-	logoStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#FF6B6B")).
-		Bold(true)
-
-	logo := logoStyle.Render(`
-    ██████╗ ██████╗  █████╗ ██╗  ██╗ ██████╗ 
-    ██╔══██╗██╔══██╗██╔══██╗██║ ██╔╝██╔═══██╗
-    ██║  ██║██████╔╝███████║█████╔╝ ██║   ██║
-    ██║  ██║██╔══██╗██╔══██║██╔═██╗ ██║   ██║
-    ██████╔╝██║  ██║██║  ██║██║  ██╗╚██████╔╝
-    ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ 
-	`)
-
-	spinner := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#00D9FF")).
-		Render(spinnerView)
-
-	return lipgloss.JoinVertical(lipgloss.Center, logo, spinner)
+	return renderHeaderArt(spinnerView)
 }

@@ -1,6 +1,9 @@
 package ui
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucky7xz/drako/internal/config"
 )
@@ -55,6 +58,8 @@ var (
 	footerStyle               lipgloss.Style
 	dropdownPopupStyle        lipgloss.Style
 	inactiveHeaderStyle       lipgloss.Style
+
+	activeHeaderArt string
 )
 
 func applyThemeStyles(cfg config.Config) {
@@ -234,4 +239,102 @@ func applyThemeStyles(cfg config.Config) {
 		Padding(1, 2).
 		Margin(1).
 		Bold(true)
+
+	if cfg.HeaderArt != nil && strings.TrimSpace(*cfg.HeaderArt) != "" {
+		activeHeaderArt = *cfg.HeaderArt
+	} else {
+		activeHeaderArt = headerArt
+	}
+}
+
+// renderHeaderArt renders the configurable header art with styled characters
+func renderHeaderArt(spinnerView string) string {
+	var formattedArt string
+	placeholder := "SPINNERPLACEHOLDER"
+
+	if strings.Contains(activeHeaderArt, "%s") {
+		formattedArt = fmt.Sprintf(activeHeaderArt, placeholder)
+	} else {
+		formattedArt = activeHeaderArt
+	}
+
+	lines := strings.Split(formattedArt, "\n")
+
+	primaryStyle := lipgloss.NewStyle().
+		Foreground(headerStyle.GetForeground()).
+		Bold(true)
+
+	var styledLines []string
+	for _, line := range lines {
+		if line == "" {
+			styledLines = append(styledLines, line)
+			continue
+		}
+
+		if strings.Contains(line, placeholder) {
+			parts := strings.Split(line, placeholder)
+			var styledLine strings.Builder
+
+			if len(parts) > 0 {
+				styledLine.WriteString(styleLineSegment(parts[0], primaryStyle))
+			}
+
+			styledLine.WriteString(whiteStyle.Render(spinnerView))
+
+			if len(parts) > 1 {
+				styledLine.WriteString(styleLineSegment(parts[1], primaryStyle))
+			}
+
+			styledLines = append(styledLines, styledLine.String())
+			continue
+		}
+
+		styledLines = append(styledLines, styleLineSegment(line, primaryStyle))
+	}
+
+	result := strings.Join(styledLines, "\n")
+	return lipgloss.NewStyle().PaddingBottom(1).Render(result)
+}
+
+// styleLineSegment applies styling to a line segment, with special chars in white
+func styleLineSegment(segment string, primaryStyle lipgloss.Style) string {
+	var styledLine strings.Builder
+	runes := []rune(segment)
+	for i := 0; i < len(runes); i++ {
+		if runes[i] == '✘' {
+			styledLine.WriteString(whiteStyle.Render("✘"))
+			continue
+		}
+
+		if i+1 < len(runes) && string(runes[i:i+2]) == "╱╲" {
+			styledLine.WriteString(whiteStyle.Render("╱╲"))
+			i++
+			continue
+		}
+
+		if i+1 < len(runes) && runes[i] == '◄' {
+			styledLine.WriteString(whiteStyle.Render("◄"))
+			continue
+		}
+
+		if i+1 < len(runes) && runes[i] == '►' {
+			styledLine.WriteString(whiteStyle.Render("►"))
+			continue
+		}
+
+		if i+1 < len(runes) && string(runes[i:i+2]) == "◄═" {
+			styledLine.WriteString(whiteStyle.Render(string(runes[i : i+2])))
+			i++
+			continue
+		}
+
+		if i+2 < len(runes) && string(runes[i:i+3]) == "啸龙志" {
+			styledLine.WriteString(whiteStyle.Render("啸龙志"))
+			i += 2
+			continue
+		}
+
+		styledLine.WriteString(primaryStyle.Render(string(runes[i])))
+	}
+	return styledLine.String()
 }

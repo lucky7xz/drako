@@ -13,6 +13,13 @@ y = 3
 #╚══════════════════════════════════════╝
 #'''
 
+# ┌─ Dynamic Header Command ──────────────────────────────────────────────────┐
+# │ Per-profile header command. Overrides global setting.                     │
+# │ WARNING: Command runs on every render - keep it fast!                     │
+# └────────────────────────────────────────────────────────────────────────────
+#header_command_enabled = false
+#header_command = "fortune"
+
 #==========================================
 # ┌─ Column 0: System & Security ──────────┐
 # └────────────────────────────────────────┘

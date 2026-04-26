@@ -15,11 +15,12 @@ type navMode int
 const (
 	gridMode navMode = iota
 	pathMode
-	childMode
+	pickerMode
 	inventoryMode
 	dropdownMode
 	infoMode
 	lockedMode
+	selectMode // Text selection mode
 )
 
 type (

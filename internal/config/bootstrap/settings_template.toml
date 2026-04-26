@@ -80,3 +80,14 @@ profile_next = "p"
 # └────────────────────────────────────────────────
 
 #default_shell = "bash"   # or "zsh", "fish", "sh", etc.
+
+# ┌─ Dynamic Header Command ──────────────────────────────────────────────────┐
+# │ Execute a command and display its output as the header.                    │
+# │ Useful for showing system info, date, quotes, fortune, etc.               │
+# │ WARNING: Command runs on every render - keep it fast!                     │
+# └────────────────────────────────────────────────────────────────────────────
+#header_command_enabled = false
+#header_command = "date"
+#header_command_args = ["+%H:%M:%S"]
+#header_command_timeout = 2
+#header_fallback = "dR4ko"

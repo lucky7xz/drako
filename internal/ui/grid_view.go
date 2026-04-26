@@ -84,9 +84,16 @@ func (m Model) renderGrid() string {
 
 	// --- Add Row Indicators and Final Assembly ---
 	var finalRows []string
-	// Calculate the padding needed for the largest row number.
 	maxRowNumWidth := len(fmt.Sprintf("%d", len(renderedRows)))
-	rowPrefix := strings.Repeat(" ", maxRowNumWidth+1) // Padding for continuation lines: "[0] ❭ "
+
+	// Compute the visual width of the styled row indicator once, so that the plain-space
+	// prefix used on border/bottom lines is the same width — keeping ┍/┕ aligned under ┌/┐.
+	// Both inactiveHeaderStyle and titleStyle have Padding(0,1), so the width is the same
+	// regardless of which style is active.
+	sampleRowNum := inactiveHeaderStyle.Render(fmt.Sprintf("%*d❭", maxRowNumWidth, 1))
+	rowPrefixWidth := lipgloss.Width(sampleRowNum)
+	rowPrefix := strings.Repeat(" ", rowPrefixWidth)
+
 	for i, row := range renderedRows {
 		rowNumRaw := fmt.Sprintf("%*d❭", maxRowNumWidth, i+1)
 
@@ -109,13 +116,11 @@ func (m Model) renderGrid() string {
 		finalRows = append(finalRows, strings.Join(lines, "\n"))
 	}
 
-	// Create padding for the header to align it with the grid body.
-	sampleRowNum := inactiveHeaderStyle.Render(fmt.Sprintf("%*d❭", maxRowNumWidth, 1))
-	headerPaddingWidth := lipgloss.Width(sampleRowNum)
-	headerPadding := strings.Repeat(" ", headerPaddingWidth)
+	// Pad the column header the same amount so ┌/┐ sits directly above ┍/┕.
+	headerPadding := strings.Repeat(" ", rowPrefixWidth)
 	paddedHeader := headerPadding + fullHeader
 
-	gridBody := lipgloss.JoinVertical(lipgloss.Center, finalRows...)
+	gridBody := lipgloss.JoinVertical(lipgloss.Left, finalRows...)
 
 	return lipgloss.JoinVertical(lipgloss.Left, paddedHeader, gridBody)
 }

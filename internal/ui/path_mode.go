@@ -83,9 +83,22 @@ func (m *PathModel) ListChildDirs() {
 		if m.Filter != "" && !strings.Contains(strings.ToLower(name), strings.ToLower(m.Filter)) {
 			continue
 		}
+		// Check if it's a directory OR a symlink to a directory
 		info, err := os.Stat(filepath.Join(path, name))
-		if err == nil && info.IsDir() {
-			m.ChildDirs = append(m.ChildDirs, name)
+		if err == nil {
+			if info.IsDir() {
+				m.ChildDirs = append(m.ChildDirs, name)
+			}
+		} else {
+			// If stat fails, try lstat to check symlink
+			linkInfo, linkErr := os.Lstat(filepath.Join(path, name))
+			if linkErr == nil && linkInfo.Mode()&os.ModeSymlink != 0 {
+				// It's a symlink, check if target is a directory
+				targetInfo, targetErr := os.Stat(filepath.Join(path, name))
+				if targetErr == nil && targetInfo.IsDir() {
+					m.ChildDirs = append(m.ChildDirs, name)
+				}
+			}
 		}
 	}
 	sort.Strings(m.ChildDirs)
@@ -157,7 +170,7 @@ func (pm *PathModel) UpdatePathMode(msg tea.KeyMsg, cfg config.Config) (navMode,
 		case tea.KeyDown:
 			if len(pm.ChildDirs) > 0 {
 				pm.SelectedChildIndex = 0
-				return childMode, nil
+				return pickerMode, nil
 			}
 		}
 		return pathMode, nil
@@ -193,7 +206,7 @@ func (pm *PathModel) UpdatePathMode(msg tea.KeyMsg, cfg config.Config) (navMode,
 	case IsDown(cfg.Keys, msg):
 		if len(pm.ChildDirs) > 0 {
 			pm.SelectedChildIndex = 0
-			return childMode, nil
+			return pickerMode, nil
 		}
 	case IsPathGridMode(cfg.Keys, msg):
 		return gridMode, nil
@@ -217,8 +230,8 @@ func (pm *PathModel) UpdatePathMode(msg tea.KeyMsg, cfg config.Config) (navMode,
 	return pathMode, nil
 }
 
-// Update handles key events when in ChildMode
-func (pm *PathModel) UpdateChildMode(msg tea.KeyMsg, cfg config.Config) (navMode, tea.Cmd) {
+// Update handles key events when in PickerMode
+func (pm *PathModel) UpdatePickerMode(msg tea.KeyMsg, cfg config.Config) (navMode, tea.Cmd) {
 	if pm.Searching {
 		switch key := msg.String(); key {
 		case "esc":
@@ -261,7 +274,7 @@ func (pm *PathModel) UpdateChildMode(msg tea.KeyMsg, cfg config.Config) (navMode
 				pm.SelectedChildIndex++
 			}
 		}
-		return childMode, nil
+		return pickerMode, nil
 	}
 
 	switch {
@@ -291,7 +304,7 @@ func (pm *PathModel) UpdateChildMode(msg tea.KeyMsg, cfg config.Config) (navMode
 				pm.UpdatePathComponents()
 				pm.ListChildDirs()
 				pm.SelectedChildIndex = 0
-				return childMode, nil
+				return pickerMode, nil
 			}
 		}
 	case IsLeft(cfg.Keys, msg):
@@ -303,7 +316,7 @@ func (pm *PathModel) UpdateChildMode(msg tea.KeyMsg, cfg config.Config) (navMode
 				pm.UpdatePathComponents()
 				pm.ListChildDirs()
 				pm.SelectedChildIndex = 0
-				return childMode, nil
+				return pickerMode, nil
 			}
 		}
 		return pathMode, nil
@@ -326,7 +339,7 @@ func (pm *PathModel) UpdateChildMode(msg tea.KeyMsg, cfg config.Config) (navMode
 			pm.SelectedChildIndex = len(pm.ChildDirs) - 1
 		}
 	}
-	return childMode, nil
+	return pickerMode, nil
 }
 
 func (pm *PathModel) RenderPathBar(active bool) string {
@@ -346,7 +359,7 @@ func (pm *PathModel) RenderPathBar(active bool) string {
 }
 
 func (pm *PathModel) RenderChildDirs(mode navMode) string {
-	if mode != childMode && mode != pathMode {
+	if mode != pickerMode && mode != pathMode {
 		return ""
 	}
 	var content string
@@ -362,7 +375,7 @@ func (pm *PathModel) RenderChildDirs(mode navMode) string {
 	} else {
 		var rows []string
 		for i, dir := range pm.ChildDirs {
-			if mode == childMode && i == pm.SelectedChildIndex {
+			if mode == pickerMode && i == pm.SelectedChildIndex {
 				rows = append(rows, selectedChildDirStyle.Render("› "+dir))
 			} else {
 				rows = append(rows, childDirStyle.Render("  "+dir))
@@ -371,7 +384,7 @@ func (pm *PathModel) RenderChildDirs(mode navMode) string {
 
 		maxVisible := 5
 		start := 0
-		if mode == childMode && pm.SelectedChildIndex >= maxVisible {
+		if mode == pickerMode && pm.SelectedChildIndex >= maxVisible {
 			start = pm.SelectedChildIndex - maxVisible + 1
 		}
 		end := start + maxVisible

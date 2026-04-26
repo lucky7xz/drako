@@ -190,6 +190,11 @@ func (c *Config) ApplyDefaults() {
 		c.Keys.ProfileNext = defaults.Keys.ProfileNext
 	}
 
+	// Header command defaults
+	if c.HeaderCommandTimeout == 0 {
+		c.HeaderCommandTimeout = 2
+	}
+
 	// Ensure limits are respected
 	ClampConfig(c)
 
@@ -401,6 +406,23 @@ func ApplyProfileOverlay(base Config, profile ProfileFile) Config {
 	// Commands are mandatory in ProfileFile basically
 	cfg.Commands = CopyCommands(profile.Commands)
 
+	// Header command overlay
+	if profile.HeaderCommandEnabled != nil {
+		cfg.HeaderCommandEnabled = *profile.HeaderCommandEnabled
+	}
+	if profile.HeaderCommand != nil {
+		cfg.HeaderCommand = *profile.HeaderCommand
+	}
+	if len(profile.HeaderCommandArgs) > 0 {
+		cfg.HeaderCommandArgs = profile.HeaderCommandArgs
+	}
+	if profile.HeaderCommandTimeout != nil {
+		cfg.HeaderCommandTimeout = *profile.HeaderCommandTimeout
+	}
+	if profile.HeaderFallback != nil {
+		cfg.HeaderFallback = *profile.HeaderFallback
+	}
+
 	return cfg
 }
 
@@ -571,6 +593,12 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 					Keys:                   settings.Keys,
 					GridSelectionTimeoutMs: settings.GridSelectionTimeoutMs,
 					Commands:               []Command{}, // Explicitly empty
+					HeaderCommandEnabled:   settings.HeaderCommandEnabled,
+					HeaderCommand:          settings.HeaderCommand,
+					HeaderCommandArgs:      settings.HeaderCommandArgs,
+					HeaderCommandTimeout:   settings.HeaderCommandTimeout,
+					HeaderFallback:         settings.HeaderFallback,
+					HeaderCommandMaxLines:  settings.HeaderCommandMaxLines,
 				}
 				log.Printf("Loaded base settings")
 				if settings.LockTimeoutMinutes != nil {
@@ -752,6 +780,12 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 			Theme:                  base.Theme,
 			Keys:                   base.Keys,
 			GridSelectionTimeoutMs: base.GridSelectionTimeoutMs,
+			HeaderCommandEnabled:   base.HeaderCommandEnabled,
+			HeaderCommand:          base.HeaderCommand,
+			HeaderCommandArgs:      base.HeaderCommandArgs,
+			HeaderCommandTimeout:   base.HeaderCommandTimeout,
+			HeaderFallback:         base.HeaderFallback,
+			HeaderCommandMaxLines:  base.HeaderCommandMaxLines,
 		},
 		Base:        base,
 		Config:      effective,

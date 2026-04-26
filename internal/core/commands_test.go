@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/lucky7xz/drako/internal/config"
+	"golang.org/x/term"
 )
 
 func TestFindCommandByName(t *testing.T) {
@@ -68,6 +69,39 @@ func TestRunCommand_ConfigMatchButEmptyCommand(t *testing.T) {
 	}
 	if len(gotArgs) > 0 {
 		t.Fatalf("expected no command execution, got %v", gotArgs)
+	}
+}
+
+// TestWaitForAnyKeyEnablesMouseReporting verifies that waitForAnyKey enables and
+// then disables xterm mouse reporting so that touchscreen taps can dismiss the prompt.
+func TestWaitForAnyKeyEnablesMouseReporting(t *testing.T) {
+	oldEnable := mouseEnableFn
+	oldDisable := mouseDisableFn
+	oldMakeRaw := makeRawFn
+	oldRestore := restoreTermFn
+	oldRead := stdinReadByteFn
+	defer func() {
+		mouseEnableFn = oldEnable
+		mouseDisableFn = oldDisable
+		makeRawFn = oldMakeRaw
+		restoreTermFn = oldRestore
+		stdinReadByteFn = oldRead
+	}()
+
+	var enableCalled, disableCalled bool
+	mouseEnableFn = func() { enableCalled = true }
+	mouseDisableFn = func() { disableCalled = true }
+	makeRawFn = func(fd int) (*term.State, error) { return nil, nil }
+	restoreTermFn = func(fd int, state *term.State) {}
+	stdinReadByteFn = func(buf []byte) (int, error) { buf[0] = '\r'; return 1, nil }
+
+	waitForAnyKey()
+
+	if !enableCalled {
+		t.Error("expected mouse reporting to be enabled before waiting for input")
+	}
+	if !disableCalled {
+		t.Error("expected mouse reporting to be disabled after reading input")
 	}
 }
 

@@ -39,13 +39,13 @@ func (m Model) View() string {
 
 	header := ""
 	if layout.ShowHeader {
-		// Use command-based header if enabled
 		headerCfg := HeaderConfig{
 			Enabled:  m.Config.HeaderCommandEnabled,
 			Command:  m.Config.HeaderCommand,
 			Args:     m.Config.HeaderCommandArgs,
 			Timeout:  time.Duration(m.Config.HeaderCommandTimeout) * time.Second,
 			Fallback: m.Config.HeaderFallback,
+			MaxLines: m.Config.HeaderCommandMaxLines,
 		}
 		header = RenderCommandHeader(headerCfg, m.spinner.View())
 	}
@@ -59,10 +59,10 @@ func (m Model) View() string {
 	switch m.mode {
 	case pathMode:
 		helpText = "Path Mode | ←/→/ad: Select, ↑/s: Children, Enter: cd, e: Search, q/Esc: Back"
-	case childMode:
-		helpText = "Child Mode | ←/→/ws: Select, Enter: cd, e: Search, q/Esc: Back"
+	case pickerMode:
+		helpText = "Picker Mode | ←/→/ws: Select, Enter: cd, e: Search, q/Esc: Back"
 	default:
-		helpText = "Grid Mode | Enter: Select, e: Explain, Tab: Path, r: Start-Lock, i: Inventory"
+		helpText = "Grid Mode | Enter: Select, e: Explain, x: Edit, Tab: Path, r: Start-Lock, i: Inventory"
 	}
 	help := helpStyle.Render(helpText)
 

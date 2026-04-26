@@ -95,3 +95,8 @@ func IsProfileSwitch(c config.InputConfig, msg tea.KeyMsg, modifier string) (boo
 	}
 	return false, -1
 }
+
+// IsEditProfile checks if the key is "x" for editing current profile in external editor.
+func IsEditProfile(c config.InputConfig, msg tea.KeyMsg) bool {
+	return msg.String() == "x"
+}

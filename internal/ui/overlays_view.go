@@ -44,13 +44,13 @@ func (m Model) viewDropdownMode() string {
 	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config)
 	header := ""
 	if layout.ShowHeader {
-		// Use command-based header if enabled
 		headerCfg := HeaderConfig{
 			Enabled:  m.Config.HeaderCommandEnabled,
 			Command:  m.Config.HeaderCommand,
 			Args:     m.Config.HeaderCommandArgs,
 			Timeout:  time.Duration(m.Config.HeaderCommandTimeout) * time.Second,
 			Fallback: m.Config.HeaderFallback,
+			MaxLines: m.Config.HeaderCommandMaxLines,
 		}
 		header = RenderCommandHeader(headerCfg, m.spinner.View())
 	}
@@ -250,13 +250,13 @@ func (m Model) viewInfoMode() string {
 	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config)
 	header := ""
 	if layout.ShowHeader {
-		// Use command-based header if enabled
 		headerCfg := HeaderConfig{
 			Enabled:  m.Config.HeaderCommandEnabled,
 			Command:  m.Config.HeaderCommand,
 			Args:     m.Config.HeaderCommandArgs,
 			Timeout:  time.Duration(m.Config.HeaderCommandTimeout) * time.Second,
 			Fallback: m.Config.HeaderFallback,
+			MaxLines: m.Config.HeaderCommandMaxLines,
 		}
 		header = RenderCommandHeader(headerCfg, m.spinner.View())
 	}

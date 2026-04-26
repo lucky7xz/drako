@@ -19,7 +19,8 @@ func startConfigWatcher(configDir string) tea.Cmd {
 	return func() tea.Msg {
 		watcher, err := fsnotify.NewWatcher()
 		if err != nil {
-			log.Printf("Failed to create file watcher: %v", err)
+			log.Printf("Warning: Failed to create file watcher: %v", err)
+			log.Printf("Tip: On Arch Linux, check inotify limit: sysctl fs.inotify.max_user_instances")
 			return nil
 		}
 
@@ -85,7 +86,8 @@ func WatchConfigCmd(configDir string) tea.Cmd {
 	return func() tea.Msg {
 		watcher, err := fsnotify.NewWatcher()
 		if err != nil {
-			log.Printf("Failed to create file watcher: %v", err)
+			log.Printf("Warning: Failed to create file watcher: %v", err)
+			log.Printf("Tip: Increase inotify limit: sudo sysctl fs.inotify.max_user_instances=4096")
 			return nil
 		}
 

@@ -79,6 +79,13 @@ type Model struct {
 	lockLastDirection int
 
 	acknowledgedErrors map[string]bool
+
+	lastClickTime  time.Time
+	lastClickPos   struct{ x, y int }
+
+	swipeActive bool
+	swipeStartX int
+	swipeStartY int
 }
 
 func (m *Model) applyConfig(cfg config.Config) {

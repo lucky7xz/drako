@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -237,8 +238,52 @@ func (m Model) resolveMouseClick(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	}
 
 	// Handle path mode and child mode mouse clicks
-	if m.mode == pathMode || m.mode == childMode {
+	if m.mode == pathMode || m.mode == pickerMode {
 		return m.resolvePathMouseClick(msg)
+	}
+
+	if m.mode == inventoryMode {
+		return m.resolveInventoryMouseClick(msg)
+	}
+
+	if m.mode == infoMode {
+		m.mode = m.previousMode
+		m.activeDetail = nil
+		return m, nil
+	}
+
+	// In grid mode, check if click is on path bar area (footer) - enter path mode
+	if m.mode == gridMode {
+		// Check if click is in the footer area where path bar is shown
+		pathBarY, inPathArea := m.getPathBarPosition()
+		if inPathArea && msg.Y >= pathBarY {
+			// Enter path mode
+			m.mode = pathMode
+			// Try to detect which path component was clicked
+			components := m.path.PathComponents
+			if len(components) > 0 {
+				if msg.X < 15 {
+					m.path.SelectedPathIndex = 0
+				} else {
+					accumX := 0
+					found := false
+					for i, comp := range components {
+						compWidth := lipgloss.Width(comp) + 1
+						if msg.X >= accumX && msg.X < accumX+compWidth {
+							m.path.SelectedPathIndex = i
+							found = true
+							break
+						}
+						accumX += compWidth
+					}
+					if !found {
+						m.path.SelectedPathIndex = len(components) - 1
+					}
+				}
+				m.path.ListChildDirs()
+			}
+			return m, nil
+		}
 	}
 
 	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config)
@@ -395,19 +440,19 @@ func (m Model) resolveDropdownMouseClick(msg tea.MouseMsg) (tea.Model, tea.Cmd) 
 
 	return m, nil
 }
+
 // resolvePathMouseClick handles mouse clicks in path mode and child mode
 func (m Model) resolvePathMouseClick(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config)
 
 	// Calculate positions
 	var (
-		headerContent    string
-		counterContent   string
-		buttonsContent   string
-		gridContent      string
-		footerContent    string
-		pathBarContent   string
-		childDirsContent string
+		headerContent  string
+		counterContent string
+		buttonsContent string
+		gridContent    string
+		footerContent  string
+		pathBarContent string
 	)
 
 	if layout.ShowHeader {
@@ -419,7 +464,7 @@ func (m Model) resolvePathMouseClick(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 
 	// Path mode elements
 	pathBarContent = m.path.RenderPathBar(true)
-	childDirsContent = m.path.RenderChildDirs(m.mode)
+	childDirsContent := m.path.RenderChildDirs(m.mode)
 
 	if layout.ShowFooter {
 		helpText := "Path Mode | ←/→/ad: Select, ↑/s: Children, Enter: cd, e: Search, q/Esc: Back"
@@ -432,68 +477,137 @@ func (m Model) resolvePathMouseClick(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	cHeight := lipgloss.Height(counterContent)
 	bHeight := lipgloss.Height(buttonsContent)
 	gHeight := lipgloss.Height(gridContent)
-	pHeight := lipgloss.Height(pathBarContent)
-	cdHeight := lipgloss.Height(childDirsContent)
+	pathBarH := lipgloss.Height(pathBarContent)   // 2: statusBarStyle.PaddingTop(1) + content
+	childDirsH := lipgloss.Height(childDirsContent)
 	fHeight := lipgloss.Height(footerContent)
 
-	// Calculate y offset for footer section
-	// Footer starts after: header + counter + buttons + grid + spacing
-	footerY := hHeight + cHeight + bHeight + gHeight + 2 // +2 for spacing
-	pathBarY := footerY
-	childDirsY := pathBarY + pHeight
+	// Calculate centering offset
+	totalHeight := hHeight + cHeight + bHeight + gHeight + fHeight
+	widest := lipgloss.Width(footerContent)
+	if w := lipgloss.Width(gridContent); w > widest {
+		widest = w
+	}
+	yOffset := (m.termHeight - totalHeight) / 2
 
-	// Click on path bar - navigate to that path component
-	if msg.Y == pathBarY && msg.X >= 0 {
-		// Calculate which path component was clicked
+	// Calculate y offset for footer section (accounting for centering)
+	footerY := yOffset + hHeight + cHeight + bHeight + gHeight
+
+	// Compute positions by working backward from the footer end.
+	// Footer order: help | net(PaddingTop+content) | profile | pathBar(PaddingTop+content) | childDirs
+	// This avoids relying on hardcoded line offsets that break when styles change.
+	childDirsY := footerY + fHeight - childDirsH
+	pathBarBlockStart := childDirsY - pathBarH
+
+	// Click above the entire path/picker UI (in grid area or header) returns to grid mode.
+	if msg.Y < pathBarBlockStart {
+		m.mode = gridMode
+		return m, nil
+	}
+
+	// Click on path bar - enter path mode OR navigate to clicked path component.
+	if msg.Y >= pathBarBlockStart && msg.Y < childDirsY && msg.X >= 0 {
 		components := m.path.PathComponents
 		if len(components) > 0 {
+			var clickedIndex int
+
 			// Click on the first component (home or root)
 			if msg.X < 15 {
-				m.path.SelectedPathIndex = 0
-				m.path.ListChildDirs()
-				return m, nil
+				clickedIndex = 0
+			} else {
+				// Try to detect which component was clicked
+				accumX := 0
+				found := false
+				for i, comp := range components {
+					compWidth := lipgloss.Width(comp) + 1 // +1 for separator
+					if msg.X >= accumX && msg.X < accumX+compWidth {
+						clickedIndex = i
+						found = true
+						break
+					}
+					accumX += compWidth
+				}
+				if !found {
+					clickedIndex = len(components) - 1
+				}
 			}
-			// Try to detect which component
-			accumX := 0
-			for i, comp := range components {
-				compWidth := lipgloss.Width(comp) + 1 // +1 for separator
-				if msg.X >= accumX && msg.X < accumX+compWidth {
-					m.path.SelectedPathIndex = i
-					m.path.ListChildDirs()
+
+			// Check for double-click on same position to exit path mode
+			now := time.Now()
+			clickDelta := now.Sub(m.lastClickTime)
+			isDoubleClick := clickDelta < 500*time.Millisecond &&
+				msg.X == m.lastClickPos.x && msg.Y == m.lastClickPos.y
+
+			// Update last click info
+			m.lastClickTime = now
+			m.lastClickPos.x = msg.X
+			m.lastClickPos.y = msg.Y
+
+			// If already in path mode
+			if m.mode == pathMode {
+				if isDoubleClick {
+					// Double-click - choose this path and exit to grid
+					targetPath := m.path.BuildPathFromComponents(clickedIndex)
+					if err := os.Chdir(targetPath); err == nil {
+						m.path.CurrentPath, _ = os.Getwd()
+						m.mode = gridMode
+						return m, func() tea.Msg { return pathChangedMsg{} }
+					}
+					// Even if chdir fails, still exit to grid
+					m.mode = gridMode
 					return m, nil
 				}
-				accumX += compWidth
+
+				// Single click - just select the path component (don't navigate)
+				m.path.SelectedPathIndex = clickedIndex
+				m.path.ListChildDirs()
+			} else {
+				// Not in path mode yet - enter path mode and select component
+				m.mode = pathMode
+				m.path.SelectedPathIndex = clickedIndex
+				m.path.ListChildDirs()
 			}
-			// Click on last part - go to current directory
-			m.path.SelectedPathIndex = len(components) - 1
-			m.path.ListChildDirs()
 		}
 		return m, nil
 	}
 
-	// Click on child directories (in child mode or path mode)
-	if msg.Y >= childDirsY && msg.Y < childDirsY+cdHeight && len(m.path.ChildDirs) > 0 {
-		// Calculate which child was clicked
+	// Click on child directories (in picker mode or path mode)
+	if msg.Y >= childDirsY && msg.Y < childDirsY+childDirsH && len(m.path.ChildDirs) > 0 {
 		localY := msg.Y - childDirsY
 		clickedIndex := localY
 
 		if clickedIndex >= 0 && clickedIndex < len(m.path.ChildDirs) {
-			// Clicked on a directory - enter it or select it
+			// Check for double-click to enter directory
+			now := time.Now()
+			clickDelta := now.Sub(m.lastClickTime)
+			isDoubleClick := clickDelta < 500*time.Millisecond &&
+				msg.X == m.lastClickPos.x && msg.Y == m.lastClickPos.y
+
+			// Update last click info BEFORE checking double-click
+			m.lastClickTime = now
+			m.lastClickPos.x = msg.X
+			m.lastClickPos.y = msg.Y
+
+			if isDoubleClick {
+				// Double-click - enter the directory and return to grid
+				parentPath := m.path.BuildPathFromComponents(m.path.SelectedPathIndex)
+				targetPath := filepath.Join(parentPath, m.path.ChildDirs[clickedIndex])
+
+				if err := os.Chdir(targetPath); err == nil {
+					m.path.CurrentPath, _ = os.Getwd()
+					m.path.UpdatePathComponents()
+					m.path.ListChildDirs()
+					m.path.SelectedChildIndex = 0
+					m.mode = gridMode
+					return m, func() tea.Msg { return pathChangedMsg{} }
+				}
+			}
+
+			// Single click - just select the directory (like keyboard navigation)
 			m.path.SelectedChildIndex = clickedIndex
 
-			// If double-click or enter action, navigate into directory
-			parentPath := m.path.BuildPathFromComponents(m.path.SelectedPathIndex)
-			targetPath := parentPath + "/" + m.path.ChildDirs[clickedIndex]
-
-			if err := m.path.ChangeDir(targetPath); err == nil {
-				m.path.CurrentPath, _ = os.Getwd()
-				m.path.UpdatePathComponents()
-				m.path.ListChildDirs()
-				m.path.SelectedChildIndex = 0
-
-				if m.mode == pathMode {
-					m.mode = childMode
-				}
+			// If in pathMode, enter pickerMode to show selection
+			if m.mode == pathMode {
+				m.mode = pickerMode
 			}
 			return m, nil
 		}
@@ -514,4 +628,54 @@ func (pm *PathModel) ChangeDir(targetPath string) error {
 	}
 	pm.CurrentPath, _ = os.Getwd()
 	return nil
+}
+
+// getPathBarPosition returns the Y position of the path bar in the footer
+// Returns (y position, true) if the path bar is visible
+func (m Model) getPathBarPosition() (int, bool) {
+	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config)
+	if !layout.ShowFooter {
+		return 0, false
+	}
+
+	// Calculate positions accounting for centering
+	var (
+		headerContent  string
+		counterContent string
+		buttonsContent string
+		gridContent    string
+		footerContent  string
+	)
+
+	if layout.ShowHeader {
+		headerContent = renderDefaultHeaderArt(m.spinner.View())
+	}
+	counterContent = m.renderProfileCounter()
+	buttonsContent = m.renderProfileButtons()
+	gridContent = m.renderGrid()
+
+	helpText := "Grid Mode | Enter: Select, e: Explain, Tab: Path, r: Start-Lock, i: Inventory"
+	help := helpStyle.Render(helpText)
+	footerContent = m.renderCombinedFooter(help)
+
+	// Calculate heights and centering
+	hHeight := lipgloss.Height(headerContent)
+	cHeight := lipgloss.Height(counterContent)
+	bHeight := lipgloss.Height(buttonsContent)
+	gHeight := lipgloss.Height(gridContent)
+	fHeight := lipgloss.Height(footerContent)
+
+	totalHeight := hHeight + cHeight + bHeight + gHeight + fHeight
+	yOffset := (m.termHeight - totalHeight) / 2
+
+	footerStartY := yOffset + hHeight + cHeight + bHeight + gHeight
+
+	// Compute pathBar position backward from footer end (same approach as resolvePathMouseClick).
+	childDirsContent := m.path.RenderChildDirs(m.mode)
+	childDirsH := lipgloss.Height(childDirsContent)
+	pathBarContent := m.path.RenderPathBar(m.mode == pathMode)
+	pathBarH := lipgloss.Height(pathBarContent)
+	pathBarY := footerStartY + fHeight - childDirsH - pathBarH
+
+	return pathBarY, true
 }

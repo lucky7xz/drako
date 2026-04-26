@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/lucky7xz/drako/internal/cli"
@@ -15,11 +16,14 @@ import (
 )
 
 var (
-	pauseFn    = pause
-	lookPathFn = exec.LookPath
-	commandFn  = exec.Command
-	//setenvFn   = os.Setenv
-	//unsetenvFn = os.Unsetenv
+	pauseFn         = pause
+	lookPathFn      = exec.LookPath
+	commandFn       = exec.Command
+	mouseEnableFn   = func() { os.Stdout.WriteString("\x1b[?1000h\x1b[?1006h") }
+	mouseDisableFn  = func() { os.Stdout.WriteString("\x1b[?1000l\x1b[?1006l") }
+	stdinReadByteFn = func(buf []byte) (int, error) { return os.Stdin.Read(buf) }
+	makeRawFn       = func(fd int) (*term.State, error) { return term.MakeRaw(fd) }
+	restoreTermFn   = func(fd int, state *term.State) { _ = term.Restore(fd, state) }
 )
 
 // - Optional booleans in config are represented as *bool (pointer-to-bool) so we
@@ -34,19 +38,44 @@ func boolOrDefault(ptr *bool, def bool) bool {
 }
 
 // waitForAnyKey waits for any single keypress in raw mode.
+// Mouse reporting is enabled so touchscreen taps also dismiss the prompt.
 func waitForAnyKey() {
 	fd := int(os.Stdin.Fd())
-	oldState, err := term.MakeRaw(fd)
+	oldState, err := makeRawFn(fd)
 	if err != nil {
 		// Fallback: just wait for Enter if raw mode fails
 		fmt.Scanln()
 		return
 	}
-	defer term.Restore(fd, oldState)
+	defer restoreTermFn(fd, oldState)
 
-	// Read one byte (ignore errors since we're just pausing)
+	mouseEnableFn()
+	defer mouseDisableFn()
+
+	// Drain leftover bytes (e.g. mouse button-release from the triggering click).
+	// Sleep briefly so in-flight terminal events arrive, then discard them all.
+	time.Sleep(80 * time.Millisecond)
+	drainStdin(fd)
+
 	buf := make([]byte, 1)
-	_, _ = os.Stdin.Read(buf)
+	_, _ = stdinReadByteFn(buf)
+}
+
+// drainStdin discards all bytes currently buffered in stdin (non-blocking).
+// This prevents a mouse button-release event from a prior click from
+// immediately dismissing the pause screen.
+func drainStdin(fd int) {
+	if err := syscall.SetNonblock(fd, true); err != nil {
+		return
+	}
+	defer syscall.SetNonblock(fd, false) //nolint:errcheck
+	buf := make([]byte, 64)
+	for {
+		n, err := syscall.Read(fd, buf)
+		if n <= 0 || err != nil {
+			break
+		}
+	}
 }
 
 func pause(msg string) {

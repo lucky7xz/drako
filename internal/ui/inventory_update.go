@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/core"
 )
@@ -170,6 +171,177 @@ func Contains(slice []string, item string) bool {
 		}
 	}
 	return false
+}
+
+func (m Model) resolveInventoryMouseClick(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	if msg.Action != tea.MouseActionPress {
+		return m, nil
+	}
+	log.Printf("Mouse click in inventory: X=%d, Y=%d", msg.X, msg.Y)
+
+	if m.inventory.err != nil {
+		m.mode = gridMode
+		m.inventory.err = nil
+		return m, nil
+	}
+
+	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config)
+
+	// --- 1. Measure Components ---
+	var (
+		headerContent  string
+		equippedTitle  string
+		equippedGrid   string
+		inventoryTitle string
+		inventoryGrid  string
+		applyButton    string
+		rescueButton   string
+		heldStatus     string
+		footerContent  string
+	)
+
+	if layout.ShowHeader {
+		headerContent = inventoryTitleStyle.Render("Inventory Management") + "\n\n"
+	}
+
+	visiblePtr, _ := m.inventory.State.GetList(core.ListVisible)
+	visible := *visiblePtr
+	inventoryPtr, _ := m.inventory.State.GetList(core.ListInventory)
+	inventory := *inventoryPtr
+
+	equippedTitle = listHeaderStyle.Render("Equipped Items") + "\n"
+	equippedGrid = m.renderInventoryGrid(visible, 0)
+	inventoryTitle = listHeaderStyle.Render("Inventory Items") + "\n"
+	inventoryGrid = m.renderInventoryGrid(inventory, 1)
+
+	applyButtonStr := "[ Apply Changes ]"
+	if m.inventory.focusedList == 2 {
+		applyButton = selectedButtonStyle.Render(applyButtonStr)
+	} else {
+		applyButton = buttonStyle.Render(applyButtonStr)
+	}
+
+	rescueButtonStr := "[ Rescue Mode ]"
+	if m.inventory.focusedList == 3 {
+		rescueButton = selectedRescueButtonStyle.Render(rescueButtonStr)
+	} else {
+		rescueButton = rescueButtonStyle.Render(rescueButtonStr)
+	}
+
+	heldItemStatus := " "
+	if m.inventory.State.HeldItem != nil {
+		heldItemStatus = helpStyle.Render("Holding: ") + selectedItemStyle.Render(*m.inventory.State.HeldItem)
+	}
+	heldStatus = heldItemStatus
+
+	if layout.ShowFooter {
+		help := helpStyle.Render("↑/↓/tab: Switch Grid | ←/→: Move | space/enter: Lift/Place | q/esc: Back")
+		version := helpStyle.Render(config.AppName + " | " + config.Version)
+		footerContent = footerStyle.Render(lipgloss.JoinVertical(lipgloss.Center, help, version))
+	}
+
+	// --- 2. Calculate Vertical Layout ---
+	hH := lipgloss.Height(headerContent)
+	etH := lipgloss.Height(equippedTitle)
+	egH := lipgloss.Height(equippedGrid)
+	itH := lipgloss.Height(inventoryTitle)
+	igH := lipgloss.Height(inventoryGrid)
+	abH := lipgloss.Height(applyButton)
+	rbH := lipgloss.Height(rescueButton)
+	hsH := lipgloss.Height(heldStatus)
+	fH := lipgloss.Height(footerContent)
+
+	totalHeight := hH + etH + egH + 2 + itH + igH + 2 + abH + 2 + rbH + 2 + hsH
+	if layout.ShowFooter {
+		totalHeight += fH
+	}
+
+	yOffset := (m.termHeight - totalHeight) / 2
+
+	// --- 3. Hit Detection ---
+
+	currentY := yOffset + hH
+
+	// Check Equipped Grid
+	currentY += etH
+	if msg.Y >= currentY && msg.Y < currentY+egH {
+		// Calculate hit in equipped grid
+		return m.resolveInventoryGridClick(msg, visible, 0, currentY)
+	}
+	currentY += egH + 2 // +2 for \n\n
+
+	// Check Inventory Grid
+	currentY += itH
+	if msg.Y >= currentY && msg.Y < currentY+igH {
+		// Calculate hit in inventory grid
+		return m.resolveInventoryGridClick(msg, inventory, 1, currentY)
+	}
+	currentY += igH + 2 // +2 for \n\n
+
+	// Check Apply Button
+	if msg.Y >= currentY && msg.Y < currentY+abH {
+		bW := lipgloss.Width(applyButton)
+		bXStart := (m.termWidth - bW) / 2
+		if msg.X >= bXStart && msg.X < bXStart+bW {
+			m.inventory.focusedList = 2
+			return m.updateInventoryMode(tea.KeyMsg{Type: tea.KeyEnter})
+		}
+	}
+	currentY += abH + 2
+
+	// Check Rescue Button
+	if msg.Y >= currentY && msg.Y < currentY+rbH {
+		bW := lipgloss.Width(rescueButton)
+		bXStart := (m.termWidth - bW) / 2
+		if msg.X >= bXStart && msg.X < bXStart+bW {
+			m.inventory.focusedList = 3
+			return m.updateInventoryMode(tea.KeyMsg{Type: tea.KeyEnter})
+		}
+	}
+
+	return m, nil
+}
+
+func (m Model) resolveInventoryGridClick(msg tea.MouseMsg, profiles []string, listID int, gridStartY int) (tea.Model, tea.Cmd) {
+	if len(profiles) == 0 {
+		// Handle empty list placeholder click
+		m.inventory.focusedList = listID
+		m.inventory.cursor = 0
+		return m.updateInventoryMode(tea.KeyMsg{Type: tea.KeySpace})
+	}
+
+	// Calculate cell width (all cells in a list have same width because of styling)
+	sampleStyle := cellStyle
+	if listID == m.inventory.focusedList && m.inventory.cursor == 0 {
+		sampleStyle = selectedCellStyle
+	}
+	cellW := lipgloss.Width(sampleStyle.Render(profiles[0]))
+	maxCellsPerLine := m.termWidth / cellW
+	if maxCellsPerLine <= 0 {
+		maxCellsPerLine = 1
+	}
+
+	// Calculate total width of a row to center it
+	cellsInFirstRow := len(profiles)
+	if cellsInFirstRow > maxCellsPerLine {
+		cellsInFirstRow = maxCellsPerLine
+	}
+	rowW := cellsInFirstRow * cellW
+	xOffset := (m.termWidth - rowW) / 2
+
+	localY := msg.Y - gridStartY
+	rowIdx := localY // Each cell is 1 line high
+	colIdx := (msg.X - xOffset) / cellW
+
+	clickedIdx := rowIdx*maxCellsPerLine + colIdx
+	if clickedIdx >= 0 && clickedIdx < len(profiles) && msg.X >= xOffset && msg.X < xOffset+rowW {
+		m.inventory.focusedList = listID
+		m.inventory.cursor = clickedIdx
+		// Simulate a space press to pick up or place
+		return m.updateInventoryMode(tea.KeyMsg{Type: tea.KeySpace})
+	}
+
+	return m, nil
 }
 
 func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
