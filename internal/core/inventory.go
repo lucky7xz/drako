@@ -3,6 +3,8 @@ package core
 import (
 	"errors"
 	"path/filepath"
+
+	"github.com/lucky7xz/drako/internal/paths"
 )
 
 const (
@@ -98,7 +100,7 @@ func (s *InventoryState) PlaceItem(listID, index int) error {
 // configDir is the root directory; inventoryDir is handled internally.
 func (s *InventoryState) CalculateMoves(configDir string, originalVisible, originalInventory []string) (map[string]string, error) {
 	moves := make(map[string]string)
-	inventoryDir := filepath.Join(configDir, "inventory")
+	inventoryDir := paths.InventoryDir(configDir)
 
 	// Helper to check existence in a slice
 	contains := func(slice []string, item string) bool {

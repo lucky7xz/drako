@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/lucky7xz/drako/internal/paths"
 )
 
 func fatalf(format string, args ...any) {
@@ -44,23 +45,11 @@ func RescueConfig() Config {
 		defaultShell = "pwsh" // Prefer PowerShell on Windows, falling back to cmd if needed by user config
 	}
 
-	// Resolve config directory for "Open Config Dir" / "Edit Config"
-	// We use the same logic as GetConfigDir, but since we are inside config package,
-	// we assume standard locations.
-	// Since RescueConfig is a fallback, we should try to be helpful.
-	// However, GetConfigDir might return error or different path if not set.
-	// Best effort:
-	configDir, err := GetConfigDir()
-	if err != nil {
-		// Fallback to a safe guess if we can't find it
-		home, _ := os.UserHomeDir()
-		configDir = filepath.Join(home, ".config", "drako")
-		if isWindows {
-			configDir = filepath.Join(home, "AppData", "Roaming", "drako")
-		}
-	}
-
-	configPath := filepath.Join(configDir, "config.toml")
+	// Used only to build the "Edit Config" / "Open Config Dir" helper
+	// commands; resolution has already succeeded by the time rescue mode
+	// can run.
+	configDir, _ := paths.ConfigDir()
+	configPath := paths.ConfigFile(configDir)
 
 	// We wrap paths in quotes in case of spaces, though drako open handles simple strings.
 	// Actually handling spaces in arguments for "drako open" requires care if we just use string splitting.
@@ -386,29 +375,6 @@ func ApplyProfileOverlay(base Config, profile ProfileFile) Config {
 	return cfg
 }
 
-const pivotProfileFilename = "pivot.toml"
-
-func GetConfigDir() (string, error) {
-
-	configDir, err := os.UserConfigDir()
-	if err != nil || configDir == "" {
-		home, herr := os.UserHomeDir()
-		if herr != nil {
-			return "", errors.Join(err, herr)
-		}
-		configDir = filepath.Join(home, ".drako")
-
-	} else {
-		configDir = filepath.Join(configDir, "drako")
-	}
-	return configDir, nil
-
-}
-
-func pivotProfilePath(configDir string) string {
-	return filepath.Join(configDir, pivotProfileFilename)
-}
-
 type pivotFile struct {
 	Locked        string   `toml:"locked"`
 	EquippedOrder []string `toml:"equipped_order"`
@@ -416,7 +382,7 @@ type pivotFile struct {
 
 func ReadPivotProfile(configDir string) (pivotFile, error) {
 	var pf pivotFile
-	path := pivotProfilePath(configDir)
+	path := paths.PivotFile(configDir)
 	data, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return pivotFile{}, nil
@@ -434,7 +400,7 @@ func writePivotFile(configDir string, pf pivotFile) error {
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		return err
 	}
-	path := pivotProfilePath(configDir)
+	path := paths.PivotFile(configDir)
 	f, err := os.Create(path)
 	if err != nil {
 		return err
@@ -460,7 +426,7 @@ func DeletePivotProfile(configDir string) error {
 	pf, _ := ReadPivotProfile(configDir)
 	if pf.Locked == "" && len(pf.EquippedOrder) == 0 {
 		// No useful content, remove file if it exists
-		return os.Remove(pivotProfilePath(configDir))
+		return os.Remove(paths.PivotFile(configDir))
 	}
 	pf.Locked = ""
 	return writePivotFile(configDir, pf)
@@ -468,13 +434,13 @@ func DeletePivotProfile(configDir string) error {
 
 func LoadConfig(profileOverride *string) ConfigBundle {
 
-	configDir, err := GetConfigDir()
+	configDir, err := paths.ConfigDir()
 
 	if err != nil {
 		fatalf("could not resolve a config directory: %v", err)
 	}
 
-	configPath := filepath.Join(configDir, "config.toml")
+	configPath := paths.ConfigFile(configDir)
 	// First run: if config file is missing, ensure dir and copy embedded bootstrap assets
 	if _, statErr := os.Stat(configPath); errors.Is(statErr, os.ErrNotExist) {
 		if mkErr := os.MkdirAll(configDir, 0o755); mkErr != nil {

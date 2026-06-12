@@ -5,12 +5,11 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/cli"
-	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/ui"
 )
 
@@ -46,7 +45,7 @@ func Run() {
 	// =======================================
 
 	// Proceed with TUI mode
-	configDir, err := config.GetConfigDir()
+	configDir, err := paths.ConfigDir()
 	if err != nil {
 		fmt.Printf("could not get config dir: %v", err)
 		os.Exit(1)
@@ -59,7 +58,7 @@ func Run() {
 	// Logging setup
 
 	// Rotate if > 1MB
-	logPath := filepath.Join(configDir, "drako.log")
+	logPath := paths.LogFile(configDir)
 	core.RotateLogIfNeeded(logPath, 1024*1024)
 
 	f, err := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)

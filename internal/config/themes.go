@@ -4,9 +4,9 @@ import (
 	"embed"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/BurntSushi/toml"
+	"github.com/lucky7xz/drako/internal/paths"
 )
 
 //go:embed bootstrap/themes.toml
@@ -29,12 +29,12 @@ type DracoThemeConfig struct {
 var loadedThemes map[string]DracoThemeConfig
 
 func init() {
-	userConfigDir, err := os.UserConfigDir()
+	configDir, err := paths.ConfigDir()
 	if err != nil {
 		panic(fmt.Sprintf("Failed to get user config directory: %v", err))
 	}
 
-	userThemesPath := filepath.Join(userConfigDir, "drako", "themes.toml")
+	userThemesPath := paths.ThemesFile(configDir)
 
 	var themesContent []byte
 

@@ -5,12 +5,12 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/lucky7xz/drako/internal/cli"
 	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/paths"
 	"golang.org/x/term"
 )
 
@@ -170,7 +170,7 @@ func RunCommand(cfg config.Config, selected string) {
 	// Log the command execution to history.log in the config directory
 	// We do this best-effort; failures to log should not stop execution.
 	func() {
-		cfgDir, err := config.GetConfigDir()
+		cfgDir, err := paths.ConfigDir()
 		if err != nil {
 			log.Printf("logging error: could not get config dir: %v", err)
 			return
@@ -182,7 +182,7 @@ func RunCommand(cfg config.Config, selected string) {
 			return
 		}
 
-		logPath := filepath.Join(cfgDir, "history.log")
+		logPath := paths.HistoryFile(cfgDir)
 		// Rotate if > 1MB
 		RotateLogIfNeeded(logPath, 1024*1024)
 

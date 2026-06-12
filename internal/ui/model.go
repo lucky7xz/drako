@@ -11,6 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/paths"
 )
 
 const (
@@ -182,7 +183,7 @@ func (m Model) presentNextBrokenProfile() Model {
 	}
 
 	desc := "This profile has an error and was hidden from selection.\n\n"
-	if e.Name == "config.toml" || strings.HasSuffix(e.Path, "config.toml") {
+	if e.Name == paths.ConfigFileName || strings.HasSuffix(e.Path, paths.ConfigFileName) {
 		// Specific message for the main config
 		desc = "If your config.toml is invalid, **Rescue Mode** can be helpful.\n" +
 			"**Warning:** Default keybindings are in effect. Your custom keys may not work (since the config.toml which stores them is invalid).\n\n" +

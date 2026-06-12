@@ -12,10 +12,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/paths"
 )
 
 func (m Model) Init() tea.Cmd {
-	configDir, _ := config.GetConfigDir()
+	configDir, _ := paths.ConfigDir()
 	return tea.Batch(
 		tea.EnterAltScreen,
 		checkNetworkStatusCmd(),
@@ -86,7 +87,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m = m.presentNextBrokenProfile()
 		}
 		// Restart the watcher for the next change
-		configDir, _ := config.GetConfigDir()
+		configDir, _ := paths.ConfigDir()
 		return m, WatchConfigCmd(configDir)
 
 	case inventoryErrorMsg:

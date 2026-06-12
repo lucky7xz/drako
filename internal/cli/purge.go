@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/lucky7xz/drako/internal/paths"
 )
 
 // PurgeOptions defines the scope of the purge operation
@@ -33,7 +35,7 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 	}
 
 	// Ensure trash directory exists
-	trashDir := filepath.Join(configDir, "trash")
+	trashDir := paths.TrashDir(configDir)
 	if err := os.MkdirAll(trashDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create trash directory: %w", err)
 	}
@@ -41,7 +43,7 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 	// Case 1: Reset Core Config (config.toml)
 	if opts.TargetConfig {
 		log.Printf("Purging Core config (config.toml)")
-		if err := moveFileToTrash(configDir, "config.toml", trashDir); err != nil {
+		if err := moveFileToTrash(configDir, paths.ConfigFileName, trashDir); err != nil {
 			log.Printf("Failed to purge config.toml: %v", err)
 		}
 	}
@@ -49,20 +51,16 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 	// Case 2: Purge Logs
 	if opts.TargetLogs {
 		log.Printf("Purging Logs (Permanent Delete)")
-		logFiles := []string{
-			"history.log", "history.log.old",
-			"drako.log", "drako.log.old",
-		}
-		for _, f := range logFiles {
-			path := filepath.Join(configDir, f)
+		for _, path := range paths.LogFiles(configDir) {
+			name := filepath.Base(path)
 			// Permanent deletion as requested
 			if err := os.Remove(path); err != nil {
 				// Don't log normal "not found" errors to avoid clutter, unless debugging
 				if !os.IsNotExist(err) {
-					log.Printf("Failed to delete log %s: %v", f, err)
+					log.Printf("Failed to delete log %s: %v", name, err)
 				}
 			} else {
-				fmt.Printf("  💀 Deleted %s\n", f)
+				fmt.Printf("  💀 Deleted %s\n", name)
 			}
 		}
 	}

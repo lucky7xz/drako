@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/lucky7xz/drako/internal/paths"
 )
 
 //go:embed all:bootstrap
@@ -22,7 +24,7 @@ func bootstrapCopy(dstRoot string) error {
 	if err != nil {
 		log.Printf("bootstrap warning: settings_template.toml not found: %v", err)
 	} else {
-		targetConfig := filepath.Join(dstRoot, "config.toml")
+		targetConfig := paths.ConfigFile(dstRoot)
 		if _, err := os.Stat(targetConfig); os.IsNotExist(err) {
 			if err := os.WriteFile(targetConfig, settings, 0o644); err != nil {
 				return err

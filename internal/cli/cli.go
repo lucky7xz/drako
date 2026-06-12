@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/lucky7xz/drako/internal/config" // drako.chronyx.xyz
+	"github.com/lucky7xz/drako/internal/paths"
 )
 
 // HandleCLI checks if the program was invoked with CLI arguments (not TUI mode).
@@ -78,7 +79,7 @@ func HandleSummonCommand(args []string) {
 		os.Exit(1)
 	}
 
-	configDir, err := config.GetConfigDir()
+	configDir, err := paths.ConfigDir()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
 		os.Exit(1)
@@ -89,7 +90,7 @@ func HandleSummonCommand(args []string) {
 	}
 
 	// Setup logging for CLI command
-	logPath := filepath.Join(configDir, "drako.log")
+	logPath := paths.LogFile(configDir)
 	logFile, err := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: could not open log file: %v\n", err)
@@ -107,7 +108,7 @@ func HandleSummonCommand(args []string) {
 		os.Exit(1)
 	}
 
-	inventoryDir := filepath.Join(configDir, "inventory")
+	inventoryDir := paths.InventoryDir(configDir)
 	fmt.Printf("\n✓ Profile summoned successfully to %s\n", inventoryDir)
 	os.Exit(0)
 }
@@ -143,7 +144,7 @@ func ExecutePurge(args []string) error {
 	}
 
 	if interactive {
-		configDir, err := config.GetConfigDir()
+		configDir, err := paths.ConfigDir()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
 			return err
@@ -161,7 +162,7 @@ func ExecutePurge(args []string) error {
 
 	// Confirmations
 	confirmMsg := ""
-	configDir, _ := config.GetConfigDir() // Ignore error as we checked above or it will fail in PurgeConfig
+	configDir, _ := paths.ConfigDir() // Ignore error as we checked above or it will fail in PurgeConfig
 
 	if opts.DestroyEverything {
 		confirmMsg = fmt.Sprintf("💀 This will DESTROY EVERYTHING in %s.\n   NO UNDO. NO TRASH.\n   Are you absolutely sure?", configDir)
@@ -215,11 +216,11 @@ func printPurgeUsage() {
 
 func setupPurgeLogging(destroyEverything bool) {
 	if !destroyEverything {
-		configDir, err := config.GetConfigDir()
+		configDir, err := paths.ConfigDir()
 		if err != nil {
 			return
 		}
-		logPath := filepath.Join(configDir, "drako.log")
+		logPath := paths.LogFile(configDir)
 		logFile, err := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: could not open log file: %v\n", err)
@@ -270,7 +271,7 @@ func runInteractivePurgeSelection(configDir string, opts *PurgeOptions, input io
 	scanDir(configDir, false)
 
 	// 2. Scan Inventory
-	scanDir(filepath.Join(configDir, "inventory"), true)
+	scanDir(paths.InventoryDir(configDir), true)
 
 	if len(validProfiles) == 0 {
 		fmt.Fprintln(output, "(No profiles found)")

@@ -9,6 +9,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/paths"
 )
 
 // Spec defines a named set of visible profiles.
@@ -25,12 +26,12 @@ func HandleSpecCommand(args []string) {
 
 	specName := args[2]
 
-	configDir, err := config.GetConfigDir()
+	configDir, err := paths.ConfigDir()
 	if err != nil {
 		log.Fatalf("could not get config dir: %v", err)
 	}
 
-	specsDir := filepath.Join(configDir, "specs")
+	specsDir := paths.SpecsDir(configDir)
 	// Try resolve the spec path
 	specPath, err := resolveSpecPath(specsDir, specName)
 	if err != nil {
@@ -63,12 +64,12 @@ func HandleStashCommand(args []string) {
 
 	specName := args[2]
 
-	configDir, err := config.GetConfigDir()
+	configDir, err := paths.ConfigDir()
 	if err != nil {
 		log.Fatalf("could not get config dir: %v", err)
 	}
 
-	specsDir := filepath.Join(configDir, "specs")
+	specsDir := paths.SpecsDir(configDir)
 	specPath, err := resolveSpecPath(specsDir, specName)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Spec not found: %s\n", specName)
@@ -95,7 +96,7 @@ func HandleStripCommand(args []string) {
 		os.Exit(1)
 	}
 
-	configDir, err := config.GetConfigDir()
+	configDir, err := paths.ConfigDir()
 	if err != nil {
 		log.Fatalf("could not get config dir: %v", err)
 	}
@@ -125,7 +126,7 @@ func resolveSpecPath(specsDir, name string) (string, error) {
 }
 
 func StashSpec(configDir string, targetProfiles []string) error {
-	inventoryDir := filepath.Join(configDir, "inventory")
+	inventoryDir := paths.InventoryDir(configDir)
 	if err := os.MkdirAll(inventoryDir, 0755); err != nil {
 		return err
 	}
@@ -177,7 +178,7 @@ func StashSpec(configDir string, targetProfiles []string) error {
 }
 
 func ApplySpec(configDir string, targetProfiles []string) error {
-	inventoryDir := filepath.Join(configDir, "inventory")
+	inventoryDir := paths.InventoryDir(configDir)
 	if err := os.MkdirAll(inventoryDir, 0755); err != nil {
 		return err
 	}
@@ -257,7 +258,7 @@ func ApplySpec(configDir string, targetProfiles []string) error {
 }
 
 func StripAllProfiles(configDir string) error {
-	inventoryDir := filepath.Join(configDir, "inventory")
+	inventoryDir := paths.InventoryDir(configDir)
 	if err := os.MkdirAll(inventoryDir, 0755); err != nil {
 		return err
 	}

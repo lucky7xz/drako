@@ -16,6 +16,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/paths"
 )
 
 // Asset copy limits
@@ -87,7 +88,7 @@ func SummonProfile(sourceURL, configDir string) error {
 
 // Summon executes the summoning logic
 func (s *Summoner) Summon(sourceURL string) error {
-	inventoryDir := filepath.Join(s.ConfigDir, "inventory")
+	inventoryDir := paths.InventoryDir(s.ConfigDir)
 	if err := os.MkdirAll(inventoryDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create inventory directory: %w", err)
 	}
@@ -401,8 +402,8 @@ func (s *Summoner) summonFromGit(repoURL, inventoryDir string) error {
 
 	// 2. Process Spec Files
 	if len(specFiles) > 0 {
-		configDir, _ := config.GetConfigDir()
-		specsDir := filepath.Join(configDir, "specs")
+		configDir, _ := paths.ConfigDir()
+		specsDir := paths.SpecsDir(configDir)
 		if err := os.MkdirAll(specsDir, 0o755); err != nil {
 			fmt.Printf("⚠️  Failed to create specs directory: %v\n", err)
 		} else {
@@ -503,7 +504,7 @@ func readAssetsFromProfile(profilePath string) ([]string, error) {
 // - profileName: name of the profile (used for subfolder isolation)
 // Returns counts of copied/skipped/missing and total bytes copied.
 func copyAssetsList(repoRoot, profileDir string, assets []string, profileName string) (int, int, int, int64) {
-	configDir, err := config.GetConfigDir()
+	configDir, err := paths.ConfigDir()
 	if err != nil {
 		log.Printf("assets: could not resolve config dir: %v", err)
 		return 0, 0, len(assets), 0
@@ -530,7 +531,7 @@ func copyAssetsList(repoRoot, profileDir string, assets []string, profileName st
 		}
 		// Destination is the assets/ directory + profile name + original relative path
 		// e.g. ~/.config/drako/assets/my-profile/script.sh
-		dst := filepath.Join(configDir, "assets", profileName, cleanRel)
+		dst := filepath.Join(paths.AssetsDir(configDir, profileName), cleanRel)
 
 		info, statErr := os.Stat(src)
 		if statErr != nil {
@@ -583,7 +584,7 @@ type assetPlanItem struct {
 
 // planAssetsList enumerates assets to present a copy plan before confirmation
 func planAssetsList(repoRoot, profileDir string, assets []string, profileName string) []assetPlanItem {
-	configDir, _ := config.GetConfigDir()
+	configDir, _ := paths.ConfigDir()
 	var plans []assetPlanItem
 	for _, rel := range assets {
 		cleanRel, safe := cleanAssetRel(rel)
