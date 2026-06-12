@@ -11,6 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/core"
 	"github.com/lucky7xz/drako/internal/paths"
 )
 
@@ -36,12 +37,9 @@ type Model struct {
 
 	path PathModel
 
-	onlineStatus      string
-	traffic           string
-	sentHistory       []uint64
-	recvHistory       []uint64
-	timeHistory       []time.Time
-	trafficAvgSeconds float64
+	onlineStatus string
+	traffic      string
+	trafficMeter core.TrafficMeter
 
 	baseConfig            config.Config
 	Config                config.Config
@@ -249,7 +247,7 @@ func InitialModel(glassrootMode bool) Model {
 	m := Model{
 		cursorRow:          0,
 		cursorCol:          0,
-		trafficAvgSeconds:  7.5,
+		trafficMeter:       core.TrafficMeter{WindowSeconds: 7.5},
 		onlineStatus:       "checking...",
 		traffic:            "calculating...",
 		path:               InitPathModel(path),

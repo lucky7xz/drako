@@ -175,46 +175,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			m.traffic = themeNameStyle.Render("error")
 		} else {
-			now := msg.t
-			currentSent := msg.counters.BytesSent
-			currentRecv := msg.counters.BytesRecv
-
-			m.sentHistory = append(m.sentHistory, currentSent)
-			m.recvHistory = append(m.recvHistory, currentRecv)
-			m.timeHistory = append(m.timeHistory, now)
-
-			cutoff := now.Add(-time.Duration(m.trafficAvgSeconds * float64(time.Second)))
-			firstValidIndex := 0
-			for i, t := range m.timeHistory {
-				if !t.Before(cutoff) {
-					break
-				}
-				firstValidIndex = i + 1
-			}
-			if firstValidIndex > 0 && len(m.timeHistory) > firstValidIndex {
-				m.timeHistory = m.timeHistory[firstValidIndex:]
-				m.sentHistory = m.sentHistory[firstValidIndex:]
-				m.recvHistory = m.recvHistory[firstValidIndex:]
-			}
+			m.trafficMeter.Sample(msg.counters.BytesSent, msg.counters.BytesRecv, msg.t)
 
 			isActive := false
-			if len(m.timeHistory) > 1 {
-				duration := m.timeHistory[len(m.timeHistory)-1].Sub(m.timeHistory[0]).Seconds()
-				sentDelta := m.sentHistory[len(m.sentHistory)-1] - m.sentHistory[0]
-				recvDelta := m.recvHistory[len(m.recvHistory)-1] - m.recvHistory[0]
-
-				if duration > 0 {
-					sentBps := float64(sentDelta) / duration
-					recvBps := float64(recvDelta) / duration
-					m.traffic = themeNameStyle.Render(fmt.Sprintf("↓ %s ↑ %s", core.FormatTraffic(recvBps), core.FormatTraffic(sentBps)))
-					if sentBps > 2*1024 || recvBps > 2*1024 {
-						isActive = true
-					}
-				} else {
-					m.traffic = themeNameStyle.Render("---")
-				}
-			} else {
+			sentBps, recvBps, ok := m.trafficMeter.Rates()
+			switch {
+			case m.trafficMeter.Samples() <= 1:
 				m.traffic = themeNameStyle.Render("calculating...")
+			case !ok:
+				m.traffic = themeNameStyle.Render("---")
+			default:
+				m.traffic = themeNameStyle.Render(fmt.Sprintf("↓ %s ↑ %s", core.FormatTraffic(recvBps), core.FormatTraffic(sentBps)))
+				if sentBps > 2*1024 || recvBps > 2*1024 {
+					isActive = true
+				}
 			}
 
 			if msg.online {
