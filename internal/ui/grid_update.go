@@ -15,42 +15,10 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	// Handle number-based navigation (1-9)
 	if num, err := strconv.Atoi(key); err == nil && num >= 1 && num <= 9 {
-		targetIndex := num - 1 // Convert to 0-based index
-
-		if m.navigationTimer == nil { // This is the first number press (column selection)
-			lastCol := core.FindLastPopulatedCol(m.grid)
-			targetCol := min(targetIndex, lastCol)
-
-			// Ensure the target column is valid before proceeding
-			if targetCol < 0 {
-				return m, nil
-			}
-
-			targetRow := core.FindFirstPopulatedRow(m.grid, targetCol)
-
-			m.cursorCol = targetCol
-			m.cursorRow = targetRow
-
-			m.navigationTimer = time.NewTimer(500 * time.Millisecond)
-
-			return m, func() tea.Msg {
-				<-m.navigationTimer.C
-				return navTimeoutMsg{}
-			}
-
-		} else { // This is the second number press (row selection)
-			m.navigationTimer.Stop()
-			m.navigationTimer = nil
-
-			lastRow := core.FindLastPopulatedRow(m.grid, m.cursorCol)
-			targetRow := min(targetIndex, lastRow)
-
-			m.cursorRow = targetRow
-			return m, nil
-		}
+		return m.quickNav(num - 1)
 	}
 
-	// If a navigation sequence was in progress, any non-numeric key cancels it.
+	// Any non-numeric key cancels a navigation sequence in progress.
 	if m.navigationTimer != nil {
 		m.navigationTimer.Stop()
 		m.navigationTimer = nil
@@ -147,6 +115,35 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 	return m, nil
+}
+
+// quickNav handles one 1-9 keypress (as a 0-based index) of the two-step
+// column-then-row jump. The first press selects a column, parks on its first
+// populated row, and arms a 500ms timer; a second press while that timer is
+// live selects a row within the chosen column. The timer expiry
+// (navTimeoutMsg) ends the sequence elsewhere.
+func (m Model) quickNav(targetIndex int) (tea.Model, tea.Cmd) {
+	if m.navigationTimer != nil {
+		// Second press: choose a row within the already-selected column.
+		m.navigationTimer.Stop()
+		m.navigationTimer = nil
+		lastRow := core.FindLastPopulatedRow(m.grid, m.cursorCol)
+		m.cursorRow = min(targetIndex, lastRow)
+		return m, nil
+	}
+
+	// First press: choose a column, parking on its first populated row.
+	targetCol := min(targetIndex, core.FindLastPopulatedCol(m.grid))
+	if targetCol < 0 {
+		return m, nil
+	}
+	m.cursorCol = targetCol
+	m.cursorRow = core.FindFirstPopulatedRow(m.grid, targetCol)
+	m.navigationTimer = time.NewTimer(500 * time.Millisecond)
+	return m, func() tea.Msg {
+		<-m.navigationTimer.C
+		return navTimeoutMsg{}
+	}
 }
 
 func (m *Model) moveCursor(rowDir, colDir int) {
