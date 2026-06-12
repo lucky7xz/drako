@@ -44,7 +44,7 @@ func HandleCLI(args []string) bool {
 		HandleOpenCLI(args)
 		return true
 	case "version", "--version", "-v":
-		fmt.Printf("%s %s\n", config.AppName, config.Version)
+		fmt.Printf("%s %s\n", config.AppName, config.Version())
 		return true
 	case "help", "--help", "-h":
 		PrintUsage()
