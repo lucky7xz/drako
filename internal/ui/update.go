@@ -309,38 +309,12 @@ func (m Model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				title = fmt.Sprintf("%s: %s", parent, item.Name)
 			}
 
-			// Resolve execution mode and auto-close for item
-			autoClose := true
-			if item.AutoCloseExecution != nil {
-				autoClose = *item.AutoCloseExecution
-			}
-			debug := false
-			if item.DebugExecution != nil {
-				debug = *item.DebugExecution
-			}
-			execMode := "live"
-			if debug {
-				execMode = "debug"
-			}
-
-			cmdStr := ""
+			cmdStr := item.Command
 			if strings.TrimSpace(item.Command) == "" {
 				cmdStr = "Error: no command configured"
-			} else {
-				cmdStr = item.Command
 			}
 
-			m.activeDetail = &DetailState{
-				Title:       title,
-				KeyLabel:    "Command",
-				Value:       cmdStr,
-				Description: item.Description,
-				Meta: []DetailMeta{
-					{Label: "Exec", Value: execMode},
-					{Label: "Auto-close", Value: fmt.Sprintf("%v", autoClose)},
-					{Label: "CWD", Value: m.path.CurrentPath},
-				},
-			}
+			m.activeDetail = newCommandDetail(title, cmdStr, item.Description, item.AutoCloseExecution, item.DebugExecution, m.path.CurrentPath)
 			m.mode = infoMode
 			return m, nil
 		}

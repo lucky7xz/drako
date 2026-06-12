@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -90,38 +89,12 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if cmd.Name == selectedChoice {
 				m.previousMode = m.mode
 
-				// Resolve execution mode and auto-close
-				autoClose := true
-				if cmd.AutoCloseExecution != nil {
-					autoClose = *cmd.AutoCloseExecution
-				}
-				debug := false
-				if cmd.DebugExecution != nil {
-					debug = *cmd.DebugExecution
-				}
-				execMode := "live"
-				if debug {
-					execMode = "debug"
-				}
-
-				cmdStr := ""
+				cmdStr := cmd.Command
 				if strings.TrimSpace(cmd.Command) == "" {
 					cmdStr = "Error: no command. ( This might be a folder of commands!)"
-				} else {
-					cmdStr = cmd.Command
 				}
 
-				m.activeDetail = &DetailState{
-					Title:       selectedChoice,
-					KeyLabel:    "Command",
-					Value:       cmdStr,
-					Description: cmd.Description,
-					Meta: []DetailMeta{
-						{Label: "Exec", Value: execMode},
-						{Label: "Auto-close", Value: fmt.Sprintf("%v", autoClose)},
-						{Label: "CWD", Value: m.path.CurrentPath},
-					},
-				}
+				m.activeDetail = newCommandDetail(selectedChoice, cmdStr, cmd.Description, cmd.AutoCloseExecution, cmd.DebugExecution, m.path.CurrentPath)
 				m.mode = infoMode
 				return m, nil
 			}
