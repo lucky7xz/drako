@@ -123,33 +123,61 @@ func (m *PathModel) BuildPathFromComponents(index int) string {
 	return result
 }
 
+// startSearch enters filter mode with an empty query.
+func (pm *PathModel) startSearch() {
+	pm.Searching = true
+	pm.Filter = ""
+	pm.ListChildDirs()
+}
+
+// clearSearch leaves filter mode and restores the unfiltered listing.
+func (pm *PathModel) clearSearch() {
+	pm.Searching = false
+	pm.Filter = ""
+	pm.ListChildDirs()
+}
+
+// editFilter applies one search keystroke — backspace or a single rune — to
+// the active filter and refreshes the listing. Other keys are ignored.
+func (pm *PathModel) editFilter(key string) {
+	if key == "backspace" {
+		if len(pm.Filter) > 0 {
+			pm.Filter = pm.Filter[:len(pm.Filter)-1]
+			pm.ListChildDirs()
+			pm.SelectedChildIndex = 0
+		}
+		return
+	}
+	if len(key) == 1 {
+		pm.Filter += key
+		pm.ListChildDirs()
+		pm.SelectedChildIndex = 0
+	}
+}
+
+// toggleHidden flips hidden-file visibility and clamps the child cursor to
+// the resized listing.
+func (pm *PathModel) toggleHidden() {
+	pm.ShowHidden = !pm.ShowHidden
+	pm.ListChildDirs()
+	if len(pm.ChildDirs) == 0 {
+		pm.SelectedChildIndex = 0
+	} else if pm.SelectedChildIndex >= len(pm.ChildDirs) {
+		pm.SelectedChildIndex = len(pm.ChildDirs) - 1
+	}
+}
+
 // Update handles key events when in PathMode
 func (pm *PathModel) UpdatePathMode(msg tea.KeyMsg, cfg config.Config) (navMode, tea.Cmd) {
 	if pm.Searching {
 		switch key := msg.String(); key {
 		case "esc":
-			pm.Searching = false
-			pm.Filter = ""
-			pm.ListChildDirs()
+			pm.clearSearch()
 		case "enter":
+			// Consume Enter to leave search; the next Enter navigates.
 			pm.Searching = false
-			// Optionally keep filter or clear it? Cleared for now as we exit search mode vs applying selection.
-			// Actually, Enter usually means "act on selection". If filtering, selection acts on filtered list.
-			// Let's just exit search mode and let subsequent Enter handle action?
-			// Or better: consume Enter to stop searching, user presses Enter again to Navigate.
-		case "backspace":
-			if len(pm.Filter) > 0 {
-				pm.Filter = pm.Filter[:len(pm.Filter)-1]
-				pm.ListChildDirs()
-				pm.SelectedChildIndex = 0
-			}
 		default:
-			// Basic filtering
-			if len(key) == 1 {
-				pm.Filter += key
-				pm.ListChildDirs()
-				pm.SelectedChildIndex = 0
-			}
+			pm.editFilter(key)
 		}
 		// While searching, limit navigation to arrow keys to avoid conflict with typing
 		switch msg.Type {
@@ -166,9 +194,7 @@ func (pm *PathModel) UpdatePathMode(msg tea.KeyMsg, cfg config.Config) (navMode,
 	case msg.String() == "q" || msg.String() == "esc":
 		return gridMode, nil // Return to grid mode (no brainer improvement)
 	case msg.String() == "e":
-		pm.Searching = true
-		pm.Filter = ""
-		pm.ListChildDirs() // Refresh logic just in case
+		pm.startSearch()
 	// Quit is handled by parent, usually
 	case IsLeft(cfg.Keys, msg):
 		if pm.SelectedPathIndex > 0 {
@@ -194,15 +220,7 @@ func (pm *PathModel) UpdatePathMode(msg tea.KeyMsg, cfg config.Config) (navMode,
 			return gridMode, func() tea.Msg { return pathChangedMsg{} }
 		}
 	case msg.String() == ".":
-		pm.ShowHidden = !pm.ShowHidden
-		pm.ListChildDirs()
-		// Reset child index if it became invalid (though ListChildDirs usually handles list rebuild)
-		// If list became empty or shorter, we should clamp cursor
-		if len(pm.ChildDirs) == 0 {
-			pm.SelectedChildIndex = 0
-		} else if pm.SelectedChildIndex >= len(pm.ChildDirs) {
-			pm.SelectedChildIndex = len(pm.ChildDirs) - 1
-		}
+		pm.toggleHidden()
 	}
 	return pathMode, nil
 }
@@ -212,9 +230,7 @@ func (pm *PathModel) UpdateChildMode(msg tea.KeyMsg, cfg config.Config) (navMode
 	if pm.Searching {
 		switch key := msg.String(); key {
 		case "esc":
-			pm.Searching = false
-			pm.Filter = ""
-			pm.ListChildDirs()
+			pm.clearSearch()
 			return pathMode, nil // Return to path mode to avoid accidental selection
 		case "enter":
 			pm.Searching = false
@@ -225,18 +241,8 @@ func (pm *PathModel) UpdateChildMode(msg tea.KeyMsg, cfg config.Config) (navMode
 				pm.CurrentPath, _ = os.Getwd()
 				return gridMode, func() tea.Msg { return pathChangedMsg{} }
 			}
-		case "backspace":
-			if len(pm.Filter) > 0 {
-				pm.Filter = pm.Filter[:len(pm.Filter)-1]
-				pm.ListChildDirs()
-				pm.SelectedChildIndex = 0
-			}
 		default:
-			if len(key) == 1 {
-				pm.Filter += key
-				pm.ListChildDirs()
-				pm.SelectedChildIndex = 0
-			}
+			pm.editFilter(key)
 		}
 		// Allow navigation while searching, but STRICTLY limit to arrow keys
 		switch msg.Type {
@@ -258,9 +264,7 @@ func (pm *PathModel) UpdateChildMode(msg tea.KeyMsg, cfg config.Config) (navMode
 	case msg.String() == "q" || msg.String() == "esc":
 		return gridMode, nil // Return to grid mode
 	case msg.String() == "e":
-		pm.Searching = true
-		pm.Filter = ""
-		pm.ListChildDirs()
+		pm.startSearch()
 	case IsUp(cfg.Keys, msg):
 		if pm.SelectedChildIndex > 0 {
 			pm.SelectedChildIndex--
@@ -281,14 +285,7 @@ func (pm *PathModel) UpdateChildMode(msg tea.KeyMsg, cfg config.Config) (navMode
 			return gridMode, func() tea.Msg { return pathChangedMsg{} }
 		}
 	case msg.String() == ".":
-		pm.ShowHidden = !pm.ShowHidden
-		pm.ListChildDirs()
-		// Re-clamp cursor for child view
-		if len(pm.ChildDirs) == 0 {
-			pm.SelectedChildIndex = 0
-		} else if pm.SelectedChildIndex >= len(pm.ChildDirs) {
-			pm.SelectedChildIndex = len(pm.ChildDirs) - 1
-		}
+		pm.toggleHidden()
 	}
 	return childMode, nil
 }
