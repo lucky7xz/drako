@@ -2,8 +2,6 @@ module github.com/lucky7xz/drako
 
 go 1.24.0
 
-toolchain go1.24.4
-
 require (
 	github.com/BurntSushi/toml v1.5.0
 	github.com/charmbracelet/bubbles v0.21.0
