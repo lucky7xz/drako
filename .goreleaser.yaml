@@ -1,5 +1,7 @@
-# .goreleaser.yml
+# .goreleaser.yaml
 # Visit https://goreleaser.com for documentation.
+# Run `goreleaser check` to validate, `goreleaser release --snapshot --clean`
+# to dry-run locally.
 
 version: 2
 
@@ -11,21 +13,34 @@ before:
 
 builds:
   - id: drako
-    main: ./cmd/drako
+    main: .
     binary: drako
     env:
-      - CGO_ENABLED=0
+      - CGO_ENABLED=0          # pure Go -> static binaries, run anywhere
+    ldflags:
+      - -s -w                  # strip debug info for smaller binaries
+      - -X github.com/lucky7xz/drako/internal/config.version={{ .Tag }}
     goos:
       - linux
       - darwin
-      - windows
+      - freebsd
     goarch:
       - amd64
       - arm64
+      - arm
+    goarm:
+      - "7"
+    ignore:
+      - goos: darwin           # no 32-bit macOS
+        goarch: arm
+      - goos: freebsd          # keep the freebsd target minimal
+        goarch: arm
+      - goos: freebsd
+        goarch: arm64
 
 archives:
-  - format: tar.gz
-    # Naming template compatible with uname output
+  - formats: [tar.gz]
+    # uname-compatible names: drako_Linux_x86_64.tar.gz etc.
     name_template: >-
       {{ .ProjectName }}_
       {{- title .Os }}_
@@ -33,10 +48,6 @@ archives:
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
-    # Use zip for windows archives
-    format_overrides:
-      - goos: windows
-        format: zip
 
 checksum:
   name_template: 'checksums.txt'
@@ -51,14 +62,9 @@ changelog:
       - '^docs:'
       - '^test:'
 
-# -----------------------------------------------------------------------------
-# Linux Packages (.deb, .rpm, AUR)
-# -----------------------------------------------------------------------------
-
-# Create .deb and .rpm packages
+# Linux packages (.deb / .rpm) — built into the release, no external repo needed.
 nfpms:
-  -
-    id: packages
+  - id: packages
     package_name: drako
     file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     vendor: "Lucky7xz"
@@ -69,71 +75,8 @@ nfpms:
     formats:
       - deb
       - rpm
-    
-    # Dependencies
     dependencies:
       - git
-
-# Arch User Repository (AUR)
-# Note: This requires a separate repo "drako-aur" or pushing to the AUR git repo directly.
-# For now, we generate the PKGBUILD which can be pushed manually or via a separate pipeline.
-aur:
-  -
-    name: drako-bin
-    homepage: "https://github.com/lucky7xz/drako"
-    description: "TUI-Deck launcher for terminal discipline."
-    maintainers:
-      - "Lucky7xz <lucky7xz@github.com>"
-    license: "AGPL-3.0"
-    private_key: '{{ .Env.AUR_KEY }}'
-    git_url: 'ssh://aur@aur.archlinux.org/drako-bin.git'
-    package: |-
-      # bin
-      install -Dm755 "./drako" "${pkgdir}/usr/bin/drako"
-      
-      # license
-      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/drako/LICENSE"
-      
-      # completions (if we add them later)
-      # install -Dm644 "./completions/drako.bash" "${pkgdir}/usr/share/bash-completion/completions/drako"
-      # install -Dm644 "./completions/drako.zsh" "${pkgdir}/usr/share/zsh/site-functions/_drako"
-      # install -Dm644 "./completions/drako.fish" "${pkgdir}/usr/share/fish/vendor_completions.d/drako.fish"
-
-# -----------------------------------------------------------------------------
-# macOS (Homebrew)
-# -----------------------------------------------------------------------------
-
-brews:
-  -
-    name: drako
-    homepage: "https://github.com/lucky7xz/drako"
-    description: "TUI-Deck launcher for terminal discipline."
-    repository:
-      owner: lucky7xz
-      name: homebrew-tap
-      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    
-    # Dependencies
-    dependencies:
-      - name: git
-
-# -----------------------------------------------------------------------------
-# Windows (Scoop)
-# -----------------------------------------------------------------------------
-
-scoops:
-  -
-    name: drako
-    homepage: "https://github.com/lucky7xz/drako"
-    description: "TUI-Deck launcher for terminal discipline."
-    repository:
-      owner: lucky7xz
-      name: scoop-bucket
-      token: "{{ .Env.SCOOP_BUCKET_GITHUB_TOKEN }}"
-
-# -----------------------------------------------------------------------------
-# Release
-# -----------------------------------------------------------------------------
 
 release:
   github:
@@ -142,4 +85,6 @@ release:
   draft: false
   prerelease: auto
 
-
+# Channels that need external repos + secret tokens (Homebrew tap, AUR, Scoop)
+# are intentionally omitted until those repos and secrets exist. Re-add the
+# brews / aur / scoops blocks when ready.

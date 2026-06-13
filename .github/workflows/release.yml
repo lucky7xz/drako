@@ -1,0 +1,29 @@
+name: release
+
+# Build and publish a GitHub Release whenever a version tag is pushed.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write   # required for GoReleaser to create the release
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # full history + tags (changelog & version)
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable    # build with the latest stable Go
+
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          version: '~> v2'      # matches `version: 2` in .goreleaser.yaml
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

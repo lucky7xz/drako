@@ -58,7 +58,7 @@ To update `drako` to the latest version, simply run the installation command aga
 
 If you are not getting the latest version, use this command instead:
 ```bash
-GOPROXY=direct go install github.com/lucky7xz/drako/cmd/drako@latest  # update drako
+GOPROXY=direct go install github.com/lucky7xz/drako@latest  # update drako
 ```
 > [!NOTE] 
 > **New to Go?** Unlike apt or brew, Go installs tools into your home folder (`~/go/bin`) rather than the system root. You must add this directory to your shell's PATH to run `drako` directly. You can lauch drako with `~/go/bin/drako`. In the `Settings` Cell (`core profile`), you can find a command called `Add go/bin to PATH` that will write the necessary changes to your shell config file.

@@ -1,5 +1,6 @@
 .cache/
 docs/tutorial/
+dist/
 xyz.*
 # Binaries for programs and plugins
 #*.exe
