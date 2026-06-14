@@ -3,7 +3,6 @@ package ui
 import (
 	"time"
 
-	"github.com/lucky7xz/drako/internal/config"
 	gopsutil_net "github.com/shirou/gopsutil/v3/net"
 )
 
@@ -51,12 +50,3 @@ type DetailMeta struct {
 	Label string
 	Value string
 }
-
-// Type aliases to bridge the gap to internal/config temporarily
-type Config = config.Config
-type Command = config.Command
-type CommandItem = config.CommandItem
-type ProfileInfo = config.ProfileInfo
-type ProfileParseError = config.ProfileParseError
-type ConfigBundle = config.ConfigBundle
-type InputConfig = config.InputConfig
