@@ -53,10 +53,10 @@ func ValidateConfig(cfg Config) error {
 			return fmt.Errorf("command %q has invalid column %q: %v", cmd.Name, cmd.Col, err)
 		}
 		if row >= cfg.Y {
-			return fmt.Errorf("command %q at row %d exceeds grid height %d", cmd.Name, row, cfg.Y)
+			return fmt.Errorf("command %q needs y >= %d (have %d)", cmd.Name, row+1, cfg.Y)
 		}
 		if col >= cfg.X {
-			return fmt.Errorf("command %q at column %q exceeds grid width %d", cmd.Name, cmd.Col, cfg.X)
+			return fmt.Errorf("command %q needs x >= %d (have %d)", cmd.Name, col+1, cfg.X)
 		}
 	}
 	return nil

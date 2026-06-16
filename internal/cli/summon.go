@@ -958,8 +958,8 @@ func validateProfileFile(path string) error {
 	}
 
 	// Check if it has at least one profile-related field
-	if ok, missing := config.ValidateProfileFile(profile); !ok {
-		return fmt.Errorf("file contains no profile settings (missing %s)", strings.Join(missing, ", "))
+	if ok, problems := config.ValidateProfileFile(profile, data); !ok {
+		return fmt.Errorf("invalid profile: %s", strings.Join(problems, "; "))
 	}
 
 	return nil

@@ -22,20 +22,37 @@ func CopyCommands(src []Command) []Command {
 	return dst
 }
 
-// ValidateProfileFile checks if the profile has minimum required fields.
-func ValidateProfileFile(pf ProfileFile) (bool, []string) {
-	var missing []string
+// ValidateProfileFile checks a profile has at least one command and x/y in 1-9.
+func ValidateProfileFile(pf ProfileFile, raw []byte) (bool, []string) {
+	var problems []string
 	if len(pf.Commands) == 0 {
-		missing = append(missing, "commands")
+		problems = append(problems, "needs at least one command")
 	}
-	// X and Y are critical for grid
-	if pf.X <= 0 {
-		missing = append(missing, "x")
+	problems = append(problems, validateGridDim("x", pf.X, raw)...)
+	problems = append(problems, validateGridDim("y", pf.Y, raw)...)
+	return len(problems) == 0, problems
+}
+
+func validateGridDim(key string, val int, raw []byte) []string {
+	if val >= 1 && val <= 9 {
+		return nil
 	}
-	if pf.Y <= 0 {
-		missing = append(missing, "y")
+	msg := fmt.Sprintf("%s = %d is invalid (must be 1-9)", key, val)
+	if line := findKeyLine(raw, key); line > 0 {
+		msg += fmt.Sprintf(" (line %d)", line)
 	}
-	return len(missing) == 0, missing
+	return []string{msg}
+}
+
+// findKeyLine returns the 1-based line of a `key =` / `key=` assignment, or 0.
+func findKeyLine(raw []byte, key string) int {
+	for i, line := range strings.Split(string(raw), "\n") {
+		t := strings.TrimSpace(line)
+		if strings.HasPrefix(t, key+"=") || strings.HasPrefix(t, key+" =") {
+			return i + 1
+		}
+	}
+	return 0
 }
 
 // NormalizeProfileName lowercases a profile reference and strips the known
@@ -73,18 +90,25 @@ func DiscoverProfilesWithErrors(configDir string) ([]ProfileInfo, []ProfileParse
 		fullPath := filepath.Join(configDir, name)
 		profileName := strings.TrimSuffix(name, ".profile.toml")
 
+		raw, err := os.ReadFile(fullPath)
+		if err != nil {
+			log.Printf("Failed to read profile %s: %v", entry.Name(), err)
+			broken = append(broken, ProfileParseError{Name: profileName, Path: fullPath, Err: err.Error()})
+			continue
+		}
+
 		var profileFile ProfileFile
-		if _, err := toml.DecodeFile(fullPath, &profileFile); err != nil {
+		if _, err := toml.Decode(string(raw), &profileFile); err != nil {
 			log.Printf("Failed to parse profile %s: %v", entry.Name(), err)
 			broken = append(broken, ProfileParseError{Name: profileName, Path: fullPath, Err: err.Error()})
 			continue
 		}
 
-		if ok, missing := ValidateProfileFile(profileFile); !ok {
+		if ok, problems := ValidateProfileFile(profileFile, raw); !ok {
 			broken = append(broken, ProfileParseError{
 				Name: profileName,
 				Path: fullPath,
-				Err:  fmt.Sprintf("profile is missing required settings: %s", strings.Join(missing, ", ")),
+				Err:  strings.Join(problems, "; "),
 			})
 			continue
 		}
