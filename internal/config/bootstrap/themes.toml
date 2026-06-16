@@ -1,16 +1,19 @@
 # This file contains all the theme definitions for Draco.
 
-[dracula]
-Primary    = "#ff2e63" # Hot Pink
-Secondary  = "#ff8c00" # Vibrant Orange
-Background = "#0d0221" # Deep Purple
-Foreground = "#f0f0f0" # Very Light Gray
-Comment    = "#5c527f" # Muted Purple-Gray
-Success    = "#00f5d4" # Bright Aqua
-Warning    = "#f9f871" # Soft Lemon
-Error      = "#ff2e63" # Hot Pink
-Info       = "#00f5d4" # Bright Aqua
-Accent     = "#ff2e63" # Hot Pink
+# 'dracula' is the built-in default, baked into the binary as the fallback.
+# uncomment for custom dracula, or use dracula2
+ 
+# [dracula]
+# Primary    = "#ff2e63" # Hot Pink
+# Secondary  = "#ff8c00" # Vibrant Orange
+# Background = "#0d0221" # Deep Purple
+# Foreground = "#f0f0f0" # Very Light Gray
+# Comment    = "#5c527f" # Muted Purple-Gray
+# Success    = "#00f5d4" # Bright Aqua
+# Warning    = "#f9f871" # Soft Lemon
+# Error      = "#ff2e63" # Hot Pink
+# Info       = "#00f5d4" # Bright Aqua
+# Accent     = "#ff2e63" # Hot Pink
 
 [dracula2]
 Primary    = "#ff79c6" # Hot Pink

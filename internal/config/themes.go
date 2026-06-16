@@ -2,8 +2,9 @@ package config
 
 import (
 	"embed"
-	"fmt"
+	"log"
 	"os"
+	"sync"
 
 	"github.com/BurntSushi/toml"
 	"github.com/lucky7xz/drako/internal/paths"
@@ -26,38 +27,69 @@ type DracoThemeConfig struct {
 	Accent     string // For selected items, cursors
 }
 
-var loadedThemes map[string]DracoThemeConfig
+// dracula is the built-in fallback theme, defined in code so it always exists.
+var dracula = DracoThemeConfig{
+	Primary:    "#ff2e63",
+	Secondary:  "#ff8c00",
+	Background: "#0d0221",
+	Foreground: "#f0f0f0",
+	Comment:    "#5c527f",
+	Success:    "#00f5d4",
+	Warning:    "#f9f871",
+	Error:      "#ff2e63",
+	Info:       "#00f5d4",
+	Accent:     "#ff2e63",
+}
 
-func init() {
+var (
+	loadedThemes map[string]DracoThemeConfig
+	themesOnce   sync.Once
+)
+
+// loadThemes runs once, on first GetTheme. It never panics: a missing or
+// malformed overlay is logged and skipped.
+func loadThemes() {
 	configDir, err := paths.ConfigDir()
 	if err != nil {
-		panic(fmt.Sprintf("Failed to get user config directory: %v", err))
+		log.Printf("themes: no config dir, using built-in themes only: %v", err)
+		configDir = ""
 	}
+	loadedThemes = buildThemes(configDir)
+}
 
-	userThemesPath := paths.ThemesFile(configDir)
+// buildThemes layers themes, later layers overriding by name: the dracula
+// foundation, the embedded themes, then the user's themes.toml.
+func buildThemes(configDir string) map[string]DracoThemeConfig {
+	themes := map[string]DracoThemeConfig{"dracula": dracula}
 
-	var themesContent []byte
-
-	if _, err := os.Stat(userThemesPath); err == nil {
-		// User-defined themes.toml exists, load from there
-		themesContent, err = os.ReadFile(userThemesPath)
-		if err != nil {
-			panic(fmt.Sprintf("Failed to read user themes file %s: %v", userThemesPath, err))
-		}
-	} else if os.IsNotExist(err) {
-		// User-defined themes.toml does not exist, load from embedded
-		themesContent, err = embeddedThemesFS.ReadFile("bootstrap/themes.toml")
-		if err != nil {
-			panic(fmt.Sprintf("Failed to read embedded themes file: %v", err))
-		}
+	if data, err := embeddedThemesFS.ReadFile("bootstrap/themes.toml"); err == nil {
+		mergeThemes(themes, data, "embedded themes")
 	} else {
-		// Other error checking user themes file
-		panic(fmt.Sprintf("Error checking user themes file %s: %v", userThemesPath, err))
+		log.Printf("themes: embedded themes unreadable: %v", err)
 	}
 
-	// Decode the TOML content
-	if _, err := toml.Decode(string(themesContent), &loadedThemes); err != nil {
-		panic(fmt.Sprintf("Failed to decode themes TOML: %v", err))
+	if configDir != "" {
+		userPath := paths.ThemesFile(configDir)
+		if data, err := os.ReadFile(userPath); err == nil {
+			mergeThemes(themes, data, userPath)
+		} else if !os.IsNotExist(err) {
+			log.Printf("themes: could not read %s: %v", userPath, err)
+		}
+	}
+
+	return themes
+}
+
+// mergeThemes decodes data and merges its themes into dst; a malformed
+// document is logged and ignored.
+func mergeThemes(dst map[string]DracoThemeConfig, data []byte, source string) {
+	var parsed map[string]DracoThemeConfig
+	if _, err := toml.Decode(string(data), &parsed); err != nil {
+		log.Printf("themes: %s is malformed, ignoring it: %v", source, err)
+		return
+	}
+	for name, theme := range parsed {
+		dst[name] = theme
 	}
 }
 
@@ -132,8 +164,9 @@ func MapThemeToUI(t DracoThemeConfig) UIColors {
 // GetTheme returns the color palette for a given theme name.
 // If the theme is not found, it defaults to "dracula".
 func GetTheme(name string) DracoThemeConfig {
+	themesOnce.Do(loadThemes)
 	if theme, ok := loadedThemes[name]; ok {
 		return theme
 	}
-	return loadedThemes["dracula"]
+	return dracula
 }

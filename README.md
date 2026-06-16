@@ -76,6 +76,9 @@ To enable `cd` on exit, see [docs/SHELL_INTEGRATION.md](docs/SHELL_INTEGRATION.m
 **The Bootstrap:** On first run, `drako` creates:
 - `config.toml`: Global settings (Input Keys, Global Theme).
 - `core.profile.toml`: The default command profile (Process Monitor, System Info, etc.)
+- `themes.toml`: Color palettes. The built-in `dracula` theme lives in the binary as the fallback, so it no longer needs to be defined here.
+
+**NOTE:** If you've customized your color schemes, keep a backup of your `themes.toml` — how themes are configured may change in a future release.
 
 **NOTE:** Bootstrapping only occurs if files (config.toml and core.profile.toml) are missing. To clean-up, use `drako purge --interactive` or `drako purge --destroyeverything` (backup your work first).
 
