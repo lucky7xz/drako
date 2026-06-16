@@ -170,21 +170,21 @@ func RunCommand(cfg config.Config, selected string) {
 	// Log the command execution to history.log in the config directory
 	// We do this best-effort; failures to log should not stop execution.
 	func() {
-		cfgDir, err := paths.ConfigDir()
+		configDir, err := paths.ConfigDir()
 		if err != nil {
 			log.Printf("logging error: could not get config dir: %v", err)
 			return
 		}
 
 		// Ensure the directory exists (it should, but safety first)
-		if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		if err := os.MkdirAll(configDir, 0o755); err != nil {
 			log.Printf("logging error: could not create config dir: %v", err)
 			return
 		}
 
-		logPath := paths.HistoryFile(cfgDir)
+		logPath := paths.HistoryFile(configDir)
 		// Rotate if > 1MB
-		RotateLogIfNeeded(logPath, paths.HistoryArchive(cfgDir), 1024*1024)
+		RotateLogIfNeeded(logPath, paths.HistoryArchive(configDir), 1024*1024)
 
 		f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 		if err != nil {
