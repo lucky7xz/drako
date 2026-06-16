@@ -47,11 +47,11 @@ func Run() {
 	// Proceed with TUI mode
 	configDir, err := paths.ConfigDir()
 	if err != nil {
-		fmt.Printf("could not get config dir: %v", err)
+		fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
 		os.Exit(1)
 	}
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
-		fmt.Printf("could not create config dir: %v", err)
+		fmt.Fprintf(os.Stderr, "could not create config dir: %v\n", err)
 		os.Exit(1)
 	}
 	// =======================================
@@ -63,7 +63,9 @@ func Run() {
 
 	f, err := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
-		fmt.Printf("could not open log file: %v", err)
+		// NOTE: cli.go treats this as a non-fatal warning and continues;
+		// reconcile (warn vs exit) in a follow-up.
+		fmt.Fprintf(os.Stderr, "could not open log file: %v\n", err)
 		os.Exit(1)
 	}
 	defer f.Close()
@@ -80,7 +82,7 @@ func Run() {
 
 		result, err := program.Run()
 		if err != nil {
-			fmt.Printf("Alas, there's been an error: %v", err)
+			fmt.Fprintf(os.Stderr, "Alas, there's been an error: %v\n", err)
 			os.Exit(1)
 		}
 
