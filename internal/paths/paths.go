@@ -19,19 +19,17 @@ import (
 // Well-known names under the drako config directory. They exist exactly
 // once, in this block.
 const (
-	appDirName       = "drako"
-	inventoryDirName = "inventory"
-	specsDirName     = "specs"
-	assetsDirName    = "assets"
-	trashDirName     = "trash"
-	pivotFileName    = "pivot.toml"
-	themesFileName   = "themes.toml"
-	logFileName      = "drako.log"
-	historyFileName  = "history.log"
-
-	// rotatedLogSuffix is appended by core.RotateLogIfNeeded when a log
-	// exceeds its size limit.
-	rotatedLogSuffix = ".old"
+	appDirName         = "drako"
+	inventoryDirName   = "inventory"
+	specsDirName       = "specs"
+	assetsDirName      = "assets"
+	trashDirName       = "trash"
+	pivotFileName      = "pivot.toml"
+	themesFileName     = "themes.toml"
+	logFileName        = "drako.log"
+	logArchiveName     = "drako.log.old"
+	historyFileName    = "history.log"
+	historyArchiveName = "history.log.old"
 )
 
 // ConfigFileName is the bare filename of drako's main configuration file.
@@ -101,14 +99,24 @@ func HistoryFile(configDir string) string {
 	return filepath.Join(configDir, historyFileName)
 }
 
+// LogArchive is the rotated backup of LogFile.
+func LogArchive(configDir string) string {
+	return filepath.Join(configDir, logArchiveName)
+}
+
+// HistoryArchive is the rotated backup of HistoryFile.
+func HistoryArchive(configDir string) string {
+	return filepath.Join(configDir, historyArchiveName)
+}
+
 // LogFiles lists every log file drako may have written, including the
 // rotated backups. This is the authoritative deletion list for
 // "drako purge --logs".
 func LogFiles(configDir string) []string {
 	return []string{
 		LogFile(configDir),
-		LogFile(configDir) + rotatedLogSuffix,
+		LogArchive(configDir),
 		HistoryFile(configDir),
-		HistoryFile(configDir) + rotatedLogSuffix,
+		HistoryArchive(configDir),
 	}
 }

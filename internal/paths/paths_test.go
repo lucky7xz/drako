@@ -3,6 +3,7 @@ package paths
 import (
 	"path/filepath"
 	"runtime"
+	"slices"
 	"testing"
 )
 
@@ -84,7 +85,9 @@ func TestWellKnownLocations(t *testing.T) {
 		{"pivot file", PivotFile(cfg), cfg + "/pivot.toml"},
 		{"themes file", ThemesFile(cfg), cfg + "/themes.toml"},
 		{"log file", LogFile(cfg), cfg + "/drako.log"},
+		{"log archive", LogArchive(cfg), cfg + "/drako.log.old"},
 		{"history file", HistoryFile(cfg), cfg + "/history.log"},
+		{"history archive", HistoryArchive(cfg), cfg + "/history.log.old"},
 	}
 
 	for _, tc := range cases {
@@ -93,5 +96,25 @@ func TestWellKnownLocations(t *testing.T) {
 				t.Errorf("got %q, want %q", tc.got, tc.want)
 			}
 		})
+	}
+}
+
+// TestLogFilesIncludesArchives locks the coupling that the .old fix was
+// about: "drako purge --logs" must delete the rotated backups, not just the
+// live logs. If an archive is ever dropped from this list, the rotated file
+// it names would survive a purge — this test fails before that ships.
+func TestLogFilesIncludesArchives(t *testing.T) {
+	const cfg = "/fake/config/drako"
+
+	want := []string{
+		LogFile(cfg),
+		LogArchive(cfg),
+		HistoryFile(cfg),
+		HistoryArchive(cfg),
+	}
+
+	got := LogFiles(cfg)
+	if !slices.Equal(got, want) {
+		t.Errorf("LogFiles() = %v, want %v", got, want)
 	}
 }

@@ -59,7 +59,7 @@ func Run() {
 
 	// Rotate if > 1MB
 	logPath := paths.LogFile(configDir)
-	core.RotateLogIfNeeded(logPath, 1024*1024)
+	core.RotateLogIfNeeded(logPath, paths.LogArchive(configDir), 1024*1024)
 
 	f, err := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {

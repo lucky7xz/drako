@@ -5,9 +5,10 @@ import (
 	"os"
 )
 
-// RotateLogIfNeeded checks if the log file at path exceeds maxBytes.
-// If it does, it renames the file to path + ".old" (overwriting any previous backup).
-func RotateLogIfNeeded(path string, maxBytes int64) {
+// RotateLogIfNeeded renames path to archivePath if path exceeds maxBytes,
+// overwriting any previous backup. The caller supplies archivePath (from
+// paths) so the backup-naming convention lives in one place.
+func RotateLogIfNeeded(path, archivePath string, maxBytes int64) {
 	info, err := os.Stat(path)
 	if os.IsNotExist(err) {
 		return
@@ -18,12 +19,10 @@ func RotateLogIfNeeded(path string, maxBytes int64) {
 	}
 
 	if info.Size() > maxBytes {
-
-		oldPath := path + ".old"
 		// Best effort remove old backup
-		_ = os.Remove(oldPath)
+		_ = os.Remove(archivePath)
 
-		if err := os.Rename(path, oldPath); err != nil {
+		if err := os.Rename(path, archivePath); err != nil {
 			log.Printf("Failed to rotate log %s: %v", path, err)
 		}
 	}

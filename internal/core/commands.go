@@ -184,7 +184,7 @@ func RunCommand(cfg config.Config, selected string) {
 
 		logPath := paths.HistoryFile(cfgDir)
 		// Rotate if > 1MB
-		RotateLogIfNeeded(logPath, 1024*1024)
+		RotateLogIfNeeded(logPath, paths.HistoryArchive(cfgDir), 1024*1024)
 
 		f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 		if err != nil {
