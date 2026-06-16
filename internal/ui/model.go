@@ -80,7 +80,6 @@ type Model struct {
 }
 
 func (m *Model) applyConfig(cfg config.Config) {
-	config.ClampConfig(&cfg)
 	applyThemeStyles(cfg)
 
 	m.grid = config.BuildGrid(cfg)

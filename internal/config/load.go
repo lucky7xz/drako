@@ -220,8 +220,9 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 				Err:  fmt.Sprintf("Grid validation failed: %v", err),
 			})
 			// "First available" fallback policy: try the first profile;
-			// if that fails too, stay on the base settings.
-			effective = base
+			// if that fails too, fall back to rescue mode (a valid grid).
+			effective = RescueConfig()
+			effective.ApplyDefaults()
 			activeIndex = 0
 			pivotStillValid = false
 			if len(profiles) > 0 {

@@ -64,7 +64,6 @@ func ValidateConfig(cfg Config) error {
 
 // BuildGrid places command names into a Y-by-X grid of cells.
 func BuildGrid(config Config) [][]string {
-	ClampConfig(&config)
 	grid := make([][]string, config.Y)
 	for i := range grid {
 		grid[i] = make([]string, config.X)

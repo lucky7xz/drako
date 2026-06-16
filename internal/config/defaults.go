@@ -42,25 +42,6 @@ func (c *Config) ApplyDefaults() {
 		c.Keys.ProfileNext = defaults.Keys.ProfileNext
 	}
 
-	// Ensure limits are respected
-	ClampConfig(c)
-
 	// Initialize control sets (WASD, Vim, arrows)
 	c.Keys.InitControls()
-}
-
-// ClampConfig forces the grid dimensions into the supported 1-9 range.
-func ClampConfig(cfg *Config) {
-	if cfg.X < 1 {
-		cfg.X = 1
-	}
-	if cfg.X > 9 {
-		cfg.X = 9
-	}
-	if cfg.Y < 1 {
-		cfg.Y = 1
-	}
-	if cfg.Y > 9 {
-		cfg.Y = 9
-	}
 }
