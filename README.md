@@ -1,5 +1,5 @@
 # drako
-\
+
 [![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/lucky7xz/drako?color=007D9C&label=version)](https://github.com/lucky7xz/drako/tags)
 [![License](https://img.shields.io/github/license/lucky7xz/drako?color=orange)](https://github.com/lucky7xz/drako/blob/main/LICENSE)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/lucky7xz/drako?color=00ADD8&logo=go&logoColor=white)](https://go.dev/)
@@ -7,6 +7,12 @@
 `drako` represents an entirely new species of terminal tools: the customizable **Command-Deck Launcher**. It is not a menu, nor a shell history. It is a brutalist **architectural framework for any CLI-based workflow**, solidifying your scattered commands, TUIs, and scripts into a cohesive control surface. As such, CLI-driven workflows become remarkably easy to document, distribute, teach, and scale across a team.
 
 https://github.com/user-attachments/assets/21fb2340-bc74-4886-a629-8e95d116e830
+
+> [!TIP]
+> **Try drako live via ssh — no install:** `ssh chronyx.xyz`
+> A demo over SSH (Charm's [Wish](https://github.com/charmbracelet/wish) + Glassroot Mode, below): you get root on box while the drako's glassroot mode (limited functionality, eg. no inventory access) keeps access sealed — the "glass" over "root".
+> Profile & commands behind the demo: [lucky7xz/groot_demo](https://github.com/lucky7xz/groot_demo).
+> Experimental and shared.
 
 
 ## ✨ TLDR; 

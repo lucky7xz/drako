@@ -2,6 +2,8 @@
 docs/tutorial/
 dist/
 xyz.*
+*clove.md
+
 # Binaries for programs and plugins
 #*.exe
 #*.exe~
