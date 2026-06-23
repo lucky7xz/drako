@@ -9,14 +9,6 @@ If you have Go installed:
 go install github.com/lucky7xz/drako@latest
 ```
 
-### Via Scoop (Coming Soon)
-We plan to add a Scoop bucket for easy installation:
-```powershell
-# Future command
-scoop bucket add drako https://github.com/lucky7xz/drako-bucket
-scoop install drako
-```
-
 ## Configuration
 
 On Windows, your configuration lives in the standard AppData location:

@@ -64,10 +64,6 @@ Once it's open, the **Settings** cell in the Core profile has an **Add go/bin to
 > [!NOTE]
 > **Emoji Support:** drako profiles sometimes use emojis as visual indicators. Modern terminals (Ghostty, WezTerm etc.) may support them by default. Others (older Linux terminals) may require installing a "Nerd Font" (e.g., [Nerd Fonts](https://www.nerdfonts.com/)) or specific emoji font packages (e.g., `fonts-noto-color-emoji`).
 
-### Shell Integration
-
-To enable `cd` on exit, see [docs/SHELL_INTEGRATION.md](docs/SHELL_INTEGRATION.md). 
-
 ### 🧭 Navigation
 
 - **Grid Navigation:** Use arrows, `w/a/s/d`, or `h/j/k/l` (customizable in config.toml).
