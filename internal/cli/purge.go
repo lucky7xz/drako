@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/lucky7xz/drako/internal/paths"
+	"github.com/lucky7xz/drako/internal/profiles"
 )
 
 // PurgeOptions defines the scope of the purge operation
@@ -258,36 +259,29 @@ func runInteractivePurgeSelection(configDir string, opts *PurgeOptions, input io
 	var validProfiles []startProfile
 
 	// Helper to scan a directory
-	scanDir := func(dir string, isInventory bool) {
-		entries, err := os.ReadDir(dir)
+	scanDir := func(dir, location string) {
+		entries, err := profiles.List(dir)
 		if err != nil {
 			return
 		}
 		for _, e := range entries {
-			if !e.IsDir() && strings.HasSuffix(e.Name(), ".profile.toml") {
-				name := strings.TrimSuffix(e.Name(), ".profile.toml")
-
-				relPath := e.Name()
-				location := "Equipped"
-				if isInventory {
-					relPath = filepath.Join("inventory", e.Name())
-					location = "Inventory"
-				}
-
-				validProfiles = append(validProfiles, startProfile{
-					Name:         name,
-					Location:     location,
-					RelativePath: relPath,
-				})
+			relPath := e.File
+			if location == "Inventory" {
+				relPath = filepath.Join("inventory", e.File)
 			}
+			validProfiles = append(validProfiles, startProfile{
+				Name:         e.Name,
+				Location:     location,
+				RelativePath: relPath,
+			})
 		}
 	}
 
 	// 1. Scan Root (Equipped)
-	scanDir(configDir, false)
+	scanDir(configDir, "Equipped")
 
 	// 2. Scan Inventory
-	scanDir(paths.InventoryDir(configDir), true)
+	scanDir(paths.InventoryDir(configDir), "Inventory")
 
 	if len(validProfiles) == 0 {
 		fmt.Fprintln(output, "(No profiles found)")
