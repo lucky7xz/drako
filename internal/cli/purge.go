@@ -141,41 +141,6 @@ func moveToTrash(srcPath, trashDir string) error {
 	return nil
 }
 
-// countFilesInDir recursively counts files in a directory
-func countFilesInDir(dir string) int {
-	count := 0
-	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil // Skip errors
-		}
-		if !info.IsDir() {
-			count++
-		}
-		return nil
-	})
-	return count
-}
-
-// formatSize converts bytes to human-readable format
-func formatSize(bytes int64) string {
-	const (
-		KB = 1024
-		MB = KB * 1024
-		GB = MB * 1024
-	)
-
-	switch {
-	case bytes >= GB:
-		return fmt.Sprintf("%.2f GB", float64(bytes)/float64(GB))
-	case bytes >= MB:
-		return fmt.Sprintf("%.2f MB", float64(bytes)/float64(MB))
-	case bytes >= KB:
-		return fmt.Sprintf("%.2f KB", float64(bytes)/float64(KB))
-	default:
-		return fmt.Sprintf("%d B", bytes)
-	}
-}
-
 // HandlePurgeCommand processes the 'drako purge' command from args
 func HandlePurgeCommand(args []string) {
 	// Parse args starting from index 2 (skipping "drako" and "purge")
