@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/BurntSushi/toml"
@@ -124,40 +123,25 @@ func HandleStripCommand(args []string) {
 // The name shown is the filename with the .spec.toml suffix removed — exactly
 // what "drako spec <name>" expects.
 func ListSpecs(specsDir string, out io.Writer) error {
-	entries, err := os.ReadDir(specsDir)
+	entries, err := profiles.ListSpecs(specsDir)
 	if err != nil {
-		if os.IsNotExist(err) {
-			fmt.Fprintf(out, "No specs found. Create one in %s\n", specsDir)
-			return nil
-		}
 		return err
 	}
-
-	var names []string
-	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".spec.toml") {
-			continue
-		}
-		names = append(names, strings.TrimSuffix(e.Name(), ".spec.toml"))
-	}
-
-	if len(names) == 0 {
+	if len(entries) == 0 {
 		fmt.Fprintf(out, "No specs found. Create one in %s\n", specsDir)
 		return nil
 	}
 
-	sort.Strings(names)
-
 	// Resolve each spec's profiles into a printable cell before drawing, so we
 	// can size the columns to the widest content.
-	rows := make([][]string, 0, len(names))
-	for _, name := range names {
+	rows := make([][]string, 0, len(entries))
+	for _, e := range entries {
 		var spec Spec
-		profiles := "(unreadable)"
-		if _, err := toml.DecodeFile(filepath.Join(specsDir, name+".spec.toml"), &spec); err == nil {
-			profiles = strings.Join(spec.Profiles, ", ")
+		profilesCol := "(unreadable)"
+		if _, derr := toml.DecodeFile(filepath.Join(specsDir, e.File), &spec); derr == nil {
+			profilesCol = strings.Join(spec.Profiles, ", ")
 		}
-		rows = append(rows, []string{name, profiles})
+		rows = append(rows, []string{e.Name, profilesCol})
 	}
 
 	table(out, []string{"Spec", "Profiles"}, rows)
@@ -199,34 +183,29 @@ func StashSpec(configDir string, targetProfiles []string) error {
 	}
 
 	// Scan Visible profiles and move them to Inventory if they are in the target set
-	visEntries, err := os.ReadDir(configDir)
+	visEntries, err := profiles.List(configDir)
 	if err != nil {
 		return err
 	}
 
-	for _, entry := range visEntries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".profile.toml") {
+	for _, e := range visEntries {
+		if !targetSet[e.Norm] {
 			continue
 		}
-		name := strings.TrimSuffix(entry.Name(), ".profile.toml")
-		norm := profiles.NormalizeName(name)
-
-		if targetSet[norm] {
-			// Check if this profile is currently locked
-			if profiles.NormalizeName(pf.Locked) == norm {
-				fmt.Printf("  ! Unlocking profile: %s\n", name)
-				if err := config.WritePivotLocked(configDir, ""); err != nil {
-					log.Printf("Warning: failed to unlock profile %s: %v", name, err)
-				}
+		// Check if this profile is currently locked
+		if profiles.NormalizeName(pf.Locked) == e.Norm {
+			fmt.Printf("  ! Unlocking profile: %s\n", e.Name)
+			if err := config.WritePivotLocked(configDir, ""); err != nil {
+				log.Printf("Warning: failed to unlock profile %s: %v", e.Name, err)
 			}
+		}
 
-			src := filepath.Join(configDir, entry.Name())
-			dst := filepath.Join(inventoryDir, entry.Name())
-			if err := moveFileSafe(src, dst); err != nil {
-				log.Printf("Warning: skipped stashing %s: %v", name, err)
-			} else {
-				fmt.Printf("  - Stashed: %s\n", name)
-			}
+		src := filepath.Join(configDir, e.File)
+		dst := filepath.Join(inventoryDir, e.File)
+		if err := moveFileSafe(src, dst); err != nil {
+			log.Printf("Warning: skipped stashing %s: %v", e.Name, err)
+		} else {
+			fmt.Printf("  - Stashed: %s\n", e.Name)
 		}
 	}
 	return nil
@@ -245,51 +224,39 @@ func ApplySpec(configDir string, targetProfiles []string) error {
 	}
 
 	// 1. Move profiles from Inventory to Visible (if in target)
-	invEntries, err := os.ReadDir(inventoryDir)
+	invEntries, err := profiles.List(inventoryDir)
 	if err == nil {
-		for _, entry := range invEntries {
-			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".profile.toml") {
-				continue
-			}
-			name := strings.TrimSuffix(entry.Name(), ".profile.toml")
-			norm := profiles.NormalizeName(name)
-
-			if targetSet[norm] {
-				src := filepath.Join(inventoryDir, entry.Name())
-				dst := filepath.Join(configDir, entry.Name())
+		for _, e := range invEntries {
+			if targetSet[e.Norm] {
+				src := filepath.Join(inventoryDir, e.File)
+				dst := filepath.Join(configDir, e.File)
 				if err := moveFileSafe(src, dst); err != nil {
-					log.Printf("Warning: skipped moving %s: %v", name, err)
+					log.Printf("Warning: skipped moving %s: %v", e.Name, err)
 				} else {
-					fmt.Printf("  + Equipped: %s\n", name)
+					fmt.Printf("  + Equipped: %s\n", e.Name)
 				}
 			}
 		}
 	}
 
 	// 2. Move profiles from Visible to Inventory (if NOT in target)
-	visEntries, err := os.ReadDir(configDir)
+	visEntries, err := profiles.List(configDir)
 	if err != nil {
 		return err
 	}
-	for _, entry := range visEntries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".profile.toml") {
-			continue
-		}
-		name := strings.TrimSuffix(entry.Name(), ".profile.toml")
-		norm := profiles.NormalizeName(name)
-
+	for _, e := range visEntries {
 		// Skip Core/Default
-		if norm == "core" || norm == "default" {
+		if e.Norm == "core" || e.Norm == "default" {
 			continue
 		}
 
-		if !targetSet[norm] {
-			src := filepath.Join(configDir, entry.Name())
-			dst := filepath.Join(inventoryDir, entry.Name())
+		if !targetSet[e.Norm] {
+			src := filepath.Join(configDir, e.File)
+			dst := filepath.Join(inventoryDir, e.File)
 			if err := moveFileSafe(src, dst); err != nil {
-				log.Printf("Warning: skipped moving %s: %v", name, err)
+				log.Printf("Warning: skipped moving %s: %v", e.Name, err)
 			} else {
-				fmt.Printf("  - Stored: %s\n", name)
+				fmt.Printf("  - Stored: %s\n", e.Name)
 			}
 		}
 	}
@@ -331,29 +298,23 @@ func StripAllProfiles(configDir string) error {
 	}
 
 	// Move all visible profiles to inventory
-	visEntries, err := os.ReadDir(configDir)
+	visEntries, err := profiles.List(configDir)
 	if err != nil {
 		return err
 	}
 
-	for _, entry := range visEntries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".profile.toml") {
-			continue
-		}
-		name := strings.TrimSuffix(entry.Name(), ".profile.toml")
-		norm := profiles.NormalizeName(name)
-
+	for _, e := range visEntries {
 		// Skip Core/Default
-		if norm == "core" || norm == "default" {
+		if e.Norm == "core" || e.Norm == "default" {
 			continue
 		}
 
-		src := filepath.Join(configDir, entry.Name())
-		dst := filepath.Join(inventoryDir, entry.Name())
+		src := filepath.Join(configDir, e.File)
+		dst := filepath.Join(inventoryDir, e.File)
 		if err := moveFileSafe(src, dst); err != nil {
-			log.Printf("Warning: skipped moving %s: %v", name, err)
+			log.Printf("Warning: skipped moving %s: %v", e.Name, err)
 		} else {
-			fmt.Printf("  - Stored: %s\n", name)
+			fmt.Printf("  - Stored: %s\n", e.Name)
 		}
 	}
 
