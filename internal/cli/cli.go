@@ -60,16 +60,19 @@ func HandleCLI(args []string) bool {
 }
 
 func PrintUsage() {
+	fmt.Printf("%s %s\n", config.AppName, config.Version())
 	fmt.Printf("Usage: drako <command> [arguments]\n\n")
-	fmt.Printf("Commands:\n")
-	fmt.Printf("  summon <url>   Summon a profile from a URL\n")
-	fmt.Printf("  purge          Delete profiles or config\n")
-	fmt.Printf("  spec           Manage specs\n")
-	fmt.Printf("  stash          Stash current profile\n")
-	fmt.Printf("  strip          Strip comments from profiles\n")
-	fmt.Printf("  open <path>    Open a file or directory\n")
-	fmt.Printf("  version        Show version information\n")
-	fmt.Printf("  help           Show this help message\n")
+	table(os.Stdout, []string{"Command", "Description"}, [][]string{
+		{"summon <url>", "Summon profile(s) from a URL"},
+		{"spec list", "Shows available specs"},
+		{"spec <name>", "Apply a spec: move related profiles files to inventory."},
+		{"stash <name>", "Stash the related prifle files to inventory."},
+		{"strip", "Strip all profiles from inventory, except the default core."},
+		{"purge <name>", "Delete profiles or config. Use 'purge -i' for interacive mode"},
+		{"version", "Show version information"},
+		{"help", "Show this help message"},
+		{"open <path/url>", "Open a text file/directory/browser link (sys-defaults rescue)"},
+	})
 }
 
 // HandleSummonCommand processes the 'drako summon <url>' command
@@ -235,7 +238,8 @@ func setupPurgeLogging(destroyEverything bool) {
 func runInteractivePurgeSelection(configDir string, opts *PurgeOptions, input io.Reader, output io.Writer) error {
 	// Struct to hold profile info
 	type startProfile struct {
-		DisplayName  string
+		Name         string
+		Location     string
 		RelativePath string
 	}
 	var validProfiles []startProfile
@@ -251,16 +255,15 @@ func runInteractivePurgeSelection(configDir string, opts *PurgeOptions, input io
 				name := strings.TrimSuffix(e.Name(), ".profile.toml")
 
 				relPath := e.Name()
-				label := name
+				location := "Equipped"
 				if isInventory {
 					relPath = filepath.Join("inventory", e.Name())
-					label = fmt.Sprintf("%s (Inventory)", name)
-				} else {
-					label = fmt.Sprintf("%s (Equipped)", name)
+					location = "Inventory"
 				}
 
 				validProfiles = append(validProfiles, startProfile{
-					DisplayName:  label,
+					Name:         name,
+					Location:     location,
 					RelativePath: relPath,
 				})
 			}
@@ -279,9 +282,11 @@ func runInteractivePurgeSelection(configDir string, opts *PurgeOptions, input io
 	}
 
 	fmt.Fprintln(output, "Select profile(s) to purge:")
+	selectRows := make([][]string, len(validProfiles))
 	for i, p := range validProfiles {
-		fmt.Fprintf(output, "%d. %s\n", i+1, p.DisplayName)
+		selectRows[i] = []string{strconv.Itoa(i + 1), p.Name, p.Location}
 	}
+	table(output, []string{"#", "Profile", "Location"}, selectRows)
 
 	fmt.Fprint(output, "\nEnter numbers (e.g. '1, 3', '1-5'): ")
 
@@ -357,7 +362,7 @@ func runInteractivePurgeSelection(configDir string, opts *PurgeOptions, input io
 		profile := validProfiles[idx-1]
 
 		// Individual Confirmation
-		fmt.Fprintf(output, "Delete %s? [y/N]: ", profile.DisplayName)
+		fmt.Fprintf(output, "Delete %s (%s)? [y/N]: ", profile.Name, profile.Location)
 		confirmRaw, _ := bufReader.ReadString('\n')
 		confirm := strings.ToLower(strings.TrimSpace(confirmRaw))
 

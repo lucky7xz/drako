@@ -269,18 +269,15 @@ func (s *Summoner) summonFromGit(repoURL, inventoryDir string) error {
 	}
 
 	// Show what was found
-	if len(profileFiles) > 0 {
-		fmt.Printf("\nFound %d profile file(s) in repository:\n", len(profileFiles))
-		for _, srcPath := range profileFiles {
-			fmt.Printf("  - %s\n", filepath.Base(srcPath))
-		}
+	fmt.Printf("\nFound %d file(s) in repository:\n", len(profileFiles)+len(specFiles))
+	foundRows := make([][]string, 0, len(profileFiles)+len(specFiles))
+	for _, srcPath := range profileFiles {
+		foundRows = append(foundRows, []string{filepath.Base(srcPath), "profile"})
 	}
-	if len(specFiles) > 0 {
-		fmt.Printf("\nFound %d spec file(s) in repository:\n", len(specFiles))
-		for _, srcPath := range specFiles {
-			fmt.Printf("  - %s\n", filepath.Base(srcPath))
-		}
+	for _, srcPath := range specFiles {
+		foundRows = append(foundRows, []string{filepath.Base(srcPath), "spec"})
 	}
+	table(os.Stdout, []string{"File", "Type"}, foundRows)
 	fmt.Println()
 
 	// Copy and validate all profile files to config directory

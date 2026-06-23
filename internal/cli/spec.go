@@ -2,9 +2,11 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/BurntSushi/toml"
@@ -20,18 +22,26 @@ type Spec struct {
 func HandleSpecCommand(args []string) {
 	if len(args) < 3 {
 		fmt.Fprintf(os.Stderr, "Usage: drako spec <name>\n")
+		fmt.Fprintf(os.Stderr, "       drako spec list\n")
 		fmt.Fprintf(os.Stderr, "  Loads a profile specification from ~/.config/drako/specs/<name>.spec.toml\n")
 		os.Exit(1)
 	}
-
-	specName := args[2]
 
 	configDir, err := paths.ConfigDir()
 	if err != nil {
 		log.Fatalf("could not get config dir: %v", err)
 	}
-
 	specsDir := paths.SpecsDir(configDir)
+
+	if args[2] == "list" {
+		if err := ListSpecs(specsDir, os.Stdout); err != nil {
+			log.Fatalf("failed to list specs: %v", err)
+		}
+		os.Exit(0)
+	}
+
+	specName := args[2]
+
 	// Try resolve the spec path
 	specPath, err := resolveSpecPath(specsDir, specName)
 	if err != nil {
@@ -107,6 +117,50 @@ func HandleStripCommand(args []string) {
 
 	fmt.Printf("✓ All profiles stripped successfully.\n")
 	os.Exit(0)
+}
+
+// ListSpecs writes the name and profiles of every *.spec.toml file in specsDir.
+// The name shown is the filename with the .spec.toml suffix removed — exactly
+// what "drako spec <name>" expects.
+func ListSpecs(specsDir string, out io.Writer) error {
+	entries, err := os.ReadDir(specsDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			fmt.Fprintf(out, "No specs found. Create one in %s\n", specsDir)
+			return nil
+		}
+		return err
+	}
+
+	var names []string
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".spec.toml") {
+			continue
+		}
+		names = append(names, strings.TrimSuffix(e.Name(), ".spec.toml"))
+	}
+
+	if len(names) == 0 {
+		fmt.Fprintf(out, "No specs found. Create one in %s\n", specsDir)
+		return nil
+	}
+
+	sort.Strings(names)
+
+	// Resolve each spec's profiles into a printable cell before drawing, so we
+	// can size the columns to the widest content.
+	rows := make([][]string, 0, len(names))
+	for _, name := range names {
+		var spec Spec
+		profiles := "(unreadable)"
+		if _, err := toml.DecodeFile(filepath.Join(specsDir, name+".spec.toml"), &spec); err == nil {
+			profiles = strings.Join(spec.Profiles, ", ")
+		}
+		rows = append(rows, []string{name, profiles})
+	}
+
+	table(out, []string{"Spec", "Profiles"}, rows)
+	return nil
 }
 
 // resolveSpecPath attempts to find a spec file with .spec.toml or .toml extension
