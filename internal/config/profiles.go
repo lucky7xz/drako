@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	profilepkg "github.com/lucky7xz/drako/internal/profiles"
 )
 
 // CopyCommands returns an independent copy of a command slice so callers
@@ -73,11 +74,11 @@ func DiscoverProfilesWithErrors(configDir string) ([]ProfileInfo, []ProfileParse
 			continue
 		}
 		name := entry.Name()
-		if !strings.HasSuffix(name, ".profile.toml") {
+		if !strings.HasSuffix(name, profilepkg.ProfileSuffix) {
 			continue
 		}
 		fullPath := filepath.Join(configDir, name)
-		profileName := strings.TrimSuffix(name, ".profile.toml")
+		profileName := strings.TrimSuffix(name, profilepkg.ProfileSuffix)
 
 		raw, err := os.ReadFile(fullPath)
 		if err != nil {
