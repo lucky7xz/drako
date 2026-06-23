@@ -13,6 +13,7 @@ import (
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/core"
 	"github.com/lucky7xz/drako/internal/paths"
+	"github.com/lucky7xz/drako/internal/profiles"
 )
 
 const (
@@ -294,8 +295,8 @@ func (m *Model) toggleProfileLock() tea.Cmd {
 	}
 
 	currentName := m.activeProfileName()
-	normCurrent := config.NormalizeProfileName(currentName)
-	normPivot := config.NormalizeProfileName(m.pivotProfileName)
+	normCurrent := profiles.NormalizeName(currentName)
+	normPivot := profiles.NormalizeName(m.pivotProfileName)
 
 	var err error
 	var messageCmd tea.Cmd

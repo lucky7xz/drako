@@ -55,17 +55,6 @@ func findKeyLine(raw []byte, key string) int {
 	return 0
 }
 
-// NormalizeProfileName lowercases a profile reference and strips the known
-// file suffixes, so "Git", "git.profile.toml" and "git.profile" all
-// address the same profile.
-func NormalizeProfileName(name string) string {
-	n := strings.TrimSpace(strings.ToLower(name))
-	n = strings.TrimSuffix(n, ".profile.toml")
-	n = strings.TrimSuffix(n, ".toml")
-	n = strings.TrimSuffix(n, ".profile")
-	return n
-}
-
 // DiscoverProfilesWithErrors scans configDir for *.profile.toml files and
 // returns the parseable profiles (sorted by name) plus a parse-error entry
 // for every file that could not be loaded or fails validation.

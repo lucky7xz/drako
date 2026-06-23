@@ -10,6 +10,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/lucky7xz/drako/internal/paths"
+	profilepkg "github.com/lucky7xz/drako/internal/profiles"
 )
 
 func fatalf(format string, args ...any) {
@@ -125,11 +126,11 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 	if len(pf.EquippedOrder) > 0 {
 		remaining := map[string]ProfileInfo{}
 		for i := 0; i < len(profiles); i++ {
-			remaining[NormalizeProfileName(profiles[i].Name)] = profiles[i]
+			remaining[profilepkg.NormalizeName(profiles[i].Name)] = profiles[i]
 		}
 		var ordered []ProfileInfo
 		for _, n := range pf.EquippedOrder {
-			norm := NormalizeProfileName(n)
+			norm := profilepkg.NormalizeName(n)
 			if info, ok := remaining[norm]; ok {
 				ordered = append(ordered, info)
 				delete(remaining, norm)
@@ -159,7 +160,7 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 		}
 	}
 
-	target := NormalizeProfileName(requested)
+	target := profilepkg.NormalizeName(requested)
 	activeIndex := 0
 	pivotStillValid := requestedPivot != ""
 	useFactoryDefaults := false
@@ -167,7 +168,7 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 	if target != "" {
 		found := false
 		for i := 0; i < len(profiles); i++ {
-			if NormalizeProfileName(profiles[i].Name) == target {
+			if profilepkg.NormalizeName(profiles[i].Name) == target {
 				activeIndex = i
 				found = true
 				break

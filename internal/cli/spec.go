@@ -12,6 +12,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/paths"
+	"github.com/lucky7xz/drako/internal/profiles"
 )
 
 // Spec defines a named set of visible profiles.
@@ -194,7 +195,7 @@ func StashSpec(configDir string, targetProfiles []string) error {
 	// Normalize target list
 	targetSet := make(map[string]bool)
 	for _, p := range targetProfiles {
-		targetSet[config.NormalizeProfileName(p)] = true
+		targetSet[profiles.NormalizeName(p)] = true
 	}
 
 	// Scan Visible profiles and move them to Inventory if they are in the target set
@@ -208,11 +209,11 @@ func StashSpec(configDir string, targetProfiles []string) error {
 			continue
 		}
 		name := strings.TrimSuffix(entry.Name(), ".profile.toml")
-		norm := config.NormalizeProfileName(name)
+		norm := profiles.NormalizeName(name)
 
 		if targetSet[norm] {
 			// Check if this profile is currently locked
-			if config.NormalizeProfileName(pf.Locked) == norm {
+			if profiles.NormalizeName(pf.Locked) == norm {
 				fmt.Printf("  ! Unlocking profile: %s\n", name)
 				if err := config.WritePivotLocked(configDir, ""); err != nil {
 					log.Printf("Warning: failed to unlock profile %s: %v", name, err)
@@ -240,7 +241,7 @@ func ApplySpec(configDir string, targetProfiles []string) error {
 	// Normalize target list
 	targetSet := make(map[string]bool)
 	for _, p := range targetProfiles {
-		targetSet[config.NormalizeProfileName(p)] = true
+		targetSet[profiles.NormalizeName(p)] = true
 	}
 
 	// 1. Move profiles from Inventory to Visible (if in target)
@@ -251,7 +252,7 @@ func ApplySpec(configDir string, targetProfiles []string) error {
 				continue
 			}
 			name := strings.TrimSuffix(entry.Name(), ".profile.toml")
-			norm := config.NormalizeProfileName(name)
+			norm := profiles.NormalizeName(name)
 
 			if targetSet[norm] {
 				src := filepath.Join(inventoryDir, entry.Name())
@@ -275,7 +276,7 @@ func ApplySpec(configDir string, targetProfiles []string) error {
 			continue
 		}
 		name := strings.TrimSuffix(entry.Name(), ".profile.toml")
-		norm := config.NormalizeProfileName(name)
+		norm := profiles.NormalizeName(name)
 
 		// Skip Core/Default
 		if norm == "core" || norm == "default" {
@@ -298,7 +299,7 @@ func ApplySpec(configDir string, targetProfiles []string) error {
 	finalOrder := make([]string, 0, len(targetProfiles)+1)
 	hasCore := false
 	for _, p := range targetProfiles {
-		if config.NormalizeProfileName(p) == "core" {
+		if profiles.NormalizeName(p) == "core" {
 			hasCore = true
 		}
 		finalOrder = append(finalOrder, p)
@@ -340,7 +341,7 @@ func StripAllProfiles(configDir string) error {
 			continue
 		}
 		name := strings.TrimSuffix(entry.Name(), ".profile.toml")
-		norm := config.NormalizeProfileName(name)
+		norm := profiles.NormalizeName(name)
 
 		// Skip Core/Default
 		if norm == "core" || norm == "default" {
