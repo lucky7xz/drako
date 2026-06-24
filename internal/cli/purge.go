@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profiles"
@@ -39,17 +38,13 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 		return fmt.Errorf("no target specified (use --target, --config, --logs, or --destroyeverything)")
 	}
 
-	// Ensure trash directory exists
-	trashDir := paths.TrashDir(configDir)
-	if err := os.MkdirAll(trashDir, 0o755); err != nil {
-		return fmt.Errorf("failed to create trash directory: %w", err)
-	}
-
 	// Case 1: Reset Core Config (config.toml)
 	if opts.TargetConfig {
 		log.Printf("Purging Core config (config.toml)")
-		if err := moveFileToTrash(configDir, paths.ConfigFileName, trashDir); err != nil {
+		if err := profiles.MoveToTrash(configDir, paths.ConfigFileName); err != nil {
 			log.Printf("Failed to purge config.toml: %v", err)
+		} else {
+			fmt.Printf("  ✓ Moved %s to trash\n", paths.ConfigFileName)
 		}
 	}
 
@@ -77,8 +72,10 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 		if filepath.Ext(filename) != ".toml" {
 			filename = filename + ".profile.toml"
 		}
-		if err := moveFileToTrash(configDir, filename, trashDir); err != nil {
+		if err := profiles.MoveToTrash(configDir, filename); err != nil {
 			log.Printf("Failed to purge %s: %v", target, err)
+		} else {
+			fmt.Printf("  ✓ Moved %s to trash\n", filename)
 		}
 	}
 
@@ -98,47 +95,6 @@ func performFullNuke(configDir string) error {
 	if err := os.RemoveAll(configDir); err != nil {
 		return fmt.Errorf("failed to destroy config directory: %w", err)
 	}
-	return nil
-}
-
-// moveFileToTrash moves a single file from configDir to trashDir with a timestamp
-func moveFileToTrash(configDir, filename, trashDir string) error {
-	// SANITIZATION: Prevent path traversal
-	// 1. Clean the path to resolve .. and .
-	src := filepath.Clean(filepath.Join(configDir, filename))
-
-	// 2. Ensure it starts with configDir
-	// We verify that the resolved path is still inside the configDir
-	// Note: We use Abs to be safe against relative configDir setups
-	absConfig, err := filepath.Abs(configDir)
-	if err != nil {
-		return fmt.Errorf("failed to resolve config dir: %w", err)
-	}
-	absSrc, err := filepath.Abs(src)
-	if err != nil {
-		return fmt.Errorf("failed to resolve source path: %w", err)
-	}
-
-	if !strings.HasPrefix(absSrc, absConfig+string(os.PathSeparator)) && absSrc != absConfig {
-		return fmt.Errorf("security violation: path traversal detected (%s)", filename)
-	}
-
-	if _, err := os.Stat(src); os.IsNotExist(err) {
-		return fmt.Errorf("file not found: %s", filename)
-	}
-	return moveToTrash(src, trashDir)
-}
-
-func moveToTrash(srcPath, trashDir string) error {
-	filename := filepath.Base(srcPath)
-	timestamp := time.Now().Format("20060102-150405")
-	dstName := fmt.Sprintf("%s.%s", filename, timestamp)
-	dstPath := filepath.Join(trashDir, dstName)
-
-	if err := os.Rename(srcPath, dstPath); err != nil {
-		return err
-	}
-	fmt.Printf("  ✓ Moved %s to trash\n", filename)
 	return nil
 }
 

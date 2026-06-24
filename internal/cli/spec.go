@@ -165,11 +165,6 @@ func resolveSpecPath(specsDir, name string) (string, error) {
 }
 
 func StashSpec(configDir string, targetProfiles []string) error {
-	inventoryDir := paths.InventoryDir(configDir)
-	if err := os.MkdirAll(inventoryDir, 0755); err != nil {
-		return err
-	}
-
 	// Read current pivot/lock state
 	pf, err := config.ReadPivotProfile(configDir)
 	if err != nil {
@@ -200,9 +195,7 @@ func StashSpec(configDir string, targetProfiles []string) error {
 			}
 		}
 
-		src := filepath.Join(configDir, e.File)
-		dst := filepath.Join(inventoryDir, e.File)
-		if err := moveFileSafe(src, dst); err != nil {
+		if err := profiles.Move(configDir, e.File, profiles.Equipped, profiles.Inventory); err != nil {
 			log.Printf("Warning: skipped stashing %s: %v", e.Name, err)
 		} else {
 			fmt.Printf("  - Stashed: %s\n", e.Name)
@@ -212,57 +205,20 @@ func StashSpec(configDir string, targetProfiles []string) error {
 }
 
 func ApplySpec(configDir string, targetProfiles []string) error {
-	inventoryDir := paths.InventoryDir(configDir)
-	if err := os.MkdirAll(inventoryDir, 0755); err != nil {
-		return err
-	}
-
-	// Normalize target list
-	targetSet := make(map[string]bool)
-	for _, p := range targetProfiles {
-		targetSet[profiles.NormalizeName(p)] = true
-	}
-
-	// 1. Move profiles from Inventory to Visible (if in target)
-	invEntries, err := profiles.List(inventoryDir)
-	if err == nil {
-		for _, e := range invEntries {
-			if targetSet[e.Norm] {
-				src := filepath.Join(inventoryDir, e.File)
-				dst := filepath.Join(configDir, e.File)
-				if err := moveFileSafe(src, dst); err != nil {
-					log.Printf("Warning: skipped moving %s: %v", e.Name, err)
-				} else {
-					fmt.Printf("  + Equipped: %s\n", e.Name)
-				}
-			}
-		}
-	}
-
-	// 2. Move profiles from Visible to Inventory (if NOT in target)
-	visEntries, err := profiles.List(configDir)
+	// Equip the targets, stash the rest (core protected) — file moves live in
+	// the profiles package; the CLI keeps the pivot bookkeeping and feedback.
+	res, err := profiles.Reconcile(configDir, targetProfiles)
 	if err != nil {
 		return err
 	}
-	for _, e := range visEntries {
-		// Skip Core/Default
-		if e.Norm == "core" || e.Norm == "default" {
-			continue
-		}
-
-		if !targetSet[e.Norm] {
-			src := filepath.Join(configDir, e.File)
-			dst := filepath.Join(inventoryDir, e.File)
-			if err := moveFileSafe(src, dst); err != nil {
-				log.Printf("Warning: skipped moving %s: %v", e.Name, err)
-			} else {
-				fmt.Printf("  - Stored: %s\n", e.Name)
-			}
-		}
+	for _, n := range res.Equipped {
+		fmt.Printf("  + Equipped: %s\n", n)
+	}
+	for _, n := range res.Stashed {
+		fmt.Printf("  - Stored: %s\n", n)
 	}
 
-	// 3. Update Pivots (Equipped Order)
-	// Ensure Core is in the list for safety
+	// Update Pivots (Equipped Order). Ensure Core is in the list for safety.
 	finalOrder := make([]string, 0, len(targetProfiles)+1)
 	hasCore := false
 	for _, p := range targetProfiles {
@@ -272,7 +228,6 @@ func ApplySpec(configDir string, targetProfiles []string) error {
 		finalOrder = append(finalOrder, p)
 	}
 	if !hasCore {
-		// Prepend Core
 		finalOrder = append([]string{"Core"}, finalOrder...)
 	}
 
@@ -280,51 +235,26 @@ func ApplySpec(configDir string, targetProfiles []string) error {
 }
 
 func StripAllProfiles(configDir string) error {
-	inventoryDir := paths.InventoryDir(configDir)
-	if err := os.MkdirAll(inventoryDir, 0755); err != nil {
-		return err
-	}
-
-	// Read current pivot/lock state
+	// Read current pivot/lock state; unlock if locked.
 	pf, err := config.ReadPivotProfile(configDir)
 	if err != nil {
 		log.Printf("Warning: could not read pivot profile: %v", err)
 	}
-	// Unlock if locked
 	if pf.Locked != "" {
 		if err := config.WritePivotLocked(configDir, ""); err != nil {
 			log.Printf("Warning: failed to unlock profile: %v", err)
 		}
 	}
 
-	// Move all visible profiles to inventory
-	visEntries, err := profiles.List(configDir)
+	// Empty desired set ⇒ stash everything except the protected core.
+	res, err := profiles.Reconcile(configDir, nil)
 	if err != nil {
 		return err
 	}
-
-	for _, e := range visEntries {
-		// Skip Core/Default
-		if e.Norm == "core" || e.Norm == "default" {
-			continue
-		}
-
-		src := filepath.Join(configDir, e.File)
-		dst := filepath.Join(inventoryDir, e.File)
-		if err := moveFileSafe(src, dst); err != nil {
-			log.Printf("Warning: skipped moving %s: %v", e.Name, err)
-		} else {
-			fmt.Printf("  - Stored: %s\n", e.Name)
-		}
+	for _, n := range res.Stashed {
+		fmt.Printf("  - Stored: %s\n", n)
 	}
 
 	// Reset Pivot Order to just Core
 	return config.WritePivotEquippedOrder(configDir, []string{"Core"})
-}
-
-func moveFileSafe(src, dst string) error {
-	if _, err := os.Stat(dst); err == nil {
-		return fmt.Errorf("destination already exists: %s", dst)
-	}
-	return os.Rename(src, dst)
 }

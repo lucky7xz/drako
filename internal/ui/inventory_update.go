@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/core"
 	"github.com/lucky7xz/drako/internal/paths"
+	"github.com/lucky7xz/drako/internal/profiles"
 )
 
 // reloadProfilesMsg signals the app to reload the configuration.
@@ -125,41 +125,26 @@ func InitInventoryModel(configDir string) inventoryModel {
 	}
 }
 
-// ApplyInventoryChangesCmd calculates the necessary file moves and executes them.
+// ApplyInventoryChangesCmd reconciles the on-disk profiles to match the
+// arranged visible list, then persists that order.
 func ApplyInventoryChangesCmd(configDir string, m inventoryModel) tea.Cmd {
 	return func() tea.Msg {
-
-		// Use core logic to calculate moves
-		moves, err := m.State.CalculateMoves(configDir, m.initialVisible, m.initialInventory)
-		if err != nil {
-			return inventoryErrorMsg{err: fmt.Errorf("calc moves failed: %w", err)}
-		}
-
-		// Pre-flight check for conflicts
-		for _, dest := range moves {
-			if _, err := os.Stat(dest); err == nil {
-				return inventoryErrorMsg{err: fmt.Errorf("conflict: %s already exists", filepath.Base(dest))}
-			}
-		}
-
-		// Execute moves
-		for src, dest := range moves {
-			if err := os.Rename(src, dest); err != nil {
-				return inventoryErrorMsg{err: fmt.Errorf("failed to move %s: %w", filepath.Base(src), err)}
-			}
-		}
-
-		// Persist the current visible order into pivot.toml as equipped_order (canonical names)
 		currentVisible, _ := m.State.GetList(core.ListVisible)
-		order := make([]string, 0, len(*currentVisible))
+		desired := make([]string, 0, len(*currentVisible))
 		for _, v := range *currentVisible {
-			order = append(order, strings.TrimSuffix(v, ".profile.toml"))
+			desired = append(desired, strings.TrimSuffix(v, ".profile.toml"))
 		}
-		if err := config.WritePivotEquippedOrder(configDir, order); err != nil {
+
+		// Equip/stash files to match the arrangement (core stays protected).
+		if _, err := profiles.Reconcile(configDir, desired); err != nil {
+			return inventoryErrorMsg{err: fmt.Errorf("apply inventory changes failed: %w", err)}
+		}
+
+		// Persist the visible order into pivot.toml as equipped_order.
+		if err := config.WritePivotEquippedOrder(configDir, desired); err != nil {
 			log.Printf("could not write equipped order: %v", err)
 		}
 
-		// Always reload to reflect order and membership changes
 		return reloadProfilesMsg{}
 	}
 }
