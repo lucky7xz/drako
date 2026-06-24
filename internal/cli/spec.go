@@ -61,7 +61,7 @@ func HandleSpecCommand(args []string) {
 		log.Fatalf("failed to apply spec: %v", err)
 	}
 
-	fmt.Printf("✓ Spec '%s' applied successfully.\n", strings.TrimSuffix(filepath.Base(specPath), ".spec.toml"))
+	fmt.Printf("✓ Spec '%s' applied successfully.\n", strings.TrimSuffix(filepath.Base(specPath), profiles.SpecSuffix))
 	os.Exit(0)
 }
 
@@ -95,7 +95,7 @@ func HandleStashCommand(args []string) {
 		log.Fatalf("failed to stash spec: %v", err)
 	}
 
-	fmt.Printf("✓ Spec '%s' stashed successfully.\n", strings.TrimSuffix(filepath.Base(specPath), ".spec.toml"))
+	fmt.Printf("✓ Spec '%s' stashed successfully.\n", strings.TrimSuffix(filepath.Base(specPath), profiles.SpecSuffix))
 	os.Exit(0)
 }
 
@@ -148,12 +148,12 @@ func ListSpecs(specsDir string, out io.Writer) error {
 	return nil
 }
 
-// resolveSpecPath attempts to find a spec file with .spec.toml or .toml extension
+// resolveSpecPath finds the spec file for name (forcing the .spec.toml suffix).
 // It returns the full path to the found file, or an error if not found.
 func resolveSpecPath(specsDir, name string) (string, error) {
 	// Force .spec.toml extension
-	if !strings.HasSuffix(name, ".spec.toml") {
-		name += ".spec.toml"
+	if !strings.HasSuffix(name, profiles.SpecSuffix) {
+		name += profiles.SpecSuffix
 	}
 
 	specPath := filepath.Join(specsDir, name)

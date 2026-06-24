@@ -70,7 +70,7 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 		log.Printf("Purging Profile: %s", target)
 		filename := target
 		if filepath.Ext(filename) != ".toml" {
-			filename = filename + ".profile.toml"
+			filename = filename + profiles.ProfileSuffix
 		}
 		if err := profiles.MoveToTrash(configDir, filename); err != nil {
 			log.Printf("Failed to purge %s: %v", target, err)

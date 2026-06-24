@@ -18,8 +18,6 @@ var (
 	pauseFn    = pause
 	lookPathFn = exec.LookPath
 	commandFn  = exec.Command
-	//setenvFn   = os.Setenv
-	//unsetenvFn = os.Unsetenv
 )
 
 // - Optional booleans in config are represented as *bool (pointer-to-bool) so we
@@ -202,7 +200,7 @@ func RunCommand(cfg config.Config, selected string) {
 
 		entry := fmt.Sprintf("[%s] %s (exec: %s)\n", timestamp, selected, executedStr)
 		if _, err := f.WriteString(entry); err != nil {
-			log.Printf("logging error: count not write to history.log: %v", err)
+			log.Printf("logging error: could not write to history.log: %v", err)
 		}
 	}()
 	// --- LOGGING END ---

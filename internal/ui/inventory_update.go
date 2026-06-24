@@ -30,10 +30,6 @@ type inventoryModel struct {
 	focusedList int    // 0 for visible, 1 for inventory, 2 for apply, 3 for rescue
 	status      string // Feedback message for the user
 	err         error  // Any error that has occurred
-
-	// Keep the initial state to calculate the diff on apply
-	initialVisible   []string
-	initialInventory []string
 }
 
 // NewList creates a new list of profiles by scanning a directory for .profile.toml files.
@@ -46,13 +42,13 @@ func NewList(dir string) ([]string, error) {
 		return nil, err
 	}
 
-	var profiles []string
+	var files []string
 	for _, entry := range entries {
-		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".profile.toml") {
-			profiles = append(profiles, entry.Name())
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), profiles.ProfileSuffix) {
+			files = append(files, entry.Name())
 		}
 	}
-	return profiles, nil
+	return files, nil
 }
 
 // InitInventoryModel creates the initial state for the inventory TUI.
@@ -86,7 +82,7 @@ func InitInventoryModel(configDir string) inventoryModel {
 		// Map canonical name -> filename
 		nameToFile := make(map[string]string, len(visibleFiles))
 		for _, f := range visibleFiles {
-			name := strings.TrimSuffix(f, ".profile.toml")
+			name := strings.TrimSuffix(f, profiles.ProfileSuffix)
 			nameToFile[name] = f
 		}
 		// Track remaining overlays by name
@@ -118,11 +114,7 @@ func InitInventoryModel(configDir string) inventoryModel {
 
 	state := core.NewInventoryState(visible, inventory)
 
-	return inventoryModel{
-		State:            state,
-		initialVisible:   append([]string{}, visible...),
-		initialInventory: append([]string{}, inventory...),
-	}
+	return inventoryModel{State: state}
 }
 
 // ApplyInventoryChangesCmd reconciles the on-disk profiles to match the
@@ -132,7 +124,7 @@ func ApplyInventoryChangesCmd(configDir string, m inventoryModel) tea.Cmd {
 		currentVisible, _ := m.State.GetList(core.ListVisible)
 		desired := make([]string, 0, len(*currentVisible))
 		for _, v := range *currentVisible {
-			desired = append(desired, strings.TrimSuffix(v, ".profile.toml"))
+			desired = append(desired, strings.TrimSuffix(v, profiles.ProfileSuffix))
 		}
 
 		// Equip/stash files to match the arrangement (core stays protected).
@@ -147,15 +139,6 @@ func ApplyInventoryChangesCmd(configDir string, m inventoryModel) tea.Cmd {
 
 		return reloadProfilesMsg{}
 	}
-}
-
-func Contains(slice []string, item string) bool {
-	for _, v := range slice {
-		if v == item {
-			return true
-		}
-	}
-	return false
 }
 
 func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {

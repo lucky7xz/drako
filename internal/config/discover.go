@@ -118,12 +118,6 @@ func DiscoverProfilesWithErrors(configDir string) ([]ProfileInfo, []ProfileParse
 	return profiles, broken
 }
 
-// DiscoverProfiles is DiscoverProfilesWithErrors without the error report.
-func DiscoverProfiles(configDir string) []ProfileInfo {
-	profiles, _ := DiscoverProfilesWithErrors(configDir)
-	return profiles
-}
-
 // ApplyProfileOverlay layers a profile on top of the base settings: grid
 // size and commands always come from the profile; theme, header art and
 // shell only when the profile sets them.

@@ -78,7 +78,6 @@ type ProfileParseError struct {
 
 // ConfigBundle packages the base config, effective config, and profile data
 type ConfigBundle struct {
-	Settings    AppSettings
 	Base        Config
 	Config      Config
 	Profiles    []ProfileInfo

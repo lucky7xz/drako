@@ -39,6 +39,29 @@ func (m Model) renderSizeOverlay(reqW, reqH int) string {
 	)
 }
 
+// padLinesToWidth right-pads every line to the widest line's width with
+// background-colored spaces, so popup contents form a solid block.
+func padLinesToWidth(raw []string, bgFill lipgloss.Style) []string {
+	maxW := 0
+	for _, line := range raw {
+		if w := lipgloss.Width(line); w > maxW {
+			maxW = w
+		}
+	}
+	if maxW == 0 {
+		maxW = 1
+	}
+	lines := make([]string, len(raw))
+	for i, line := range raw {
+		pad := maxW - lipgloss.Width(line)
+		if pad < 0 {
+			pad = 0
+		}
+		lines[i] = line + bgFill.Render(strings.Repeat(" ", pad))
+	}
+	return lines
+}
+
 func (m Model) viewDropdownMode() string {
 	// Render the base grid view
 	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config)
@@ -52,43 +75,9 @@ func (m Model) viewDropdownMode() string {
 	helpText := "Dropdown Mode | ↑/↓/ws: Select, Enter: Execute, Esc/q: Cancel"
 	help := helpStyle.Render(helpText)
 
-	// Adjust footer rendering for layout?
-	// The original code rendered StatusBar, ProfileBar, PathBar etc explicitly here.
-	// Since we are refactoring, let's keep it close to original for now, using helpers if possible.
-
-	// Re-implementing the original comprehensive footer block for now until we unify `renderWithLayout`
-
-	netLabel := lipgloss.NewStyle().Render("NET: ")
-	netText := netLabel + m.traffic
-	statusText := fmt.Sprintf("STATUS: %s", m.onlineStatus)
-	themeText := "THEME: "
-	themeName := themeNameStyle.Render(m.Config.Theme)
-	separator := helpStyle.Render(" | ")
-
-	networkStatusBar := lipgloss.NewStyle().PaddingTop(1).Render(
-		lipgloss.JoinHorizontal(lipgloss.Left,
-			netText,
-			separator,
-			statusText,
-			separator,
-			themeText,
-			themeName,
-		),
-	)
-	profileBar := m.renderProfileBar()
-	pathBar := m.path.RenderPathBar(false)
-	childDirs := m.path.RenderChildDirs(m.mode)
-
 	var footer string
 	if layout.ShowFooter {
-		footer = lipgloss.JoinVertical(
-			lipgloss.Left,
-			help,
-			networkStatusBar,
-			profileBar,
-			pathBar,
-			childDirs,
-		)
+		footer = m.renderCombinedFooter(help)
 	}
 
 	finalContent := lipgloss.JoinVertical(
@@ -123,35 +112,16 @@ func (m Model) renderDropdownPopup() string {
 	textSel := selectedItemStyle.Background(bg)
 	gap := lipgloss.NewStyle().Background(bg)
 
-	// Build lines and compute max width
+	// Build lines, then right-pad them into a solid block.
 	var raw []string
-	maxW := 0
 	for i, item := range m.dropdownItems {
-		var line string
 		if i == m.dropdownSelectedIdx {
-			line = cursorSel.Render("► ") + textSel.Render(item.Name)
+			raw = append(raw, cursorSel.Render("► ")+textSel.Render(item.Name))
 		} else {
-			line = gap.Render("  ") + textNorm.Render(item.Name)
-		}
-		raw = append(raw, line)
-		if w := lipgloss.Width(line); w > maxW {
-			maxW = w
+			raw = append(raw, gap.Render("  ")+textNorm.Render(item.Name))
 		}
 	}
-	if maxW == 0 {
-		maxW = 1
-	}
-
-	// Right-pad each line with background-colored spaces to equal width
-	var lines []string
-	for _, line := range raw {
-		pad := maxW - lipgloss.Width(line)
-		if pad < 0 {
-			pad = 0
-		}
-		padded := line + bgFill.Render(strings.Repeat(" ", pad))
-		lines = append(lines, padded)
-	}
+	lines := padLinesToWidth(raw, bgFill)
 
 	content := lipgloss.JoinVertical(lipgloss.Left, lines...)
 	return dropdownPopupStyle.Render(content)
@@ -302,25 +272,7 @@ func (m Model) viewInfoMode() string {
 	raw = append(raw, "")
 	raw = append(raw, helpStyle.Render("Press y to copy command/details to clipboard • any key to close"))
 
-	// Compute max width and pad
-	maxW := 0
-	for _, line := range raw {
-		if w := lipgloss.Width(line); w > maxW {
-			maxW = w
-		}
-	}
-	if maxW == 0 {
-		maxW = 1
-	}
-
-	var lines []string
-	for _, line := range raw {
-		pad := maxW - lipgloss.Width(line)
-		if pad < 0 {
-			pad = 0
-		}
-		lines = append(lines, line+bgFill.Render(strings.Repeat(" ", pad)))
-	}
+	lines := padLinesToWidth(raw, bgFill)
 
 	popup := dropdownPopupStyle.Render(lipgloss.JoinVertical(lipgloss.Left, lines...))
 	content := lipgloss.JoinVertical(lipgloss.Center, header, popup)

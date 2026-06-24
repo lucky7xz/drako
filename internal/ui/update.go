@@ -137,9 +137,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.mode == gridMode || m.mode == childMode {
 			if ok, target := IsProfileSwitch(m.Config.Keys, msg, m.Config.NumbModifier); ok {
 				if target < len(m.profiles) {
-					if updated, cmd, ok := m.switchToProfileIndex(target); ok {
+					if updated, ok := m.switchToProfileIndex(target); ok {
 						m = updated
-						return m, cmd
+						return m, nil
 					}
 				}
 				return m, nil
@@ -387,9 +387,9 @@ func (m Model) updateLockedMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) switchToProfileIndex(target int) (Model, tea.Cmd, bool) {
+func (m Model) switchToProfileIndex(target int) (Model, bool) {
 	if len(m.profiles) == 0 {
-		return m, nil, false
+		return m, false
 	}
 	total := len(m.profiles)
 	if target < 0 || target >= total {
@@ -401,17 +401,16 @@ func (m Model) switchToProfileIndex(target int) (Model, tea.Cmd, bool) {
 	// Check for existence
 	if _, err := os.Stat(selected.Path); err != nil {
 		log.Printf("skipping missing profile: %s", selected.Path)
-		return m, nil, false
+		return m, false
 	}
 
-	// TODO
 	updated := m
 	updated.activeProfileIndex = target
 	_ = os.Setenv("DRAKO_PROFILE", selected.Name)
 	updated.Config = config.ApplyProfileOverlay(m.baseConfig, selected.Profile)
 	updated.applyConfig(updated.Config)
 
-	return updated, nil, true
+	return updated, true
 }
 
 func (m Model) handleProfileCycle(direction int) (tea.Model, tea.Cmd) {
@@ -426,9 +425,9 @@ func (m Model) handleProfileCycle(direction int) (tea.Model, tea.Cmd) {
 	for i := 1; i <= total; i++ {
 		target := core.CalculateNextProfileIndex(current, direction*i, total)
 
-		nextModel, cmd, ok := m.switchToProfileIndex(target)
+		nextModel, ok := m.switchToProfileIndex(target)
 		if ok {
-			return nextModel, cmd
+			return nextModel, nil
 		}
 	}
 	return m, nil

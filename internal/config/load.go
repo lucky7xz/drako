@@ -245,16 +245,6 @@ func LoadConfig(profileOverride *string) ConfigBundle {
 	effective.Commands = CopyCommands(effective.Commands)
 
 	return ConfigBundle{
-		Settings: AppSettings{
-			DefaultShell:       base.DefaultShell,
-			NumbModifier:       base.NumbModifier,
-			Profile:            base.Profile,
-			LockTimeoutMinutes: base.LockTimeoutMinutes,
-			EnvWhitelist:       base.EnvWhitelist,
-			EnvBlocklist:       base.EnvBlocklist,
-			Theme:              base.Theme,
-			Keys:               base.Keys,
-		},
 		Base:        base,
 		Config:      effective,
 		Profiles:    profiles,

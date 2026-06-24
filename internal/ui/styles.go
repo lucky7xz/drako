@@ -155,7 +155,6 @@ func applyThemeStyles(cfg config.Config) {
 	titleStyle = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.TitleFG)).
 		Bold(true).
-		Bold(true).
 		Padding(0, 1)
 
 	inventoryTitleStyle = lipgloss.NewStyle().

@@ -544,7 +544,7 @@ func copyAssetsList(repoRoot, profileDir string, assets []string, profileName st
 			continue
 		}
 		// Single file copy with limits
-		if allow, _ := checkAssetFileAllowed(info.Size(), fileCount, totalBytes); !allow {
+		if !checkAssetFileAllowed(info.Size(), fileCount, totalBytes) {
 			log.Printf("assets: skipping (limits) %s", rel)
 			skipped++
 			continue
@@ -677,7 +677,7 @@ func copyDirWithLimits(srcDir, dstDir string, fileCount *int, totalBytes *int64)
 		if serr != nil {
 			return serr
 		}
-		if allow, _ := checkAssetFileAllowed(info.Size(), *fileCount, *totalBytes); !allow {
+		if !checkAssetFileAllowed(info.Size(), *fileCount, *totalBytes) {
 			skipped++
 			return nil
 		}
@@ -711,17 +711,17 @@ func copyDirWithLimits(srcDir, dstDir string, fileCount *int, totalBytes *int64)
 }
 
 // checkAssetFileAllowed enforces per-file and aggregate limits
-func checkAssetFileAllowed(size int64, fileCount int, totalBytes int64) (bool, int64) {
+func checkAssetFileAllowed(size int64, fileCount int, totalBytes int64) bool {
 	if size > assetMaxFileBytes {
-		return false, totalBytes
+		return false
 	}
 	if fileCount+1 > assetMaxFileCount {
-		return false, totalBytes
+		return false
 	}
 	if totalBytes+size > assetMaxTotalBytes {
-		return false, totalBytes
+		return false
 	}
-	return true, totalBytes + size
+	return true
 }
 
 // isPathWithinBase checks if target is within base after resolving symlinks

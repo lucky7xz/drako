@@ -191,7 +191,7 @@ func (pm *PathModel) UpdatePathMode(msg tea.KeyMsg, cfg config.Config) (navMode,
 	}
 
 	switch {
-	case msg.String() == "q" || msg.String() == "esc":
+	case IsCancel(cfg.Keys, msg):
 		return gridMode, nil // Return to grid mode (no brainer improvement)
 	case msg.String() == "e":
 		pm.startSearch()
@@ -261,7 +261,7 @@ func (pm *PathModel) UpdateChildMode(msg tea.KeyMsg, cfg config.Config) (navMode
 	}
 
 	switch {
-	case msg.String() == "q" || msg.String() == "esc":
+	case IsCancel(cfg.Keys, msg):
 		return gridMode, nil // Return to grid mode
 	case msg.String() == "e":
 		pm.startSearch()
