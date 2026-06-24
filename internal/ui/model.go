@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucky7xz/drako/internal/config"
@@ -31,7 +30,7 @@ type Model struct {
 	Selected    string
 	Quitting    bool
 	mode        navMode
-	spinner     spinner.Model
+	spinner     spinnerModel
 	inputBuffer string
 
 	GlassrootMode bool
@@ -102,11 +101,10 @@ func (m *Model) applyConfig(cfg config.Config) {
 	}
 	m.Config = cfg
 	m.inputBuffer = ""
-	if m.spinner.Spinner.Frames == nil {
-		m.spinner = spinner.New()
-		m.spinner.Spinner = spinner.Line
+	if m.spinner.frames == nil {
+		m.spinner = newSpinner()
 	}
-	m.spinner.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF"))
+	m.spinner.style = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF"))
 
 	// Initialize lock timeout (default minutes if not set)
 	if cfg.LockTimeoutMinutes != nil && *cfg.LockTimeoutMinutes > 0 {
@@ -242,8 +240,7 @@ func InitialModel(glassrootMode bool) Model {
 		os.Exit(1)
 	}
 
-	s := spinner.New()
-	s.Spinner = spinner.Line
+	s := newSpinner()
 	m := Model{
 		cursorRow:          0,
 		cursorCol:          0,

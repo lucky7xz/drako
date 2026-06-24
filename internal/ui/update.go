@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/core"
@@ -20,7 +19,7 @@ func (m Model) Init() tea.Cmd {
 	return tea.Batch(
 		tea.EnterAltScreen,
 		checkNetworkStatusCmd(),
-		m.spinner.Tick,
+		m.spinner.tick(),
 		WatchConfigCmd(configDir),
 		lockCheckTick(),
 	)
@@ -94,9 +93,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.inventory.err = msg.err
 		return m, nil
 
-	case spinner.TickMsg:
+	case spinnerTickMsg:
 		var cmd tea.Cmd
-		m.spinner, cmd = m.spinner.Update(msg)
+		m.spinner, cmd = m.spinner.Update()
 		return m, cmd
 
 	case tea.KeyMsg:
