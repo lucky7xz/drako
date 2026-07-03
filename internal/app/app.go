@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/cli"
@@ -98,11 +99,43 @@ func Run() {
 		}
 
 		if state.Selected != "" {
-			core.RunCommand(state.Config, state.Selected)
+			// Internal "drako …" cells are dispatched here, at the layer that
+			// may wire cli and core together; everything else runs via core.
+			switch {
+			case strings.HasPrefix(state.Selected, "drako purge"):
+				if runInternalPurge(state.Selected) {
+					return // successful purge ends the session
+				}
+			case strings.HasPrefix(state.Selected, "drako open"):
+				cli.HandleOpenCommand(state.Selected)
+			default:
+				core.RunCommand(state.Config, state.Selected)
+			}
 
 			cmd := exec.Command("clear")
 			cmd.Stdout = os.Stdout
 			_ = cmd.Run()
 		}
 	}
+}
+
+// runInternalPurge runs a "drako purge …" cell in-process and reports whether
+// the purge succeeded (after which the app should exit rather than relaunch
+// the TUI on a config that may no longer exist).
+func runInternalPurge(command string) bool {
+	// Strip "drako purge" to match what os.Args[2:] would provide.
+	parts := strings.Fields(command)
+	if len(parts) < 2 {
+		log.Printf("Invalid purge command: %s", command)
+		return false
+	}
+
+	if err := cli.ExecutePurge(parts[2:]); err != nil {
+		fmt.Printf("\nInternal Purge Error: %v\n", err)
+		core.Pause("\nPress any key...")
+		return false
+	}
+	fmt.Printf("\npress any key to exit...")
+	core.Pause("")
+	return true
 }

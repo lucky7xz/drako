@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lucky7xz/drako/internal/cli"
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/paths"
 	"golang.org/x/term"
@@ -52,6 +51,12 @@ func pause(msg string) {
 		fmt.Print(msg)
 	}
 	waitForAnyKey()
+}
+
+// Pause prints msg and blocks until any keypress. Exported for the app layer,
+// which needs the same "press any key" beat between TUI sessions.
+func Pause(msg string) {
+	pause(msg)
 }
 
 // FindCommandByName returns a pointer to the matching top-level command or a nested item.
@@ -98,20 +103,6 @@ func buildShellCmd(shell_config, commandStr string) *exec.Cmd {
 
 // RunCommand finds the selected command from the loaded config and executes it.
 func RunCommand(cfg config.Config, selected string) {
-	// Handle special internal commands first
-	if strings.HasPrefix(selected, "drako purge") {
-		handleInternalPurge(selected)
-		// Since purge often resets state or exits, we might want to just return here
-		// But standard purge flow ends with Exit(0) usually.
-		// If it returns, we might want to pause.
-		return
-	}
-
-	if strings.HasPrefix(selected, "drako open") {
-		cli.HandleOpenCommand(selected)
-		return
-	}
-
 	// cmd will hold the prepared command to run. It's a pointer type; zero value is nil.
 	var cmd *exec.Cmd
 	// Pointers to per-command overrides; nil means "use default".
@@ -249,29 +240,5 @@ func RunCommand(cfg config.Config, selected string) {
 		pause("\nPress any key to return to the application.")
 
 		return
-	}
-}
-
-func handleInternalPurge(command string) {
-	// Parse the command string
-	// Expected format: "drako purge --target core" or "drako purge --interactive"
-	parts := strings.Fields(command)
-	if len(parts) < 2 {
-		log.Printf("Invalid purge command: %s", command)
-		return
-	}
-
-	// We strip "drako purge" (first 2 args) to match what os.Args[2:] would provide
-	args := parts[2:]
-
-	// Call the reusable CLI function
-	if err := cli.ExecutePurge(args); err != nil {
-		fmt.Printf("\nInternal Purge Error: %v\n", err)
-		pause("\nPress any key...")
-	} else {
-		// Success case
-		fmt.Printf("\npress any key to exit...")
-		pause("") // wait for user
-		os.Exit(0)
 	}
 }
