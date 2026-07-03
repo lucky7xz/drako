@@ -33,6 +33,8 @@ type Model struct {
 	spinner     spinnerModel
 	inputBuffer string
 
+	styles Styles
+
 	GlassrootMode bool
 
 	path PathModel
@@ -80,7 +82,7 @@ type Model struct {
 }
 
 func (m *Model) applyConfig(cfg config.Config) {
-	applyThemeStyles(cfg)
+	m.styles = BuildStyles(cfg)
 
 	m.grid = config.BuildGrid(cfg)
 	if len(m.grid) > 0 {

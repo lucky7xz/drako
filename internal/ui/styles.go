@@ -11,84 +11,103 @@ import (
 
 // Styling lives in one place so colors and layout tweaks are easy to reason about.
 
-var (
-	appStyle = lipgloss.NewStyle().
-			Margin(1, 2)
+// appStyle is static chrome (not theme-derived), so it stays a package var.
+var appStyle = lipgloss.NewStyle().Margin(1, 2)
 
-	headerArt = `
+// headerArt is the built-in default template, used when a profile sets no
+// custom header_art. It is a constant, not mutable state.
+const headerArt = `
 ╭───────────────────────────────╮
 │   //┏━ ┓z       ┏━ ┓\\:...    │
 │  ┏━━┫  ╋━━━┳━━━━╋  ┣━┓━━━━━┓  │
 │  ┃  ✘  ┃ ┏━┫ ━━ ┃   ◄┃  %s  ┃  │
 │  ┗━━━━━┻━┛ ┗━╱╲━┻━━┻━┻━━━━━┛  │
-◄═══════════════════════════════► 
-     ◄═════[  啸龙志  ]═════►      
+◄═══════════════════════════════►
+     ◄═════[  啸龙志  ]═════►
 ╰───────────────────────────────╯
 `
 
-	activeHeaderArt = ""
+// Styles holds every theme-derived lipgloss.Style plus the resolved header
+// art. It is built once per config by BuildStyles and carried on the Model, so
+// rendering reads a value it was handed rather than mutable package globals.
+type Styles struct {
+	Header    lipgloss.Style
+	Help      lipgloss.Style
+	StatusBar lipgloss.Style
+	Online    lipgloss.Style
+	Offline   lipgloss.Style
 
-	headerStyle               lipgloss.Style
-	helpStyle                 lipgloss.Style
-	statusBarStyle            lipgloss.Style
-	onlineStyle               lipgloss.Style
-	offlineStyle              lipgloss.Style
-	cellStyle                 lipgloss.Style
-	selectedCellStyle         lipgloss.Style
-	pathStyle                 lipgloss.Style
-	selectedPathStyle         lipgloss.Style
-	childDirStyle             lipgloss.Style
-	selectedChildDirStyle     lipgloss.Style
-	pathSeparatorStyle        lipgloss.Style
-	lockBadgeStyle            lipgloss.Style
-	statusPositiveStyle       lipgloss.Style
-	statusNegativeStyle       lipgloss.Style
-	titleStyle                lipgloss.Style
-	inventoryTitleStyle       lipgloss.Style
-	listHeaderStyle           lipgloss.Style
-	itemStyle                 lipgloss.Style
-	selectedItemStyle         lipgloss.Style
-	selectedCursorStyle       lipgloss.Style
-	buttonStyle               lipgloss.Style
-	selectedButtonStyle       lipgloss.Style
-	rescueButtonStyle         lipgloss.Style
-	selectedRescueButtonStyle lipgloss.Style
-	errorTitleStyle           lipgloss.Style
-	errorTextStyle            lipgloss.Style
-	themeNameStyle            lipgloss.Style
-	whiteStyle                lipgloss.Style
-	footerStyle               lipgloss.Style
-	dropdownPopupStyle        lipgloss.Style
-)
+	Cell         lipgloss.Style
+	SelectedCell lipgloss.Style
 
-func applyThemeStyles(cfg config.Config) {
+	Path          lipgloss.Style
+	SelectedPath  lipgloss.Style
+	PathSeparator lipgloss.Style
+
+	ChildDir         lipgloss.Style
+	SelectedChildDir lipgloss.Style
+
+	LockBadge      lipgloss.Style
+	StatusPositive lipgloss.Style
+	StatusNegative lipgloss.Style
+
+	Title          lipgloss.Style
+	InventoryTitle lipgloss.Style
+	ListHeader     lipgloss.Style
+
+	Item           lipgloss.Style
+	SelectedItem   lipgloss.Style
+	SelectedCursor lipgloss.Style
+
+	Button               lipgloss.Style
+	SelectedButton       lipgloss.Style
+	RescueButton         lipgloss.Style
+	SelectedRescueButton lipgloss.Style
+
+	ErrorTitle    lipgloss.Style
+	ErrorText     lipgloss.Style
+	ThemeName     lipgloss.Style
+	White         lipgloss.Style
+	Footer        lipgloss.Style
+	DropdownPopup lipgloss.Style
+
+	// HeaderArt is the resolved header template: the profile's custom art, or
+	// the built-in default when none is set.
+	HeaderArt string
+}
+
+// BuildStyles resolves a config into a concrete Styles value. It is pure: same
+// config in, same styles out, no globals touched — so it is unit-testable.
+func BuildStyles(cfg config.Config) Styles {
 	theme := config.GetTheme(cfg.Theme)
 	ui := config.MapThemeToUI(theme)
 
+	var s Styles
+
 	if cfg.HeaderArt != nil && strings.TrimSpace(*cfg.HeaderArt) != "" {
-		activeHeaderArt = *cfg.HeaderArt
+		s.HeaderArt = *cfg.HeaderArt
 		log.Printf("Using custom header art from config")
 	} else {
-		activeHeaderArt = headerArt
+		s.HeaderArt = headerArt
 		log.Printf("Using default header art")
 	}
 
-	headerStyle = lipgloss.NewStyle().
+	s.Header = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.HeaderFG)).
 		PaddingBottom(1).
 		Bold(true)
 
-	helpStyle = lipgloss.NewStyle().
+	s.Help = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.HelpFG))
 
-	statusBarStyle = lipgloss.NewStyle().
+	s.StatusBar = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.StatusInfo)).
 		PaddingTop(1)
 
-	onlineStyle = lipgloss.NewStyle().
+	s.Online = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.StatusPositive))
 
-	offlineStyle = lipgloss.NewStyle().
+	s.Offline = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.StatusNegative))
 
 	retroBorder := lipgloss.Border{
@@ -102,62 +121,62 @@ func applyThemeStyles(cfg config.Config) {
 		BottomRight: "┙",
 	}
 
-	cellStyle = lipgloss.NewStyle().
+	s.Cell = lipgloss.NewStyle().
 		Border(retroBorder).
 		BorderForeground(lipgloss.Color(ui.GridBorder)).
 		Bold(true).
 		Padding(0, 1)
 
-	selectedCellStyle = lipgloss.NewStyle().
+	s.SelectedCell = lipgloss.NewStyle().
 		Border(retroBorder).
 		BorderForeground(lipgloss.Color(ui.GridSelBorder)).
 		Foreground(lipgloss.Color(ui.GridSelText)).
 		Bold(true).
 		Padding(0, 1)
 
-	pathStyle = lipgloss.NewStyle().
+	s.Path = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.Path)).
 		Padding(0, 1)
 
-	selectedPathStyle = lipgloss.NewStyle().
+	s.SelectedPath = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.PathSelected)).
 		Underline(true).
 		Padding(0, 1)
 
-	childDirStyle = lipgloss.NewStyle().
+	s.ChildDir = lipgloss.NewStyle().
 		Padding(0, 2).
 		Foreground(lipgloss.Color(ui.HelpFG))
 
-	selectedChildDirStyle = lipgloss.NewStyle().
+	s.SelectedChildDir = lipgloss.NewStyle().
 		Padding(0, 2).
 		Foreground(lipgloss.Color(ui.GridSelText)).
 		Bold(true)
 
-	pathSeparatorStyle = lipgloss.NewStyle().
+	s.PathSeparator = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.PathSeparator)).
 		Padding(0, 1)
 
-	lockBadgeStyle = lipgloss.NewStyle().
+	s.LockBadge = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(theme.Background)).
 		Background(lipgloss.Color(theme.Primary)).
 		Bold(true).
 		Padding(0, 1).
 		MarginLeft(1)
 
-	statusPositiveStyle = lipgloss.NewStyle().
+	s.StatusPositive = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.StatusPositive)).
 		PaddingLeft(1)
 
-	statusNegativeStyle = lipgloss.NewStyle().
+	s.StatusNegative = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.StatusNegative)).
 		PaddingLeft(1)
 
-	titleStyle = lipgloss.NewStyle().
+	s.Title = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.TitleFG)).
 		Bold(true).
 		Padding(0, 1)
 
-	inventoryTitleStyle = lipgloss.NewStyle().
+	s.InventoryTitle = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.TitleFG)).
 		Bold(true).
 		Border(lipgloss.DoubleBorder()).
@@ -165,67 +184,67 @@ func applyThemeStyles(cfg config.Config) {
 		Padding(0, 1).
 		MarginBottom(1)
 
-	listHeaderStyle = lipgloss.NewStyle().
+	s.ListHeader = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.ListHeaderFG)).
 		Underline(true).
 		Padding(0, 1)
 
-	itemStyle = lipgloss.NewStyle().
+	s.Item = lipgloss.NewStyle().
 		Padding(0, 1)
 
-	selectedItemStyle = lipgloss.NewStyle().
+	s.SelectedItem = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.TitleFG)).
 		Padding(0, 1)
 
-	selectedCursorStyle = lipgloss.NewStyle().
+	s.SelectedCursor = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.CursorFG))
 
-	buttonStyle = lipgloss.NewStyle().
+	s.Button = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.ButtonFG)).
 		Background(lipgloss.Color(ui.ButtonBG)).
 		Padding(0, 3).
 		MarginTop(1)
 
-	selectedButtonStyle = lipgloss.NewStyle().
+	s.SelectedButton = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.ButtonSelFG)).
 		Background(lipgloss.Color(ui.ButtonSelBG)).
 		Padding(0, 3).
 		MarginTop(1)
 
-	rescueButtonStyle = lipgloss.NewStyle().
+	s.RescueButton = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.StatusNegative)).
 		Background(lipgloss.Color(ui.ButtonBG)).
 		Padding(0, 3).
 		MarginTop(1)
 
-	selectedRescueButtonStyle = lipgloss.NewStyle().
+	s.SelectedRescueButton = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#FFFFFF")).
 		Background(lipgloss.Color(ui.StatusNegative)).
 		Padding(0, 3).
 		MarginTop(1).
 		Bold(true)
 
-	errorTitleStyle = lipgloss.NewStyle().
+	s.ErrorTitle = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.StatusNegative)).
 		Bold(true)
 
-	errorTextStyle = lipgloss.NewStyle().
+	s.ErrorText = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.Warning))
 
-	themeNameStyle = lipgloss.NewStyle().
+	s.ThemeName = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.TitleFG)).
 		Bold(true)
 
-	whiteStyle = lipgloss.NewStyle().
+	s.White = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#FFFFFF")).
 		Bold(true)
 
-	footerStyle = lipgloss.NewStyle().
+	s.Footer = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.FooterFG)).
 		PaddingTop(3).
 		Align(lipgloss.Center)
 
-	dropdownPopupStyle = lipgloss.NewStyle().
+	s.DropdownPopup = lipgloss.NewStyle().
 		Border(lipgloss.ThickBorder()).
 		BorderForeground(lipgloss.Color(ui.DropdownBorder)).
 		Background(lipgloss.Color(ui.DropdownBG)).
@@ -233,25 +252,27 @@ func applyThemeStyles(cfg config.Config) {
 		Padding(1, 2).
 		Margin(1).
 		Bold(true)
+
+	return s
 }
 
 // renderHeaderArt renders the header with x and Chinese characters in white
-func renderHeaderArt(spinnerView string) string {
+func (s Styles) renderHeaderArt(spinnerView string) string {
 	var formattedArt string
 	placeholder := "SPINNERPLACEHOLDER"
 
 	// Only inject the spinner if the template asks for it
-	if strings.Contains(activeHeaderArt, "%s") {
-		formattedArt = fmt.Sprintf(activeHeaderArt, placeholder)
+	if strings.Contains(s.HeaderArt, "%s") {
+		formattedArt = fmt.Sprintf(s.HeaderArt, placeholder)
 	} else {
-		formattedArt = activeHeaderArt
+		formattedArt = s.HeaderArt
 	}
 
 	lines := strings.Split(formattedArt, "\n")
 
-	// Get the primary color from headerStyle
+	// Get the primary color from the header style
 	primaryStyle := lipgloss.NewStyle().
-		Foreground(headerStyle.GetForeground()).
+		Foreground(s.Header.GetForeground()).
 		Bold(true)
 
 	var styledLines []string
@@ -269,15 +290,15 @@ func renderHeaderArt(spinnerView string) string {
 
 			// Process part before spinner
 			if len(parts) > 0 {
-				styledLine.WriteString(styleLineSegment(parts[0], primaryStyle))
+				styledLine.WriteString(s.styleLineSegment(parts[0], primaryStyle))
 			}
 
 			// Add white-styled spinner
-			styledLine.WriteString(whiteStyle.Render(spinnerView))
+			styledLine.WriteString(s.White.Render(spinnerView))
 
 			// Process part after spinner
 			if len(parts) > 1 {
-				styledLine.WriteString(styleLineSegment(parts[1], primaryStyle))
+				styledLine.WriteString(s.styleLineSegment(parts[1], primaryStyle))
 			}
 
 			styledLines = append(styledLines, styledLine.String())
@@ -285,7 +306,7 @@ func renderHeaderArt(spinnerView string) string {
 		}
 
 		// Regular line without spinner
-		styledLines = append(styledLines, styleLineSegment(line, primaryStyle))
+		styledLines = append(styledLines, s.styleLineSegment(line, primaryStyle))
 	}
 
 	// Apply only padding, not color
@@ -294,46 +315,46 @@ func renderHeaderArt(spinnerView string) string {
 }
 
 // styleLineSegment applies styling to a line segment, with X and Chinese chars in white
-func styleLineSegment(segment string, primaryStyle lipgloss.Style) string {
+func (s Styles) styleLineSegment(segment string, primaryStyle lipgloss.Style) string {
 	var styledLine strings.Builder
 	runes := []rune(segment)
 	for i := 0; i < len(runes); i++ {
 		// Check for 'X'
 		if runes[i] == '✘' {
-			styledLine.WriteString(whiteStyle.Render("✘"))
+			styledLine.WriteString(s.White.Render("✘"))
 			continue
 		}
 
 		// Check for "╱╲"
 		if i+1 < len(runes) && string(runes[i:i+2]) == "╱╲" {
-			styledLine.WriteString(whiteStyle.Render("╱╲"))
+			styledLine.WriteString(s.White.Render("╱╲"))
 			i++ // Skip next char (loop will increment by 1)
 			continue
 		}
 
 		// Check for "◄"
 		if i+1 < len(runes) && runes[i] == '◄' {
-			styledLine.WriteString(whiteStyle.Render("◄"))
+			styledLine.WriteString(s.White.Render("◄"))
 			continue
 		}
 
 		// Check for "►"
 		if i+1 < len(runes) && runes[i] == '►' {
-			styledLine.WriteString(whiteStyle.Render("►"))
+			styledLine.WriteString(s.White.Render("►"))
 			continue
 		}
 
 		// Check for "◄═══════════════════════════════►"
 		pattern := "◄═══════════════════════════════►"
 		if i+len([]rune(pattern))-1 < len(runes) && string(runes[i:i+len([]rune(pattern))]) == pattern {
-			styledLine.WriteString(whiteStyle.Render(pattern))
+			styledLine.WriteString(s.White.Render(pattern))
 			i += len([]rune(pattern)) - 1 // Skip the matched runes
 			continue
 		}
 
 		// Check for Chinese characters "啸龙志"
 		if i+2 < len(runes) && string(runes[i:i+3]) == "啸龙志" {
-			styledLine.WriteString(whiteStyle.Render("啸龙志"))
+			styledLine.WriteString(s.White.Render("啸龙志"))
 			i += 2 // Skip next 2 chars (loop will increment by 1)
 			continue
 		}

@@ -33,7 +33,7 @@ func (m Model) renderGrid() string {
 	if len(m.grid) > 0 {
 		for c := 0; c < len(m.grid[0]); c++ {
 			headerLabel := fmt.Sprintf("[%s]", columnToLetter(c))
-			styledLabel := titleStyle.Render(headerLabel)
+			styledLabel := m.styles.Title.Render(headerLabel)
 
 			// Let lipgloss handle the centering of the styled text.
 			headerContentWidth := totalCellWidth - 2 // for ┌ and ┐
@@ -57,9 +57,9 @@ func (m Model) renderGrid() string {
 		for c, cell := range row {
 			var style lipgloss.Style
 			if m.mode == gridMode && r == m.cursorRow && c == m.cursorCol {
-				style = selectedCellStyle
+				style = m.styles.SelectedCell
 			} else {
-				style = cellStyle
+				style = m.styles.Cell
 			}
 
 			truncatedContent := truncateText(cell, maxContentWidth)
@@ -121,7 +121,7 @@ func (m Model) renderProfileCounter() string {
 		x = 9
 	}
 	counter := fmt.Sprintf("< %d / %d >", x, y)
-	return titleStyle.Render(counter)
+	return m.styles.Title.Render(counter)
 }
 
 func (m Model) renderProfileBar() string {
@@ -143,14 +143,14 @@ func (m Model) renderProfileBar() string {
 	osArch := fmt.Sprintf("(%s/%s)", runtime.GOOS, runtime.GOARCH)
 
 	// Format: HOST: user@hostname (linux/amd64) |
-	hostLabel := "HOST: " + username + "@" + hostname + " " + osArch + helpStyle.Render(" | ")
+	hostLabel := "HOST: " + username + "@" + hostname + " " + osArch + m.styles.Help.Render(" | ")
 
 	profileLabel := lipgloss.NewStyle().Render("PROFILE: ")
-	segments := []string{hostLabel + profileLabel + m.activeProfileName() + helpStyle.Render(" | ")}
+	segments := []string{hostLabel + profileLabel + m.activeProfileName() + m.styles.Help.Render(" | ")}
 
 	if m.pivotProfileName != "" {
 		label := fmt.Sprintf("🔒 %s", m.pivotProfileName)
-		segments = append(segments, lockBadgeStyle.Render(label))
+		segments = append(segments, m.styles.LockBadge.Render(label))
 	}
 
 	if m.GlassrootMode {
@@ -160,9 +160,9 @@ func (m Model) renderProfileBar() string {
 	}
 
 	if m.profileStatusMessage != "" {
-		style := statusNegativeStyle
+		style := m.styles.StatusNegative
 		if m.profileStatusPositive {
-			style = statusPositiveStyle
+			style = m.styles.StatusPositive
 		}
 		segments = append(segments, style.Render(m.profileStatusMessage))
 	}

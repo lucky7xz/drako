@@ -38,7 +38,7 @@ func (m Model) View() string {
 
 	header := ""
 	if layout.ShowHeader {
-		header = renderHeaderArt(m.spinner.View())
+		header = m.styles.renderHeaderArt(m.spinner.View())
 	}
 	counter := m.renderProfileCounter()
 	grid := m.renderGrid()
@@ -53,7 +53,7 @@ func (m Model) View() string {
 	default:
 		helpText = "Grid Mode | Enter: Select, e: Explain, Tab: Path, r: Start-Lock, i: Inventory"
 	}
-	help := helpStyle.Render(helpText)
+	help := m.styles.Help.Render(helpText)
 
 	footer := m.renderCombinedFooter(help)
 
@@ -83,8 +83,8 @@ func (m Model) renderCombinedFooter(helpRendered string) string {
 	netText := netLabel + m.traffic
 	statusText := fmt.Sprintf("STATUS: %s", m.onlineStatus)
 	themeText := "THEME: "
-	themeName := themeNameStyle.Render(m.Config.Theme)
-	separator := helpStyle.Render(" | ")
+	themeName := m.styles.ThemeName.Render(m.Config.Theme)
+	separator := m.styles.Help.Render(" | ")
 
 	networkStatusBar := lipgloss.NewStyle().PaddingTop(1).Render(
 		lipgloss.JoinHorizontal(lipgloss.Left,
@@ -97,8 +97,8 @@ func (m Model) renderCombinedFooter(helpRendered string) string {
 		),
 	)
 	profileBar := m.renderProfileBar()
-	pathBar := m.path.RenderPathBar(m.mode == pathMode)
-	childDirs := m.path.RenderChildDirs(m.mode)
+	pathBar := m.path.RenderPathBar(m.mode == pathMode, m.styles)
+	childDirs := m.path.RenderChildDirs(m.mode, m.styles)
 
 	items := []string{}
 	if helpRendered != "" {
@@ -130,7 +130,7 @@ func truncateText(s string, maxLength int) string {
 }
 
 func (m Model) renderFooter() string {
-	return footerStyle.Render("[ github.com/lucky7xz | {chronyx}.xyz ]")
+	return m.styles.Footer.Render("[ github.com/lucky7xz | {chronyx}.xyz ]")
 }
 
 // --- Minimum size helpers (computed from grid size and min_scale) ---

@@ -172,7 +172,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case networkStatusMsg:
 		if msg.err != nil {
-			m.traffic = themeNameStyle.Render("error")
+			m.traffic = m.styles.ThemeName.Render("error")
 		} else {
 			m.trafficMeter.Sample(msg.counters.BytesSent, msg.counters.BytesRecv, msg.t)
 
@@ -180,11 +180,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			sentBps, recvBps, ok := m.trafficMeter.Rates()
 			switch {
 			case m.trafficMeter.Samples() <= 1:
-				m.traffic = themeNameStyle.Render("calculating...")
+				m.traffic = m.styles.ThemeName.Render("calculating...")
 			case !ok:
-				m.traffic = themeNameStyle.Render("---")
+				m.traffic = m.styles.ThemeName.Render("---")
 			default:
-				m.traffic = themeNameStyle.Render(fmt.Sprintf("↓ %s ↑ %s", core.FormatTraffic(recvBps), core.FormatTraffic(sentBps)))
+				m.traffic = m.styles.ThemeName.Render(fmt.Sprintf("↓ %s ↑ %s", core.FormatTraffic(recvBps), core.FormatTraffic(sentBps)))
 				if sentBps > 2*1024 || recvBps > 2*1024 {
 					isActive = true
 				}
@@ -192,12 +192,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			if msg.online {
 				if isActive {
-					m.onlineStatus = onlineStyle.Render("online (active)")
+					m.onlineStatus = m.styles.Online.Render("online (active)")
 				} else {
-					m.onlineStatus = onlineStyle.Render("online (idle)")
+					m.onlineStatus = m.styles.Online.Render("online (idle)")
 				}
 			} else {
-				m.onlineStatus = offlineStyle.Render("offline")
+				m.onlineStatus = m.styles.Offline.Render("offline")
 			}
 		}
 		return m, networkTick()

@@ -10,13 +10,13 @@ import (
 
 // renderSizeOverlay shows a centered panel with current and required dimensions
 func (m Model) renderSizeOverlay(reqW, reqH int) string {
-	title := titleStyle.Render("Terminal too small")
+	title := m.styles.Title.Render("Terminal too small")
 	minScalePct := 60
-	info := helpStyle.Render(
+	info := m.styles.Help.Render(
 		fmt.Sprintf("Current: %dx%d  |  Required (at %d%%): %dx%d",
 			m.termWidth, m.termHeight, minScalePct, reqW, reqH),
 	)
-	hint := helpStyle.Render("Hint: maximize the window or lower grid size (x,y)")
+	hint := m.styles.Help.Render("Hint: maximize the window or lower grid size (x,y)")
 
 	box := lipgloss.JoinVertical(
 		lipgloss.Left,
@@ -67,13 +67,13 @@ func (m Model) viewDropdownMode() string {
 	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config)
 	header := ""
 	if layout.ShowHeader {
-		header = renderHeaderArt(m.spinner.View())
+		header = m.styles.renderHeaderArt(m.spinner.View())
 	}
 	grid := m.renderGrid()
 	mainContent := lipgloss.JoinVertical(lipgloss.Center, header, grid)
 
 	helpText := "Dropdown Mode | ↑/↓/ws: Select, Enter: Execute, Esc/q: Cancel"
-	help := helpStyle.Render(helpText)
+	help := m.styles.Help.Render(helpText)
 
 	var footer string
 	if layout.ShowFooter {
@@ -105,11 +105,11 @@ func (m Model) viewDropdownMode() string {
 
 func (m Model) renderDropdownPopup() string {
 	// Ensure every segment renders with the popup background to avoid black gaps
-	bg := dropdownPopupStyle.GetBackground()
+	bg := m.styles.DropdownPopup.GetBackground()
 	bgFill := lipgloss.NewStyle().Background(bg)
-	cursorSel := selectedCursorStyle.Background(bg)
-	textNorm := itemStyle.Background(bg)
-	textSel := selectedItemStyle.Background(bg)
+	cursorSel := m.styles.SelectedCursor.Background(bg)
+	textNorm := m.styles.Item.Background(bg)
+	textSel := m.styles.SelectedItem.Background(bg)
 	gap := lipgloss.NewStyle().Background(bg)
 
 	// Build lines, then right-pad them into a solid block.
@@ -124,7 +124,7 @@ func (m Model) renderDropdownPopup() string {
 	lines := padLinesToWidth(raw, bgFill)
 
 	content := lipgloss.JoinVertical(lipgloss.Left, lines...)
-	return dropdownPopupStyle.Render(content)
+	return m.styles.DropdownPopup.Render(content)
 }
 
 func (m Model) viewLockedMode() string {
@@ -158,11 +158,11 @@ func (m Model) viewLockedMode() string {
 	bar := "[" + strings.Repeat("█", filled) + strings.Repeat("░", barWidth-filled) + "]"
 
 	lockIcon := "🔒"
-	title := titleStyle.Render("Session Locked")
-	timeInfo := helpStyle.Render(fmt.Sprintf("Idle for %d minute(s)", elapsedMins))
-	instructions := helpStyle.Render("Pump ← → (A/D or H/L) to fill the slider and unlock")
-	progressLabel := helpStyle.Render(fmt.Sprintf("%d / %d pumps", m.lockProgress, goal))
-	quitHint := helpStyle.Render("Press Ctrl+C to quit")
+	title := m.styles.Title.Render("Session Locked")
+	timeInfo := m.styles.Help.Render(fmt.Sprintf("Idle for %d minute(s)", elapsedMins))
+	instructions := m.styles.Help.Render("Pump ← → (A/D or H/L) to fill the slider and unlock")
+	progressLabel := m.styles.Help.Render(fmt.Sprintf("%d / %d pumps", m.lockProgress, goal))
+	quitHint := m.styles.Help.Render("Press Ctrl+C to quit")
 
 	content := lipgloss.JoinVertical(
 		lipgloss.Center,
@@ -212,15 +212,15 @@ func (m Model) viewInfoMode() string {
 	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config)
 	header := ""
 	if layout.ShowHeader {
-		header = renderHeaderArt(m.spinner.View())
+		header = m.styles.renderHeaderArt(m.spinner.View())
 	}
 
 	// Build info lines with same background rules to avoid black gaps
-	bg := dropdownPopupStyle.GetBackground()
+	bg := m.styles.DropdownPopup.GetBackground()
 	bgFill := lipgloss.NewStyle().Background(bg)
-	titleStyleLocal := titleStyle.Background(bg)
-	labelStyle := helpStyle.Background(bg)
-	valueStyle := itemStyle.Background(bg)
+	titleStyleLocal := m.styles.Title.Background(bg)
+	labelStyle := m.styles.Help.Background(bg)
+	valueStyle := m.styles.Item.Background(bg)
 
 	// Wrap width for info popup content
 	wrapWidth := m.termWidth - 10
@@ -270,11 +270,11 @@ func (m Model) viewInfoMode() string {
 	}
 
 	raw = append(raw, "")
-	raw = append(raw, helpStyle.Render("Press y to copy command/details to clipboard • any key to close"))
+	raw = append(raw, m.styles.Help.Render("Press y to copy command/details to clipboard • any key to close"))
 
 	lines := padLinesToWidth(raw, bgFill)
 
-	popup := dropdownPopupStyle.Render(lipgloss.JoinVertical(lipgloss.Left, lines...))
+	popup := m.styles.DropdownPopup.Render(lipgloss.JoinVertical(lipgloss.Left, lines...))
 	content := lipgloss.JoinVertical(lipgloss.Center, header, popup)
 	return appStyle.Render(lipgloss.Place(m.termWidth, m.termHeight, lipgloss.Center, lipgloss.Center, content))
 }

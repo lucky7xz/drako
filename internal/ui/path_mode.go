@@ -290,43 +290,43 @@ func (pm *PathModel) UpdateChildMode(msg tea.KeyMsg, cfg config.Config) (navMode
 	return childMode, nil
 }
 
-func (pm *PathModel) RenderPathBar(active bool) string {
+func (pm *PathModel) RenderPathBar(active bool, styles Styles) string {
 	var renderedParts []string
 	for i, component := range pm.PathComponents {
 		var style lipgloss.Style
 		if active && i == pm.SelectedPathIndex {
-			style = selectedPathStyle
+			style = styles.SelectedPath
 		} else {
-			style = pathStyle
+			style = styles.Path
 		}
 		renderedParts = append(renderedParts, style.Render(component))
 	}
 
-	separator := pathSeparatorStyle.Render("/")
-	return statusBarStyle.Render(lipgloss.JoinHorizontal(lipgloss.Top, strings.Join(renderedParts, separator)))
+	separator := styles.PathSeparator.Render("/")
+	return styles.StatusBar.Render(lipgloss.JoinHorizontal(lipgloss.Top, strings.Join(renderedParts, separator)))
 }
 
-func (pm *PathModel) RenderChildDirs(mode navMode) string {
+func (pm *PathModel) RenderChildDirs(mode navMode, styles Styles) string {
 	if mode != childMode && mode != pathMode {
 		return ""
 	}
 	var content string
 
 	if pm.ChildDirsError != nil {
-		content = offlineStyle.Render("  [cannot read directory: permission denied or path invalid]")
+		content = styles.Offline.Render("  [cannot read directory: permission denied or path invalid]")
 	} else if len(pm.ChildDirs) == 0 {
 		msg := "  [no sub-directories]"
 		if pm.Filter != "" {
 			msg = "  [no matches]"
 		}
-		content = helpStyle.Render(msg)
+		content = styles.Help.Render(msg)
 	} else {
 		var rows []string
 		for i, dir := range pm.ChildDirs {
 			if mode == childMode && i == pm.SelectedChildIndex {
-				rows = append(rows, selectedChildDirStyle.Render("› "+dir))
+				rows = append(rows, styles.SelectedChildDir.Render("› "+dir))
 			} else {
-				rows = append(rows, childDirStyle.Render("  "+dir))
+				rows = append(rows, styles.ChildDir.Render("  "+dir))
 			}
 		}
 
