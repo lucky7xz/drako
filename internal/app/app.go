@@ -16,8 +16,10 @@ import (
 
 // Run wires everything together. It keeps the program running so that after a command
 // finishes we jump back into the TUI without losing state or the screen layout.
+// It returns the process exit code; main is the only caller of os.Exit, so
+// deferred cleanups here always run before the process ends.
 
-func Run() {
+func Run() int {
 	glassrootMode := false
 	isTuiMode := false
 
@@ -38,7 +40,7 @@ func Run() {
 		if cli.HandleCLI(os.Args) {
 			// HandleCLI returns true/false to indicate success.
 			// Either way, we exit here. No TUI.
-			return
+			return 0
 		}
 	}
 
@@ -49,11 +51,11 @@ func Run() {
 	configDir, err := paths.ConfigDir()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		fmt.Fprintf(os.Stderr, "could not create config dir: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 	// =======================================
 	// Logging setup
@@ -67,7 +69,7 @@ func Run() {
 		// NOTE: cli.go treats this as a non-fatal warning and continues;
 		// reconcile (warn vs exit) in a follow-up.
 		fmt.Fprintf(os.Stderr, "could not open log file: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 	defer f.Close()
 	log.SetOutput(f)
@@ -79,23 +81,28 @@ func Run() {
 		// We initialize with the *current* directory which might have changed
 		// from manual Chdir or from internal logic
 
-		program := tea.NewProgram(ui.InitialModel(glassrootMode))
+		initial := ui.InitialModel(glassrootMode)
+		if initial.Quitting {
+			// e.g. glassroot with a broken profile: fail before the TUI starts
+			return initial.ExitCode
+		}
+		program := tea.NewProgram(initial)
 
 		result, err := program.Run()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Alas, there's been an error: %v\n", err)
-			os.Exit(1)
+			return 1
 		}
 
 		// Cast result to ui.Model
 		state, ok := result.(ui.Model)
 		if !ok {
 			// Should not happen, but safe exit
-			return
+			return 0
 		}
 
 		if state.Quitting {
-			return
+			return state.ExitCode
 		}
 
 		if state.Selected != "" {
@@ -104,7 +111,7 @@ func Run() {
 			switch {
 			case strings.HasPrefix(state.Selected, "drako purge"):
 				if runInternalPurge(state.Selected) {
-					return // successful purge ends the session
+					return 0 // successful purge ends the session
 				}
 			case strings.HasPrefix(state.Selected, "drako open"):
 				cli.HandleOpenCommand(state.Selected)

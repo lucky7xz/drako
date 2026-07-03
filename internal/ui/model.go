@@ -78,6 +78,7 @@ type profileState struct {
 type Model struct {
 	Selected      string
 	Quitting      bool
+	ExitCode      int // process exit code the host should use once the TUI is down
 	GlassrootMode bool
 	Config        config.Config // effective config (read by app.go after quit)
 
@@ -264,9 +265,9 @@ func InitialModel(glassrootMode bool) Model {
 	bundle := config.LoadConfig(nil)
 
 	if glassrootMode && len(bundle.Broken) > 0 {
-		// In Glassroot mode, we do not expose TOML contents or enter Rescue Mode.
-		// If any profile is broken, we exit immediately and silently.
-		os.Exit(1)
+		// Glassroot never exposes TOML contents or Rescue Mode. Hand the host
+		// a model that is already done; app.Run exits before starting the TUI.
+		return Model{Quitting: true, ExitCode: 1, GlassrootMode: true}
 	}
 
 	s := newSpinner()

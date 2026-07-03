@@ -62,7 +62,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.applyBundle(bundle)
 		if len(bundle.Broken) > 0 {
 			if m.GlassrootMode {
-				os.Exit(1)
+				return m.failGlassroot()
 			}
 			m.profile.pendingErrors = append(m.profile.pendingErrors, bundle.Broken...)
 			m.profile.errorQueueActive = true
@@ -79,7 +79,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.applyBundle(bundle)
 		if len(bundle.Broken) > 0 {
 			if m.GlassrootMode {
-				os.Exit(1)
+				return m.failGlassroot()
 			}
 			m.profile.pendingErrors = append(m.profile.pendingErrors, bundle.Broken...)
 			m.profile.errorQueueActive = true
@@ -118,14 +118,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateLockedMode(msg)
 		}
 
-		// 1. Centralized Glassroot "Gatekeeper"
-		// Intercept restricted actions (Lock, Inventory, Path) early.
-		if m.GlassrootMode {
-			if IsLock(m.Config.Keys, msg) ||
-				IsInventory(m.Config.Keys, msg) ||
-				IsPathGridMode(m.Config.Keys, msg) {
-				return m, nil
-			}
+		// Glassroot gatekeeper: restricted keys are no-ops. The full policy
+		// lives in glassroot.go.
+		if m.glassrootBlocksKey(msg) {
+			return m, nil
 		}
 
 		if IsLock(m.Config.Keys, msg) {
@@ -317,13 +313,8 @@ func (m Model) updateInfoMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 	if m.profile.errorQueueActive {
 		var cmds []tea.Cmd
-		if key == "y" {
-			if m.GlassrootMode {
-				// Block copy in glassroot mode
-				// Fallthrough effectively, but prevent copy command
-			} else if m.activeDetail != nil {
-				cmds = append(cmds, copyToClipboardCmd(m.activeDetail.Value))
-			}
+		if key == "y" && m.allowCopy() && m.activeDetail != nil {
+			cmds = append(cmds, copyToClipboardCmd(m.activeDetail.Value))
 		}
 		// Always delegate to presentNextBrokenProfile to handle queue exhaustion and Rescue Trigger
 		m = m.presentNextBrokenProfile()
@@ -331,7 +322,7 @@ func (m Model) updateInfoMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 	switch key {
 	case "y":
-		if m.GlassrootMode {
+		if !m.allowCopy() {
 			return m, nil
 		}
 		if m.activeDetail != nil {

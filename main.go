@@ -1,9 +1,11 @@
 package main
 
 import (
+	"os"
+
 	"github.com/lucky7xz/drako/internal/app"
 )
 
 func main() {
-	app.Run()
+	os.Exit(app.Run())
 }
