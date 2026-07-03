@@ -94,7 +94,9 @@ func (c *GitCloner) CloneRepo(url, destDir string) error {
 // HTTPDownloader implements FileDownloader using http package
 type HTTPDownloader struct{}
 
-// DownloadFile downloads a file from URL to destPath
+// DownloadFile downloads a file from URL to dstPath. On failure dstPath is
+// removed, so a partial download never survives. The caller stages dstPath
+// somewhere temporary and validates before anything reaches the inventory.
 func (d *HTTPDownloader) DownloadFile(sourceURL, dstPath string) error {
 	fmt.Printf("Downloading from %s...\n", sourceURL)
 
@@ -123,25 +125,20 @@ func (d *HTTPDownloader) DownloadFile(sourceURL, dstPath string) error {
 		return fmt.Errorf("file too large (%d bytes, max %d bytes)", resp.ContentLength, profileMaxSize)
 	}
 
-	// Create temporary file first
-	tempPath := dstPath + ".tmp"
-	tempFile, err := os.Create(tempPath)
+	out, err := os.Create(dstPath)
 	if err != nil {
-		return fmt.Errorf("failed to create temp file: %w", err)
+		return fmt.Errorf("failed to create file: %w", err)
 	}
-	// TODO: Fix bug - allow renaming .tmp file to final destination instead of deleting it
-	// TODO: Check if http.Client is safe and doesn't follow redirects to local files
 
-	defer func() {
-		tempFile.Close()
-		os.Remove(tempPath)
-	}()
-
-	written, err := io.CopyN(tempFile, resp.Body, profileMaxSize+1)
+	// Copy limit+1 so an oversized body is detected rather than truncated.
+	written, err := io.CopyN(out, resp.Body, profileMaxSize+1)
+	out.Close()
 	if err != nil && err != io.EOF {
+		os.Remove(dstPath)
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 	if written > profileMaxSize {
+		os.Remove(dstPath)
 		return fmt.Errorf("file too large (>%d bytes). This is not a valid profile", profileMaxSize)
 	}
 	return nil
