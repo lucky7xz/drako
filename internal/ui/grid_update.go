@@ -19,9 +19,9 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	// Any non-numeric key cancels a navigation sequence in progress.
-	if m.navigationTimer != nil {
-		m.navigationTimer.Stop()
-		m.navigationTimer = nil
+	if m.gridNav.timer != nil {
+		m.gridNav.timer.Stop()
+		m.gridNav.timer = nil
 	}
 
 	switch {
@@ -33,7 +33,7 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// ====================
 	case IsInventory(m.Config.Keys, msg):
 		m.mode = inventoryMode
-		m.inventory = InitInventoryModel(m.configDir)
+		m.inventory = InitInventoryModel(m.profile.configDir)
 		return m, nil
 
 	case IsPathGridMode(m.Config.Keys, msg):
@@ -41,15 +41,15 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// ====================
 
 	case IsUp(m.Config.Keys, msg):
-		m.moveCursor(-1, 0)
+		m.gridNav.moveCursor(-1, 0)
 	case IsDown(m.Config.Keys, msg):
-		m.moveCursor(1, 0)
+		m.gridNav.moveCursor(1, 0)
 	case IsLeft(m.Config.Keys, msg):
-		m.moveCursor(0, -1)
+		m.gridNav.moveCursor(0, -1)
 	case IsRight(m.Config.Keys, msg):
-		m.moveCursor(0, 1)
+		m.gridNav.moveCursor(0, 1)
 	case IsExplain(m.Config.Keys, msg):
-		selectedChoice := m.grid[m.cursorRow][m.cursorCol]
+		selectedChoice := m.gridNav.grid[m.gridNav.cursorRow][m.gridNav.cursorCol]
 		if strings.TrimSpace(selectedChoice) == "" {
 			return m, nil
 		}
@@ -81,7 +81,7 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.mode = infoMode
 		return m, nil
 	case IsConfirm(m.Config.Keys, msg):
-		selectedChoice := m.grid[m.cursorRow][m.cursorCol]
+		selectedChoice := m.gridNav.grid[m.gridNav.cursorRow][m.gridNav.cursorCol]
 
 		// Special handling for Exit Rescue Mode command
 		if selectedChoice == "Exit Rescue Mode" {
@@ -100,10 +100,10 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 					if len(cmd.Items) > 0 {
 						// Open dropdown menu
 						m.mode = dropdownMode
-						m.dropdownRow = m.cursorRow
-						m.dropdownCol = m.cursorCol
-						m.dropdownItems = cmd.Items
-						m.dropdownSelectedIdx = 0
+						m.dropdown.row = m.gridNav.cursorRow
+						m.dropdown.col = m.gridNav.cursorCol
+						m.dropdown.items = cmd.Items
+						m.dropdown.selectedIdx = 0
 						return m, nil
 					}
 					break
@@ -123,41 +123,41 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 // live selects a row within the chosen column. The timer expiry
 // (navTimeoutMsg) ends the sequence elsewhere.
 func (m Model) quickNav(targetIndex int) (tea.Model, tea.Cmd) {
-	if m.navigationTimer != nil {
+	if m.gridNav.timer != nil {
 		// Second press: choose a row within the already-selected column.
-		m.navigationTimer.Stop()
-		m.navigationTimer = nil
-		lastRow := core.FindLastPopulatedRow(m.grid, m.cursorCol)
-		m.cursorRow = min(targetIndex, lastRow)
+		m.gridNav.timer.Stop()
+		m.gridNav.timer = nil
+		lastRow := core.FindLastPopulatedRow(m.gridNav.grid, m.gridNav.cursorCol)
+		m.gridNav.cursorRow = min(targetIndex, lastRow)
 		return m, nil
 	}
 
 	// First press: choose a column, parking on its first populated row.
-	targetCol := min(targetIndex, core.FindLastPopulatedCol(m.grid))
+	targetCol := min(targetIndex, core.FindLastPopulatedCol(m.gridNav.grid))
 	if targetCol < 0 {
 		return m, nil
 	}
-	m.cursorCol = targetCol
-	m.cursorRow = core.FindFirstPopulatedRow(m.grid, targetCol)
-	m.navigationTimer = time.NewTimer(500 * time.Millisecond)
+	m.gridNav.cursorCol = targetCol
+	m.gridNav.cursorRow = core.FindFirstPopulatedRow(m.gridNav.grid, targetCol)
+	m.gridNav.timer = time.NewTimer(500 * time.Millisecond)
 	return m, func() tea.Msg {
-		<-m.navigationTimer.C
+		<-m.gridNav.timer.C
 		return navTimeoutMsg{}
 	}
 }
 
-func (m *Model) moveCursor(rowDir, colDir int) {
+func (g *gridNav) moveCursor(rowDir, colDir int) {
 	bestRow, bestCol := -1, -1
 	minDist := math.MaxFloat64
 
-	for r, row := range m.grid {
+	for r, row := range g.grid {
 		for c, val := range row {
-			if val == "" || (r == m.cursorRow && c == m.cursorCol) {
+			if val == "" || (r == g.cursorRow && c == g.cursorCol) {
 				continue
 			}
 
-			rowDiff := r - m.cursorRow
-			colDiff := c - m.cursorCol
+			rowDiff := r - g.cursorRow
+			colDiff := c - g.cursorCol
 			isCorrectDirection := false
 			if rowDir > 0 && rowDiff > 0 {
 				isCorrectDirection = true
@@ -183,7 +183,7 @@ func (m *Model) moveCursor(rowDir, colDir int) {
 	}
 
 	if bestRow != -1 {
-		m.cursorRow = bestRow
-		m.cursorCol = bestCol
+		g.cursorRow = bestRow
+		g.cursorCol = bestCol
 	}
 }

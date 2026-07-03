@@ -21,88 +21,113 @@ const (
 	defaultLockPumpGoal       = 6
 )
 
-type Model struct {
-	grid        [][]string
-	cursorRow   int
-	cursorCol   int
-	termWidth   int
-	termHeight  int
-	Selected    string
-	Quitting    bool
-	mode        navMode
-	spinner     spinnerModel
-	inputBuffer string
+// gridNav is the command grid plus the cursor moving over it, including the
+// quicknav two-step (column-then-row) jump timer.
+type gridNav struct {
+	grid      [][]string
+	cursorRow int
+	cursorCol int
+	timer     *time.Timer
+}
 
-	styles Styles
+// dropdownState is an open dropdown: the grid cell that owns it, its items,
+// and the current selection.
+type dropdownState struct {
+	row, col    int
+	selectedIdx int
+	items       []config.CommandItem
+}
 
-	GlassrootMode bool
+// lockState is the idle auto-lock plus the pump-to-unlock slider.
+type lockState struct {
+	lastActivity  time.Time
+	timeoutMins   int
+	modeBefore    navMode
+	progress      int
+	pumpGoal      int
+	lastDirection int
+}
 
-	path PathModel
+// netStatus is the rendered online/traffic status lines and the meter that
+// feeds them.
+type netStatus struct {
+	online  string
+	traffic string
+	meter   core.TrafficMeter
+}
 
-	onlineStatus string
-	traffic      string
-	trafficMeter core.TrafficMeter
-
-	baseConfig            config.Config
-	Config                config.Config
-	profiles              []config.ProfileInfo
-	activeProfileIndex    int
-	configDir             string
-	pivotProfileName      string
-	profileLocked         bool
-	profileStatusMessage  string
-	profileStatusPositive bool
-
+// profileState is the profile lifecycle: the discovered profiles, the active
+// one, pivot pinning, the transient status message, and the broken-profile
+// error queue.
+type profileState struct {
+	base               config.Config
+	profiles           []config.ProfileInfo
+	activeIndex        int
+	configDir          string
+	pivotName          string
+	locked             bool
+	statusMessage      string
+	statusPositive     bool
 	nextTimerID        int
 	statusClearTimerID int
+	pendingErrors      []config.ProfileParseError
+	errorQueueActive   bool
+	acknowledged       map[string]bool
+}
 
-	navigationTimer *time.Timer
+type Model struct {
+	Selected      string
+	Quitting      bool
+	GlassrootMode bool
+	Config        config.Config // effective config (read by app.go after quit)
 
+	mode         navMode
+	previousMode navMode
+	termWidth    int
+	termHeight   int
+
+	styles  Styles
+	spinner spinnerModel
+
+	gridNav   gridNav
+	dropdown  dropdownState
+	lock      lockState
+	net       netStatus
+	profile   profileState
+	path      PathModel
 	inventory inventoryModel
 
-	dropdownRow         int
-	dropdownCol         int
-	dropdownSelectedIdx int
-	dropdownItems       []config.CommandItem
-
-	previousMode navMode
 	activeDetail *DetailState // Single source of truth for detail view
+}
 
-	pendingProfileErrors    []config.ProfileParseError
-	profileErrorQueueActive bool
-
-	lastActivityTime  time.Time
-	lockTimeoutMins   int
-	modeBeforeLock    navMode
-	lockProgress      int
-	lockPumpGoal      int
-	lockLastDirection int
-
-	acknowledgedErrors map[string]bool
+// clampCursor pulls the cursor back inside the grid bounds after the grid
+// changes shape (e.g. a profile switch to a smaller layout).
+func (g *gridNav) clampCursor() {
+	if len(g.grid) == 0 {
+		return
+	}
+	if g.cursorRow >= len(g.grid) {
+		g.cursorRow = len(g.grid) - 1
+	}
+	if g.cursorRow < 0 {
+		g.cursorRow = 0
+	}
+	if len(g.grid[0]) > 0 {
+		if g.cursorCol >= len(g.grid[0]) {
+			g.cursorCol = len(g.grid[0]) - 1
+		}
+		if g.cursorCol < 0 {
+			g.cursorCol = 0
+		}
+	}
 }
 
 func (m *Model) applyConfig(cfg config.Config) {
 	m.styles = BuildStyles(cfg)
 
-	m.grid = config.BuildGrid(cfg)
-	if len(m.grid) > 0 {
-		if m.cursorRow >= len(m.grid) {
-			m.cursorRow = len(m.grid) - 1
-		}
-		if m.cursorRow < 0 {
-			m.cursorRow = 0
-		}
-		if len(m.grid[0]) > 0 {
-			if m.cursorCol >= len(m.grid[0]) {
-				m.cursorCol = len(m.grid[0]) - 1
-			}
-			if m.cursorCol < 0 {
-				m.cursorCol = 0
-			}
-		}
-	}
+	m.gridNav.grid = config.BuildGrid(cfg)
+	m.gridNav.clampCursor()
 	m.Config = cfg
-	m.inputBuffer = ""
 	if m.spinner.frames == nil {
 		m.spinner = newSpinner()
 	}
@@ -110,49 +135,49 @@ func (m *Model) applyConfig(cfg config.Config) {
 
 	// Initialize lock timeout (default minutes if not set)
 	if cfg.LockTimeoutMinutes != nil && *cfg.LockTimeoutMinutes > 0 {
-		m.lockTimeoutMins = *cfg.LockTimeoutMinutes
+		m.lock.timeoutMins = *cfg.LockTimeoutMinutes
 	} else {
-		m.lockTimeoutMins = defaultLockTimeoutMinutes
+		m.lock.timeoutMins = defaultLockTimeoutMinutes
 	}
 
-	if m.lockPumpGoal <= 0 {
-		m.lockPumpGoal = defaultLockPumpGoal
+	if m.lock.pumpGoal <= 0 {
+		m.lock.pumpGoal = defaultLockPumpGoal
 	}
 }
 
 func (m *Model) applyBundle(bundle config.ConfigBundle) {
-	m.baseConfig = bundle.Base
+	m.profile.base = bundle.Base
 	profiles := bundle.Profiles
 	if len(profiles) == 0 {
 		profiles = []config.ProfileInfo{{Name: "Core"}}
 	}
-	m.profiles = profiles
+	m.profile.profiles = profiles
 	if bundle.ActiveIndex < 0 || bundle.ActiveIndex >= len(profiles) {
-		m.activeProfileIndex = 0
+		m.profile.activeIndex = 0
 	} else {
-		m.activeProfileIndex = bundle.ActiveIndex
+		m.profile.activeIndex = bundle.ActiveIndex
 	}
 	m.applyConfig(bundle.Config)
-	m.configDir = bundle.ConfigDir
-	m.pivotProfileName = bundle.LockedName
-	m.profileLocked = strings.TrimSpace(bundle.LockedName) != ""
+	m.profile.configDir = bundle.ConfigDir
+	m.profile.pivotName = bundle.LockedName
+	m.profile.locked = strings.TrimSpace(bundle.LockedName) != ""
 }
 
 // presentNextBrokenProfile pops the next pending broken profile error and configures infoMode to display it.
 func (m Model) presentNextBrokenProfile() Model {
 	// Filter out already acknowledged errors
-	for len(m.pendingProfileErrors) > 0 {
-		e := m.pendingProfileErrors[0]
-		if m.acknowledgedErrors[e.Path] { // Track by Path to be specific
-			m.pendingProfileErrors = m.pendingProfileErrors[1:]
+	for len(m.profile.pendingErrors) > 0 {
+		e := m.profile.pendingErrors[0]
+		if m.profile.acknowledged[e.Path] { // Track by Path to be specific
+			m.profile.pendingErrors = m.profile.pendingErrors[1:]
 			continue
 		}
 		break
 	}
 
-	if len(m.pendingProfileErrors) == 0 {
+	if len(m.profile.pendingErrors) == 0 {
 		// Queue exhausted.
-		if m.profileErrorQueueActive {
+		if m.profile.errorQueueActive {
 			// Trigger Rescue Mode if we just finished processing a queue
 			rescueCfg := config.RescueConfig()
 			rescueCfg.ApplyDefaults()
@@ -162,15 +187,15 @@ func (m Model) presentNextBrokenProfile() Model {
 		// Safe reset to Grid Mode
 		m.mode = gridMode
 		m.activeDetail = nil
-		m.profileErrorQueueActive = false
+		m.profile.errorQueueActive = false
 		return m
 	}
 
-	e := m.pendingProfileErrors[0]
-	m.pendingProfileErrors = m.pendingProfileErrors[1:]
+	e := m.profile.pendingErrors[0]
+	m.profile.pendingErrors = m.profile.pendingErrors[1:]
 
 	// Mark as acknowledged
-	m.acknowledgedErrors[e.Path] = true
+	m.profile.acknowledged[e.Path] = true
 
 	// Capture previous mode only if we are transitioning FROM a valid mode.
 	// If we are already in infoMode (chained errors), we keep the original previousMode.
@@ -206,22 +231,24 @@ func (m Model) presentNextBrokenProfile() Model {
 		Value:       fmt.Sprintf("Path: %s\nError: %s", e.Path, strings.TrimSpace(e.Err)),
 		Description: desc,
 		Meta: []DetailMeta{
-			{Label: "CWD", Value: m.configDir},
+			{Label: "CWD", Value: m.profile.configDir},
 		},
 	}
 	m.mode = infoMode
 	return m
 }
 
-func (m Model) activeProfileName() string {
-	if len(m.profiles) == 0 {
+// activeName returns the display name of the active profile, defaulting to
+// "Core" when there are no profiles or the name is blank.
+func (p profileState) activeName() string {
+	if len(p.profiles) == 0 {
 		return "Core"
 	}
-	idx := m.activeProfileIndex
-	if idx < 0 || idx >= len(m.profiles) {
+	idx := p.activeIndex
+	if idx < 0 || idx >= len(p.profiles) {
 		idx = 0
 	}
-	name := m.profiles[idx].Name
+	name := p.profiles[idx].Name
 	if strings.TrimSpace(name) == "" {
 		return "Core"
 	}
@@ -244,25 +271,29 @@ func InitialModel(glassrootMode bool) Model {
 
 	s := newSpinner()
 	m := Model{
-		cursorRow:          0,
-		cursorCol:          0,
-		trafficMeter:       core.TrafficMeter{WindowSeconds: 7.5},
-		onlineStatus:       "checking...",
-		traffic:            "calculating...",
-		path:               InitPathModel(path),
-		mode:               gridMode,
-		spinner:            s,
-		baseConfig:         bundle.Base,
-		lastActivityTime:   time.Now(),
-		modeBeforeLock:     gridMode,
-		lockPumpGoal:       defaultLockPumpGoal,
-		acknowledgedErrors: make(map[string]bool),
-		GlassrootMode:      glassrootMode,
+		net: netStatus{
+			meter:   core.TrafficMeter{WindowSeconds: 7.5},
+			online:  "checking...",
+			traffic: "calculating...",
+		},
+		path:    InitPathModel(path),
+		mode:    gridMode,
+		spinner: s,
+		profile: profileState{
+			base:         bundle.Base,
+			acknowledged: make(map[string]bool),
+		},
+		lock: lockState{
+			lastActivity: time.Now(),
+			modeBefore:   gridMode,
+			pumpGoal:     defaultLockPumpGoal,
+		},
+		GlassrootMode: glassrootMode,
 	}
 	m.applyBundle(bundle)
 	if len(bundle.Broken) > 0 {
-		m.pendingProfileErrors = append(m.pendingProfileErrors, bundle.Broken...)
-		m.profileErrorQueueActive = true
+		m.profile.pendingErrors = append(m.profile.pendingErrors, bundle.Broken...)
+		m.profile.errorQueueActive = true
 		m = m.presentNextBrokenProfile()
 	}
 
@@ -270,48 +301,48 @@ func InitialModel(glassrootMode bool) Model {
 }
 
 func (m *Model) scheduleStatusClearTimer() tea.Cmd {
-	m.nextTimerID++
-	id := m.nextTimerID
-	m.statusClearTimerID = id
+	m.profile.nextTimerID++
+	id := m.profile.nextTimerID
+	m.profile.statusClearTimerID = id
 	return tea.Tick(profileStatusDuration, func(time.Time) tea.Msg {
 		return profileStatusClearMsg{id: id}
 	})
 }
 
 func (m *Model) setProfileStatus(message string, positive bool) tea.Cmd {
-	m.profileStatusMessage = message
-	m.profileStatusPositive = positive
+	m.profile.statusMessage = message
+	m.profile.statusPositive = positive
 	if strings.TrimSpace(message) == "" {
-		m.statusClearTimerID = 0
+		m.profile.statusClearTimerID = 0
 		return nil
 	}
 	return m.scheduleStatusClearTimer()
 }
 
 func (m *Model) toggleProfileLock() tea.Cmd {
-	if strings.TrimSpace(m.configDir) == "" {
+	if strings.TrimSpace(m.profile.configDir) == "" {
 		return m.setProfileStatus("Pivot unavailable", false)
 	}
 
-	currentName := m.activeProfileName()
+	currentName := m.profile.activeName()
 	normCurrent := profiles.NormalizeName(currentName)
-	normPivot := profiles.NormalizeName(m.pivotProfileName)
+	normPivot := profiles.NormalizeName(m.profile.pivotName)
 
 	var err error
 	var messageCmd tea.Cmd
 
-	if m.profileLocked && normPivot == normCurrent && m.pivotProfileName != "" {
-		err = config.DeletePivotProfile(m.configDir)
+	if m.profile.locked && normPivot == normCurrent && m.profile.pivotName != "" {
+		err = config.DeletePivotProfile(m.profile.configDir)
 		if err == nil {
-			m.profileLocked = false
-			m.pivotProfileName = ""
+			m.profile.locked = false
+			m.profile.pivotName = ""
 			messageCmd = m.setProfileStatus("Pivot cleared", false)
 		}
 	} else {
-		err = config.WritePivotLocked(m.configDir, currentName)
+		err = config.WritePivotLocked(m.profile.configDir, currentName)
 		if err == nil {
-			m.profileLocked = true
-			m.pivotProfileName = currentName
+			m.profile.locked = true
+			m.profile.pivotName = currentName
 			messageCmd = m.setProfileStatus(fmt.Sprintf("Pinned %s", currentName), true)
 		}
 	}
@@ -325,20 +356,20 @@ func (m *Model) toggleProfileLock() tea.Cmd {
 
 func (m Model) enterLockedMode() Model {
 	if m.mode != lockedMode {
-		m.modeBeforeLock = m.mode
+		m.lock.modeBefore = m.mode
 	}
 	m.mode = lockedMode
-	m.lockProgress = 0
-	m.lockLastDirection = 0
+	m.lock.progress = 0
+	m.lock.lastDirection = 0
 	return m
 }
 
 func (m Model) exitLockedMode() Model {
 	if m.mode == lockedMode {
-		m.mode = m.modeBeforeLock
+		m.mode = m.lock.modeBefore
 	}
-	m.lastActivityTime = time.Now()
-	m.lockProgress = 0
-	m.lockLastDirection = 0
+	m.lock.lastActivity = time.Now()
+	m.lock.progress = 0
+	m.lock.lastDirection = 0
 	return m
 }

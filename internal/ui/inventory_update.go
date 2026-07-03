@@ -189,7 +189,7 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Lift and Place
 	case IsConfirm(m.Config.Keys, msg):
 		if inv.focusedList == 2 { // Apply button is focused
-			return m, ApplyInventoryChangesCmd(m.configDir, m.inventory)
+			return m, ApplyInventoryChangesCmd(m.profile.configDir, m.inventory)
 		}
 		if inv.focusedList == 3 { // Rescue Mode button
 			m.mode = gridMode

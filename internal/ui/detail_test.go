@@ -13,10 +13,8 @@ func boolPtr(b bool) *bool { return &b }
 // explain key bound, so the explain path can be driven directly.
 func explainModel(cmd config.Command) Model {
 	return Model{
-		mode:      gridMode,
-		grid:      [][]string{{cmd.Name}},
-		cursorRow: 0,
-		cursorCol: 0,
+		mode:    gridMode,
+		gridNav: gridNav{grid: [][]string{{cmd.Name}}},
 		Config: config.Config{
 			Keys:     config.InputConfig{Explain: "e"},
 			Commands: []config.Command{cmd},

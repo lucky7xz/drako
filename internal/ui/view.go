@@ -80,8 +80,8 @@ func (m Model) View() string {
 // Pass empty help string to skip help (e.g. if help is rendered differently)
 func (m Model) renderCombinedFooter(helpRendered string) string {
 	netLabel := lipgloss.NewStyle().Render("NET: ")
-	netText := netLabel + m.traffic
-	statusText := fmt.Sprintf("STATUS: %s", m.onlineStatus)
+	netText := netLabel + m.net.traffic
+	statusText := fmt.Sprintf("STATUS: %s", m.net.online)
 	themeText := "THEME: "
 	themeName := m.styles.ThemeName.Render(m.Config.Theme)
 	separator := m.styles.Help.Render(" | ")

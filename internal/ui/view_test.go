@@ -29,7 +29,7 @@ func createTestModelForView(mode navMode) Model {
 		termWidth:  100, // Generous width
 		termHeight: 50,  // Generous height
 		Config:     cfg,
-		grid:       grid,
+		gridNav:    gridNav{grid: grid},
 		// Inventory model needed for inventory mode
 		inventory: inventoryModel{
 			State: core.NewInventoryState(
@@ -38,9 +38,10 @@ func createTestModelForView(mode navMode) Model {
 			),
 			focusedList: 0,
 		},
-		activeProfileIndex: 0,
-		profiles: []config.ProfileInfo{
-			{Name: "Core"},
+		profile: profileState{
+			profiles: []config.ProfileInfo{
+				{Name: "Core"},
+			},
 		},
 	}
 

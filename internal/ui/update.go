@@ -64,8 +64,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.GlassrootMode {
 				os.Exit(1)
 			}
-			m.pendingProfileErrors = append(m.pendingProfileErrors, bundle.Broken...)
-			m.profileErrorQueueActive = true
+			m.profile.pendingErrors = append(m.profile.pendingErrors, bundle.Broken...)
+			m.profile.errorQueueActive = true
 			m = m.presentNextBrokenProfile()
 			return m, nil
 		}
@@ -81,8 +81,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.GlassrootMode {
 				os.Exit(1)
 			}
-			m.pendingProfileErrors = append(m.pendingProfileErrors, bundle.Broken...)
-			m.profileErrorQueueActive = true
+			m.profile.pendingErrors = append(m.profile.pendingErrors, bundle.Broken...)
+			m.profile.errorQueueActive = true
 			m = m.presentNextBrokenProfile()
 		}
 		// Restart the watcher for the next change
@@ -110,7 +110,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Update last activity time for any key press (except in locked mode)
 		if m.mode != lockedMode {
-			m.lastActivityTime = time.Now()
+			m.lock.lastActivity = time.Now()
 		}
 
 		// Handle locked mode separately
@@ -136,7 +136,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Profile switching with configurable modifier + Number or ~ (Shift + `)
 		if m.mode == gridMode || m.mode == childMode {
 			if ok, target := IsProfileSwitch(m.Config.Keys, msg, m.Config.NumbModifier); ok {
-				if target < len(m.profiles) {
+				if target < len(m.profile.profiles) {
 					if updated, ok := m.switchToProfileIndex(target); ok {
 						m = updated
 						return m, nil
@@ -172,19 +172,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case networkStatusMsg:
 		if msg.err != nil {
-			m.traffic = m.styles.ThemeName.Render("error")
+			m.net.traffic = m.styles.ThemeName.Render("error")
 		} else {
-			m.trafficMeter.Sample(msg.counters.BytesSent, msg.counters.BytesRecv, msg.t)
+			m.net.meter.Sample(msg.counters.BytesSent, msg.counters.BytesRecv, msg.t)
 
 			isActive := false
-			sentBps, recvBps, ok := m.trafficMeter.Rates()
+			sentBps, recvBps, ok := m.net.meter.Rates()
 			switch {
-			case m.trafficMeter.Samples() <= 1:
-				m.traffic = m.styles.ThemeName.Render("calculating...")
+			case m.net.meter.Samples() <= 1:
+				m.net.traffic = m.styles.ThemeName.Render("calculating...")
 			case !ok:
-				m.traffic = m.styles.ThemeName.Render("---")
+				m.net.traffic = m.styles.ThemeName.Render("---")
 			default:
-				m.traffic = m.styles.ThemeName.Render(fmt.Sprintf("↓ %s ↑ %s", core.FormatTraffic(recvBps), core.FormatTraffic(sentBps)))
+				m.net.traffic = m.styles.ThemeName.Render(fmt.Sprintf("↓ %s ↑ %s", core.FormatTraffic(recvBps), core.FormatTraffic(sentBps)))
 				if sentBps > 2*1024 || recvBps > 2*1024 {
 					isActive = true
 				}
@@ -192,37 +192,37 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			if msg.online {
 				if isActive {
-					m.onlineStatus = m.styles.Online.Render("online (active)")
+					m.net.online = m.styles.Online.Render("online (active)")
 				} else {
-					m.onlineStatus = m.styles.Online.Render("online (idle)")
+					m.net.online = m.styles.Online.Render("online (idle)")
 				}
 			} else {
-				m.onlineStatus = m.styles.Offline.Render("offline")
+				m.net.online = m.styles.Offline.Render("offline")
 			}
 		}
 		return m, networkTick()
 
 	case navTimeoutMsg:
-		if m.navigationTimer != nil {
-			m.navigationTimer.Stop()
+		if m.gridNav.timer != nil {
+			m.gridNav.timer.Stop()
 		}
-		m.navigationTimer = nil
+		m.gridNav.timer = nil
 		return m, nil
 
 	case profileStatusClearMsg:
-		if msg.id != m.statusClearTimerID {
+		if msg.id != m.profile.statusClearTimerID {
 			return m, nil
 		}
-		m.statusClearTimerID = 0
-		m.profileStatusMessage = ""
+		m.profile.statusClearTimerID = 0
+		m.profile.statusMessage = ""
 		return m, nil
 
 	case lockCheckMsg:
 		// Check if we should auto-lock
 		autoLockEnabled := m.Config.AutoLockEnabled == nil || *m.Config.AutoLockEnabled
-		if autoLockEnabled && m.mode != lockedMode && m.lockTimeoutMins > 0 {
-			elapsed := time.Since(m.lastActivityTime)
-			if elapsed >= time.Duration(m.lockTimeoutMins)*time.Minute {
+		if autoLockEnabled && m.mode != lockedMode && m.lock.timeoutMins > 0 {
+			elapsed := time.Since(m.lock.lastActivity)
+			if elapsed >= time.Duration(m.lock.timeoutMins)*time.Minute {
 				log.Printf("Auto-locking after %v of inactivity", elapsed)
 				m = m.enterLockedMode()
 			}
@@ -240,12 +240,12 @@ func (m Model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Handle number-based navigation (1-9)
 	if num, err := strconv.Atoi(key); err == nil && num >= 1 && num <= 9 {
 		targetIndex := num - 1 // Convert to 0-based index
-		if len(m.dropdownItems) > 0 {
+		if len(m.dropdown.items) > 0 {
 			// If the target is out of bounds, select the last item.
-			if targetIndex >= len(m.dropdownItems) {
-				m.dropdownSelectedIdx = len(m.dropdownItems) - 1
+			if targetIndex >= len(m.dropdown.items) {
+				m.dropdown.selectedIdx = len(m.dropdown.items) - 1
 			} else {
-				m.dropdownSelectedIdx = targetIndex
+				m.dropdown.selectedIdx = targetIndex
 			}
 		}
 		return m, nil
@@ -255,25 +255,25 @@ func (m Model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case IsCancel(m.Config.Keys, msg):
 		// Close dropdown and return to grid mode
 		m.mode = gridMode
-		m.dropdownItems = nil
+		m.dropdown.items = nil
 		return m, nil
 	case Matches(m.Config.Keys, msg, "ctrl+c"):
 		m.Quitting = true
 		return m, tea.Quit
 	case IsUp(m.Config.Keys, msg):
-		if m.dropdownSelectedIdx > 0 {
-			m.dropdownSelectedIdx--
+		if m.dropdown.selectedIdx > 0 {
+			m.dropdown.selectedIdx--
 		}
 	case IsDown(m.Config.Keys, msg):
-		if m.dropdownSelectedIdx < len(m.dropdownItems)-1 {
-			m.dropdownSelectedIdx++
+		if m.dropdown.selectedIdx < len(m.dropdown.items)-1 {
+			m.dropdown.selectedIdx++
 		}
 	case IsExplain(m.Config.Keys, msg):
-		if m.dropdownSelectedIdx >= 0 && m.dropdownSelectedIdx < len(m.dropdownItems) {
-			item := m.dropdownItems[m.dropdownSelectedIdx]
+		if m.dropdown.selectedIdx >= 0 && m.dropdown.selectedIdx < len(m.dropdown.items) {
+			item := m.dropdown.items[m.dropdown.selectedIdx]
 			parent := ""
-			if m.dropdownRow >= 0 && m.dropdownCol >= 0 && m.dropdownRow < len(m.grid) && m.dropdownCol < len(m.grid[0]) {
-				parent = m.grid[m.dropdownRow][m.dropdownCol]
+			if m.dropdown.row >= 0 && m.dropdown.col >= 0 && m.dropdown.row < len(m.gridNav.grid) && m.dropdown.col < len(m.gridNav.grid[0]) {
+				parent = m.gridNav.grid[m.dropdown.row][m.dropdown.col]
 			}
 			m.previousMode = m.mode
 
@@ -294,8 +294,8 @@ func (m Model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case IsConfirm(m.Config.Keys, msg):
 		// Execute the selected dropdown item
-		if m.dropdownSelectedIdx >= 0 && m.dropdownSelectedIdx < len(m.dropdownItems) {
-			selectedItem := m.dropdownItems[m.dropdownSelectedIdx]
+		if m.dropdown.selectedIdx >= 0 && m.dropdown.selectedIdx < len(m.dropdown.items) {
+			selectedItem := m.dropdown.items[m.dropdown.selectedIdx]
 			m.Selected = selectedItem.Name
 			// Store the command to execute
 			// We need to create a temporary command entry for execution
@@ -315,7 +315,7 @@ func copyToClipboardCmd(s string) tea.Cmd {
 
 func (m Model) updateInfoMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
-	if m.profileErrorQueueActive {
+	if m.profile.errorQueueActive {
 		var cmds []tea.Cmd
 		if key == "y" {
 			if m.GlassrootMode {
@@ -351,6 +351,22 @@ func (m Model) updateInfoMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 }
 
+// pump advances the unlock slider for one keypress: alternating directions
+// fill it, repeating a direction drains it. Reports whether the goal was hit.
+func (l *lockState) pump(dir int) bool {
+	if l.lastDirection == dir {
+		if l.progress > 0 {
+			l.progress--
+		}
+		return false
+	}
+	l.lastDirection = dir
+	if l.progress < l.pumpGoal {
+		l.progress++
+	}
+	return l.progress >= l.pumpGoal
+}
+
 func (m Model) updateLockedMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 
@@ -365,38 +381,23 @@ func (m Model) updateLockedMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// Require alternating directions to "pump" the slider
-	if m.lockLastDirection == dir {
-		if m.lockProgress > 0 {
-			m.lockProgress--
-		}
-		return m, nil
-	}
-
-	m.lockLastDirection = dir
-	if m.lockProgress < m.lockPumpGoal {
-		m.lockProgress++
-	}
-
-	if m.lockProgress >= m.lockPumpGoal {
-		log.Printf("Unlocking via pump sequence after %d steps", m.lockProgress)
+	if m.lock.pump(dir) {
+		log.Printf("Unlocking via pump sequence after %d steps", m.lock.progress)
 		m = m.exitLockedMode()
-		return m, nil
 	}
-
 	return m, nil
 }
 
 func (m Model) switchToProfileIndex(target int) (Model, bool) {
-	if len(m.profiles) == 0 {
+	if len(m.profile.profiles) == 0 {
 		return m, false
 	}
-	total := len(m.profiles)
+	total := len(m.profile.profiles)
 	if target < 0 || target >= total {
 		target = ((target % total) + total) % total
 	}
 
-	selected := m.profiles[target]
+	selected := m.profile.profiles[target]
 
 	// Check for existence
 	if _, err := os.Stat(selected.Path); err != nil {
@@ -405,21 +406,21 @@ func (m Model) switchToProfileIndex(target int) (Model, bool) {
 	}
 
 	updated := m
-	updated.activeProfileIndex = target
+	updated.profile.activeIndex = target
 	_ = os.Setenv("DRAKO_PROFILE", selected.Name)
-	updated.Config = config.ApplyProfileOverlay(m.baseConfig, selected.Profile)
+	updated.Config = config.ApplyProfileOverlay(m.profile.base, selected.Profile)
 	updated.applyConfig(updated.Config)
 
 	return updated, true
 }
 
 func (m Model) handleProfileCycle(direction int) (tea.Model, tea.Cmd) {
-	if len(m.profiles) <= 1 {
+	if len(m.profile.profiles) <= 1 {
 		return m, nil
 	}
 
-	current := m.activeProfileIndex
-	total := len(m.profiles)
+	current := m.profile.activeIndex
+	total := len(m.profile.profiles)
 	// Only try up to 'total' times.
 	// Start from 1 to avoid re-selecting the current profile immediately.
 	for i := 1; i <= total; i++ {

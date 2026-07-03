@@ -12,7 +12,7 @@ import (
 
 func (m Model) renderGrid() string {
 	maxContentWidth := 0
-	for _, row := range m.grid {
+	for _, row := range m.gridNav.grid {
 		for _, cell := range row {
 			contentWidth := lipgloss.Width(cell)
 			if contentWidth > maxContentWidth {
@@ -30,8 +30,8 @@ func (m Model) renderGrid() string {
 
 	// --- Build Header ---
 	var headerParts []string
-	if len(m.grid) > 0 {
-		for c := 0; c < len(m.grid[0]); c++ {
+	if len(m.gridNav.grid) > 0 {
+		for c := 0; c < len(m.gridNav.grid[0]); c++ {
 			headerLabel := fmt.Sprintf("[%s]", columnToLetter(c))
 			styledLabel := m.styles.Title.Render(headerLabel)
 
@@ -52,11 +52,11 @@ func (m Model) renderGrid() string {
 
 	// --- Build Grid ---
 	var renderedRows []string
-	for r, row := range m.grid {
+	for r, row := range m.gridNav.grid {
 		var renderedCells []string
 		for c, cell := range row {
 			var style lipgloss.Style
-			if m.mode == gridMode && r == m.cursorRow && c == m.cursorCol {
+			if m.mode == gridMode && r == m.gridNav.cursorRow && c == m.gridNav.cursorCol {
 				style = m.styles.SelectedCell
 			} else {
 				style = m.styles.Cell
@@ -112,11 +112,11 @@ func columnToLetter(col int) string {
 }
 
 func (m Model) renderProfileCounter() string {
-	y := len(m.profiles)
+	y := len(m.profile.profiles)
 	if y > 9 {
 		y = 9
 	}
-	x := m.activeProfileIndex + 1
+	x := m.profile.activeIndex + 1
 	if x > 9 {
 		x = 9
 	}
@@ -146,10 +146,10 @@ func (m Model) renderProfileBar() string {
 	hostLabel := "HOST: " + username + "@" + hostname + " " + osArch + m.styles.Help.Render(" | ")
 
 	profileLabel := lipgloss.NewStyle().Render("PROFILE: ")
-	segments := []string{hostLabel + profileLabel + m.activeProfileName() + m.styles.Help.Render(" | ")}
+	segments := []string{hostLabel + profileLabel + m.profile.activeName() + m.styles.Help.Render(" | ")}
 
-	if m.pivotProfileName != "" {
-		label := fmt.Sprintf("🔒 %s", m.pivotProfileName)
+	if m.profile.pivotName != "" {
+		label := fmt.Sprintf("🔒 %s", m.profile.pivotName)
 		segments = append(segments, m.styles.LockBadge.Render(label))
 	}
 
@@ -159,12 +159,12 @@ func (m Model) renderProfileBar() string {
 		segments = append(segments, glassIndicator)
 	}
 
-	if m.profileStatusMessage != "" {
+	if m.profile.statusMessage != "" {
 		style := m.styles.StatusNegative
-		if m.profileStatusPositive {
+		if m.profile.statusPositive {
 			style = m.styles.StatusPositive
 		}
-		segments = append(segments, style.Render(m.profileStatusMessage))
+		segments = append(segments, style.Render(m.profile.statusMessage))
 	}
 
 	return lipgloss.NewStyle().PaddingTop(1).Render(lipgloss.JoinHorizontal(lipgloss.Left, segments...))

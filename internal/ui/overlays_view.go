@@ -114,8 +114,8 @@ func (m Model) renderDropdownPopup() string {
 
 	// Build lines, then right-pad them into a solid block.
 	var raw []string
-	for i, item := range m.dropdownItems {
-		if i == m.dropdownSelectedIdx {
+	for i, item := range m.dropdown.items {
+		if i == m.dropdown.selectedIdx {
 			raw = append(raw, cursorSel.Render("► ")+textSel.Render(item.Name))
 		} else {
 			raw = append(raw, gap.Render("  ")+textNorm.Render(item.Name))
@@ -129,20 +129,20 @@ func (m Model) renderDropdownPopup() string {
 
 func (m Model) viewLockedMode() string {
 	// Calculate time since last activity
-	elapsed := time.Since(m.lastActivityTime)
+	elapsed := time.Since(m.lock.lastActivity)
 	elapsedMins := int(elapsed.Minutes())
 
 	if elapsedMins < 0 {
 		elapsedMins = 0
 	}
 
-	goal := m.lockPumpGoal
+	goal := m.lock.pumpGoal
 	if goal <= 0 {
 		goal = defaultLockPumpGoal
 	}
 
 	barWidth := 24
-	progress := m.lockProgress
+	progress := m.lock.progress
 	if progress < 0 {
 		progress = 0
 	}
@@ -161,7 +161,7 @@ func (m Model) viewLockedMode() string {
 	title := m.styles.Title.Render("Session Locked")
 	timeInfo := m.styles.Help.Render(fmt.Sprintf("Idle for %d minute(s)", elapsedMins))
 	instructions := m.styles.Help.Render("Pump ← → (A/D or H/L) to fill the slider and unlock")
-	progressLabel := m.styles.Help.Render(fmt.Sprintf("%d / %d pumps", m.lockProgress, goal))
+	progressLabel := m.styles.Help.Render(fmt.Sprintf("%d / %d pumps", m.lock.progress, goal))
 	quitHint := m.styles.Help.Render("Press Ctrl+C to quit")
 
 	content := lipgloss.JoinVertical(

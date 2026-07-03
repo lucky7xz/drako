@@ -12,12 +12,12 @@ import (
 func createTestGridModel() Model {
 	m := Model{
 		mode: gridMode,
-		grid: [][]string{
-			{"A", "B"},
-			{"C", "D"},
+		gridNav: gridNav{
+			grid: [][]string{
+				{"A", "B"},
+				{"C", "D"},
+			},
 		},
-		cursorRow: 0,
-		cursorCol: 0,
 		Config: config.Config{
 			Keys: config.InputConfig{
 				NavUp:    []string{"up", "k"},
@@ -37,29 +37,29 @@ func TestUpdateGridMode_Navigation(t *testing.T) {
 	// Test Right
 	tm, _ = m.updateGridMode(tea.KeyMsg{Type: tea.KeyRight})
 	m = tm.(Model)
-	if m.cursorCol != 1 {
-		t.Errorf("Expected cursorCol 1, got %d", m.cursorCol)
+	if m.gridNav.cursorCol != 1 {
+		t.Errorf("Expected cursorCol 1, got %d", m.gridNav.cursorCol)
 	}
 
 	// Test Down
 	tm, _ = m.updateGridMode(tea.KeyMsg{Type: tea.KeyDown})
 	m = tm.(Model)
-	if m.cursorRow != 1 {
-		t.Errorf("Expected cursorRow 1, got %d", m.cursorRow)
+	if m.gridNav.cursorRow != 1 {
+		t.Errorf("Expected cursorRow 1, got %d", m.gridNav.cursorRow)
 	}
 
 	// Test Left
 	tm, _ = m.updateGridMode(tea.KeyMsg{Type: tea.KeyLeft})
 	m = tm.(Model)
-	if m.cursorCol != 0 {
-		t.Errorf("Expected cursorCol 0, got %d", m.cursorCol)
+	if m.gridNav.cursorCol != 0 {
+		t.Errorf("Expected cursorCol 0, got %d", m.gridNav.cursorCol)
 	}
 
 	// Test Up
 	tm, _ = m.updateGridMode(tea.KeyMsg{Type: tea.KeyUp})
 	m = tm.(Model)
-	if m.cursorRow != 0 {
-		t.Errorf("Expected cursorRow 0, got %d", m.cursorRow)
+	if m.gridNav.cursorRow != 0 {
+		t.Errorf("Expected cursorRow 0, got %d", m.gridNav.cursorRow)
 	}
 }
 
