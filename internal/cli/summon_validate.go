@@ -4,13 +4,51 @@ package cli
 // untrusted input and must pass these checks before it lands in inventory.
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
 	"github.com/BurntSushi/toml"
 	"github.com/lucky7xz/drako/internal/config"
 )
+
+// isHexString reports whether s is exactly n hexadecimal characters.
+func isHexString(s string, n int) bool {
+	if len(s) != n {
+		return false
+	}
+	for _, r := range s {
+		switch {
+		case r >= '0' && r <= '9', r >= 'a' && r <= 'f', r >= 'A' && r <= 'F':
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+// verifyFileSHA256 hashes path and compares it (case-insensitively) against
+// the expected hex digest. A mismatch is an error that names both hashes.
+func verifyFileSHA256(path, expected string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("could not open file for verification: %w", err)
+	}
+	defer f.Close()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return fmt.Errorf("could not hash file: %w", err)
+	}
+	got := hex.EncodeToString(h.Sum(nil))
+	if !strings.EqualFold(got, expected) {
+		return fmt.Errorf("sha256 MISMATCH\n  expected %s\n  got      %s\nnothing was written to the inventory", strings.ToLower(expected), got)
+	}
+	return nil
+}
 
 // Profile size limits
 const (

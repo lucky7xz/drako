@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/lucky7xz/drako/internal/config" // drako.chronyx.xyz
 	"github.com/lucky7xz/drako/internal/paths"
@@ -96,10 +97,18 @@ func HandleSummonCommand(args []string) {
 		log.SetOutput(logFile)
 	}
 
-	sourceURL := args[2]
+	sourceURL, sha, rev, err := parseSummonArgs(args[2:])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n\n", err)
+		PrintSummonUsage()
+		os.Exit(1)
+	}
 	log.Printf("Attempting to summon profile from: %s", sourceURL)
 
-	if err := SummonProfile(sourceURL, configDir); err != nil {
+	summoner := NewSummoner(configDir)
+	summoner.SHA256 = sha
+	summoner.Rev = rev
+	if err := summoner.Summon(sourceURL); err != nil {
 		log.Printf("Summon failed: %v", err)
 		fmt.Fprintf(os.Stderr, "Summon failed: %v\n", err)
 		os.Exit(1)
@@ -110,15 +119,67 @@ func HandleSummonCommand(args []string) {
 	os.Exit(0)
 }
 
+// parseSummonArgs extracts the source URL and the optional verification
+// pins from everything after "drako summon". Flags may appear before or
+// after the URL, in --flag value or --flag=value form.
+func parseSummonArgs(args []string) (sourceURL, sha, rev string, err error) {
+	flagValue := func(i *int, name string) (string, error) {
+		a := args[*i]
+		if a == name {
+			*i++
+			if *i >= len(args) {
+				return "", fmt.Errorf("%s requires a value", name)
+			}
+			return args[*i], nil
+		}
+		return strings.TrimPrefix(a, name+"="), nil
+	}
+
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		switch {
+		case a == "--sha256" || strings.HasPrefix(a, "--sha256="):
+			if sha, err = flagValue(&i, "--sha256"); err != nil {
+				return "", "", "", err
+			}
+		case a == "--rev" || strings.HasPrefix(a, "--rev="):
+			if rev, err = flagValue(&i, "--rev"); err != nil {
+				return "", "", "", err
+			}
+		case strings.HasPrefix(a, "-"):
+			return "", "", "", fmt.Errorf("unknown flag: %s", a)
+		case sourceURL != "":
+			return "", "", "", fmt.Errorf("more than one source URL given (%q and %q)", sourceURL, a)
+		default:
+			sourceURL = a
+		}
+	}
+
+	if sourceURL == "" {
+		return "", "", "", fmt.Errorf("no source URL given")
+	}
+	// Only full-length pins verify anything: a truncated hash weakens the
+	// check, and branch/tag names are mutable — reject both loudly.
+	if sha != "" && !isHexString(sha, 64) {
+		return "", "", "", fmt.Errorf("--sha256 must be the full 64-character hex digest (got %d characters)", len(sha))
+	}
+	if rev != "" && !isHexString(rev, 40) {
+		return "", "", "", fmt.Errorf("--rev must be a full 40-character commit hash; branch and tag names are mutable and verify nothing")
+	}
+	return sourceURL, sha, rev, nil
+}
+
 // PrintSummonUsage prints the usage information for the summon command
 func PrintSummonUsage() {
-	fmt.Fprintf(os.Stderr, "Usage: drako summon <url>\n")
+	fmt.Fprintf(os.Stderr, "Usage: drako summon <url> [--sha256 <hex64> | --rev <commit40>]\n")
 	fmt.Fprintf(os.Stderr, "\nSummoned profiles are saved to ~/.config/drako/inventory/\n")
+	fmt.Fprintf(os.Stderr, "Pins verify that what arrived is what the author published;\n")
+	fmt.Fprintf(os.Stderr, "without one, drako warns and proceeds unverified.\n")
 	fmt.Fprintf(os.Stderr, "\nExamples:\n")
-	fmt.Fprintf(os.Stderr, "  # Summon a single profile file:\n")
-	fmt.Fprintf(os.Stderr, "  drako summon https://raw.githubusercontent.com/user/repo/main/profile.profile.toml\n")
-	fmt.Fprintf(os.Stderr, "\n  # Summon from a git repository (finds all .profile.toml files):\n")
-	fmt.Fprintf(os.Stderr, "  drako summon git@github.com:user/repo.git\n")
+	fmt.Fprintf(os.Stderr, "  # Summon a single profile file (pin with its sha256):\n")
+	fmt.Fprintf(os.Stderr, "  drako summon https://example.com/deck.profile.toml --sha256 9f2a...\n")
+	fmt.Fprintf(os.Stderr, "\n  # Summon from a git repository (pin with a full commit hash):\n")
+	fmt.Fprintf(os.Stderr, "  drako summon git@github.com:user/repo.git --rev 3f81c2d...\n")
 	fmt.Fprintf(os.Stderr, "  drako summon https://github.com/user/repo.git\n")
 }
 

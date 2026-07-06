@@ -68,6 +68,18 @@ func warnIfNoSSHKeys() {
 	}
 }
 
+// gitHeadFn resolves a checkout's HEAD commit. A package var so tests can
+// stub it; the real implementation shells out to git.
+var gitHeadFn = gitHead
+
+func gitHead(dir string) (string, error) {
+	out, err := exec.Command("git", "-C", dir, "rev-parse", "HEAD").Output()
+	if err != nil {
+		return "", fmt.Errorf("could not resolve the cloned HEAD commit: %w", err)
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
 // GitCloner implements RepoCloner using exec.Command
 type GitCloner struct{}
 

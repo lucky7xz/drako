@@ -39,6 +39,13 @@ type Summoner struct {
 	Downloader FileDownloader
 	Cloner     RepoCloner
 	UI         UIInterface
+
+	// Verification pins, already format-validated by the CLI layer.
+	// SHA256 pins a single-file (HTTP) summon to a payload hash;
+	// Rev pins a git summon to a full commit hash. Empty = unverified
+	// (allowed for compatibility, warned about).
+	SHA256 string
+	Rev    string
 }
 
 // NewSummoner creates a new Summoner with real dependencies
@@ -65,6 +72,9 @@ func (s *Summoner) Summon(sourceURL string) error {
 	}
 
 	if isGitURL(sourceURL) {
+		if s.SHA256 != "" {
+			return fmt.Errorf("--sha256 pins single-file downloads; for git repositories use --rev <full-commit-hash>")
+		}
 		if err := s.Cloner.CheckGitAvailable(); err != nil {
 			return err
 		}
@@ -78,6 +88,12 @@ func (s *Summoner) Summon(sourceURL string) error {
 		fmt.Printf("  Destination: %s\n", inventoryDir)
 		fmt.Printf("  Action: Find and copy all .profile.toml files\n\n")
 
+		if s.Rev == "" {
+			fmt.Printf("⚠️  Unverified summon: no --rev given. drako cannot confirm this deck\n")
+			fmt.Printf("    is what its author published. To pin it:\n")
+			fmt.Printf("    drako summon <url> --rev <full-40-hex-commit>\n\n")
+		}
+
 		if !s.UI.Confirm("Proceed with cloning?") {
 			return fmt.Errorf("operation cancelled by user")
 		}
@@ -86,6 +102,9 @@ func (s *Summoner) Summon(sourceURL string) error {
 	}
 
 	// HTTP/HTTPS Download
+	if s.Rev != "" {
+		return fmt.Errorf("--rev pins git clones; for single-file downloads use --sha256 <hash>")
+	}
 	filename := extractFilenameFromURL(sourceURL)
 	if filename == "" || !strings.HasSuffix(filename, ".profile.toml") {
 		filename = "personal.profile.toml"
@@ -105,6 +124,12 @@ func (s *Summoner) Summon(sourceURL string) error {
 		fmt.Printf("  ⚠️  Warning: %s already exists and will be overwritten\n", filename)
 	}
 	fmt.Println()
+
+	if s.SHA256 == "" {
+		fmt.Printf("⚠️  Unverified summon: no --sha256 given. drako cannot confirm this file\n")
+		fmt.Printf("    is what its author published. To pin it:\n")
+		fmt.Printf("    drako summon <url> --sha256 <hash>\n\n")
+	}
 
 	if !s.UI.Confirm("Proceed with download?") {
 		return fmt.Errorf("operation cancelled by user")
@@ -142,6 +167,20 @@ func (s *Summoner) summonFromGit(repoURL, inventoryDir string) error {
 	// Clone the repository using injected Cloner
 	if err := s.Cloner.CloneRepo(repoURL, tempDir); err != nil {
 		return err
+	}
+
+	// Verify the pinned commit before any file is even looked at. Git's
+	// content addressing means one matching commit hash covers the whole
+	// tree — every profile, spec and asset in it.
+	if s.Rev != "" {
+		head, err := gitHeadFn(tempDir)
+		if err != nil {
+			return err
+		}
+		if !strings.EqualFold(head, s.Rev) {
+			return fmt.Errorf("commit MISMATCH\n  pinned %s\n  cloned %s\nnothing was summoned", strings.ToLower(s.Rev), head)
+		}
+		fmt.Printf("✓ Verified commit: HEAD = %.12s…\n", head)
 	}
 
 	profileFiles, specFiles, err := findRepoFiles(tempDir)
@@ -412,6 +451,16 @@ func (s *Summoner) summonFromHTTP(sourceURL, inventoryDir string) error {
 
 	if err := s.Downloader.DownloadFile(sourceURL, tempPath); err != nil {
 		return err
+	}
+
+	// Verify the pin before the TOML parser ever touches the bytes: the
+	// cheap check gates the risky one.
+	if s.SHA256 != "" {
+		fmt.Printf("Verifying sha256...\n")
+		if err := verifyFileSHA256(tempPath, s.SHA256); err != nil {
+			return err
+		}
+		fmt.Printf("✓ sha256 verified\n")
 	}
 
 	// Validate the downloaded file
