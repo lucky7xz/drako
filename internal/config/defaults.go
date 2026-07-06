@@ -41,6 +41,9 @@ func (c *Config) ApplyDefaults() {
 	if strings.TrimSpace(c.Keys.ProfileNext) == "" {
 		c.Keys.ProfileNext = defaults.Keys.ProfileNext
 	}
+	if strings.TrimSpace(c.Keys.EditFile) == "" {
+		c.Keys.EditFile = defaults.Keys.EditFile
+	}
 
 	// Initialize control sets (WASD, Vim, arrows)
 	c.Keys.InitControls()

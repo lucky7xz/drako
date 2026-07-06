@@ -71,7 +71,7 @@ func (m Model) viewInventoryMode() string {
 	var footer string
 	if layout.ShowFooter {
 		// Render Help
-		help := m.styles.Help.Render("↑/↓/tab: Switch Grid | ←/→: Move | space/enter: Lift/Place | q/esc: Back")
+		help := m.styles.Help.Render("↑/↓/tab: Switch Grid | ←/→: Move | space/enter: Lift/Place | e: Edit | q/esc: Back")
 
 		// Render Version
 		version := m.styles.Help.Render(config.AppName + " | " + config.Version())

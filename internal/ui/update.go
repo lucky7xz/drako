@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -92,6 +93,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case inventoryErrorMsg:
 		m.inventory.err = msg.err
 		return m, nil
+
+	case editorFinishedMsg:
+		return m.afterEdit(msg)
 
 	case spinnerTickMsg:
 		var cmd tea.Cmd
@@ -340,6 +344,47 @@ func (m Model) updateInfoMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.activeDetail = nil // Clear detail state
 		return m, nil
 	}
+}
+
+// afterEdit reacts to the external editor closing: reload everything, let
+// the broken-profile queue take over if the edit broke an equipped profile,
+// otherwise return to the inventory view with a validity verdict.
+func (m Model) afterEdit(msg editorFinishedMsg) (tea.Model, tea.Cmd) {
+	if msg.err != nil {
+		m.inventory.status = "Edit failed: " + msg.err.Error()
+		m.mode = inventoryMode
+		return m, nil
+	}
+
+	// The edit may have changed any equipped profile — reload the bundle.
+	bundle := config.LoadConfig(nil)
+	m.applyBundle(bundle)
+	if len(bundle.Broken) > 0 {
+		if m.GlassrootMode {
+			return m.failGlassroot()
+		}
+		m.profile.pendingErrors = append(m.profile.pendingErrors, bundle.Broken...)
+		m.profile.errorQueueActive = true
+		return m.presentNextBrokenProfile(), nil
+	}
+
+	// Rebuild the inventory (validity may have changed), keep the cursor.
+	prev := m.inventory
+	m.inventory = InitInventoryModel(m.profile.configDir)
+	m.inventory.focusedList = prev.focusedList
+	m.inventory.cursor = prev.cursor
+	if listPtr, err := m.inventory.State.GetList(prev.focusedList); err == nil && m.inventory.cursor >= len(*listPtr) {
+		m.inventory.cursor = max(len(*listPtr)-1, 0)
+	}
+
+	name := filepath.Base(msg.path)
+	if err := config.CheckProfileFile(msg.path); err != nil {
+		m.inventory.status = fmt.Sprintf("⚠️ %s has errors: %v", name, err)
+	} else {
+		m.inventory.status = "✓ Saved: " + name
+	}
+	m.mode = inventoryMode
+	return m, nil
 }
 
 // pump advances the unlock slider for one keypress: alternating directions

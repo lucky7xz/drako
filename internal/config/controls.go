@@ -13,6 +13,7 @@ type InputConfig struct {
 	Lock         string `toml:"lock"`
 	ProfilePrev  string `toml:"profile_prev"`
 	ProfileNext  string `toml:"profile_next"`
+	EditFile     string `toml:"edit_file"`
 
 	// Internal computed sets for fast lookup
 	NavUp    []string

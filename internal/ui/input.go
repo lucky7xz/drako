@@ -95,3 +95,8 @@ func IsProfileSwitch(c config.InputConfig, msg tea.KeyMsg, modifier string) (boo
 	}
 	return false, -1
 }
+
+// IsEditFile checks if the key matches the edit-file action (inventory mode).
+func IsEditFile(c config.InputConfig, msg tea.KeyMsg) bool {
+	return msg.String() == c.EditFile
+}

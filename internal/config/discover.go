@@ -23,6 +23,23 @@ func CopyCommands(src []Command) []Command {
 	return dst
 }
 
+// CheckProfileFile reports whether the file at path parses and validates as
+// a profile. Used for immediate feedback after in-app edits.
+func CheckProfileFile(path string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("could not read file: %w", err)
+	}
+	var pf ProfileFile
+	if _, err := toml.Decode(string(data), &pf); err != nil {
+		return fmt.Errorf("invalid TOML: %w", err)
+	}
+	if ok, problems := ValidateProfileFile(pf, data); !ok {
+		return fmt.Errorf("%s", strings.Join(problems, "; "))
+	}
+	return nil
+}
+
 // ValidateProfileFile checks a profile has at least one command and x/y in 1-9.
 func ValidateProfileFile(pf ProfileFile, raw []byte) (bool, []string) {
 	var problems []string

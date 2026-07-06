@@ -10,6 +10,8 @@ import tea "github.com/charmbracelet/bubbletea"
 // Blocked: entering inventory, entering path mode, toggling the pivot lock,
 // copying to the clipboard, and exposing config/rescue details when a profile
 // is broken (the session ends silently instead — see failGlassroot).
+// File editing is blocked transitively (it lives inside inventory mode) plus
+// a defense-in-depth check at the handler — an editor is a shell (:!sh).
 //
 // Deliberately allowed (decided 2026-07-03): profile switching/cycling and the
 // explain popup. Operator contract: every profile equipped on a glassroot box

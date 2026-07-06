@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -117,6 +118,24 @@ func InitInventoryModel(configDir string) inventoryModel {
 	return inventoryModel{State: state}
 }
 
+// selectedFilePath resolves the highlighted list item to its current on-disk
+// location. Staged (unapplied) moves don't matter: disk is unchanged until
+// Apply Changes runs. ok is false when a button row or no item is selected.
+func (inv inventoryModel) selectedFilePath(configDir string) (string, bool) {
+	if inv.focusedList != core.ListVisible && inv.focusedList != core.ListInventory {
+		return "", false
+	}
+	listPtr, err := inv.State.GetList(inv.focusedList)
+	if err != nil || inv.cursor < 0 || inv.cursor >= len(*listPtr) {
+		return "", false
+	}
+	name := (*listPtr)[inv.cursor]
+	if inv.focusedList == core.ListVisible {
+		return filepath.Join(configDir, name), true
+	}
+	return filepath.Join(paths.InventoryDir(configDir), name), true
+}
+
 // ApplyInventoryChangesCmd reconciles the on-disk profiles to match the
 // arranged visible list, then persists that order.
 func ApplyInventoryChangesCmd(configDir string, m inventoryModel) tea.Cmd {
@@ -185,6 +204,27 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case IsPathGridMode(m.Config.Keys, msg): // Reuse tab for focus cycle
 		inv.focusedList = (inv.focusedList + 1) % 4 // 0: visible, 1: inventory, 2: apply, 3: rescue
 		inv.cursor = 0
+
+	// Edit the selected profile file in the user's editor
+	case IsEditFile(m.Config.Keys, msg):
+		if m.GlassrootMode {
+			// Unreachable (glassroot gates inventory itself), kept as
+			// defense in depth: an editor is a shell.
+			return m, nil
+		}
+		if inv.State.HeldItem != nil {
+			inv.status = "Place the held item before editing"
+			return m, nil
+		}
+		path, ok := inv.selectedFilePath(m.profile.configDir)
+		if !ok {
+			return m, nil
+		}
+		if _, err := os.Stat(path); err != nil {
+			inv.status = "Cannot edit: " + err.Error()
+			return m, nil
+		}
+		return m, openInEditorCmd(path)
 
 	// Lift and Place
 	case IsConfirm(m.Config.Keys, msg):

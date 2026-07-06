@@ -41,6 +41,7 @@ func RescueConfig() Config {
 			Lock:         "r",
 			ProfilePrev:  "o",
 			ProfileNext:  "p",
+			EditFile:     "e",
 		},
 		Commands: []Command{
 			{
