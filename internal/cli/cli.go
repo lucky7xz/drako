@@ -20,6 +20,9 @@ func HandleCLI(args []string) bool {
 	command := args[1]
 
 	switch command {
+	case "ls", "list":
+		HandleLsCommand(args)
+		return true
 	case "summon", "--summon":
 		HandleSummonCommand(args)
 		return true
@@ -58,6 +61,7 @@ func PrintUsage() {
 	fmt.Printf("%s %s\n", config.AppName, config.Version())
 	fmt.Printf("Usage: drako <command> [arguments]\n\n")
 	table(os.Stdout, []string{"Command", "Description"}, [][]string{
+		{"ls", "List equipped profiles and their commands with cell addresses"},
 		{"summon <url>", "Summon profile(s) from a URL"},
 		{"spec list", "Shows available specs"},
 		{"spec <name>", "Apply a spec: move related profiles files to inventory."},
