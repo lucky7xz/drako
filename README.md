@@ -284,6 +284,10 @@ Ideas are welcome. Bugs will be hunted.
 
 
 
+## 🤖 AI disclosure
+
+drako is developed with heavy AI assistance — code, research, and docs. The codebase is deliberately kept small and modular so it can be audited end to end by one person. Judge the code, not the typing method.
+
 ## 📜 License
 
 The core Drako engine is released under the [GNU Affero General Public License v3.0](LICENSE). Bootstrap assets in the `bootstrap/` directory are released under either [MIT](bootstrap/LICENSE-MIT) or [Apache-2.0](bootstrap/LICENSE-Apache) licenses.
