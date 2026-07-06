@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 	"unicode/utf8"
+
+	"github.com/charmbracelet/x/ansi"
 )
 
 func TestTable(t *testing.T) {
@@ -61,5 +63,24 @@ func TestTable_ShortRowPadded(t *testing.T) {
 	})
 	if !strings.Contains(out.String(), "│ x │") {
 		t.Errorf("short row not padded correctly:\n%s", out.String())
+	}
+}
+
+// Every rendered line must occupy the same number of terminal cells, even
+// with emoji content — rune counting used to shift borders by one.
+func TestTableEmojiAlignment(t *testing.T) {
+	var sb strings.Builder
+	table(&sb, []string{"ADDR", "NAME"}, [][]string{
+		{"A0", "🧹 Maintenance"}, // true emoji: 1 rune, 2 cells
+		{"A1", "⬆️ Update"},     // VS16 sequence: 2 runes, 2 cells
+		{"A2", "plain"},
+		{"A3", "啸龙志"}, // CJK wide
+	})
+	lines := strings.Split(strings.TrimRight(sb.String(), "\n"), "\n")
+	want := ansi.StringWidth(lines[0])
+	for i, line := range lines {
+		if got := ansi.StringWidth(line); got != want {
+			t.Errorf("line %d width = %d, want %d: %q", i, got, want, line)
+		}
 	}
 }

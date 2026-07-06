@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/charmbracelet/x/ansi"
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/paths"
 )
@@ -59,17 +60,14 @@ func deckOrder(cmds []config.Command) []config.Command {
 	return sorted
 }
 
-// oneLine truncates a description to a single readable line.
+// oneLine truncates a description to a single readable line, measured in
+// terminal cells so emoji-heavy text still fits its column.
 func oneLine(s string, width int) string {
 	s = strings.TrimSpace(s)
 	if i := strings.IndexByte(s, '\n'); i >= 0 {
 		s = s[:i]
 	}
-	runes := []rune(s)
-	if len(runes) <= width {
-		return s
-	}
-	return string(runes[:width-1]) + "…"
+	return ansi.Truncate(s, width, "…")
 }
 
 // renderLs writes the equipped-deck listing.
