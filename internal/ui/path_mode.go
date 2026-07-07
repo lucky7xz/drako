@@ -104,13 +104,14 @@ func (m *PathModel) BuildPathFromComponents(index int) string {
 	var pathToJoin []string
 	var result string
 
-	if m.PathComponents[0] == "/" {
+	switch m.PathComponents[0] {
+	case "/":
 		pathToJoin = m.PathComponents[1 : index+1]
 		result = "/" + filepath.Join(pathToJoin...)
-	} else if m.PathComponents[0] == "~" {
+	case "~":
 		pathToJoin = m.PathComponents[1 : index+1]
 		result = filepath.Join(home, filepath.Join(pathToJoin...))
-	} else {
+	default:
 		pathToJoin = m.PathComponents[:index+1]
 		result = filepath.Join(pathToJoin...)
 	}

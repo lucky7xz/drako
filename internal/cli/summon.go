@@ -58,12 +58,6 @@ func NewSummoner(configDir string) *Summoner {
 	}
 }
 
-// SummonProfile Entry Point (Legacy Wrapper)
-func SummonProfile(sourceURL, configDir string) error {
-	summoner := NewSummoner(configDir)
-	return summoner.Summon(sourceURL)
-}
-
 // Summon executes the summoning logic
 func (s *Summoner) Summon(sourceURL string) error {
 	inventoryDir := paths.InventoryDir(s.ConfigDir)

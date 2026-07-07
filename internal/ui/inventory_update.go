@@ -80,16 +80,11 @@ func InitInventoryModel(configDir string) inventoryModel {
 	// canonical names (e.g., "core", "nw_pro"); leftovers follow alphabetically.
 	var visible []string // contains filenames for overlays
 	if pf, err := config.ReadPivotProfile(configDir); err == nil && len(pf.EquippedOrder) > 0 {
-		// Map canonical name -> filename
-		nameToFile := make(map[string]string, len(visibleFiles))
+		// Canonical name -> filename; entries are consumed as the saved
+		// order claims them, leftovers get appended below.
+		remaining := make(map[string]string, len(visibleFiles))
 		for _, f := range visibleFiles {
-			name := strings.TrimSuffix(f, profiles.ProfileSuffix)
-			nameToFile[name] = f
-		}
-		// Track remaining overlays by name
-		remaining := make(map[string]string, len(nameToFile))
-		for n, f := range nameToFile {
-			remaining[n] = f
+			remaining[strings.TrimSuffix(f, profiles.ProfileSuffix)] = f
 		}
 
 		for _, n := range pf.EquippedOrder {

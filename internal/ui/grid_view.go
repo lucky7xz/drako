@@ -112,17 +112,9 @@ func columnToLetter(col int) string {
 }
 
 func (m Model) renderProfileCounter() string {
-	y := len(m.profile.profiles)
-	if y > 9 {
-		y = 9
-	}
-	x := m.profile.activeIndex + 1
-	if x > 9 {
-		x = 9
-	}
-	if x > y { // zero profiles on disk: rescue grid, "< 0 / 0 >"
-		x = y
-	}
+	y := min(len(m.profile.profiles), 9)
+	// x > y only with zero profiles on disk: rescue grid, "< 0 / 0 >"
+	x := min(m.profile.activeIndex+1, 9, y)
 	counter := fmt.Sprintf("< %d / %d >", x, y)
 	return m.styles.Title.Render(counter)
 }
