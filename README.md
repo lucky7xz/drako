@@ -134,7 +134,7 @@ One deck file, every machine. This is what makes summoned decks portable across 
 
 On first run, `drako` creates:
 - `config.toml`: Global settings (Input Keys, Global Theme).
-- `core.profile.toml`: The default command profile (Process Monitor, System Info, etc.), generated for your OS from templates inside the binary. Deleted or stashed it? `drako restore-core` regenerates it any time.
+- `core.profile.toml`: The default command profile (Process Monitor, System Info, etc.) — a variant deck shipped inside the binary, so the same file works on every OS. Deleted or stashed it? `drako restore-core` restores it any time.
 - `themes.toml`: Color palettes. The built-in `dracula` theme lives in the binary as the fallback, so it no longer needs to be defined here.
 
 **NOTE:** If you've customized your color schemes, keep a backup of your `themes.toml` — how themes are configured may change in a future release.

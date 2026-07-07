@@ -65,15 +65,7 @@ func TestRefactorBootstrap(t *testing.T) {
 		t.Errorf("Expected theme dracula, got %s", bundle.Config.Theme)
 	}
 
-	// Verify Fallback Logic (Distro Detection -> Generic)
-	// On this test runner (likely Linux), if it's not Arch/Fedora/Debian, it should now identify as "linux_generic"
-	// or fallback to "linux_generic" if specific key is missing.
-	// Since we are running on unknown Linux, detecting "linux_generic" is plausible.
-	// However, if we forced "linux_generic" for Weather, we can check if it loaded.
-	// But since "linux_generic" == "linux_debian" == "curl wttr.in", we can't easily distinguish content.
-	// So we rely on the fact that WeaveConfig didn't crash.
-
-	// Check multiline handling (implicit check via bootstrap success, but could inspect file)
-	// If the weaver was broken, the TOML decode above (or in app) would likely fail or produce truncated strings.
-	// We trust that if LoadConfig succeeded with non-empty commands, we are good.
+	// Platform-variant resolution of the core deck is covered per-target in
+	// TestEmbeddedCoreDeckResolvesEverywhere; here it suffices that the
+	// bootstrap produced a deck LoadConfig could decode into commands.
 }

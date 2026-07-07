@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/lucky7xz/drako/internal/paths"
@@ -33,11 +32,11 @@ func bootstrapCopy(dstRoot string) error {
 		}
 	}
 
-	// 2. Weave and write core.profile.toml (Core Profile)
+	// 2. Write core.profile.toml (Core Profile)
 	if created, err := RestoreCoreProfile(dstRoot); err != nil {
-		log.Printf("bootstrap error: failed to weave core profile: %v", err)
+		log.Printf("bootstrap error: failed to write core profile: %v", err)
 	} else if created {
-		log.Printf("bootstrap: generated core.profile.toml for runtime: %s", runtime.GOOS)
+		log.Printf("bootstrap: generated core.profile.toml")
 	}
 
 	// 3. Copy other files
@@ -54,7 +53,7 @@ func bootstrapCopy(dstRoot string) error {
 		rel = strings.TrimPrefix(rel, "/")
 
 		// Skip files we handle specially or don't want to expose
-		if rel == "core_template.toml" || rel == "settings_template.toml" || rel == "core_dictionary.toml" || rel == "config.toml" || rel == "core.profile.toml" {
+		if rel == "settings_template.toml" || rel == "config.toml" || rel == "core.profile.toml" {
 			return nil
 		}
 
@@ -88,21 +87,14 @@ func bootstrapCopy(dstRoot string) error {
 	})
 }
 
-// RestoreCoreProfile weaves the embedded core template for this platform and
-// writes core.profile.toml into dstRoot. It never overwrites an existing file;
-// the bool reports whether a new file was created. Used by first-run bootstrap
-// and by "drako restore-core" (the rescue grid's way back once the core deck
-// has been stashed or deleted).
+// RestoreCoreProfile writes the embedded default deck as core.profile.toml
+// into dstRoot. The deck uses per-platform command variants, so one file
+// serves every OS — resolution happens at load time. It never overwrites an
+// existing file; the bool reports whether a new file was created. Used by
+// first-run bootstrap and by "drako restore-core" (the rescue grid's way back
+// once the core deck has been stashed or deleted).
 func RestoreCoreProfile(dstRoot string) (bool, error) {
-	tmpl, err := bootstrapFS.ReadFile("bootstrap/core_template.toml")
-	if err != nil {
-		return false, err
-	}
-	dict, err := bootstrapFS.ReadFile("bootstrap/core_dictionary.toml")
-	if err != nil {
-		return false, err
-	}
-	woven, err := WeaveConfig(tmpl, dict)
+	deck, err := bootstrapFS.ReadFile("bootstrap/core.profile.toml")
 	if err != nil {
 		return false, err
 	}
@@ -110,7 +102,7 @@ func RestoreCoreProfile(dstRoot string) (bool, error) {
 	if _, err := os.Stat(targetProfile); err == nil {
 		return false, nil
 	}
-	if err := os.WriteFile(targetProfile, woven, 0o644); err != nil {
+	if err := os.WriteFile(targetProfile, deck, 0o644); err != nil {
 		return false, err
 	}
 	return true, nil

@@ -1,0 +1,267 @@
+# dR4ko - Core Profile
+# The default deck, shipped inside the binary. Commands use per-platform
+# variant tables — drako resolves the right one for this machine when the
+# profile loads. This file doubles as the reference example for variants.
+
+# ┌─ Profile Settings ───────────────────────────────────────┐
+# │ Customize the look and feel of this profile.
+# └──────────────────────────────────────────────────────────┘
+x = 3
+y = 3
+
+#header_art = '''
+#╔══════════════════════════════════════╗
+#║  Core Profile                        ║
+#╚══════════════════════════════════════╝
+#'''
+
+#==========================================
+# ┌─ Column 0: System & Security ──────────┐
+# └────────────────────────────────────────┘
+[[commands]]
+name = "⬆️ System Update"
+description = "Queries the repositories for fresh versions and pulls them into your system. Your digital infrastructure sheds old scales for new ones—staying sharp, staying current. The machinery needs to evolve or rust settles in."
+command = { linux_debian = "sudo apt update && sudo apt upgrade", linux_arch = "sudo pacman -Syu", linux_fedora = "sudo dnf upgrade", linux_void = "sudo xbps-install -Su", linux_generic = """
+# Unknown distro: probe the common package managers.
+if command -v apt >/dev/null; then sudo apt update && sudo apt upgrade
+elif command -v dnf >/dev/null; then sudo dnf upgrade
+elif command -v pacman >/dev/null; then sudo pacman -Syu
+elif command -v zypper >/dev/null; then sudo zypper update
+elif command -v xbps-install >/dev/null; then sudo xbps-install -Su
+elif command -v apk >/dev/null; then sudo apk upgrade
+else echo "❓ No known package manager found — update with your distro's own tool."
+fi
+""", macos = "brew upgrade", windows = "winget upgrade --all" }
+col = "A"
+row = 0
+auto_close_execution = false
+
+[[commands]]
+name = "🧹 Maintenance ⋮ "
+description = "Maintenance and threat scanning. Clear out the debris, hunt for what shouldn't be there. A lean system moves faster."
+col = "A"
+row = 1
+items = [
+    { name = "Clean Packages", description = "Clears out the old scales your system sheds during updates. Removes what's no longer needed so nothing rots in the corners.", command = { linux_debian = "sudo apt autoremove", linux_arch = "sudo pacman -Sc", linux_fedora = "sudo dnf autoremove", linux_void = "sudo xbps-remove -Oo", linux_generic = """
+if command -v apt >/dev/null; then sudo apt autoremove
+elif command -v dnf >/dev/null; then sudo dnf autoremove
+elif command -v pacman >/dev/null; then sudo pacman -Sc
+elif command -v xbps-remove >/dev/null; then sudo xbps-remove -Oo
+else echo "❓ No known package manager found — clean up with your distro's own tool."
+fi
+""", macos = "brew cleanup", windows = "echo 'Windows handles cleanup automatically'" }, auto_close_execution = false },
+    { name = "Virus Scan (Home)", description = "Updates threat signatures and prowls through your home directory. Hunting for what doesn't belong.", command = { linux_generic = """
+# Check if ClamAV is installed first
+if ! command -v freshclam &> /dev/null || ! command -v clamscan &> /dev/null; then
+    echo "❌ Error: ClamAV is not installed. Run the install command from Cell [C-0] first."
+    sleep 1
+    exit 1
+fi
+
+echo "🛡️  Initiating Security Protocol..."
+echo "-----------------------------------"
+
+# Step 1: Update
+echo "📦 [1/2] Updating Virus Definitions..."
+sudo freshclam || echo "⚠️  Update had warnings, proceeding to scan anyway..."
+
+# Step 2: Scan
+echo "-----------------------------------"
+echo "🔍 [2/2] Scanning $HOME recursively..."
+echo "ℹ️  NOTE: The scanner is in 'Infected-Only' mode."
+echo "ℹ️  NOTE: In this mode, silence is GOOD. You will only see output if a threat is detected."
+echo "⏳  Scanning now (this may take several minutes)..."
+
+# Run scan
+clamscan -r --bell -i "$HOME"
+
+echo "-----------------------------------"
+echo "✅ Scan complete."
+""", macos = "echo 'No virus scanning needed by default'", windows = "Start-Process 'C:\\Program Files\\Windows Defender\\MpCmdRun.exe' -ArgumentList '-Scan -ScanType 2'" }, auto_close_execution = false }
+]
+
+[[commands]]
+name = "👀 Process Monitor"
+description = "Everything running right now, laid bare. Watch processes pulse, memory flow, CPU cycles burn. The system breathing beneath the surface. See what's moving in real-time."
+command = { linux_generic = """
+btop 2>/dev/null || {
+    echo "btop not available. Defaulting to top..."
+    top
+}
+""", macos = """
+btop 2>/dev/null || {
+    echo "btop not available. Defaulting to top..."
+    top -o cpu
+}
+""", windows = "taskmgr" }
+col = "A"
+row = 2
+
+#==========================================
+# ┌─ Column 1: Files & Info ───────────────┐
+# └────────────────────────────────────────┘
+[[commands]]
+name = " 🔎 File Finder"
+description = "Type and watch it hunt through thousands of files instantly. When your filesystem sprawls like endlessly, this cuts straight to what you're tracking. Fast, precise, relentless."
+command = { linux_generic = "fzf --preview 'head -n 50 {}' --preview-window=right:50%:wrap --border --header '🔎 START TYPING TO SEARCH...'", macos = "fzf --preview 'head -n 50 {}' --preview-window=right:50%:wrap --border --header '🔎 START TYPING TO SEARCH...'", windows = "gci -Recurse | Where-Object { ! $_.PSIsContainer } | Out-GridView" }
+col = "B"
+row = 0
+auto_close_execution = false
+
+[[commands]]
+name = "🌐 Bandwidth"
+description = "Curious how much internet you're using right now? This opens up a little dashboard showing data going in and out. I find it mesmerizing to watch the numbers jump when I'm downloading a big file."
+command = { linux_generic = """
+bmon 2>/dev/null || {
+    echo "bmon not available. Starting fallback monitor..."
+    sleep 1
+    while true; do
+        clear
+        cat /proc/net/dev | awk '
+        NR>2 {
+            # Capture stats
+            recv[$1]=$2; trans[$1]=$10;
+        }
+        END {
+            # Header
+            printf "%-10s %15s %15s\\n", "IFACE", "RX (Bytes)", "TX (Bytes)"
+            print "---------------------------------------------"
+            # Print (Note: This is a simplified snapshot view)
+            for (i in recv) {
+                printf "%-10s %15s %15s\\n", i, recv[i], trans[i]
+            }
+        }'
+        echo ""
+        echo "Update: 1s | Press Ctrl+C to stop"
+        sleep 1
+    done
+}""", macos = "nettop -P -L 1", windows = "typeperf \"\\Network Interface(*)\\Bytes Total/sec\"" }
+col = "B"
+row = 1
+
+
+[[commands]]
+name = "📊 System Status ⋮ "
+description = "Vital signs and stats. Hardware details, disk territories mapped, or the weather beyond your screen. Information at different scales."
+col = "B"
+row = 2
+items = [
+    { name = "System Info", description = "The bones of your machine. Distro, kernel version, uptime, hardware beneath the surface. See what you're running on.", command = { linux_generic = """
+fastfetch 2>/dev/null || neofetch 2>/dev/null || {
+    if command -v lshw &> /dev/null; then
+        echo "fastfetch/neofetch not found. Using lshw..."
+        lshw -short
+    else
+        echo "System Info Tools missing. Fallback:"
+        uname -sr
+        grep PRETTY_NAME /etc/os-release 2>/dev/null | cut -d= -f2- | sed 's/"//g'
+    fi
+}
+""", macos = "system_profiler SPSoftwareDataType SPDetailLevel=mini", windows = "systeminfo" }, auto_close_execution = false },
+    { name = "Disk Usage", description = "Map of your storage. See where space went, find what's been forgotten in dusty corners.", command = { linux_generic = """
+duf 2>/dev/null || {
+    echo "duf not available. Defaulting to du..."
+    du -h -d 1
+}
+""", macos = "du -h -d 1", windows = "drako internal open-url ms-settings:storage" }, auto_close_execution = false },
+    { name = "Weather", description = "Quick weather from wttr.in. The world beyond the screen, right here in the terminal.", command = { linux_generic = "curl wttr.in", macos = "curl wttr.in", windows = "curl wttr.in" }, auto_close_execution = false }
+]
+
+#==========================================
+# ┌─ Column 2: Network & Web ──────────────┐
+# └────────────────────────────────────────┘
+[[commands]]
+name = " 📦 Install Tools ⋮ "
+col = "C"
+row = 0
+description = "Bundled up all the little tools that this menu uses, just in case you don't have them. It's like getting all the batteries and accessories included for once. This makes sure all the other buttons here will work as expected. I like to be prepared, you know? "
+items = [
+    { name = "Install common tools", description = "The core utilities—btop, neofetch, clamav, fzf, bmon. Tools that keep the machinery visible and responsive.", command = { linux_debian = "sudo apt install btop bmon neofetch clamav fzf duf", linux_arch = "sudo pacman -S btop bmon fastfetch clamav fzf duf", linux_fedora = "sudo dnf install btop bmon neofetch clamav fzf duf", linux_void = "sudo xbps-install -S btop bmon fastfetch clamav fzf duf", linux_generic = """
+if command -v apt >/dev/null; then sudo apt install btop bmon neofetch clamav fzf duf
+elif command -v dnf >/dev/null; then sudo dnf install btop bmon neofetch clamav fzf duf
+elif command -v pacman >/dev/null; then sudo pacman -S btop bmon fastfetch clamav fzf duf
+elif command -v xbps-install >/dev/null; then sudo xbps-install -S btop bmon fastfetch clamav fzf duf
+else echo "❓ No known package manager found — install btop bmon neofetch clamav fzf duf with your distro's own tool."
+fi
+""", macos = "brew install btop bmon neofetch fzf duf", windows = "winget install btop bmon neofetch fzf duf" }, auto_close_execution = false },
+    { name = "Install micro", description = "Installs micro, a modern terminal text editor. Clean interface, easy to use. Set it as your default EDITOR via Settings if you want.", command = { linux_debian = "sudo apt install micro", linux_arch = "sudo pacman -S micro", linux_fedora = "sudo dnf install micro", linux_void = "sudo xbps-install -S micro", linux_generic = """
+if command -v apt >/dev/null; then sudo apt install micro
+elif command -v dnf >/dev/null; then sudo dnf install micro
+elif command -v pacman >/dev/null; then sudo pacman -S micro
+elif command -v xbps-install >/dev/null; then sudo xbps-install -S micro
+else echo "❓ No known package manager found — install micro with your distro's own tool."
+fi
+""", macos = "brew install micro", windows = "winget install micro" }, auto_close_execution = false },
+
+    { name = "🃏 Summon '101 Series' Command Deck", description = "Pulls the 101 deck from the remote archives into your inventory. New space to explore.", command = { linux_generic = "drako summon https://github.com/lucky7xz/101-deck.git", macos = "drako summon https://github.com/lucky7xz/101-deck.git", windows = "drako summon https://github.com/lucky7xz/101-deck.git" }, auto_close_execution = false },
+
+    { name = "🃏 Summon 'ggml' Command Deck", description = "Pulls the ggml deck from the remote archives into your inventory. Start learning about llama.cpp.", command = { linux_generic = "drako summon https://github.com/lucky7xz/ggml-deck.git", macos = "drako summon https://github.com/lucky7xz/ggml-deck.git", windows = "drako summon https://github.com/lucky7xz/ggml-deck.git" }, auto_close_execution = false },
+
+    { name = "🃏 Summon Private Deck", description = "Pulls a private deck from locked archives. Requires SSH keys to access the hidden chambers.", command = { linux_generic = '''
+echo "Enter GitHub Username:"
+read username
+echo "Enter Repository Name:"
+read reponame
+echo "Summoning from git@github.com:$username/$reponame.git..."
+drako summon "git@github.com:$username/$reponame.git"
+''', macos = '''
+echo "Enter GitHub Username:"
+read username
+echo "Enter Repository Name:"
+read reponame
+echo "Summoning from git@github.com:$username/$reponame.git..."
+drako summon "git@github.com:$username/$reponame.git"
+''', windows = '''
+$username = Read-Host -Prompt "Enter GitHub Username"
+$reponame = Read-Host -Prompt "Enter Repository Name"
+Write-Host "Summoning from git@github.com:$username/$reponame.git..."
+drako summon "git@github.com:$username/$reponame.git"
+''' }, auto_close_execution = false },
+]
+
+[[commands]]
+name = "📜 Open Shell Config"
+description = "This is where all your terminal customizations live. The shell config file loads every time you open a terminal and controls your aliases, environment variables, and prompt appearance. It's like the settings panel for your command line experience. I open this file whenever I want to add a new shortcut or tweak how my terminal behaves."
+command = { linux_generic = "$EDITOR ~/.bashrc", macos = "$EDITOR ~/.zshrc", windows = "drako open $PROFILE" }
+col = "C"
+row = 1
+
+
+[[commands]]
+name = " 🐉 Settings ⋮ "
+col = "C"
+row = 2
+description = "The dragon's lair. Tweak the internal mechanics, adjust your environment, and refine how you interact with the system. This is where you make the machine yours."
+items = [
+    { name = "⚙️  Edit config.toml ", description = "The file you're reading right now. Key bindings, themes, etc.—all controlled here. Change anything. Break things. That's the point. Power lives in plain text files. Rescue mode can help you restore a broken config.", command = { linux_generic = "$EDITOR ~/.config/drako/config.toml", macos = "$EDITOR ~/.config/drako/config.toml", windows = "drako open %APPDATA%\\drako\\config.toml" } },
+    { name = "📁 Browse config dir", description = "Hidden chambers where configurations live. Most users never look here, but this is where real control exists. Explore it. Break things. Make it yours. The vastness of cyber starts in folders like these.", command = { linux_generic = "drako open ~/.config/drako", macos = "drako open ~/.config/drako", windows = "drako open %APPDATA%\\drako" } },
+    { name = "ℹ️  Open Pivot  ", description = "Small scale state tracking, profile switches, paths. Useful for debugging or just curiosity.", command = { linux_generic = "$EDITOR ~/.config/drako/pivot.toml", macos = "$EDITOR ~/.config/drako/pivot.toml", windows = "drako open %APPDATA%\\drako\\pivot.toml" } },
+    { name = "📜 Open History Logs", description = "A record of past movements. Every command executed, every choice made, preserved in the archives. Peer into the past to trace your steps.", command = { linux_generic = "$EDITOR ~/.config/drako/history.log", macos = "$EDITOR ~/.config/drako/history.log", windows = "drako open %APPDATA%\\drako\\history.log" } },
+    { name = "📜 Open Logs (Debug)", description = "The trail of what happened. Events, errors, state changes recorded. Read the logs when things break or when you want to see the machinery.", command = { linux_generic = "$EDITOR ~/.config/drako/drako.log", macos = "$EDITOR ~/.config/drako/drako.log", windows = "drako open %APPDATA%\\drako\\drako.log" } },
+
+    #===========================================================================================================
+    { name = "Reload Shell", description = "NOTE: Won't affect your current shell (child process limitation). Use this to copy the command: press 'y', then paste it into your terminal to actually reload.", command = { linux_generic = "source ~/.bashrc", macos = "source ~/.zshrc", windows = "" }, auto_close_execution = false },
+    { name = "Add go/bin to PATH (<-- Very Recommended)", description = "Adds ~/go/bin to your PATH so Go binaries run from anywhere. Makes the tools globally accessible.", command = { linux_generic = '''
+echo 'export PATH=$PATH:~/go/bin' >> ~/.bashrc
+echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
+echo "Path added to ~/.bashrc. Restart shell to take effect."
+''', macos = '''
+echo 'export PATH=$PATH:~/go/bin' >> ~/.zshrc
+echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.zshrc
+echo "Path added to ~/.zshrc. Restart shell to take effect."
+''', windows = '''
+Add-Content $PROFILE '$env:PATH += ";$env:USERPROFILE\go\bin"'
+Add-Content $PROFILE '$env:PATH += ";C:\Program Files\Go\bin"'
+Write-Host "Path added to PowerShell Profile. Restart shell to take effect."
+''' }, auto_close_execution = false },
+    { name = "Alias x=drako (<-- Recommended)", description = "Adds 'alias x=drako' to ~/.bashrc. Launch with just 'x'. Quick access to the den.", command = { linux_generic = '''
+echo "alias x='~/go/bin/drako'" >> ~/.bashrc
+echo "Alias added to ~/.bashrc. Restart shell to use 'x'."
+''', macos = '''
+echo "alias x='~/go/bin/drako'" >> ~/.zshrc
+echo "Alias added. Restart shell to use 'x'."
+''', windows = '''
+echo 'Function x { & "$env:USERPROFILE\go\bin\drako.exe" }' >> $PROFILE
+''' }, auto_close_execution = false },
+    { name = "Set micro as EDITOR (<-- Recommended)", description = "Sets EDITOR environment variable to micro in ~/.bashrc. Your default editor for system commands. Restart shell after.", command = { linux_generic = "echo 'export EDITOR=micro' >> ~/.bashrc && echo \"Alias added to ~/.bashrc. Restart shell.\"", macos = "echo 'export EDITOR=micro' >> ~/.zshrc && echo \"Alias added to ~/.zshrc. Restart shell.\"", windows = "setx EDITOR micro" }, auto_close_execution = false },
+]

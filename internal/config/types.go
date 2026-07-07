@@ -192,26 +192,34 @@ func (c *Command) UnmarshalTOML(v any) error {
 	c.Command = cmd
 	c.Description = appendNote(c.Description, note)
 
-	if rawItems, ok := m["items"].([]any); ok {
-		for _, ri := range rawItems {
-			im, ok := ri.(map[string]any)
-			if !ok {
-				return fmt.Errorf("command %q: items must be tables", c.Name)
-			}
-			item := CommandItem{
-				Name:               tomlStr(im, "name"),
-				Description:        tomlStr(im, "description"),
-				AutoCloseExecution: tomlBoolPtr(im, "auto_close_execution"),
-				DebugExecution:     tomlBoolPtr(im, "debug_execution"),
-			}
-			icmd, inote, err := resolveCommandField(im["command"])
-			if err != nil {
-				return fmt.Errorf("command %q, item %q: %w", c.Name, item.Name, err)
-			}
-			item.Command = icmd
-			item.Description = appendNote(item.Description, inote)
-			c.Items = append(c.Items, item)
+	// Inline arrays arrive as []any, [[commands.items]] headers as []map[string]any.
+	var rawItems []any
+	switch t := m["items"].(type) {
+	case []any:
+		rawItems = t
+	case []map[string]any:
+		for _, im := range t {
+			rawItems = append(rawItems, im)
 		}
+	}
+	for _, ri := range rawItems {
+		im, ok := ri.(map[string]any)
+		if !ok {
+			return fmt.Errorf("command %q: items must be tables", c.Name)
+		}
+		item := CommandItem{
+			Name:               tomlStr(im, "name"),
+			Description:        tomlStr(im, "description"),
+			AutoCloseExecution: tomlBoolPtr(im, "auto_close_execution"),
+			DebugExecution:     tomlBoolPtr(im, "debug_execution"),
+		}
+		icmd, inote, err := resolveCommandField(im["command"])
+		if err != nil {
+			return fmt.Errorf("command %q, item %q: %w", c.Name, item.Name, err)
+		}
+		item.Command = icmd
+		item.Description = appendNote(item.Description, inote)
+		c.Items = append(c.Items, item)
 	}
 	return nil
 }

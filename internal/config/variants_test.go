@@ -112,6 +112,35 @@ items = [
 	}
 }
 
+// Items written as [[commands.items]] headers arrive as []map[string]any
+// instead of []any — both syntaxes must decode.
+func TestItemsHeaderSyntax(t *testing.T) {
+	pinPlatform(t, "linux_arch")
+	p := decodeProfile(t, `
+x = 1
+y = 1
+[[commands]]
+name = "folder"
+col = "A"
+row = 0
+
+[[commands.items]]
+name = "one"
+command = { linux_arch = "pacman -Q", macos = "brew list" }
+
+[[commands.items]]
+name = "two"
+command = "echo hi"
+`)
+	items := p.Commands[0].Items
+	if len(items) != 2 {
+		t.Fatalf("items = %d, want 2", len(items))
+	}
+	if items[0].Command != "pacman -Q" || items[1].Command != "echo hi" {
+		t.Errorf("header-syntax items misdecoded: %+v", items)
+	}
+}
+
 func TestVariantErrors(t *testing.T) {
 	pinPlatform(t, "linux_arch")
 	var p ProfileFile
