@@ -141,6 +141,9 @@ On first run, `drako` creates:
 
 **NOTE:** Bootstrapping only occurs if files (config.toml and core.profile.toml) are missing. To clean-up, use `drako purge --interactive` or `drako purge --destroyeverything` (backup your work first).
 
+> [!NOTE]
+> **Upgrading from an older version?** Your existing `core.profile.toml` keeps working and is never overwritten. It was generated for your OS at install time; the Core deck now ships as a single cross-platform variant deck instead. To switch (optional): `drako purge --target core` (your old file goes to `trash/`), then `drako restore-core`. Any customizations you made to the old file need to be carried over by hand.
+
 **Clean Slate:** The default inventory is intentionally minimal to avoid cluttering your workspace. You can summon curated command decks directly from the **Install Tools** menu in the Core profile, or use the CLI to summon them manually:
 
 - **101 Series** ([Source](https://github.com/lucky7xz/101-deck)): `drako summon https://github.com/lucky7xz/101-deck.git`
