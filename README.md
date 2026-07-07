@@ -178,7 +178,8 @@ drako spec example
 # Useful for clearing a specific set of profiles without affecting others.
 drako stash example
 
-# Move all profiles to inventory/ (except Core)
+# Move all profiles to inventory/. With nothing equipped, drako starts
+# in Rescue mode — `drako restore-core` brings the default deck back.
 drako strip
 
 ```
@@ -195,7 +196,7 @@ drako strip
 
 Safely reset or remove configurations.
 ```bash
-# Remove Core profile (moves to trash/)
+# Remove Core profile (moves to trash/); `drako restore-core` regenerates it
 drako purge --target core
 
 # Remove a specific profile (moves to trash/)
@@ -216,7 +217,7 @@ drako purge --destroyeverything
 
 If your configuration breaks (syntax error, invalid grid), Drako won't crash. It enters **Rescue Mode**.
 
-- **Repair Tools:** Provides buttons to edit `config.toml`, open the config directory, or remove broken profiles.
+- **Repair Tools:** Provides buttons to edit `config.toml`, open the config directory, remove broken profiles, or restore the default Core deck.
 - **Manual Access:** You can enter `[ Rescue Mode ]` manually via the **Inventory** (`i`).
 - **Exit:** Select "Exit Rescue Mode" or switch to a working profile (`o`/`p`) to return to normal operation.
 

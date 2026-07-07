@@ -76,8 +76,8 @@ func InitInventoryModel(configDir string) inventoryModel {
 	// Sort inventory list alphabetically
 	sort.Strings(inventory)
 
-	// Build visible list including the special "Core" entry
-	// Persisted equipped_order uses canonical names (e.g., "Core", "nw_pro")
+	// Order the visible list by the persisted equipped_order, which uses
+	// canonical names (e.g., "core", "nw_pro"); leftovers follow alphabetically.
 	var visible []string // contains filenames for overlays
 	if pf, err := config.ReadPivotProfile(configDir); err == nil && len(pf.EquippedOrder) > 0 {
 		// Map canonical name -> filename

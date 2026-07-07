@@ -149,9 +149,6 @@ func (m *Model) applyConfig(cfg config.Config) {
 func (m *Model) applyBundle(bundle config.ConfigBundle) {
 	m.profile.base = bundle.Base
 	profiles := bundle.Profiles
-	if len(profiles) == 0 {
-		profiles = []config.ProfileInfo{{Name: "Core"}}
-	}
 	m.profile.profiles = profiles
 	if bundle.ActiveIndex < 0 || bundle.ActiveIndex >= len(profiles) {
 		m.profile.activeIndex = 0
@@ -240,10 +237,11 @@ func (m Model) presentNextBrokenProfile() Model {
 }
 
 // activeName returns the display name of the active profile, defaulting to
-// "Core" when there are no profiles or the name is blank.
+// "Rescue" when there are no profiles or the name is blank (no profiles on
+// disk means the compiled-in rescue grid is what's showing).
 func (p profileState) activeName() string {
 	if len(p.profiles) == 0 {
-		return "Core"
+		return "Rescue"
 	}
 	idx := p.activeIndex
 	if idx < 0 || idx >= len(p.profiles) {
@@ -251,7 +249,7 @@ func (p profileState) activeName() string {
 	}
 	name := p.profiles[idx].Name
 	if strings.TrimSpace(name) == "" {
-		return "Core"
+		return "Rescue"
 	}
 	return name
 }
@@ -264,7 +262,7 @@ func InitialModel(glassrootMode bool) Model {
 
 	bundle := config.LoadConfig(nil)
 
-	if glassrootMode && len(bundle.Broken) > 0 {
+	if glassrootMode && glassrootRejectsBundle(bundle) {
 		// Glassroot never exposes TOML contents or Rescue Mode. Hand the host
 		// a model that is already done; app.Run exits before starting the TUI.
 		return Model{Quitting: true, ExitCode: 1, GlassrootMode: true}

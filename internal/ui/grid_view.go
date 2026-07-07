@@ -120,6 +120,9 @@ func (m Model) renderProfileCounter() string {
 	if x > 9 {
 		x = 9
 	}
+	if x > y { // zero profiles on disk: rescue grid, "< 0 / 0 >"
+		x = y
+	}
 	counter := fmt.Sprintf("< %d / %d >", x, y)
 	return m.styles.Title.Render(counter)
 }

@@ -85,12 +85,9 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 		// Special handling for Exit Rescue Mode command
 		if selectedChoice == "Exit Rescue Mode" {
-			// Reset to Core profile (index 0)
-			if updated, ok := m.switchToProfileIndex(0); ok {
-				m = updated
-				return m, nil
-			}
-			return m, nil
+			// Reload the bundle and land on whatever is actually equipped;
+			// with nothing equipped this resolves back to the rescue grid.
+			return m, func() tea.Msg { return reloadProfilesMsg{} }
 		}
 
 		if selectedChoice != "" {

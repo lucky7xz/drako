@@ -96,9 +96,16 @@ func RescueConfig() Config {
 			{
 				Name:        "Exit Rescue Mode",
 				Command:     "true", // Intercepted by UI
-				Description: "Returns to your Core configuration.\n\n(Same as switching to the first profile with Mod+1)",
+				Description: "Reloads your profiles and returns to whatever is equipped.\n\n• If no profiles are equipped, you stay in Rescue mode.",
 				Row:         2,
 				Col:         "b", // Center bottom
+			},
+			{
+				Name:        "Restore Core Deck",
+				Command:     "drako restore-core",
+				Description: "Regenerates the default core.profile.toml for this platform.\n\n• Use this if you stashed or deleted the core deck and want it back.\n• Existing core.profile.toml is never overwritten.",
+				Row:         2,
+				Col:         "c", // Right bottom
 			},
 		},
 	}

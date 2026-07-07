@@ -35,16 +35,16 @@ func TestPlanReconcile_StashesEquippedNotDesired(t *testing.T) {
 	}
 }
 
-func TestPlanReconcile_NeverStashesCore(t *testing.T) {
+func TestPlanReconcile_CoreIsOrdinary(t *testing.T) {
 	moves := planReconcile(
 		[]string{"core.profile.toml", "git.profile.toml"}, // equipped
 		nil,
-		[]string{"git"}, // desired: git only; core is unlisted but must stay equipped
+		[]string{"git"}, // desired: git only; core is unlisted → stashed like any deck
 	)
 
-	// core is protected, git is desired & already equipped → no moves at all.
-	if len(moves) != 0 {
-		t.Errorf("expected no moves (core protected), got %+v", moves)
+	want := []move{{File: "core.profile.toml", From: Equipped, To: Inventory}}
+	if !reflect.DeepEqual(moves, want) {
+		t.Errorf("got %+v, want %+v", moves, want)
 	}
 }
 

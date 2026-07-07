@@ -13,7 +13,7 @@ type Result struct {
 }
 
 // Reconcile arranges profile files under configDir so that exactly the desired
-// profiles (plus the protected core profile) are equipped: it equips desired
+// profiles are equipped: it equips desired
 // profiles from the inventory and stashes equipped profiles not in desired.
 func Reconcile(configDir string, desired []string) (Result, error) {
 	equipped, err := List(configDir)
@@ -73,11 +73,7 @@ func planReconcile(equipped, inventory, desired []string) []move {
 		}
 	}
 	for _, file := range equipped {
-		norm := NormalizeName(file)
-		if norm == "core" || norm == "default" {
-			continue // the core profile is protected: never stashed
-		}
-		if !want[norm] {
+		if !want[NormalizeName(file)] {
 			moves = append(moves, move{File: file, From: Equipped, To: Inventory})
 		}
 	}

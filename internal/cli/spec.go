@@ -102,7 +102,7 @@ func HandleStashCommand(args []string) {
 func HandleStripCommand(args []string) {
 	if len(args) < 2 {
 		fmt.Fprintf(os.Stderr, "Usage: drako strip\n")
-		fmt.Fprintf(os.Stderr, "  Moves ALL profiles (except Core) to inventory.\n")
+		fmt.Fprintf(os.Stderr, "  Moves ALL profiles to inventory.\n")
 		os.Exit(1)
 	}
 
@@ -205,8 +205,8 @@ func StashSpec(configDir string, targetProfiles []string) error {
 }
 
 func ApplySpec(configDir string, targetProfiles []string) error {
-	// Equip the targets, stash the rest (core protected) — file moves live in
-	// the profiles package; the CLI keeps the pivot bookkeeping and feedback.
+	// Equip the targets, stash the rest — file moves live in the profiles
+	// package; the CLI keeps the pivot bookkeeping and feedback.
 	res, err := profiles.Reconcile(configDir, targetProfiles)
 	if err != nil {
 		return err
@@ -218,20 +218,7 @@ func ApplySpec(configDir string, targetProfiles []string) error {
 		fmt.Printf("  - Stored: %s\n", n)
 	}
 
-	// Update Pivots (Equipped Order). Ensure Core is in the list for safety.
-	finalOrder := make([]string, 0, len(targetProfiles)+1)
-	hasCore := false
-	for _, p := range targetProfiles {
-		if profiles.NormalizeName(p) == "core" {
-			hasCore = true
-		}
-		finalOrder = append(finalOrder, p)
-	}
-	if !hasCore {
-		finalOrder = append([]string{"Core"}, finalOrder...)
-	}
-
-	return config.WritePivotEquippedOrder(configDir, finalOrder)
+	return config.WritePivotEquippedOrder(configDir, targetProfiles)
 }
 
 func StripAllProfiles(configDir string) error {
@@ -246,7 +233,7 @@ func StripAllProfiles(configDir string) error {
 		}
 	}
 
-	// Empty desired set ⇒ stash everything except the protected core.
+	// Empty desired set ⇒ stash everything.
 	res, err := profiles.Reconcile(configDir, nil)
 	if err != nil {
 		return err
@@ -255,6 +242,6 @@ func StripAllProfiles(configDir string) error {
 		fmt.Printf("  - Stored: %s\n", n)
 	}
 
-	// Reset Pivot Order to just Core
-	return config.WritePivotEquippedOrder(configDir, []string{"Core"})
+	// Empty pivot order: next launch lands in rescue mode.
+	return config.WritePivotEquippedOrder(configDir, nil)
 }

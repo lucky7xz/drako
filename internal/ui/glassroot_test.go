@@ -101,3 +101,25 @@ func TestGlassrootFailQuitsWithExitCode(t *testing.T) {
 		t.Error("expected the command to produce tea.QuitMsg")
 	}
 }
+
+// Glassroot refuses to show a bundle with broken profiles (TOML details) or
+// zero equipped profiles (the rescue grid's config-editing cells).
+func TestGlassrootRejectsBundle(t *testing.T) {
+	cases := []struct {
+		name   string
+		bundle config.ConfigBundle
+		want   bool
+	}{
+		{"healthy", config.ConfigBundle{Profiles: []config.ProfileInfo{{Name: "kiosk"}}}, false},
+		{"broken profile", config.ConfigBundle{
+			Profiles: []config.ProfileInfo{{Name: "kiosk"}},
+			Broken:   []config.ProfileParseError{{Name: "bad"}},
+		}, true},
+		{"zero profiles (rescue grid)", config.ConfigBundle{}, true},
+	}
+	for _, tc := range cases {
+		if got := glassrootRejectsBundle(tc.bundle); got != tc.want {
+			t.Errorf("%s: glassrootRejectsBundle = %v, want %v", tc.name, got, tc.want)
+		}
+	}
+}

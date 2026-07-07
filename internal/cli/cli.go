@@ -38,6 +38,9 @@ func HandleCLI(args []string) bool {
 	case "strip", "--strip":
 		HandleStripCommand(args)
 		return true
+	case "restore-core", "--restore-core":
+		HandleRestoreCoreCommand()
+		return true
 	case "open", "--open":
 		HandleOpenCLI(args)
 		return true
@@ -66,7 +69,8 @@ func PrintUsage() {
 		{"spec list", "Shows available specs"},
 		{"spec <name>", "Apply a spec: move related profiles files to inventory."},
 		{"stash <name>", "Stash the related prifle files to inventory."},
-		{"strip", "Strip all profiles from inventory, except the default core."},
+		{"strip", "Move all equipped profiles to inventory."},
+		{"restore-core", "Regenerate the default core profile for this platform"},
 		{"purge <name>", "Delete profiles or config. Use 'purge -i' for interacive mode"},
 		{"version", "Show version information"},
 		{"help", "Show this help message"},
@@ -185,6 +189,28 @@ func PrintSummonUsage() {
 	fmt.Fprintf(os.Stderr, "\n  # Summon from a git repository (pin with a full commit hash):\n")
 	fmt.Fprintf(os.Stderr, "  drako summon git@github.com:user/repo.git --rev 3f81c2d...\n")
 	fmt.Fprintf(os.Stderr, "  drako summon https://github.com/user/repo.git\n")
+}
+
+// HandleRestoreCoreCommand regenerates core.profile.toml from the embedded
+// template. This is the way back after the core deck has been stashed or
+// deleted — the rescue grid offers it as a cell.
+func HandleRestoreCoreCommand() {
+	configDir, err := paths.ConfigDir()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
+		os.Exit(1)
+	}
+	created, err := config.RestoreCoreProfile(configDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "restore-core failed: %v\n", err)
+		os.Exit(1)
+	}
+	if created {
+		fmt.Printf("✓ Core profile restored to %s\n", configDir)
+	} else {
+		fmt.Println("Core profile already present — nothing to do.")
+	}
+	os.Exit(0)
 }
 
 // HandleOpenCLI processes the 'drako open <path>' command from the shell.

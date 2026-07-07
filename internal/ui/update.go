@@ -60,11 +60,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case reloadProfilesMsg:
 		bundle := config.LoadConfig(nil)
+		if m.GlassrootMode && glassrootRejectsBundle(bundle) {
+			return m.failGlassroot()
+		}
 		m.applyBundle(bundle)
 		if len(bundle.Broken) > 0 {
-			if m.GlassrootMode {
-				return m.failGlassroot()
-			}
 			m.profile.pendingErrors = append(m.profile.pendingErrors, bundle.Broken...)
 			m.profile.errorQueueActive = true
 			m = m.presentNextBrokenProfile()
@@ -77,11 +77,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Config file changed on disk, reload everything
 		log.Printf("Config file change detected: %s", msg.Path)
 		bundle := config.LoadConfig(nil)
+		if m.GlassrootMode && glassrootRejectsBundle(bundle) {
+			return m.failGlassroot()
+		}
 		m.applyBundle(bundle)
 		if len(bundle.Broken) > 0 {
-			if m.GlassrootMode {
-				return m.failGlassroot()
-			}
 			m.profile.pendingErrors = append(m.profile.pendingErrors, bundle.Broken...)
 			m.profile.errorQueueActive = true
 			m = m.presentNextBrokenProfile()

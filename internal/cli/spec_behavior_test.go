@@ -26,7 +26,7 @@ func exists(t *testing.T, parts ...string) bool {
 
 // StripAllProfiles ------------------------------------------------------
 
-func TestStripAllProfiles_MovesAllButCore(t *testing.T) {
+func TestStripAllProfiles_MovesEverything(t *testing.T) {
 	cfg := t.TempDir()
 	inv := filepath.Join(cfg, "inventory")
 	writeProfile(t, cfg, "core")
@@ -37,14 +37,11 @@ func TestStripAllProfiles_MovesAllButCore(t *testing.T) {
 		t.Fatalf("StripAllProfiles: %v", err)
 	}
 
-	if !exists(t, cfg, "core.profile.toml") {
-		t.Error("core must stay equipped")
+	if exists(t, cfg, "core.profile.toml") || exists(t, cfg, "git.profile.toml") || exists(t, cfg, "work.profile.toml") {
+		t.Error("all profiles must leave the equipped dir")
 	}
-	if exists(t, cfg, "git.profile.toml") || exists(t, cfg, "work.profile.toml") {
-		t.Error("git/work must leave the equipped dir")
-	}
-	if !exists(t, inv, "git.profile.toml") || !exists(t, inv, "work.profile.toml") {
-		t.Error("git/work must land in inventory")
+	if !exists(t, inv, "core.profile.toml") || !exists(t, inv, "git.profile.toml") || !exists(t, inv, "work.profile.toml") {
+		t.Error("all profiles must land in inventory")
 	}
 }
 
@@ -88,7 +85,7 @@ func TestApplySpec_EquipsTargetsStashesRest(t *testing.T) {
 	if !exists(t, inv, "git.profile.toml") {
 		t.Error("git must be stashed (not in target)")
 	}
-	if !exists(t, cfg, "core.profile.toml") {
-		t.Error("core must never be stashed")
+	if !exists(t, inv, "core.profile.toml") {
+		t.Error("core must be stashed like any other deck (not in target)")
 	}
 }

@@ -1,6 +1,10 @@
 package ui
 
-import tea "github.com/charmbracelet/bubbletea"
+import (
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/lucky7xz/drako/internal/config"
+)
 
 // Glassroot is drako's kiosk lockdown (--glassroot): the session may only see
 // and run what its decks offer. This file is the single policy point — every
@@ -9,7 +13,8 @@ import tea "github.com/charmbracelet/bubbletea"
 //
 // Blocked: entering inventory, entering path mode, toggling the pivot lock,
 // copying to the clipboard, and exposing config/rescue details when a profile
-// is broken (the session ends silently instead — see failGlassroot).
+// is broken or no profiles are equipped at all (the session ends silently
+// instead — see failGlassroot and glassrootRejectsBundle).
 // File editing is blocked transitively (it lives inside inventory mode) plus
 // a defense-in-depth check at the handler — an editor is a shell (:!sh).
 //
@@ -32,6 +37,13 @@ func (m Model) glassrootBlocksKey(msg tea.KeyMsg) bool {
 // TOML contents, so glassroot forbids it.
 func (m Model) allowCopy() bool {
 	return !m.GlassrootMode
+}
+
+// glassrootRejectsBundle reports whether a freshly loaded bundle must not be
+// shown in a glassroot session: broken profiles expose TOML details, and zero
+// equipped profiles would land in the rescue grid (config-editing cells).
+func glassrootRejectsBundle(b config.ConfigBundle) bool {
+	return len(b.Broken) > 0 || len(b.Profiles) == 0
 }
 
 // failGlassroot ends the session silently with exit code 1. Glassroot never

@@ -34,28 +34,10 @@ func bootstrapCopy(dstRoot string) error {
 	}
 
 	// 2. Weave and write core.profile.toml (Core Profile)
-	tmpl, err := bootstrapFS.ReadFile("bootstrap/core_template.toml")
-	if err != nil {
-		log.Printf("bootstrap warning: core_template.toml not found: %v", err)
-	}
-	dict, err := bootstrapFS.ReadFile("bootstrap/core_dictionary.toml")
-	if err != nil {
-		log.Printf("bootstrap warning: core_dictionary.toml not found: %v", err)
-	}
-
-	if tmpl != nil && dict != nil {
-		woven, err := WeaveConfig(tmpl, dict)
-		if err != nil {
-			log.Printf("bootstrap error: failed to weave config: %v", err)
-		} else {
-			targetProfile := filepath.Join(dstRoot, "core.profile.toml")
-			if _, err := os.Stat(targetProfile); os.IsNotExist(err) {
-				if err := os.WriteFile(targetProfile, woven, 0o644); err != nil {
-					return err
-				}
-				log.Printf("bootstrap: generated core.profile.toml for runtime: %s", runtime.GOOS)
-			}
-		}
+	if created, err := RestoreCoreProfile(dstRoot); err != nil {
+		log.Printf("bootstrap error: failed to weave core profile: %v", err)
+	} else if created {
+		log.Printf("bootstrap: generated core.profile.toml for runtime: %s", runtime.GOOS)
 	}
 
 	// 3. Copy other files
@@ -104,4 +86,32 @@ func bootstrapCopy(dstRoot string) error {
 		}
 		return os.WriteFile(target, b, 0o644)
 	})
+}
+
+// RestoreCoreProfile weaves the embedded core template for this platform and
+// writes core.profile.toml into dstRoot. It never overwrites an existing file;
+// the bool reports whether a new file was created. Used by first-run bootstrap
+// and by "drako restore-core" (the rescue grid's way back once the core deck
+// has been stashed or deleted).
+func RestoreCoreProfile(dstRoot string) (bool, error) {
+	tmpl, err := bootstrapFS.ReadFile("bootstrap/core_template.toml")
+	if err != nil {
+		return false, err
+	}
+	dict, err := bootstrapFS.ReadFile("bootstrap/core_dictionary.toml")
+	if err != nil {
+		return false, err
+	}
+	woven, err := WeaveConfig(tmpl, dict)
+	if err != nil {
+		return false, err
+	}
+	targetProfile := filepath.Join(dstRoot, "core.profile.toml")
+	if _, err := os.Stat(targetProfile); err == nil {
+		return false, nil
+	}
+	if err := os.WriteFile(targetProfile, woven, 0o644); err != nil {
+		return false, err
+	}
+	return true, nil
 }
