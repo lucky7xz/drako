@@ -13,7 +13,7 @@ X → e (Explain).
 Y → i (Inventory).
 
 LB → Tab (toggle Grid/Path).
-RB → Backtick "``" (Next profile).
+RB → p (Next profile); optionally LB+RB or another spare button → o (Previous profile).
 
 Start/Options → r (Start‑Lock toggle).
 Back paddles → Number shortcuts:

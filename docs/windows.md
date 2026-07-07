@@ -23,16 +23,11 @@ On Windows, your configuration lives in the standard AppData location:
 
 - **Native Path Handling:** Drako understands drive letters (`C:\`) and backslashes.
 - **Shell Integration:** Commands run via your default shell (PowerShell by default if detected, or configured in `config.toml`).
-- **Scoop Integration:** Use the bundled `scoop` profile to manage your packages from a TUI.
+- **Cross-Platform Decks:** Profile authors can give a cell a `windows` command variant alongside the Linux/macOS ones — see "Cross-Platform Decks" in the README. The generated Core profile already uses Windows-native commands.
 
-## Scoop Profile
+## Scoop
 
-We include a "Starter Deck" for Scoop users. You can find it in your Inventory (`i`).
-
-It includes commands for:
-- Checking updates (`scoop status`, `scoop update`)
-- Searching and installing apps
-- Cleaning up old versions (`scoop cleanup`)
+Scoop commands (`scoop status`, `scoop update`, `scoop cleanup`, …) bind to grid cells like any other CLI tool — a Scoop deck makes a great first custom profile.
 
 ## Troubleshooting
 
