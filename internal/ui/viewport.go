@@ -67,6 +67,23 @@ func cellFootprint(grid [][]string) int {
 	return min(widest, GridMaxTextWidth) + 4
 }
 
+// fitFootprint clamps the content-preferred cell footprint to what the
+// terminal affords the minimum 2-column window, so text length can widen
+// cells only within available space — never past it. Compression stops at
+// MinCellFootprint to keep truncated text legible; narrower content simply
+// keeps its natural size.
+func fitFootprint(content, widthBudget, totalCols int) int {
+	minCols := min(totalCols, 2)
+	if minCols < 1 {
+		return content
+	}
+	avail := widthBudget
+	if totalCols > minCols {
+		avail -= 2 // the appended ▸ marker
+	}
+	return min(content, max(avail/minCols, MinCellFootprint))
+}
+
 // gridRowBudget is the vertical space left for the grid block after the
 // chrome around it. Heights are measured from the rendered strings, not
 // estimated: an empty string costs one line, exactly as in JoinVertical.

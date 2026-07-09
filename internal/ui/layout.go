@@ -7,6 +7,10 @@ const (
 	// Grid Geometry Defaults (used for fallbacks or min sizing)
 	GridCellHeight   = 4
 	GridMaxTextWidth = 25
+	// MinCellFootprint is the narrowest a cell may be compressed to when
+	// terminal space is tight (8 text columns + padding + border). It caps
+	// the size gate's width demand at a content-independent constant.
+	MinCellFootprint = 12
 
 	// UI Elements Height
 	LayoutHeaderHeight = 10 // Logo + spacing

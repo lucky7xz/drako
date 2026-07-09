@@ -85,6 +85,31 @@ func TestCellFootprint(t *testing.T) {
 	}
 }
 
+func TestFitFootprint(t *testing.T) {
+	tests := []struct {
+		name                            string
+		content, widthBudget, totalCols int
+		want                            int
+	}{
+		{"roomy terminal: content wins", 29, 100, 3, 29},
+		{"tight: space share wins, marker reserved", 29, 34, 3, 16},
+		{"tight two columns: no marker reserve", 29, 32, 2, 16},
+		{"never compressed below legibility floor", 29, 20, 3, 12},
+		{"narrow content ignores the floor", 8, 20, 3, 8},
+		{"single column gets the whole budget", 29, 20, 1, 20},
+		{"empty grid guard", 4, 20, 0, 4},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := fitFootprint(tt.content, tt.widthBudget, tt.totalCols)
+			if got != tt.want {
+				t.Errorf("fitFootprint(%d, %d, %d) = %d, want %d",
+					tt.content, tt.widthBudget, tt.totalCols, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestGridRowBudget(t *testing.T) {
 	// appStyle has Margin(1,2): 2 vertical lines always spent.
 	tests := []struct {

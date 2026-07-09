@@ -2,9 +2,9 @@ package ui
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 )
 
 func (m Model) View() string {
@@ -110,24 +110,14 @@ func (m Model) renderCombinedFooter(helpRendered string) string {
 	return lipgloss.JoinVertical(lipgloss.Left, items...)
 }
 
-// truncateText clips a string to a max visual width
+// truncateText clips a string to a max visual width. ansi.Truncate measures
+// grapheme clusters (emoji + variation selectors), which per-rune width
+// arithmetic gets wrong.
 func truncateText(s string, maxLength int) string {
 	if lipgloss.Width(s) <= maxLength {
 		return s
 	}
-
-	var truncated strings.Builder
-	var currentWidth int
-	for _, r := range s {
-		runeWidth := lipgloss.Width(string(r))
-		if currentWidth+runeWidth+3 > maxLength {
-			break
-		}
-		truncated.WriteRune(r)
-		currentWidth += runeWidth
-	}
-
-	return truncated.String() + "..."
+	return ansi.Truncate(s, maxLength, "...")
 }
 
 func (m Model) renderFooter() string {
@@ -157,7 +147,11 @@ func (m Model) belowMinimum() (bool, int, int) {
 	if totalRows > minRows {
 		reqH++ // the ▾ ▴ marker line
 	}
-	reqW := appStyle.GetHorizontalMargins() + maxRowNumWidth + 1 + minCols*cellFootprint(m.gridNav.grid)
+	// Cells compress down to MinCellFootprint before the overlay fires, so
+	// long text cannot raise the demand past a constant; naturally narrower
+	// cells lower it.
+	reqW := appStyle.GetHorizontalMargins() + maxRowNumWidth + 1 +
+		minCols*min(cellFootprint(m.gridNav.grid), MinCellFootprint)
 	if totalCols > minCols {
 		reqW += 2 // the appended ▸ marker
 	}

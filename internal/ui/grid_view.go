@@ -14,9 +14,6 @@ import (
 // the grid is bigger than the terminal, a center-locked window around the
 // cursor is shown, with indicators counting the clipped rows/columns.
 func (m Model) renderGrid(budgetLines int) string {
-	totalCellWidth := cellFootprint(m.gridNav.grid)
-	maxContentWidth := totalCellWidth - 4
-
 	// --- Derive the visible window on both axes ---
 	totalRows := len(m.gridNav.grid)
 	totalCols := 0
@@ -27,8 +24,11 @@ func (m Model) renderGrid(budgetLines int) string {
 	// Calculate the padding needed for the largest row number.
 	maxRowNumWidth := len(fmt.Sprintf("%d", max(totalRows-1, 0)))
 
-	// reserve 2: the right scroll marker appended to the header line
 	widthBudget := m.termWidth - appStyle.GetHorizontalMargins() - (maxRowNumWidth + 1)
+	totalCellWidth := fitFootprint(cellFootprint(m.gridNav.grid), widthBudget, totalCols)
+	maxContentWidth := totalCellWidth - 4
+
+	// reserve 2: the right scroll marker appended to the header line
 	colWin := window(m.gridNav.cursorCol, totalCols, visibleCount(widthBudget, totalCellWidth, totalCols, 2))
 
 	rowHeight := lipgloss.Height(m.styles.Cell.Render("x"))

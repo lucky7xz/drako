@@ -238,6 +238,64 @@ func TestView_WideCellsStillRenderNarrow(t *testing.T) {
 	}
 }
 
+// Long cell text must never lock a profile out of a terminal that other
+// profiles render in: cells compress to the available space (text
+// ellipsizes) and the gate's width demand is capped at a constant.
+func TestView_LongTextCompressesNotBlocks(t *testing.T) {
+	long := strings.Repeat("x", 25)
+	grid := [][]string{
+		{long, long, long},
+		{long, long, long},
+		{long, long, long},
+	}
+	cfg := config.Config{X: 3, Y: 3, Theme: "default", DefaultShell: "/bin/bash"}
+	m := Model{
+		mode:       gridMode,
+		termWidth:  44,
+		termHeight: 30,
+		Config:     cfg,
+		styles:     BuildStyles(cfg),
+		gridNav:    gridNav{grid: grid},
+		profile:    profileState{profiles: []config.ProfileInfo{{Name: "Core"}}},
+	}
+
+	if _, reqW, _ := m.belowMinimum(); reqW != 32 {
+		t.Errorf("gate width demand should cap at the constant 32, got %d", reqW)
+	}
+
+	output := m.View()
+	if strings.Contains(output, "Terminal too small") {
+		t.Fatalf("long-text 3x3 grid at 44 cols should compress, not overlay. Got:\n%s", output)
+	}
+	for _, want := range []string{"...", "[A]", "[B]", "▸"} {
+		if !strings.Contains(output, want) {
+			t.Errorf("output missing %q. Got:\n%s", want, output)
+		}
+	}
+}
+
+// truncateText must clip by rendered width, not per-rune arithmetic:
+// emoji with variation selectors (⬆️ = ⬆ + VS16) fool rune-based counting,
+// and an over-wide "truncated" string wraps inside its cell, breaking row
+// alignment.
+func TestTruncateTextEmojiWidth(t *testing.T) {
+	tests := []struct {
+		s   string
+		max int
+	}{
+		{"⬆️ System Update", 14},
+		{"🧹 Maintenance ⋮ ", 12},
+		{"👀 Process Monitor", 8},
+		{"plain ascii text", 9},
+	}
+	for _, tt := range tests {
+		got := truncateText(tt.s, tt.max)
+		if w := lipgloss.Width(got); w > tt.max {
+			t.Errorf("truncateText(%q, %d) = %q renders %d wide", tt.s, tt.max, got, w)
+		}
+	}
+}
+
 func TestView_BothAxesScroll(t *testing.T) {
 	m := makeScrollTestModel(9, 10, 60, 24)
 	m.gridNav.cursorRow = 5
