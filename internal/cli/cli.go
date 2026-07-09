@@ -41,6 +41,9 @@ func HandleCLI(args []string) bool {
 	case "restore-core", "--restore-core":
 		HandleRestoreCoreCommand()
 		return true
+	case "check", "--check":
+		HandleCheckCommand(args)
+		return true
 	case "open", "--open":
 		HandleOpenCLI(args)
 		return true
@@ -65,6 +68,7 @@ func PrintUsage() {
 	fmt.Printf("Usage: drako <command> [arguments]\n\n")
 	table(os.Stdout, []string{"Command", "Description"}, [][]string{
 		{"ls", "List equipped profiles and their commands with cell addresses"},
+		{"check [path ...]", "Validate profile files (default: equipped + inventory)"},
 		{"summon <url>", "Summon profile(s) from a URL"},
 		{"spec list", "Shows available specs"},
 		{"spec <name>", "Apply a spec: move related profiles files to inventory."},
