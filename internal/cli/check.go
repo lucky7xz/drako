@@ -14,24 +14,23 @@ import (
 
 // HandleCheckCommand processes 'drako check [path ...]': lint profile files
 // for authoring mistakes. With no arguments it checks every equipped and
-// inventory profile. Exit code 1 when any error-level finding exists, so
-// deck repositories can run it in CI.
-func HandleCheckCommand(args []string) {
+// inventory profile. Returns exit code 1 when any error-level finding
+// exists, so deck repositories can run it in CI.
+func HandleCheckCommand(args []string) int {
 	targets, err := checkTargets(args[2:])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 	if len(targets) == 0 {
 		fmt.Println("No profile files to check.")
-		os.Exit(0)
+		return 0
 	}
 
-	errs := runChecks(os.Stdout, targets)
-	if errs > 0 {
-		os.Exit(1)
+	if runChecks(os.Stdout, targets) > 0 {
+		return 1
 	}
-	os.Exit(0)
+	return 0
 }
 
 // checkTargets resolves the argument list to profile files. Arguments may be

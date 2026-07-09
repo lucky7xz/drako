@@ -25,6 +25,31 @@ row = 0
 col = "a"
 `
 
+func TestHandleCheckCommand_ExitCodes(t *testing.T) {
+	dir := t.TempDir()
+	bad := writeCheckFile(t, dir, "bad.profile.toml", "x = not toml at all [")
+	good := writeCheckFile(t, dir, "good.profile.toml", cleanProfile)
+	empty := t.TempDir()
+
+	tests := []struct {
+		name string
+		args []string
+		want int
+	}{
+		{"error findings exit 1 (CI contract)", []string{"drako", "check", bad}, 1},
+		{"clean file exits 0", []string{"drako", "check", good}, 0},
+		{"unreadable path exits 1", []string{"drako", "check", filepath.Join(dir, "nope")}, 1},
+		{"empty dir exits 0", []string{"drako", "check", empty}, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := HandleCheckCommand(tt.args); got != tt.want {
+				t.Errorf("HandleCheckCommand(%v) = %d, want %d", tt.args, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestRunChecksTableOutput(t *testing.T) {
 	dir := t.TempDir()
 	bad := writeCheckFile(t, dir, "bad.profile.toml", "x = not toml at all [")

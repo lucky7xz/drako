@@ -19,11 +19,11 @@ import (
 
 const lsDescriptionWidth = 60
 
-// HandleLsCommand processes 'drako ls'.
-func HandleLsCommand(args []string) {
+// HandleLsCommand processes 'drako ls'. Returns the process exit code.
+func HandleLsCommand(args []string) int {
 	if len(args) > 2 {
 		fmt.Fprintf(os.Stderr, "Usage: drako ls\n")
-		os.Exit(1)
+		return 1
 	}
 
 	// Keep stdout pure listing: route log output to the usual log file
@@ -38,7 +38,7 @@ func HandleLsCommand(args []string) {
 
 	bundle := config.LoadConfig(nil)
 	renderLs(os.Stdout, bundle)
-	os.Exit(0)
+	return 0
 }
 
 // cellAddress renders a command's grid coordinate, e.g. "A0".

@@ -61,3 +61,29 @@ func TestListSpecs_MissingDir(t *testing.T) {
 		t.Errorf("expected 'No specs found' for missing dir, got:\n%s", out.String())
 	}
 }
+
+func TestSpecHandlers_ExitCodes(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", tmp)
+	t.Setenv("HOME", tmp)
+
+	tests := []struct {
+		name string
+		fn   func([]string) int
+		args []string
+		want int
+	}{
+		{"spec no args", HandleSpecCommand, []string{"drako", "spec"}, 1},
+		{"spec not found", HandleSpecCommand, []string{"drako", "spec", "nosuch"}, 1},
+		{"stash no args", HandleStashCommand, []string{"drako", "stash"}, 1},
+		{"stash not found", HandleStashCommand, []string{"drako", "stash", "nosuch"}, 1},
+		{"strip succeeds on empty config", HandleStripCommand, []string{"drako", "strip"}, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.fn(tt.args); got != tt.want {
+				t.Errorf("%v = %d, want %d", tt.args, got, tt.want)
+			}
+		})
+	}
+}

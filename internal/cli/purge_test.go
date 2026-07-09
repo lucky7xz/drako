@@ -340,3 +340,9 @@ func TestInteractivePurge_Range(t *testing.T) {
 		t.Errorf("Expected 3 targets, got %d", len(opts.TargetProfiles))
 	}
 }
+
+func TestHandlePurgeCommand_BadFlag(t *testing.T) {
+	if got := HandlePurgeCommand([]string{"drako", "purge", "--nonsense"}); got != 1 {
+		t.Errorf("HandlePurgeCommand --nonsense = %d, want 1", got)
+	}
+}

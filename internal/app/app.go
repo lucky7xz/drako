@@ -37,10 +37,8 @@ func Run() int {
 
 	// 1. If NOT in TUI mode, try to handle as a CLI command (e.g. "drako summon", "drako purge")
 	if !isTuiMode {
-		if cli.HandleCLI(os.Args) {
-			// HandleCLI returns true/false to indicate success.
-			// Either way, we exit here. No TUI.
-			return 0
+		if handled, code := cli.HandleCLI(os.Args); handled {
+			return code
 		}
 	}
 

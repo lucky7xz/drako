@@ -98,14 +98,16 @@ func performFullNuke(configDir string) error {
 	return nil
 }
 
-// HandlePurgeCommand processes the 'drako purge' command from args
-func HandlePurgeCommand(args []string) {
+// HandlePurgeCommand processes the 'drako purge' command from args.
+// Returns the process exit code.
+func HandlePurgeCommand(args []string) int {
 	// Parse args starting from index 2 (skipping "drako" and "purge")
 	if err := ExecutePurge(args[2:]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		printPurgeUsage()
-		os.Exit(1)
+		printPurgeUsage(os.Stderr)
+		return 1
 	}
+	return 0
 }
 
 // ExecutePurge parses flags and executes the purge logic.
@@ -151,7 +153,7 @@ func ExecutePurge(args []string) error {
 	}
 
 	if !opts.DestroyEverything && !opts.TargetConfig && !opts.TargetLogs && len(opts.TargetProfiles) == 0 {
-		printPurgeUsage()
+		printPurgeUsage(os.Stderr)
 		return fmt.Errorf("no target specified")
 	}
 
@@ -179,12 +181,14 @@ func ExecutePurge(args []string) error {
 	return nil
 }
 
-func printPurgeUsage() {
-	fmt.Println("Purge Usage:")
-	fmt.Println("To purge a specific profile, use:    `drako purge --target <name>`")
-	fmt.Println("To purge Core config, use:           `drako purge --config`")
-	fmt.Println("To select interactively, use:        `drako purge --interactive`")
-	fmt.Println("Destroy ~/.config/drako directory:   `drako purge --destroyeverything`")
+// printPurgeUsage writes usage to w — os.Stderr on error paths, so stdout
+// stays clean for pipes.
+func printPurgeUsage(w io.Writer) {
+	fmt.Fprintln(w, "Purge Usage:")
+	fmt.Fprintln(w, "To purge a specific profile, use:    `drako purge --target <name>`")
+	fmt.Fprintln(w, "To purge Core config, use:           `drako purge --config`")
+	fmt.Fprintln(w, "To select interactively, use:        `drako purge --interactive`")
+	fmt.Fprintln(w, "Destroy ~/.config/drako directory:   `drako purge --destroyeverything`")
 }
 
 func setupPurgeLogging(destroyEverything bool) {

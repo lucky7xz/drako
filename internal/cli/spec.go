@@ -19,25 +19,27 @@ type Spec struct {
 	Profiles []string `toml:"profiles"`
 }
 
-func HandleSpecCommand(args []string) {
+func HandleSpecCommand(args []string) int {
 	if len(args) < 3 {
 		fmt.Fprintf(os.Stderr, "Usage: drako spec <name>\n")
 		fmt.Fprintf(os.Stderr, "       drako spec list\n")
 		fmt.Fprintf(os.Stderr, "  Loads a profile specification from ~/.config/drako/specs/<name>.spec.toml\n")
-		os.Exit(1)
+		return 1
 	}
 
 	configDir, err := paths.ConfigDir()
 	if err != nil {
-		log.Fatalf("could not get config dir: %v", err)
+		fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
+		return 1
 	}
 	specsDir := paths.SpecsDir(configDir)
 
 	if args[2] == "list" {
 		if err := ListSpecs(specsDir, os.Stdout); err != nil {
-			log.Fatalf("failed to list specs: %v", err)
+			fmt.Fprintf(os.Stderr, "failed to list specs: %v\n", err)
+			return 1
 		}
-		os.Exit(0)
+		return 0
 	}
 
 	specName := args[2]
@@ -49,74 +51,81 @@ func HandleSpecCommand(args []string) {
 		fmt.Fprintf(os.Stderr, "Please create a spec file in %s\n", specsDir)
 		fmt.Fprintf(os.Stderr, "Example content:\n")
 		fmt.Fprintf(os.Stderr, "profiles = [\"git\", \"work\"]\n")
-		os.Exit(1)
+		return 1
 	}
 
 	var spec Spec
 	if _, err := toml.DecodeFile(specPath, &spec); err != nil {
-		log.Fatalf("failed to parse spec: %v", err)
+		fmt.Fprintf(os.Stderr, "failed to parse spec: %v\n", err)
+		return 1
 	}
 
 	if err := ApplySpec(configDir, spec.Profiles); err != nil {
-		log.Fatalf("failed to apply spec: %v", err)
+		fmt.Fprintf(os.Stderr, "failed to apply spec: %v\n", err)
+		return 1
 	}
 
 	fmt.Printf("✓ Spec '%s' applied successfully.\n", strings.TrimSuffix(filepath.Base(specPath), profiles.SpecSuffix))
-	os.Exit(0)
+	return 0
 }
 
-func HandleStashCommand(args []string) {
+func HandleStashCommand(args []string) int {
 	if len(args) < 3 {
 		fmt.Fprintf(os.Stderr, "Usage: drako stash <name>\n")
 		fmt.Fprintf(os.Stderr, "  Stashes profiles listed in ~/.config/drako/specs/<name>.spec.toml to inventory\n")
-		os.Exit(1)
+		return 1
 	}
 
 	specName := args[2]
 
 	configDir, err := paths.ConfigDir()
 	if err != nil {
-		log.Fatalf("could not get config dir: %v", err)
+		fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
+		return 1
 	}
 
 	specsDir := paths.SpecsDir(configDir)
 	specPath, err := resolveSpecPath(specsDir, specName)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Spec not found: %s\n", specName)
-		os.Exit(1)
+		return 1
 	}
 
 	var spec Spec
 	if _, err := toml.DecodeFile(specPath, &spec); err != nil {
-		log.Fatalf("failed to parse spec: %v", err)
+		fmt.Fprintf(os.Stderr, "failed to parse spec: %v\n", err)
+		return 1
 	}
 
 	if err := StashSpec(configDir, spec.Profiles); err != nil {
-		log.Fatalf("failed to stash spec: %v", err)
+		fmt.Fprintf(os.Stderr, "failed to stash spec: %v\n", err)
+		return 1
 	}
 
 	fmt.Printf("✓ Spec '%s' stashed successfully.\n", strings.TrimSuffix(filepath.Base(specPath), profiles.SpecSuffix))
-	os.Exit(0)
+	return 0
 }
 
-func HandleStripCommand(args []string) {
+func HandleStripCommand(args []string) int {
 	if len(args) < 2 {
 		fmt.Fprintf(os.Stderr, "Usage: drako strip\n")
 		fmt.Fprintf(os.Stderr, "  Moves ALL profiles to inventory.\n")
-		os.Exit(1)
+		return 1
 	}
 
 	configDir, err := paths.ConfigDir()
 	if err != nil {
-		log.Fatalf("could not get config dir: %v", err)
+		fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
+		return 1
 	}
 
 	if err := StripAllProfiles(configDir); err != nil {
-		log.Fatalf("failed to strip profiles: %v", err)
+		fmt.Fprintf(os.Stderr, "failed to strip profiles: %v\n", err)
+		return 1
 	}
 
 	fmt.Printf("✓ All profiles stripped successfully.\n")
-	os.Exit(0)
+	return 0
 }
 
 // ListSpecs writes the name and profiles of every *.spec.toml file in specsDir.

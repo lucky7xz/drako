@@ -68,3 +68,9 @@ func TestRenderLsEmpty(t *testing.T) {
 		t.Errorf("empty bundle output = %q", sb.String())
 	}
 }
+
+func TestHandleLsCommand_UsageError(t *testing.T) {
+	if got := HandleLsCommand([]string{"drako", "ls", "extra"}); got != 1 {
+		t.Errorf("HandleLsCommand with extra arg = %d, want 1", got)
+	}
+}

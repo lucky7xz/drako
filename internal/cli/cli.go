@@ -10,56 +10,46 @@ import (
 	"github.com/lucky7xz/drako/internal/paths"
 )
 
-// HandleCLI checks if the program was invoked with CLI arguments (not TUI mode).
-// Returns true if a CLI command was handled (or errored out), false if it should proceed to TUI.
-func HandleCLI(args []string) bool {
+// HandleCLI checks if the program was invoked with CLI arguments (not TUI
+// mode). handled=false means proceed to the TUI; otherwise code is the
+// process exit code, which app.Run carries back to the sole os.Exit in main.
+func HandleCLI(args []string) (handled bool, code int) {
 	if len(args) <= 1 {
-		return false
+		return false, 0
 	}
 
 	command := args[1]
 
 	switch command {
 	case "ls", "list":
-		HandleLsCommand(args)
-		return true
+		return true, HandleLsCommand(args)
 	case "summon", "--summon":
-		HandleSummonCommand(args)
-		return true
+		return true, HandleSummonCommand(args)
 	case "purge", "--purge":
-		HandlePurgeCommand(args)
-		return true
+		return true, HandlePurgeCommand(args)
 	case "spec", "--spec":
-		HandleSpecCommand(args)
-		return true
+		return true, HandleSpecCommand(args)
 	case "stash", "--stash":
-		HandleStashCommand(args)
-		return true
+		return true, HandleStashCommand(args)
 	case "strip", "--strip":
-		HandleStripCommand(args)
-		return true
+		return true, HandleStripCommand(args)
 	case "restore-core", "--restore-core":
-		HandleRestoreCoreCommand()
-		return true
+		return true, HandleRestoreCoreCommand()
 	case "check", "--check":
-		HandleCheckCommand(args)
-		return true
+		return true, HandleCheckCommand(args)
 	case "open", "--open":
-		HandleOpenCLI(args)
-		return true
+		return true, HandleOpenCLI(args)
 	case "version", "--version", "-v":
 		fmt.Printf("%s %s\n", config.AppName, config.Version())
-		return true
+		return true, 0
 	case "help", "--help", "-h":
 		PrintUsage()
-		return true
+		return true, 0
 	default:
-		// If we have an argument that isn't a known command, it's an error.
-		// We print usage and exit with 1.
+		// An argument that isn't a known command is an error.
 		fmt.Printf("Unknown command or argument: '%s'\n\n", command)
 		PrintUsage()
-		os.Exit(1)
-		return true // unreachable
+		return true, 1
 	}
 }
 
@@ -82,21 +72,22 @@ func PrintUsage() {
 	})
 }
 
-// HandleSummonCommand processes the 'drako summon <url>' command
-func HandleSummonCommand(args []string) {
+// HandleSummonCommand processes the 'drako summon <url>' command.
+// Returns the process exit code.
+func HandleSummonCommand(args []string) int {
 	if len(args) < 3 {
 		PrintSummonUsage()
-		os.Exit(1)
+		return 1
 	}
 
 	configDir, err := paths.ConfigDir()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		fmt.Fprintf(os.Stderr, "could not create config dir: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 
 	// Setup logging for CLI command
@@ -113,7 +104,7 @@ func HandleSummonCommand(args []string) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n\n", err)
 		PrintSummonUsage()
-		os.Exit(1)
+		return 1
 	}
 	log.Printf("Attempting to summon profile from: %s", sourceURL)
 
@@ -123,12 +114,12 @@ func HandleSummonCommand(args []string) {
 	if err := summoner.Summon(sourceURL); err != nil {
 		log.Printf("Summon failed: %v", err)
 		fmt.Fprintf(os.Stderr, "Summon failed: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 
 	inventoryDir := paths.InventoryDir(configDir)
 	fmt.Printf("\n✓ Profile summoned successfully to %s\n", inventoryDir)
-	os.Exit(0)
+	return 0
 }
 
 // parseSummonArgs extracts the source URL and the optional verification
@@ -198,30 +189,32 @@ func PrintSummonUsage() {
 // HandleRestoreCoreCommand regenerates core.profile.toml from the embedded
 // template. This is the way back after the core deck has been stashed or
 // deleted — the rescue grid offers it as a cell.
-func HandleRestoreCoreCommand() {
+// Returns the process exit code.
+func HandleRestoreCoreCommand() int {
 	configDir, err := paths.ConfigDir()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 	created, err := config.RestoreCoreProfile(configDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "restore-core failed: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 	if created {
 		fmt.Printf("✓ Core profile restored to %s\n", configDir)
 	} else {
 		fmt.Println("Core profile already present — nothing to do.")
 	}
-	os.Exit(0)
+	return 0
 }
 
 // HandleOpenCLI processes the 'drako open <path>' command from the shell.
-func HandleOpenCLI(args []string) {
+// Returns the process exit code.
+func HandleOpenCLI(args []string) int {
 	if len(args) < 3 {
 		fmt.Fprintf(os.Stderr, "Usage: drako open <path>\n")
-		os.Exit(1)
+		return 1
 	}
 
 	// Reconstruct the argument or take the last one.
@@ -229,9 +222,8 @@ func HandleOpenCLI(args []string) {
 
 	if err := OpenPath(path); err != nil {
 		fmt.Fprintf(os.Stderr, "Error opening '%s': %v\n", path, err)
-		os.Exit(1)
+		return 1
 	}
 
-	// Success
-	os.Exit(0)
+	return 0
 }
