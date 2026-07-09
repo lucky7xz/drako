@@ -5,7 +5,6 @@ import "github.com/lucky7xz/drako/internal/config"
 // Layout constants define the geometry of the TUI elements.
 const (
 	// Grid Geometry Defaults (used for fallbacks or min sizing)
-	GridCellWidth    = 29
 	GridCellHeight   = 4
 	GridMaxTextWidth = 25
 

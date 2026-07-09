@@ -8,12 +8,11 @@ import (
 
 // A big grid must not demand a terminal that fits it whole: scrolling only
 // needs a minimum window, so layout math caps the grid's claim at
-// MinVisibleGridRows/Cols.
+// MinVisibleGridRows/Cols and the size gate at a 2x2 window.
 
-func TestIsBelowMinimum_BigGridScrollsInsteadOfBlocking(t *testing.T) {
-	cfg := config.Config{X: 9, Y: 10}
-	tooSmall, _, _ := IsBelowMinimum(100, 25, cfg)
-	if tooSmall {
+func TestBelowMinimum_BigGridScrollsInsteadOfBlocking(t *testing.T) {
+	m := makeScrollTestModel(9, 10, 100, 25)
+	if tooSmall, _, _ := m.belowMinimum(); tooSmall {
 		t.Error("9x10 grid in 100x25 terminal should scroll, not hit the size overlay")
 	}
 }

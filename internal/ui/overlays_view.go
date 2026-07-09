@@ -11,10 +11,9 @@ import (
 // renderSizeOverlay shows a centered panel with current and required dimensions
 func (m Model) renderSizeOverlay(reqW, reqH int) string {
 	title := m.styles.Title.Render("Terminal too small")
-	minScalePct := 60
 	info := m.styles.Help.Render(
-		fmt.Sprintf("Current: %dx%d  |  Required (at %d%%): %dx%d",
-			m.termWidth, m.termHeight, minScalePct, reqW, reqH),
+		fmt.Sprintf("Current: %dx%d  |  Required: %dx%d",
+			m.termWidth, m.termHeight, reqW, reqH),
 	)
 	hint := m.styles.Help.Render("Hint: maximize the window or lower grid size (x,y)")
 

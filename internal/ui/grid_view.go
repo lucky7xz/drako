@@ -14,24 +14,8 @@ import (
 // the grid is bigger than the terminal, a center-locked window around the
 // cursor is shown, with indicators counting the clipped rows/columns.
 func (m Model) renderGrid(budgetLines int) string {
-	// Cell width is measured over ALL cells, not just visible ones, so the
-	// grid does not change shape while scrolling.
-	maxContentWidth := 0
-	for _, row := range m.gridNav.grid {
-		for _, cell := range row {
-			contentWidth := lipgloss.Width(cell)
-			if contentWidth > maxContentWidth {
-				maxContentWidth = contentWidth
-			}
-		}
-	}
-
-	if maxContentWidth > GridMaxTextWidth {
-		maxContentWidth = GridMaxTextWidth
-	}
-
-	// Total width must account for content, padding (1+1), and border (1+1).
-	totalCellWidth := maxContentWidth + 4
+	totalCellWidth := cellFootprint(m.gridNav.grid)
+	maxContentWidth := totalCellWidth - 4
 
 	// --- Derive the visible window on both axes ---
 	totalRows := len(m.gridNav.grid)

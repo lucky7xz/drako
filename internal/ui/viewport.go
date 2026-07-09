@@ -52,6 +52,21 @@ func visibleCount(budget, cellSize, total, reserve int) int {
 	return max(1, (budget-reserve)/cellSize)
 }
 
+// cellFootprint is the on-screen width of one rendered cell: the widest
+// content across ALL cells (so the grid keeps its shape while scrolling),
+// capped at GridMaxTextWidth, plus padding (1+1) and border (1+1).
+func cellFootprint(grid [][]string) int {
+	widest := 0
+	for _, row := range grid {
+		for _, cell := range row {
+			if w := lipgloss.Width(cell); w > widest {
+				widest = w
+			}
+		}
+	}
+	return min(widest, GridMaxTextWidth) + 4
+}
+
 // gridRowBudget is the vertical space left for the grid block after the
 // chrome around it. Heights are measured from the rendered strings, not
 // estimated: an empty string costs one line, exactly as in JoinVertical.

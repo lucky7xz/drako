@@ -66,6 +66,25 @@ func TestVisibleCount(t *testing.T) {
 	}
 }
 
+func TestCellFootprint(t *testing.T) {
+	tests := []struct {
+		name string
+		grid [][]string
+		want int
+	}{
+		{"empty grid", nil, 4},
+		{"narrow cells", [][]string{{"ab", "abcd"}}, 8},
+		{"width capped at GridMaxTextWidth", [][]string{{"this cell content is far too long to fit"}}, GridMaxTextWidth + 4},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := cellFootprint(tt.grid); got != tt.want {
+				t.Errorf("cellFootprint = %d, want %d", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestGridRowBudget(t *testing.T) {
 	// appStyle has Margin(1,2): 2 vertical lines always spent.
 	tests := []struct {

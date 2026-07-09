@@ -171,6 +171,73 @@ func TestView_WideGridScrolls(t *testing.T) {
 	}
 }
 
+// The size gate floors the scroll window at 2x2 (capped by the grid): the
+// overlay fires before the window could shrink to a useless single cell.
+// For the R-cell model (footprint 8, row height 3, prefix 2) that boundary
+// is exactly 24x13.
+func TestView_WindowFloor(t *testing.T) {
+	tests := []struct {
+		name         string
+		termW, termH int
+		wantOverlay  bool
+	}{
+		{"one column short of 2x2", 23, 30, true},
+		{"one line short of 2x2", 100, 12, true},
+		{"exactly the 2x2 floor", 24, 13, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := makeScrollTestModel(9, 9, tt.termW, tt.termH)
+			output := m.View()
+			gotOverlay := strings.Contains(output, "Terminal too small")
+			if gotOverlay != tt.wantOverlay {
+				t.Fatalf("overlay = %v, want %v. Got:\n%s", gotOverlay, tt.wantOverlay, output)
+			}
+			if !tt.wantOverlay {
+				for _, want := range []string{"0❭", "1❭", "[A]", "[B]", "▾", "▸"} {
+					if !strings.Contains(output, want) {
+						t.Errorf("floor render missing %q. Got:\n%s", want, output)
+					}
+				}
+			}
+		})
+	}
+}
+
+// Wide-celled small grids (like the core profile: 3 columns of ~22-wide
+// cells) must keep rendering a 2-column window in narrow terminals instead
+// of hitting the overlay.
+func TestView_WideCellsStillRenderNarrow(t *testing.T) {
+	wide := strings.Repeat("x", 22)
+	grid := [][]string{
+		{wide, wide, wide},
+		{wide, wide, wide},
+		{wide, wide, wide},
+	}
+	cfg := config.Config{X: 3, Y: 3, Theme: "default", DefaultShell: "/bin/bash"}
+	m := Model{
+		mode:       gridMode,
+		termWidth:  60,
+		termHeight: 30,
+		Config:     cfg,
+		styles:     BuildStyles(cfg),
+		gridNav:    gridNav{grid: grid},
+		profile:    profileState{profiles: []config.ProfileInfo{{Name: "Core"}}},
+	}
+	output := m.View()
+	if strings.Contains(output, "Terminal too small") {
+		t.Fatalf("3x3 grid with wide cells at 60 cols should render a 2-col window, not the overlay. Got:\n%s", output)
+	}
+	for _, want := range []string{"[A]", "[B]", "▸"} {
+		if !strings.Contains(output, want) {
+			t.Errorf("output missing %q", want)
+		}
+	}
+	if strings.Contains(output, "[C]") {
+		t.Error("third column should be scrolled out at 60 cols")
+	}
+}
+
 func TestView_BothAxesScroll(t *testing.T) {
 	m := makeScrollTestModel(9, 10, 60, 24)
 	m.gridNav.cursorRow = 5

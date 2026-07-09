@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/lucky7xz/drako/internal/config"
 )
 
 func (m Model) View() string {
@@ -13,8 +12,8 @@ func (m Model) View() string {
 		return "Initializing..."
 	}
 
-	// If terminal is too small even at min_scale, show blocking overlay
-	if tooSmall, reqW, reqH := IsBelowMinimum(m.termWidth, m.termHeight, m.Config); tooSmall {
+	// If even the minimum grid window cannot fit, show the blocking overlay
+	if tooSmall, reqW, reqH := m.belowMinimum(); tooSmall {
 		return m.renderSizeOverlay(reqW, reqH)
 	}
 
@@ -135,39 +134,32 @@ func (m Model) renderFooter() string {
 	return m.styles.Footer.Render("[ github.com/lucky7xz | {chronyx}.xyz ]")
 }
 
-// --- Minimum size helpers (computed from grid size and min_scale) ---
-
-// CalculateRequiredSize computes the minimum terminal dimensions needed
-// for the current grid at 100% scale
-func CalculateRequiredSize(cfg config.Config) (minWidth, minHeight int) {
-	// Grid area, capped at the minimum scroll window: bigger grids scroll.
-	gridWidth := min(cfg.X, MinVisibleGridCols) * GridCellWidth
-	gridHeight := min(cfg.Y, MinVisibleGridRows) * GridCellHeight
-
-	minWidth = gridWidth + LayoutSideMargin
-	// Header is now optional, so minimum height doesn't strictly require it
-	// But let's keep it in the calculation for optimal experience,
-	// or reduce it?
-	// If we want to support small screens, we should say min height is grid + footer.
-	// Let's be permissive.
-	minHeight = gridHeight + LayoutStatusHeight + LayoutVertPadding
-	return minWidth, minHeight
-}
-
-// RequiredSizeAtScale estimates the space needed at a given scale factor
-func RequiredSizeAtScale(cfg config.Config, scale float64) (int, int) {
-	w, h := CalculateRequiredSize(cfg)
-	return int(float64(w) * scale), int(float64(h) * scale)
-}
-
-// IsBelowMinimum returns whether the terminal is too small even at min_scale,
-// and returns the required width/height at min_scale for display.
-func IsBelowMinimum(termWidth, termHeight int, cfg config.Config) (bool, int, int) {
-	// Default minimum scale is 60% (triggers a bit sooner)
-	scale := 0.60
-	reqW, reqH := RequiredSizeAtScale(cfg, scale)
-	if termWidth < reqW || termHeight < reqH {
-		return true, reqW, reqH
+// belowMinimum reports whether the terminal cannot fit even the minimum
+// grid window (2x2, capped by the grid's own size), plus the required
+// dimensions for the overlay. It uses the same measured quantities as
+// renderGrid, so the overlay fires exactly when the window would otherwise
+// shrink below the floor — a 1-cell peephole is never rendered.
+func (m Model) belowMinimum() (bool, int, int) {
+	totalRows := len(m.gridNav.grid)
+	totalCols := 0
+	if totalRows > 0 {
+		totalCols = len(m.gridNav.grid[0])
 	}
-	return false, reqW, reqH
+	minRows := min(2, totalRows)
+	minCols := min(2, totalCols)
+
+	rowHeight := lipgloss.Height(m.styles.Cell.Render("x"))
+	maxRowNumWidth := len(fmt.Sprintf("%d", max(totalRows-1, 0)))
+
+	// Chrome floor: hidden header/counter/footer still cost one line each,
+	// plus the column-header line; scroll markers only when the axis scrolls.
+	reqH := appStyle.GetVerticalMargins() + 3 + 1 + minRows*rowHeight
+	if totalRows > minRows {
+		reqH++ // the ▾ ▴ marker line
+	}
+	reqW := appStyle.GetHorizontalMargins() + maxRowNumWidth + 1 + minCols*cellFootprint(m.gridNav.grid)
+	if totalCols > minCols {
+		reqW += 2 // the appended ▸ marker
+	}
+	return m.termWidth < reqW || m.termHeight < reqH, reqW, reqH
 }
