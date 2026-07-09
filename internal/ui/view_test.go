@@ -1,9 +1,11 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/core"
 )
@@ -69,6 +71,127 @@ func TestView_GridMode(t *testing.T) {
 	// Check for Row Number indicators (e.g., 0❭)
 	if !strings.Contains(output, "0❭") {
 		t.Errorf("View output missing row number '0❭'. Got:\n%s", output)
+	}
+}
+
+// makeScrollTestModel builds a grid-mode model with a cols×rows grid of
+// "R<r>C<c>" cells and the given terminal size.
+func makeScrollTestModel(cols, rows, termW, termH int) Model {
+	grid := make([][]string, rows)
+	for r := range grid {
+		grid[r] = make([]string, cols)
+		for c := range grid[r] {
+			grid[r][c] = fmt.Sprintf("R%dC%d", r, c)
+		}
+	}
+	cfg := config.Config{X: cols, Y: rows, Theme: "default", DefaultShell: "/bin/bash"}
+	return Model{
+		mode:       gridMode,
+		termWidth:  termW,
+		termHeight: termH,
+		Config:     cfg,
+		styles:     BuildStyles(cfg), // real styles: cell height must be measured honestly
+		gridNav:    gridNav{grid: grid},
+		profile:    profileState{profiles: []config.ProfileInfo{{Name: "Core"}}},
+	}
+}
+
+func TestView_SmallGridNoScroll(t *testing.T) {
+	m := makeScrollTestModel(2, 2, 100, 50)
+	output := m.View()
+
+	for _, cell := range []string{"R0C0", "R0C1", "R1C0", "R1C1"} {
+		if !strings.Contains(output, cell) {
+			t.Errorf("small grid should render every cell, missing %q", cell)
+		}
+	}
+	for _, glyph := range []string{"▴", "▾", "◂", "▸"} {
+		if strings.Contains(output, glyph) {
+			t.Errorf("small grid should not show scroll marker %q", glyph)
+		}
+	}
+}
+
+func TestView_TallGridScrolls(t *testing.T) {
+	tests := []struct {
+		name      string
+		cursorRow int
+		contains  []string
+		absent    []string
+	}{
+		{"cursor top", 0, []string{"R0C0", "▾"}, []string{"R9C0", "▴"}},
+		{"cursor bottom", 9, []string{"R9C0", "▴"}, []string{"R0C0", "▾"}},
+		{"cursor middle", 5, []string{"R5C0", "5❭", "▾ ▴"}, []string{"R0C0", "R9C0"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := makeScrollTestModel(1, 10, 100, 24)
+			m.gridNav.cursorRow = tt.cursorRow
+			output := m.View()
+			for _, want := range tt.contains {
+				if !strings.Contains(output, want) {
+					t.Errorf("output missing %q. Got:\n%s", want, output)
+				}
+			}
+			for _, unwanted := range tt.absent {
+				if strings.Contains(output, unwanted) {
+					t.Errorf("output should not contain %q. Got:\n%s", unwanted, output)
+				}
+			}
+		})
+	}
+}
+
+func TestView_WideGridScrolls(t *testing.T) {
+	tests := []struct {
+		name      string
+		cursorCol int
+		contains  []string
+		absent    []string
+	}{
+		{"cursor left", 0, []string{"[A]", "R0C0", "▸"}, []string{"[I]", "◂"}},
+		{"cursor right", 8, []string{"[I]", "R0C8", "◂"}, []string{"[A]", "▸"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := makeScrollTestModel(9, 1, 60, 50)
+			m.gridNav.cursorCol = tt.cursorCol
+			output := m.View()
+			for _, want := range tt.contains {
+				if !strings.Contains(output, want) {
+					t.Errorf("output missing %q. Got:\n%s", want, output)
+				}
+			}
+			for _, unwanted := range tt.absent {
+				if strings.Contains(output, unwanted) {
+					t.Errorf("output should not contain %q. Got:\n%s", unwanted, output)
+				}
+			}
+		})
+	}
+}
+
+func TestView_BothAxesScroll(t *testing.T) {
+	m := makeScrollTestModel(9, 10, 60, 24)
+	m.gridNav.cursorRow = 5
+	m.gridNav.cursorCol = 4
+	output := m.View()
+
+	for _, want := range []string{
+		"R5C4", "5❭", "[B]", "[G]",
+		"▴", "▾", "◂", "▸",
+	} {
+		if !strings.Contains(output, want) {
+			t.Errorf("output missing %q. Got:\n%s", want, output)
+		}
+	}
+	for _, unwanted := range []string{"[A]", "[I]", "R0C0", "R9C8"} {
+		if strings.Contains(output, unwanted) {
+			t.Errorf("output should not contain %q. Got:\n%s", unwanted, output)
+		}
+	}
+	if h := lipgloss.Height(output); h > m.termHeight+2 {
+		t.Errorf("scrolled view is %d lines tall, must not exceed termHeight+appStyle margins = %d", h, m.termHeight+2)
 	}
 }
 

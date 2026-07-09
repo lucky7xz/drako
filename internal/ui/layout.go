@@ -14,6 +14,11 @@ const (
 	LayoutStatusHeight = 5  // Status bar + network + path
 	LayoutSideMargin   = 4  // Left + Right margins
 	LayoutVertPadding  = 2  // Top + Bottom padding
+
+	// A bigger grid scrolls instead of demanding more terminal, so layout
+	// math never claims space for more than this many rows/columns.
+	MinVisibleGridRows = 3
+	MinVisibleGridCols = 3
 )
 
 // Layout controls the visibility of UI elements based on terminal size.
@@ -25,8 +30,9 @@ type Layout struct {
 // CalculateLayout determines which UI elements should be visible.
 // It prioritizes the Grid and Footer information.
 func CalculateLayout(termW, termH int, cfg config.Config) Layout {
-	// Calculate the height of the essential central grid
-	gridHeight := cfg.Y * GridCellHeight
+	// The essential central grid: beyond the minimum window it scrolls,
+	// so it never claims more height than that window.
+	gridHeight := min(cfg.Y, MinVisibleGridRows) * GridCellHeight
 
 	// Calculate estimated height of footer elements (Help, Status, Profile, Path)
 	// This is roughly 8-10 lines depending on state.

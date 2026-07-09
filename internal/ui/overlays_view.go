@@ -69,9 +69,6 @@ func (m Model) viewDropdownMode() string {
 	if layout.ShowHeader {
 		header = m.styles.renderHeaderArt(m.spinner.View())
 	}
-	grid := m.renderGrid()
-	mainContent := lipgloss.JoinVertical(lipgloss.Center, header, grid)
-
 	helpText := "Dropdown Mode | ↑/↓/ws: Select, Enter: Execute, Esc/q: Cancel"
 	help := m.styles.Help.Render(helpText)
 
@@ -79,6 +76,9 @@ func (m Model) viewDropdownMode() string {
 	if layout.ShowFooter {
 		footer = m.renderCombinedFooter(help)
 	}
+
+	grid := m.renderGrid(gridRowBudget(m.termHeight, header, footer))
+	mainContent := lipgloss.JoinVertical(lipgloss.Center, header, grid)
 
 	finalContent := lipgloss.JoinVertical(
 		lipgloss.Center,

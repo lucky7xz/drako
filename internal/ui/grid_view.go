@@ -10,7 +10,12 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-func (m Model) renderGrid() string {
+// renderGrid renders the grid into at most budgetLines terminal lines. When
+// the grid is bigger than the terminal, a center-locked window around the
+// cursor is shown, with indicators counting the clipped rows/columns.
+func (m Model) renderGrid(budgetLines int) string {
+	// Cell width is measured over ALL cells, not just visible ones, so the
+	// grid does not change shape while scrolling.
 	maxContentWidth := 0
 	for _, row := range m.gridNav.grid {
 		for _, cell := range row {
@@ -28,33 +33,51 @@ func (m Model) renderGrid() string {
 	// Total width must account for content, padding (1+1), and border (1+1).
 	totalCellWidth := maxContentWidth + 4
 
+	// --- Derive the visible window on both axes ---
+	totalRows := len(m.gridNav.grid)
+	totalCols := 0
+	if totalRows > 0 {
+		totalCols = len(m.gridNav.grid[0])
+	}
+
+	// Calculate the padding needed for the largest row number.
+	maxRowNumWidth := len(fmt.Sprintf("%d", max(totalRows-1, 0)))
+
+	// reserve 2: the right scroll marker appended to the header line
+	widthBudget := m.termWidth - appStyle.GetHorizontalMargins() - (maxRowNumWidth + 1)
+	colWin := window(m.gridNav.cursorCol, totalCols, visibleCount(widthBudget, totalCellWidth, totalCols, 2))
+
+	rowHeight := lipgloss.Height(m.styles.Cell.Render("x"))
+	rowBudget := budgetLines - 1 // column header line
+	// reserve 1: the marker line under the grid while scrolling
+	rowWin := window(m.gridNav.cursorRow, totalRows, visibleCount(rowBudget, rowHeight, totalRows, 1))
+
 	// --- Build Header ---
 	var headerParts []string
-	if len(m.gridNav.grid) > 0 {
-		for c := 0; c < len(m.gridNav.grid[0]); c++ {
-			headerLabel := fmt.Sprintf("[%s]", columnToLetter(c))
-			styledLabel := m.styles.Title.Render(headerLabel)
+	for c := colWin.start; c < colWin.end; c++ {
+		headerLabel := fmt.Sprintf("[%s]", columnToLetter(c))
+		styledLabel := m.styles.Title.Render(headerLabel)
 
-			// Let lipgloss handle the centering of the styled text.
-			headerContentWidth := totalCellWidth - 2 // for ┌ and ┐
-			headerCellStyle := lipgloss.NewStyle().
-				Width(headerContentWidth).
-				Align(lipgloss.Center)
+		// Let lipgloss handle the centering of the styled text.
+		headerContentWidth := totalCellWidth - 2 // for ┌ and ┐
+		headerCellStyle := lipgloss.NewStyle().
+			Width(headerContentWidth).
+			Align(lipgloss.Center)
 
-			headerContent := headerCellStyle.Render(styledLabel)
-			headerWithLines := strings.ReplaceAll(headerContent, " ", "─")
+		headerContent := headerCellStyle.Render(styledLabel)
+		headerWithLines := strings.ReplaceAll(headerContent, " ", "─")
 
-			headerPart := fmt.Sprintf("┌%s┐", headerWithLines)
-			headerParts = append(headerParts, headerPart)
-		}
+		headerPart := fmt.Sprintf("┌%s┐", headerWithLines)
+		headerParts = append(headerParts, headerPart)
 	}
 	fullHeader := lipgloss.JoinHorizontal(lipgloss.Left, headerParts...)
 
-	// --- Build Grid ---
-	var renderedRows []string
-	for r, row := range m.gridNav.grid {
+	// --- Build Grid (visible window only, absolute r/c throughout) ---
+	rowPrefix := strings.Repeat(" ", maxRowNumWidth+1) // Padding for continuation lines: "[0] ❭ "
+	var finalRows []string
+	for r := rowWin.start; r < rowWin.end; r++ {
 		var renderedCells []string
-		for c, cell := range row {
+		for c := colWin.start; c < colWin.end; c++ {
 			var style lipgloss.Style
 			if m.mode == gridMode && r == m.gridNav.cursorRow && c == m.gridNav.cursorCol {
 				style = m.styles.SelectedCell
@@ -62,7 +85,7 @@ func (m Model) renderGrid() string {
 				style = m.styles.Cell
 			}
 
-			truncatedContent := truncateText(cell, maxContentWidth)
+			truncatedContent := truncateText(m.gridNav.grid[r][c], maxContentWidth)
 
 			// The cell style itself has padding, so we just need to render the content.
 			paddedContent := lipgloss.NewStyle().
@@ -70,19 +93,11 @@ func (m Model) renderGrid() string {
 				Align(lipgloss.Left).
 				Render(truncatedContent)
 
-			renderedCell := style.Render(paddedContent)
-			renderedCells = append(renderedCells, renderedCell)
+			renderedCells = append(renderedCells, style.Render(paddedContent))
 		}
-		renderedRows = append(renderedRows, lipgloss.JoinHorizontal(lipgloss.Top, renderedCells...))
-	}
+		row := lipgloss.JoinHorizontal(lipgloss.Top, renderedCells...)
 
-	// --- Add Row Indicators and Final Assembly ---
-	var finalRows []string
-	// Calculate the padding needed for the largest row number.
-	maxRowNumWidth := len(fmt.Sprintf("%d", len(renderedRows)-1))
-	rowPrefix := strings.Repeat(" ", maxRowNumWidth+1) // Padding for continuation lines: "[0] ❭ "
-	for i, row := range renderedRows {
-		rowNum := fmt.Sprintf("%*d❭", maxRowNumWidth, i)
+		rowNum := fmt.Sprintf("%*d❭", maxRowNumWidth, r)
 		// Split the row into lines and add proper prefix to each line
 		lines := strings.Split(row, "\n")
 		for j, line := range lines {
@@ -95,9 +110,35 @@ func (m Model) renderGrid() string {
 		finalRows = append(finalRows, strings.Join(lines, "\n"))
 	}
 
-	// Create padding for the header to align it with the grid body.
-	headerPadding := strings.Repeat(" ", maxRowNumWidth+1) // +5 for "[0] ❭ "
-	paddedHeader := headerPadding + fullHeader
+	// --- Scroll markers ---
+	// A marker points at hidden cells: it shows the directions the cursor
+	// can still move toward. Both vertical directions share one line under
+	// the grid; a blank slot keeps its size constant while scrolling.
+	if rowWin.scrolling() {
+		down, up := " ", " "
+		if rowWin.hiddenAfter > 0 {
+			down = "▾"
+		}
+		if rowWin.hiddenBefore > 0 {
+			up = "▴"
+		}
+		finalRows = append(finalRows, m.styles.SelectedCursor.Render(down+" "+up))
+	}
+
+	// Create padding for the header to align it with the grid body; the
+	// horizontal scroll markers flank this line.
+	paddedHeader := rowPrefix + fullHeader
+	if colWin.scrolling() {
+		left := " "
+		if colWin.hiddenBefore > 0 {
+			left = m.styles.SelectedCursor.Render("◂")
+		}
+		right := ""
+		if colWin.hiddenAfter > 0 {
+			right = " " + m.styles.SelectedCursor.Render("▸")
+		}
+		paddedHeader = strings.Repeat(" ", maxRowNumWidth-1) + left + " " + fullHeader + right
+	}
 
 	gridBody := lipgloss.JoinVertical(lipgloss.Center, finalRows...)
 

@@ -1,0 +1,91 @@
+package ui
+
+import "testing"
+
+func TestWindow(t *testing.T) {
+	tests := []struct {
+		name                   string
+		cursor, total, visible int
+		want                   gridWindow
+	}{
+		{"all fits is identity", 2, 5, 5, gridWindow{0, 5, 0, 0}},
+		{"visible larger than total is identity", 0, 3, 10, gridWindow{0, 3, 0, 0}},
+		{"cursor at start clamps to zero", 0, 10, 3, gridWindow{0, 3, 0, 7}},
+		{"cursor centered mid-grid", 5, 10, 3, gridWindow{4, 7, 4, 3}},
+		{"cursor at end clamps to tail", 9, 10, 3, gridWindow{7, 10, 7, 0}},
+		{"even visible leans up", 5, 10, 4, gridWindow{3, 7, 3, 3}},
+		{"zero visible treated as one", 5, 10, 0, gridWindow{5, 6, 5, 4}},
+		{"cursor below range clamps", -3, 10, 3, gridWindow{0, 3, 0, 7}},
+		{"cursor past range clamps", 42, 10, 3, gridWindow{7, 10, 7, 0}},
+		{"empty grid", 0, 0, 3, gridWindow{}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := window(tt.cursor, tt.total, tt.visible)
+			if got != tt.want {
+				t.Errorf("window(%d, %d, %d) = %+v, want %+v",
+					tt.cursor, tt.total, tt.visible, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestWindowScrolling(t *testing.T) {
+	if window(0, 5, 5).scrolling() {
+		t.Error("full window should not report scrolling")
+	}
+	if !window(5, 10, 3).scrolling() {
+		t.Error("clipped window should report scrolling")
+	}
+}
+
+func TestVisibleCount(t *testing.T) {
+	tests := []struct {
+		name                             string
+		budget, cellSize, total, reserve int
+		want                             int
+	}{
+		{"exact fit returns total, no reserve", 9, 3, 3, 2, 3},
+		{"roomy budget returns total", 100, 3, 5, 2, 5},
+		{"one line short drops into scroll mode", 8, 3, 3, 2, 2},
+		{"reserve shrinks scroll window", 12, 3, 10, 2, 3},
+		{"cell wider than budget still shows one", 12, 29, 9, 0, 1},
+		{"tiny budget still shows one", 0, 3, 10, 2, 1},
+		{"negative budget still shows one", -4, 3, 10, 2, 1},
+		{"zero cell size is identity", 10, 0, 7, 2, 7},
+		{"zero total is identity", 10, 3, 0, 2, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := visibleCount(tt.budget, tt.cellSize, tt.total, tt.reserve)
+			if got != tt.want {
+				t.Errorf("visibleCount(%d, %d, %d, %d) = %d, want %d",
+					tt.budget, tt.cellSize, tt.total, tt.reserve, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGridRowBudget(t *testing.T) {
+	// appStyle has Margin(1,2): 2 vertical lines always spent.
+	tests := []struct {
+		name       string
+		termHeight int
+		chrome     []string
+		want       int
+	}{
+		{"no chrome", 24, nil, 22},
+		{"single lines", 24, []string{"a", "b"}, 20},
+		{"empty string still costs one line", 24, []string{""}, 21},
+		{"multiline chrome measured", 24, []string{"a\nb\nc"}, 19},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := gridRowBudget(tt.termHeight, tt.chrome...)
+			if got != tt.want {
+				t.Errorf("gridRowBudget(%d, %v) = %d, want %d",
+					tt.termHeight, tt.chrome, got, tt.want)
+			}
+		})
+	}
+}

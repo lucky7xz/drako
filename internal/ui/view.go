@@ -41,8 +41,6 @@ func (m Model) View() string {
 		header = m.styles.renderHeaderArt(m.spinner.View())
 	}
 	counter := m.renderProfileCounter()
-	grid := m.renderGrid()
-	mainContent := lipgloss.JoinVertical(lipgloss.Center, header, counter, grid)
 
 	var helpText string
 	switch m.mode {
@@ -61,6 +59,10 @@ func (m Model) View() string {
 	if !layout.ShowFooter {
 		footer = ""
 	}
+
+	// The grid gets whatever vertical space the chrome leaves over.
+	grid := m.renderGrid(gridRowBudget(m.termHeight, header, counter, footer))
+	mainContent := lipgloss.JoinVertical(lipgloss.Center, header, counter, grid)
 
 	finalContent := lipgloss.JoinVertical(
 		lipgloss.Center,
@@ -138,9 +140,9 @@ func (m Model) renderFooter() string {
 // CalculateRequiredSize computes the minimum terminal dimensions needed
 // for the current grid at 100% scale
 func CalculateRequiredSize(cfg config.Config) (minWidth, minHeight int) {
-	// Grid area
-	gridWidth := cfg.X * GridCellWidth
-	gridHeight := cfg.Y * GridCellHeight
+	// Grid area, capped at the minimum scroll window: bigger grids scroll.
+	gridWidth := min(cfg.X, MinVisibleGridCols) * GridCellWidth
+	gridHeight := min(cfg.Y, MinVisibleGridRows) * GridCellHeight
 
 	minWidth = gridWidth + LayoutSideMargin
 	// Header is now optional, so minimum height doesn't strictly require it
