@@ -15,9 +15,30 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/paths"
+	"golang.org/x/term"
 )
 
-const lsDescriptionWidth = 60
+const (
+	// lsDescriptionWidth caps the description column even in wide terminals.
+	lsDescriptionWidth = 60
+	// lsMinDescription is the narrowest useful description column; below it
+	// the column is dropped entirely rather than rendered as confetti.
+	lsMinDescription = 12
+	// lsMaxNameWidth caps the name column so one long cell name can't starve
+	// the descriptions.
+	lsMaxNameWidth = 32
+	// lsFallbackWidth is assumed when stdout is not a terminal (pipes, AI
+	// agents) — stable output regardless of the host window.
+	lsFallbackWidth = 80
+)
+
+// lsWidth is the terminal width to fit the listing into.
+func lsWidth() int {
+	if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 0 {
+		return w
+	}
+	return lsFallbackWidth
+}
 
 // HandleLsCommand processes 'drako ls'. Returns the process exit code.
 func HandleLsCommand(args []string) int {
@@ -41,7 +62,7 @@ func HandleLsCommand(args []string) int {
 		fmt.Fprintf(os.Stderr, "drako: %v\n", err)
 		return 1
 	}
-	renderLs(os.Stdout, bundle)
+	renderLs(os.Stdout, bundle, lsWidth())
 	return 0
 }
 
@@ -74,8 +95,10 @@ func oneLine(s string, width int) string {
 	return ansi.Truncate(s, width, "…")
 }
 
-// renderLs writes the equipped-deck listing.
-func renderLs(out io.Writer, bundle config.ConfigBundle) {
+// renderLs writes the equipped-deck listing, fitted to width terminal cells:
+// the description column shrinks to the remaining space and is dropped
+// entirely when a useful width can't be met.
+func renderLs(out io.Writer, bundle config.ConfigBundle, width int) {
 	if len(bundle.Profiles) == 0 {
 		fmt.Fprintln(out, "No equipped profiles.")
 	}
@@ -93,22 +116,52 @@ func renderLs(out io.Writer, bundle config.ConfigBundle) {
 			continue
 		}
 
-		rows := make([][]string, 0, len(cmds))
+		type rawRow struct{ addr, name, desc string }
+		raws := make([]rawRow, 0, len(cmds))
 		for _, c := range cmds {
 			addr := cellAddress(c)
-			rows = append(rows, []string{addr, c.Name, oneLine(c.Description, lsDescriptionWidth)})
+			raws = append(raws, rawRow{addr, c.Name, c.Description})
 			for k, item := range c.Items {
-				rows = append(rows, []string{
-					fmt.Sprintf("%s.%d", addr, k+1),
-					"  " + item.Name,
-					oneLine(item.Description, lsDescriptionWidth),
-				})
+				raws = append(raws, rawRow{fmt.Sprintf("%s.%d", addr, k+1), "  " + item.Name, item.Description})
 			}
 		}
-		table(out, []string{"ADDR", "NAME", "DESCRIPTION"}, rows)
+
+		// Fit: fixed ADDR column, capped NAME column, DESCRIPTION takes what
+		// remains. Per column the table adds 3 chars of chrome, plus 1.
+		addrW := ansi.StringWidth("ADDR")
+		nameW := ansi.StringWidth("NAME")
+		for _, r := range raws {
+			addrW = max(addrW, ansi.StringWidth(r.addr))
+			nameW = max(nameW, ansi.StringWidth(r.name))
+		}
+		nameW = min(nameW, lsMaxNameWidth)
+
+		descW := min(lsDescriptionWidth, width-addrW-nameW-10)
+		withDesc := descW >= lsMinDescription
+		if !withDesc {
+			// Two columns: give the name what the terminal has left.
+			nameW = min(nameW, max(width-addrW-7, 8))
+		}
+
+		rows := make([][]string, 0, len(raws))
+		for _, r := range raws {
+			// Names keep their leading indent (dropdown items), so truncate
+			// without oneLine's TrimSpace.
+			row := []string{r.addr, ansi.Truncate(r.name, nameW, "…")}
+			if withDesc {
+				row = append(row, oneLine(r.desc, descW))
+			}
+			rows = append(rows, row)
+		}
+		headers := []string{"ADDR", "NAME"}
+		if withDesc {
+			headers = append(headers, "DESCRIPTION")
+		}
+		table(out, headers, rows)
 	}
 
 	for _, b := range bundle.Broken {
-		fmt.Fprintf(out, "\n⚠️  %s is broken and hidden: %s\n", b.Name, oneLine(b.Err, lsDescriptionWidth))
+		line := fmt.Sprintf("⚠️  %s is broken and hidden: %s", b.Name, oneLine(b.Err, lsDescriptionWidth))
+		fmt.Fprintf(out, "\n%s\n", ansi.Truncate(line, width, "…"))
 	}
 }
