@@ -59,7 +59,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case reloadProfilesMsg:
-		bundle := config.LoadConfig(nil)
+		bundle, err := config.LoadConfig(nil)
+		if err != nil {
+			log.Printf("config reload failed: %v", err)
+			return m, m.setProfileStatus("Config reload failed", false)
+		}
 		if m.GlassrootMode && glassrootRejectsBundle(bundle) {
 			return m.failGlassroot()
 		}
@@ -76,7 +80,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ConfigChangedMsg:
 		// Config file changed on disk, reload everything
 		log.Printf("Config file change detected: %s", msg.Path)
-		bundle := config.LoadConfig(nil)
+		bundle, err := config.LoadConfig(nil)
+		if err != nil {
+			// Keep watching: the environment may recover before the next change.
+			log.Printf("config reload failed: %v", err)
+			configDir, _ := paths.ConfigDir()
+			return m, tea.Batch(m.setProfileStatus("Config reload failed", false), WatchConfigCmd(configDir))
+		}
 		if m.GlassrootMode && glassrootRejectsBundle(bundle) {
 			return m.failGlassroot()
 		}
@@ -357,7 +367,12 @@ func (m Model) afterEdit(msg editorFinishedMsg) (tea.Model, tea.Cmd) {
 	}
 
 	// The edit may have changed any equipped profile — reload the bundle.
-	bundle := config.LoadConfig(nil)
+	bundle, err := config.LoadConfig(nil)
+	if err != nil {
+		m.inventory.status = "Reload failed: " + err.Error()
+		m.mode = inventoryMode
+		return m, nil
+	}
 	m.applyBundle(bundle)
 	if len(bundle.Broken) > 0 {
 		if m.GlassrootMode {

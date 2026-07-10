@@ -260,7 +260,13 @@ func InitialModel(glassrootMode bool) Model {
 		path = "could not get path"
 	}
 
-	bundle := config.LoadConfig(nil)
+	bundle, err := config.LoadConfig(nil)
+	if err != nil {
+		// No config directory means nothing to run from; hand the host a
+		// model that is already done and let app.Run exit with the code.
+		fmt.Fprintf(os.Stderr, "drako: %v\n", err)
+		return Model{Quitting: true, ExitCode: 1, GlassrootMode: glassrootMode}
+	}
 
 	if glassrootMode && glassrootRejectsBundle(bundle) {
 		// Glassroot never exposes TOML contents or Rescue Mode. Hand the host

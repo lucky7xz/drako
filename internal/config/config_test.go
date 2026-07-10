@@ -82,7 +82,7 @@ func TestLoadConfig_HandlesBrokenProfiles(t *testing.T) {
 
 	// Run LoadConfig
 	// Note: It might create config.toml (bootstrap) which is fine.
-	bundle := LoadConfig(nil)
+	bundle := mustLoadConfig(t, nil)
 
 	// Assertions
 	// 1. Check for Broken report
@@ -131,7 +131,7 @@ func TestBootstrap_GeneratesFiles(t *testing.T) {
 	t.Setenv("HOME", tmpDir)
 
 	// Run
-	LoadConfig(nil)
+	mustLoadConfig(t, nil)
 
 	// Verify
 	expectedConfig := filepath.Join(tmpDir, "drako", "config.toml")
@@ -166,7 +166,7 @@ func TestLoadConfig_HandlesBrokenConfig(t *testing.T) {
 	os.WriteFile(configPath, []byte("NOT TOML! ["), 0644)
 
 	// Run LoadConfig - Should NOT PANIC
-	bundle := LoadConfig(nil)
+	bundle := mustLoadConfig(t, nil)
 
 	// Assertions
 	// 1. Check for Broken report

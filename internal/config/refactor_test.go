@@ -25,7 +25,7 @@ func TestRefactorBootstrap(t *testing.T) {
 	expectedDir := filepath.Join(tempDir, "drako")
 
 	// 1. Run LoadConfig (Should bootstrap)
-	bundle := LoadConfig(nil)
+	bundle := mustLoadConfig(t, nil)
 
 	// 2. Verify config.toml exists and has no commands
 	configPath := filepath.Join(expectedDir, "config.toml")

@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 )
 
@@ -71,7 +72,10 @@ func BuildGrid(config Config) [][]string {
 	for _, cmd := range config.Commands {
 		row, col, err := resolveCell(cmd, config)
 		if err != nil {
-			fatalf("invalid column value for command %q: %v", cmd.Name, err)
+			// ValidateConfig already reports this at load time; rendering
+			// must never kill the process, so skip the cell.
+			log.Printf("skipping command %q: %v", cmd.Name, err)
+			continue
 		}
 		if row >= 0 && row < config.Y && col >= 0 && col < config.X {
 			grid[row][col] = cmd.Name

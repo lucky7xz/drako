@@ -38,3 +38,22 @@ func TestResolveCell(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildGridSkipsInvalidCell(t *testing.T) {
+	cfg := Config{
+		X: 2, Y: 1,
+		Commands: []Command{
+			{Name: "good", Command: "true", Row: 0, Col: "a"},
+			{Name: "bad", Command: "true", Row: 0, Col: "!"},
+		},
+	}
+	// Must not kill the process: ValidateConfig already reports this at
+	// load time; rendering skips the cell.
+	grid := BuildGrid(cfg)
+	if grid[0][0] != "good" {
+		t.Errorf("valid cell should be placed, got %q", grid[0][0])
+	}
+	if grid[0][1] != "" {
+		t.Errorf("invalid cell should be skipped, got %q", grid[0][1])
+	}
+}

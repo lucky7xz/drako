@@ -36,7 +36,11 @@ func HandleLsCommand(args []string) int {
 		}
 	}
 
-	bundle := config.LoadConfig(nil)
+	bundle, err := config.LoadConfig(nil)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "drako: %v\n", err)
+		return 1
+	}
 	renderLs(os.Stdout, bundle)
 	return 0
 }
