@@ -125,8 +125,11 @@ func (m Model) renderDropdownPopup() string {
 		}
 	}
 	if m.batch.dropdown {
-		counter := fmt.Sprintf("%d/%d · Space mark · Enter launch", len(m.batch.marked), multiplex.MaxCommands)
-		raw = append(raw, gap.Render("  ")+textNorm.Render(counter))
+		// Same look as the grid's batch counter (styles.Title), so the mode
+		// reads at a glance; the key hints stay in the quiet item style.
+		counter := m.styles.Title.Background(bg).Render(fmt.Sprintf("[ BATCH %d/%d ]", len(m.batch.marked), multiplex.MaxCommands))
+		hints := textNorm.Render(" Space mark · Enter launch")
+		raw = append(raw, gap.Render("  ")+counter+hints)
 	}
 	lines := padLinesToWidth(raw, bgFill)
 

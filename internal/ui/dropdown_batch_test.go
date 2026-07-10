@@ -191,8 +191,8 @@ func TestDropdownPopupShowsMarksWhileMarking(t *testing.T) {
 	if !strings.Contains(out, "◉") || !strings.Contains(out, "○") {
 		t.Errorf("marking popup must show mark glyphs:\n%s", out)
 	}
-	if !strings.Contains(out, "1/9") {
-		t.Errorf("marking popup must show the count line:\n%s", out)
+	if !strings.Contains(out, "[ BATCH 1/9 ]") {
+		t.Errorf("marking popup must show the prominent batch counter:\n%s", out)
 	}
 
 	plain := ansi.Strip(dropdownTestModel().renderDropdownPopup())
