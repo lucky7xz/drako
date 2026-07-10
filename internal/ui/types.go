@@ -19,6 +19,7 @@ const (
 	dropdownMode
 	infoMode
 	lockedMode
+	batchMode
 )
 
 type (

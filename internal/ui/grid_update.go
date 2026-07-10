@@ -13,6 +13,14 @@ import (
 func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 
+	// A pending leader sequence consumes the next key, whatever it is.
+	if m.leader.pending {
+		return m.handleLeaderContinuation(msg)
+	}
+	if IsLeader(m.Config.Keys, msg) {
+		return m.armLeader()
+	}
+
 	// Handle number-based navigation (1-9)
 	if num, err := strconv.Atoi(key); err == nil && num >= 1 && num <= 9 {
 		return m.quickNav(num - 1)

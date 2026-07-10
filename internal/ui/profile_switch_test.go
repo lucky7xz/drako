@@ -21,7 +21,7 @@ func switchTestModel(t *testing.T) Model {
 	}
 	base := config.Config{X: 1, Y: 1}
 	base.ApplyDefaults()
-	return Model{profile: profileState{base: base, profiles: infos}}
+	return Model{Config: base, profile: profileState{base: base, profiles: infos}}
 }
 
 func TestSwitchProfileTracksSessionWithoutEnvMutation(t *testing.T) {

@@ -16,6 +16,7 @@ https://github.com/user-attachments/assets/21fb2340-bc74-4886-a629-8e95d116e830
 -   **Summon** — [`drako summon <repo>`](#-summoning-profiles) pulls a deck from any Git host, verifiable with `--sha256`/`--rev`
 -   **The Weaver** — [one cell, every OS](#-cross-platform-decks-the-weaver): commands resolve per platform (apt/pacman/brew/…)
 -   **Specs & linting** — equip "Work Mode" in [one command](#-profile-specs); keep decks CI-clean with [`drako check`](#-deck-linting)
+-   **Batch launch** — mark up to 9 cells (`m`, `b`), launch them together in one tmux session
 -   **Glassroot Mode** — a [sealed surface](#-glassroot-mode-experimental) for serving drako over SSH *(experimental)*
 
 ## 📡 Try it live
@@ -96,7 +97,8 @@ Run any of these with no arguments for usage. Details in [Power Tools](#-power-t
 
 - **Grid Navigation:** Use arrows, `w/a/s/d`, or `h/j/k/l` (customizable in config.toml).
 - **Quick Navigation:** For example: pressing `2` and `3` in quick sequence moves the cursor to the 2nd column, 3rd row.
-- **Switch Profile:** `Alt` + `1-9` to switch directly.
+- **Switch Profile:** `m` then `1-9` (leader sequence), or the legacy `Alt` + `1-9` chord.
+- **Batch Launch:** `m` then `b`, then `Space` to mark cells and `Enter` to launch them together in tmux (requires tmux; not available in Glassroot Mode).
 - **Cycle Profile:** `o` (prev) and `p` (next).
 - **Profile Inventory:** `i`. Inside, `e` opens the highlighted profile file in your editor (`$VISUAL`/`$EDITOR`).
 - **Lock Current Profile (for launching):** `r`.

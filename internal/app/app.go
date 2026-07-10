@@ -6,10 +6,12 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/cli"
 	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/multiplex"
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/ui"
 )
@@ -103,6 +105,15 @@ func Run() int {
 			return state.ExitCode
 		}
 
+		if len(state.SelectedBatch) > 0 {
+			runBatch(state)
+
+			cmd := exec.Command("clear")
+			cmd.Stdout = os.Stdout
+			_ = cmd.Run()
+			continue
+		}
+
 		if state.Selected != "" {
 			// Internal "drako …" cells are dispatched here, at the layer that
 			// may wire cli and core together; everything else runs via core.
@@ -121,6 +132,59 @@ func Run() int {
 			cmd.Stdout = os.Stdout
 			_ = cmd.Run()
 		}
+	}
+}
+
+// runBatch hands the terminal to one tmux session running every marked cell.
+// The heavy lifting (layout, quoting, nested-$TMUX) lives in the multiplex
+// package; this is resolution and handoff, mirroring the single-run dispatch.
+func runBatch(state ui.Model) {
+	var cmds []multiplex.Command
+	for _, name := range state.SelectedBatch {
+		parent, item, found := core.FindCommandByName(state.Config, name)
+		if !found || item != nil || parent.Command == "" {
+			log.Printf("batch: skipping %q (not a direct command)", name)
+			continue
+		}
+		cmds = append(cmds, multiplex.Command{
+			Name:     name,
+			Script:   parent.Command,
+			Shell:    state.Config.DefaultShell,
+			KeepOpen: parent.AutoCloseExecution != nil && !*parent.AutoCloseExecution,
+		})
+	}
+	if len(cmds) == 0 {
+		return
+	}
+
+	scriptDir, err := os.MkdirTemp("", "drako-batch-*")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "batch launch failed: %v\n", err)
+		return
+	}
+
+	session := fmt.Sprintf("drako-%d", time.Now().Unix())
+	insideTmux := os.Getenv("TMUX") != ""
+	plan, err := multiplex.Plan(session, cmds, insideTmux, scriptDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "batch launch failed: %v\n", err)
+		return
+	}
+
+	for _, c := range cmds {
+		core.LogExecution(c.Name, "batch: "+c.Script)
+	}
+
+	env := core.CommandEnv(os.Environ(), state.Config.EnvWhitelist, state.ActiveProfileName())
+	if err := multiplex.Run(plan, scriptDir, env); err != nil {
+		fmt.Fprintf(os.Stderr, "batch launch failed: %v\n", err)
+		core.Pause("\nPress any key to return to the application.")
+		return
+	}
+
+	// A detached session is still alive — tell the user how to get back in.
+	if plan.Attach && exec.Command("tmux", "has-session", "-t", session).Run() == nil {
+		core.Pause(fmt.Sprintf("\nBatch session still running: tmux attach -t %s\nPress any key to return to drako.", session))
 	}
 }
 

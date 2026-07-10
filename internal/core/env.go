@@ -5,12 +5,12 @@ import (
 	"strings"
 )
 
-// commandEnv builds the child environment for one command run: the whitelist
+// CommandEnv builds the child environment for one command run: the whitelist
 // sanitizes the inherited environment, then drako's own DRAKO_PROFILE is set
 // to the active profile — always, even under a whitelist that omits it, so
 // scripts can rely on it. With no active profile an externally set value
 // passes through untouched.
-func commandEnv(base []string, whitelist []string, activeProfile string) []string {
+func CommandEnv(base []string, whitelist []string, activeProfile string) []string {
 	env := PrepareEnv(base, whitelist)
 	if activeProfile == "" {
 		return env

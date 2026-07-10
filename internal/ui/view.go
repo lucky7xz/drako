@@ -40,6 +40,9 @@ func (m Model) View() string {
 		header = m.styles.renderHeaderArt(m.spinner.View())
 	}
 	counter := m.renderProfileCounter()
+	if m.mode == batchMode {
+		counter = m.renderBatchCounter()
+	}
 
 	var helpText string
 	switch m.mode {
@@ -47,6 +50,8 @@ func (m Model) View() string {
 		helpText = "Path Mode | ←/→/ad: Select, ↓/s: Children, Enter: cd, e: Search, q/Esc: Back"
 	case childMode:
 		helpText = "Child Mode | ↑/↓/ws: Select, Enter: cd, e: Search, q/Esc: Back"
+	case batchMode:
+		helpText = m.batchHelpText()
 	default:
 		helpText = "Grid Mode | Enter: Select, e: Explain, Tab: Path, r: Start-Lock, i: Inventory"
 	}

@@ -6,10 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"time"
 
 	"github.com/lucky7xz/drako/internal/config"
-	"github.com/lucky7xz/drako/internal/paths"
 	"golang.org/x/term"
 )
 
@@ -121,48 +119,10 @@ func RunCommand(cfg config.Config, selected, activeProfile string) {
 
 	// Sanitize the child environment: the whitelist (if configured) restricts
 	// what commands inherit; drako's own DRAKO_PROFILE is always present.
-	cmd := assembleCmd(plan, commandEnv(os.Environ(), cfg.EnvWhitelist, activeProfile))
+	cmd := assembleCmd(plan, CommandEnv(os.Environ(), cfg.EnvWhitelist, activeProfile))
 
-	// --- LOGGING START ---
-	// Log the command execution to history.log in the config directory
-	// We do this best-effort; failures to log should not stop execution.
-	func() {
-		configDir, err := paths.ConfigDir()
-		if err != nil {
-			log.Printf("logging error: could not get config dir: %v", err)
-			return
-		}
-
-		// Ensure the directory exists (it should, but safety first)
-		if err := os.MkdirAll(configDir, 0o755); err != nil {
-			log.Printf("logging error: could not create config dir: %v", err)
-			return
-		}
-
-		logPath := paths.HistoryFile(configDir)
-		// Rotate if > 1MB
-		RotateLogIfNeeded(logPath, paths.HistoryArchive(configDir), 1024*1024)
-
-		f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
-		if err != nil {
-			log.Printf("logging error: could not open history.log: %v", err)
-			return
-		}
-		defer f.Close()
-
-		timestamp := time.Now().Format("2006-01-02 15:04:05")
-
-		var executedStr string
-		if cmd.Args != nil {
-			executedStr = strings.Join(cmd.Args, " ")
-		}
-
-		entry := fmt.Sprintf("[%s] %s (exec: %s)\n", timestamp, selected, executedStr)
-		if _, err := f.WriteString(entry); err != nil {
-			log.Printf("logging error: could not write to history.log: %v", err)
-		}
-	}()
-	// --- LOGGING END ---
+	// Log the execution to history.log; best-effort, never blocks the run.
+	LogExecution(selected, strings.Join(cmd.Args, " "))
 
 	if plan.debug {
 		// Debug: capture combined output and pause.

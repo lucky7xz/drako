@@ -63,13 +63,14 @@ func (m Model) renderGrid(budgetLines int) string {
 		var renderedCells []string
 		for c := colWin.start; c < colWin.end; c++ {
 			var style lipgloss.Style
-			if m.mode == gridMode && r == m.gridNav.cursorRow && c == m.gridNav.cursorCol {
+			if (m.mode == gridMode || m.mode == batchMode) && r == m.gridNav.cursorRow && c == m.gridNav.cursorCol {
 				style = m.styles.SelectedCell
 			} else {
 				style = m.styles.Cell
 			}
 
-			truncatedContent := truncateText(m.gridNav.grid[r][c], maxContentWidth)
+			cellName := m.gridNav.grid[r][c]
+			truncatedContent := truncateText(m.batchCellPrefix(cellName)+cellName, maxContentWidth)
 
 			// The cell style itself has padding, so we just need to render the content.
 			paddedContent := lipgloss.NewStyle().

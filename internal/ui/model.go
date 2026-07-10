@@ -80,6 +80,7 @@ type profileState struct {
 
 type Model struct {
 	Selected      string
+	SelectedBatch []string // cell names for a batch launch (read by app.go after quit)
 	Quitting      bool
 	ExitCode      int // process exit code the host should use once the TUI is down
 	GlassrootMode bool
@@ -100,6 +101,8 @@ type Model struct {
 	profile   profileState
 	path      PathModel
 	inventory inventoryModel
+	leader    leaderState
+	batch     batchState
 
 	activeDetail *DetailState // Single source of truth for detail view
 }

@@ -178,6 +178,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateDropdownMode(msg)
 		case infoMode:
 			return m.updateInfoMode(msg)
+		case batchMode:
+			return m.updateBatchMode(msg)
 		}
 
 	case networkStatusMsg:
@@ -225,6 +227,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.profile.statusClearTimerID = 0
 		m.profile.statusMessage = ""
+		return m, nil
+
+	case leaderTimeoutMsg:
+		m.disarmLeader()
 		return m, nil
 
 	case lockCheckMsg:

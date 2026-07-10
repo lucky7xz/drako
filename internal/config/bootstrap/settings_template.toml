@@ -47,6 +47,12 @@ numb_modifier = "alt"
 profile_prev = "o"
 profile_next = "p"
 
+# The leader arms a two-key sequence in the grid:
+#   leader, 1-9  -> switch to profile 1-9
+#   leader, b    -> batch mode (mark cells, launch together in tmux)
+# The legacy Alt+1-9 chord still works alongside it.
+#leader = "m"
+
 # ┌─ Environment Variables ──────────────────────────────┐
 # | By default, drako inherits your full shell environment
 # | to ensure maximum compatibility with your tools.

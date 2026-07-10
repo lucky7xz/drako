@@ -14,6 +14,9 @@ type InputConfig struct {
 	ProfilePrev  string `toml:"profile_prev"`
 	ProfileNext  string `toml:"profile_next"`
 	EditFile     string `toml:"edit_file"`
+	// Leader arms a two-key sequence: leader then 'b' (batch mode) or
+	// 1-9 (switch profile). The legacy modifier chord (alt+1-9) still works.
+	Leader string `toml:"leader"`
 
 	// Internal computed sets for fast lookup
 	NavUp    []string

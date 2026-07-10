@@ -3,6 +3,7 @@ package core
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -83,5 +84,25 @@ func assertMissing(t *testing.T, path string) {
 	t.Helper()
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		t.Errorf("expected %s to not exist, stat err = %v", filepath.Base(path), err)
+	}
+}
+
+func TestLogExecutionAppendsHistory(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", tmp)
+	t.Setenv("HOME", tmp)
+	if err := os.MkdirAll(filepath.Join(tmp, "drako"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	LogExecution("my cell", "batch: echo hi")
+
+	data, err := os.ReadFile(filepath.Join(tmp, "drako", "history.log"))
+	if err != nil {
+		t.Fatalf("history.log not written: %v", err)
+	}
+	line := string(data)
+	if !strings.Contains(line, "my cell") || !strings.Contains(line, "(exec: batch: echo hi)") {
+		t.Errorf("history entry malformed: %q", line)
 	}
 }
