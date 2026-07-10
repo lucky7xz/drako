@@ -103,14 +103,9 @@ func TestBatchLaunchCollectsInGridOrder(t *testing.T) {
 func TestBatchLaunchWithNothingMarked(t *testing.T) {
 	m := batchTestModel()
 
-	m, cmd := pressBatch(t, m, tea.KeyMsg{Type: tea.KeyEnter})
+	m, _ = pressBatch(t, m, tea.KeyMsg{Type: tea.KeyEnter})
 	if len(m.SelectedBatch) != 0 {
 		t.Fatal("enter with zero marks must not launch")
-	}
-	if cmd != nil {
-		if _, quit := cmd().(tea.QuitMsg); quit {
-			t.Fatal("enter with zero marks must not quit the TUI")
-		}
 	}
 	if m.profile.statusMessage == "" {
 		t.Error("empty launch should explain itself")

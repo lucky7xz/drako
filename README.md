@@ -98,7 +98,7 @@ Run any of these with no arguments for usage. Details in [Power Tools](#-power-t
 - **Grid Navigation:** Use arrows, `w/a/s/d`, or `h/j/k/l` (customizable in config.toml).
 - **Quick Navigation:** For example: pressing `2` and `3` in quick sequence moves the cursor to the 2nd column, 3rd row.
 - **Switch Profile:** `m` then `1-9` (leader sequence), or the legacy `Alt` + `1-9` chord.
-- **Batch Launch:** `m` then `b`, then `Space` to mark cells and `Enter` to launch them together in tmux (requires tmux; not available in Glassroot Mode).
+- **Batch Launch:** `m` then `b`, then `Space` to mark cells and `Enter` to launch them together in tmux (requires tmux; not available in Glassroot Mode). Works inside a folder's dropdown too — `m`, `b` there batches that folder's items.
 - **Cycle Profile:** `o` (prev) and `p` (next).
 - **Profile Inventory:** `i`. Inside, `e` opens the highlighted profile file in your editor (`$VISUAL`/`$EDITOR`).
 - **Lock Current Profile (for launching):** `r`.

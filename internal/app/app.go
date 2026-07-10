@@ -142,15 +142,25 @@ func runBatch(state ui.Model) {
 	var cmds []multiplex.Command
 	for _, name := range state.SelectedBatch {
 		parent, item, found := core.FindCommandByName(state.Config, name)
-		if !found || item != nil || parent.Command == "" {
-			log.Printf("batch: skipping %q (not a direct command)", name)
+		if !found {
+			log.Printf("batch: skipping %q (not found)", name)
+			continue
+		}
+		// A name resolves to either a grid cell or a dropdown item; both
+		// launch the same way, from their own command string and flags.
+		command, autoClosePtr := parent.Command, parent.AutoCloseExecution
+		if item != nil {
+			command, autoClosePtr = item.Command, item.AutoCloseExecution
+		}
+		if command == "" {
+			log.Printf("batch: skipping %q (no command)", name)
 			continue
 		}
 		cmds = append(cmds, multiplex.Command{
 			Name:     name,
-			Script:   parent.Command,
+			Script:   command,
 			Shell:    state.Config.DefaultShell,
-			KeepOpen: parent.AutoCloseExecution != nil && !*parent.AutoCloseExecution,
+			KeepOpen: autoClosePtr != nil && !*autoClosePtr,
 		})
 	}
 	if len(cmds) == 0 {

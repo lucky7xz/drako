@@ -253,6 +253,27 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 
+	// Leader sequence: inside a dropdown the only continuation is 'b'
+	// (start marking this folder's items); everything else is swallowed.
+	if m.leader.pending {
+		m.disarmLeader()
+		if key == "b" {
+			return m.enterDropdownBatch()
+		}
+		return m, nil
+	}
+	if IsLeader(m.Config.Keys, msg) {
+		return m.armLeader()
+	}
+
+	// An active dropdown batch owns space/enter/esc; other keys fall through
+	// to the normal dropdown behavior below (digit jumps, nav, explain).
+	if m.batch.dropdown {
+		if next, cmd, handled := m.updateDropdownMarking(msg); handled {
+			return next, cmd
+		}
+	}
+
 	// Handle number-based navigation (1-9)
 	if num, err := strconv.Atoi(key); err == nil && num >= 1 && num <= 9 {
 		targetIndex := num - 1 // Convert to 0-based index

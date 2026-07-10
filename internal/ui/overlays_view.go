@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/lucky7xz/drako/internal/multiplex"
 )
 
 // renderSizeOverlay shows a centered panel with current and required dimensions
@@ -111,14 +112,21 @@ func (m Model) renderDropdownPopup() string {
 	textSel := m.styles.SelectedItem.Background(bg)
 	gap := lipgloss.NewStyle().Background(bg)
 
-	// Build lines, then right-pad them into a solid block.
+	// Build lines, then right-pad them into a solid block. Items are always
+	// numbered — digits jump the selector; in a dropdown batch each runnable
+	// item also carries its mark glyph.
 	var raw []string
 	for i, item := range m.dropdown.items {
+		label := fmt.Sprintf("%d %s%s", i+1, m.itemMarkPrefix(item), item.Name)
 		if i == m.dropdown.selectedIdx {
-			raw = append(raw, cursorSel.Render("► ")+textSel.Render(item.Name))
+			raw = append(raw, cursorSel.Render("► ")+textSel.Render(label))
 		} else {
-			raw = append(raw, gap.Render("  ")+textNorm.Render(item.Name))
+			raw = append(raw, gap.Render("  ")+textNorm.Render(label))
 		}
+	}
+	if m.batch.dropdown {
+		counter := fmt.Sprintf("%d/%d · Space mark · Enter launch", len(m.batch.marked), multiplex.MaxCommands)
+		raw = append(raw, gap.Render("  ")+textNorm.Render(counter))
 	}
 	lines := padLinesToWidth(raw, bgFill)
 

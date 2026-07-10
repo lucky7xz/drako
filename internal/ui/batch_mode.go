@@ -18,22 +18,87 @@ import (
 var tmuxLookPath = exec.LookPath
 
 type batchState struct {
-	marked map[string]bool // cell name → marked
+	marked map[string]bool // cell/item name → marked
+	// dropdown scopes the mark set to the open folder's items: an inside
+	// batch never mixes with grid cells, and vice versa.
+	dropdown bool
+}
+
+// batchGate is the single availability check for every batch entry point.
+// Glassroot never offers batch: a batch hands the guest a full tmux session
+// (new windows, shells) — far outside the kiosk contract.
+func (m *Model) batchGate() (bool, tea.Cmd) {
+	if m.GlassrootMode {
+		return false, m.setProfileStatus("Batch unavailable here", false)
+	}
+	if _, err := tmuxLookPath("tmux"); err != nil {
+		return false, m.setProfileStatus("Batch needs tmux installed", false)
+	}
+	return true, nil
 }
 
 // enterBatchMode gates and switches into batch mode with an empty mark set.
-// Glassroot never offers batch: a batch hands the guest a full tmux session
-// (new windows, shells) — far outside the kiosk contract.
 func (m Model) enterBatchMode() (tea.Model, tea.Cmd) {
-	if m.GlassrootMode {
-		return m, m.setProfileStatus("Batch unavailable here", false)
-	}
-	if _, err := tmuxLookPath("tmux"); err != nil {
-		return m, m.setProfileStatus("Batch needs tmux installed", false)
+	if ok, cmd := m.batchGate(); !ok {
+		return m, cmd
 	}
 	m.batch = batchState{marked: map[string]bool{}}
 	m.mode = batchMode
 	return m, nil
+}
+
+// enterDropdownBatch starts marking the open folder's items; the mode stays
+// dropdownMode — marking is a property of the mark set, not a new mode.
+func (m Model) enterDropdownBatch() (tea.Model, tea.Cmd) {
+	if ok, cmd := m.batchGate(); !ok {
+		return m, cmd
+	}
+	m.batch = batchState{marked: map[string]bool{}, dropdown: true}
+	return m, nil
+}
+
+// updateDropdownMarking consumes a key while a dropdown batch is active.
+// handled=false hands the key back for the dropdown's normal behavior
+// (navigation, digit jumps, explain).
+func (m Model) updateDropdownMarking(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
+	switch msg.String() {
+	case " ":
+		if m.dropdown.selectedIdx < 0 || m.dropdown.selectedIdx >= len(m.dropdown.items) {
+			return m, nil, true
+		}
+		item := m.dropdown.items[m.dropdown.selectedIdx]
+		if item.Command == "" {
+			return m, m.setProfileStatus("Item not batchable", false), true
+		}
+		if m.batch.marked[item.Name] {
+			delete(m.batch.marked, item.Name)
+			return m, nil, true
+		}
+		if len(m.batch.marked) >= multiplex.MaxCommands {
+			return m, m.setProfileStatus("Batch is full (9 max)", false), true
+		}
+		m.batch.marked[item.Name] = true
+		return m, nil, true
+
+	case "enter":
+		var names []string
+		for _, item := range m.dropdown.items {
+			if m.batch.marked[item.Name] {
+				names = append(names, item.Name)
+			}
+		}
+		if len(names) == 0 {
+			return m, m.setProfileStatus("Nothing marked", false), true
+		}
+		m.SelectedBatch = names
+		return m, tea.Quit, true
+
+	case "esc":
+		// End marking, keep the dropdown open; the next esc closes it.
+		m.batch = batchState{}
+		return m, nil, true
+	}
+	return m, nil, false
 }
 
 // markable reports whether a grid cell can join a batch: it must resolve to a
