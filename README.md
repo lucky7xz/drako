@@ -1,73 +1,101 @@
 # drako
 
 [![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/lucky7xz/drako?color=007D9C&label=version)](https://github.com/lucky7xz/drako/tags)
-[![License](https://img.shields.io/github/license/lucky7xz/drako?color=orange)](https://github.com/lucky7xz/drako/blob/main/LICENSE)
+[![License](https://img.shields.io/github/license/lucky7xz/drako?color=orange)](https://github.com/lucky7xz/drako/blob/main/LICENCE)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/lucky7xz/drako?color=00ADD8&logo=go&logoColor=white)](https://go.dev/)
 
 `drako` represents an entirely new species of terminal tools: the customizable **Command-Deck Launcher**. It is not a menu, nor a shell history. It is a brutalist **architectural framework for any CLI-based workflow**, solidifying your scattered commands, TUIs, and scripts into a cohesive control surface. As such, CLI-driven workflows become remarkably easy to document, distribute, teach, and scale across a team.
 
 https://github.com/user-attachments/assets/21fb2340-bc74-4886-a629-8e95d116e830
 
-> [!TIP]
-> **Try drako live via ssh — no install:** `ssh chronyx.xyz`
-> A demo over SSH (Charm's [Wish](https://github.com/charmbracelet/wish) + Glassroot Mode, below): you get root on box while the drako's glassroot mode (limited functionality, eg. no inventory access) keeps access sealed — the "glass" over "root".
-> Profile & commands behind the demo: [lucky7xz/groot_demo](https://github.com/lucky7xz/groot_demo).
-> Experimental and shared.
+## ✨ Features
 
+-   **Harness, don't replace** — if it runs in a terminal, it can be bound to the grid: tools, TUIs, scripts
+-   **The Grid** — keyboard-driven command center, up to 729 cells per profile with [Quick Navigation](#-navigation)
+-   **Profiles & decks** — grouped commands plus optional [assets](#-summoning-profiles) (configs, scripts) shipped alongside
+-   **Summon** — [`drako summon <repo>`](#-summoning-profiles) pulls a deck from any Git host, verifiable with `--sha256`/`--rev`
+-   **The Weaver** — [one cell, every OS](#-cross-platform-decks-the-weaver): commands resolve per platform (apt/pacman/brew/…)
+-   **Specs & linting** — equip "Work Mode" in [one command](#-profile-specs); keep decks CI-clean with [`drako check`](#-deck-linting)
+-   **Glassroot Mode** — a [sealed surface](#-glassroot-mode-experimental) for serving drako over SSH *(experimental)*
 
-## ✨ TLDR; 
+## 📡 Try it live
 
-`drako` is built on a few core principles:
+No install — drako served over SSH ([Wish](https://github.com/charmbracelet/wish) + [Glassroot Mode](#-glassroot-mode-experimental)):
 
--   **Harness, Don't Replace:** It integrates with the tools you already use. If it runs in the terminal, it can be bound to the grid.
--   **The Grid:** Your keyboard-based command center. It is technically `3-dimensional` and can fit up to 729 (9x * 9y * 9z) commands per `grid`, any of which can be accessed almost instantly using **Quick Navigation** (see below). Cycle through command grids or stash them in the `inventory` folder using `i`.
--   **Profiles, Decks, & Assets:** A `profile` consists of a `grid configuration` (size etc), a collection of commands (the `deck`), and `assets` (optional). Example: A `profile` can have a `deck` of Docker commands, and have Docker compose files as its `assets`. 
--   **Portable Specs:** All `profile` files exist in `~/.config/drako/`. You can download new `profile` setups from any `git` repository to your `inventory` folder using `drako summon`. You can even have multiple such `profiles` in a single repo (`specs`). Git-manage your own `spec` folder and `summon` your own control panel in an instant.
+-   **`ssh chronyx.xyz`** — you get root on the box while glassroot keeps access sealed: the "glass" over "root"
+-   [lucky7xz/groot_demo](https://github.com/lucky7xz/groot_demo) — the exact profile & commands behind the demo
 
-## 🚀 Quick Start
+> Experimental and shared — treat it as a public terminal.
 
-> Requires Go **1.24** or newer.
+## 🚀 Install
 
-If Go is installed, installing `drako` is a single command.
+> Requires Go **1.24+** —  A `curl | sh` installer is on the roadmap.
 
 ```bash
 go install github.com/lucky7xz/drako@latest
 ```
 
-### Install Go
+Need Go first?
 
-- Debian/Ubuntu: `sudo apt install golang`
-- Arch: `sudo pacman -S go`
-- macOS: `brew install go`
-- Windows: `scoop install go` or `winget install GoLang.Go`
+| Platform      | Command                                             |
+| ------------- | --------------------------------------------------- |
+| Debian/Ubuntu | `sudo apt install golang`                           |
+| Arch          | `sudo pacman -S go`                                 |
+| macOS         | `brew install go`                                   |
+| Windows       | `scoop install go` *or* `winget install GoLang.Go`  |
 
-### Update
-
-To update `drako` to the latest version, simply run the installation command again.
-
-If you are not getting the latest version, use this command instead:
-```bash
-GOPROXY=direct go install github.com/lucky7xz/drako@latest  # update drako
-```
-
-### First run
-
-Installing with Go is currently the only method (a `curl | sh` script is on the roadmap). Go drops binaries in `~/go/bin`, which usually isn't on your `PATH` yet — so on first run, launch drako by its full path:
+**First run:** Go drops binaries in `~/go/bin`, which usually isn't on your `PATH` yet — launch drako by its full path once:
 
 ```bash
-go install github.com/lucky7xz/drako@latest   # install
-~/go/bin/drako                                 # first run (PATH not set up yet)
+~/go/bin/drako
 ```
 
 Once it's open, the **Settings** cell in the Core profile has an **Add go/bin to PATH** command that writes the change to your shell config. Open a new shell afterward and you can just run `drako`.
 
-> [!NOTE]
-> **Emoji Support:** drako profiles sometimes use emojis as visual indicators. Modern terminals (Ghostty, WezTerm etc.) may support them by default. Others (older Linux terminals) may require installing a "Nerd Font" (e.g., [Nerd Fonts](https://www.nerdfonts.com/)) or specific emoji font packages (e.g., `fonts-noto-color-emoji`).
+**Update:** rerun the install command. If you're not getting the latest version:
 
-### 🧭 Navigation
+```bash
+GOPROXY=direct go install github.com/lucky7xz/drako@latest
+```
+
+> [!NOTE]
+> **Emoji Support:** drako profiles sometimes use emojis as visual indicators. Modern terminals (Ghostty, WezTerm etc.) may support them by default. Others (older Linux terminals) may require a [Nerd Font](https://www.nerdfonts.com/) or an emoji font package (e.g., `fonts-noto-color-emoji`).
+
+## 🎴 Decks
+
+The default install is intentionally minimal. Summon curated command decks straight from the **Install Tools** menu in the Core profile, or from the CLI:
+
+-   [**101 Series**](https://github.com/lucky7xz/101-deck) — starter commands for learning the grid: `drako summon https://github.com/lucky7xz/101-deck.git`
+-   [**GGML**](https://github.com/lucky7xz/ggml-deck) — llama.cpp / local-LLM workflow: `drako summon https://github.com/lucky7xz/ggml-deck.git`
+-   [**groot demo**](https://github.com/lucky7xz/groot_demo) — the profile behind the public SSH demo
+
+Build your own: git-manage a folder of `.profile.toml` files and [`summon`](#-summoning-profiles) your own control panel from any host.
+
+## 🧰 CLI
+
+Beyond the TUI, drako gives you CLI commands for managing decks at scale:
+
+| Command                     | What it does                                                                 |
+| --------------------------- | ---------------------------------------------------------------------------- |
+| `drako ls`                  | Print every equipped deck as a table — pipe it, grep it, or feed it to an AI |
+| `drako summon <repo>`       | Pull a deck from any Git host into your inventory; pin with `--sha256`/`--rev` |
+| `drako check [path ...]`    | Lint profile files; exits 1 on errors — run it in your deck repo's CI        |
+| `drako spec <name>`         | Equip the profiles a spec lists; stash the rest (context switch)             |
+| `drako stash <name>`        | Move a spec's profiles to the inventory                                      |
+| `drako strip`               | Move every profile to the inventory (next launch: Rescue Mode)               |
+| `drako restore-core`        | Regenerate the default Core deck                                             |
+| `drako purge`               | Reset or remove configuration — trash-first, `--interactive` available       |
+| `drako open <path>`         | Open a file, directory, or URL with the OS default application              |
+| `drako --glassroot`         | Launch a sealed surface for SSH/Wish hosting                                 |
+
+Run any of these with no arguments for usage. Details in [Power Tools](#-power-tools) and [Purge](#-purge) below.
+
+---
+
+## 🧭 Navigation
 
 - **Grid Navigation:** Use arrows, `w/a/s/d`, or `h/j/k/l` (customizable in config.toml).
-- **Quick Navigation:** For example : Pressing `2` and `3` in quick sequence moves the cursor to the 2nd column, 3rd row.
+- **Quick Navigation:** For example: pressing `2` and `3` in quick sequence moves the cursor to the 2nd column, 3rd row.
 - **Switch Profile:** `Alt` + `1-9` to switch directly.
 - **Cycle Profile:** `o` (prev) and `p` (next).
 - **Profile Inventory:** `i`. Inside, `e` opens the highlighted profile file in your editor (`$VISUAL`/`$EDITOR`).
@@ -78,16 +106,14 @@ Once it's open, the **Settings** cell in the Core profile has an **Add go/bin to
     - **Hidden Files:** `.` to toggle.
     - **Back:** `q` or `Esc`.
 - **Quit:** `Ctrl+C` (Global), or `q` (Grid Mode).
-- **Glassroot Mode (launch flag):** start with `drako --glassroot` for a sealed surface meant for SSH/Wish hosting (see Glassroot Mode below).
 
 > **Customization:** Remap keys in `~/.config/drako/config.toml` under `[keys]`.
-
 
 ## 📇 Profile Creation Example
 
 Create a new file with the `.profile.toml` extension. `drako` will discover it automatically.
 
- For example `~/.config/drako/networking.profile.toml`:
+For example `~/.config/drako/networking.profile.toml`:
 
 ```toml
 # Define grid size and theme for this profile.
@@ -100,18 +126,17 @@ name = "nmap LAN"
 command = "nmap -sn 192.168.1.0/24"
 col = "a"
 row = 0
-auto_close_execution = false       # Here we want to keep the window open after execution to actually see the output.
+auto_close_execution = false       # Keep the window open after execution to actually see the output.
 
 [[commands]]
 name = "Bandwidth"
 command = "bmon"
-col = a
+col = "a"
 row = 1
-# auto-close true per default      # Here we want to close the window after execution because bmon is a TUI.
-
+# auto-close true per default      # bmon is a TUI — close its window when it exits.
 ```
 
-## 🧶 Cross-Platform Decks (Command Variants)
+## 🧶 Cross-Platform Decks (The Weaver)
 
 A cell's `command` can be a plain string — or a table of per-platform variants, resolved when the profile loads:
 
@@ -133,28 +158,21 @@ One deck file, every machine. This is what makes summoned decks portable across 
 ## 👢 Bootstrap
 
 On first run, `drako` creates:
+
 - `config.toml`: Global settings (Input Keys, Global Theme).
 - `core.profile.toml`: The default command profile (Process Monitor, System Info, etc.) — a variant deck shipped inside the binary, so the same file works on every OS. Deleted or stashed it? `drako restore-core` restores it any time.
 - `themes.toml`: Color palettes. The built-in `dracula` theme lives in the binary as the fallback, so it no longer needs to be defined here.
 
 **NOTE:** If you've customized your color schemes, keep a backup of your `themes.toml` — how themes are configured may change in a future release.
 
-**NOTE:** Bootstrapping only occurs if files (config.toml and core.profile.toml) are missing. To clean-up, use `drako purge --interactive` or `drako purge --destroyeverything` (backup your work first).
+**NOTE:** Bootstrapping only occurs if files (config.toml and core.profile.toml) are missing. To clean up, use `drako purge --interactive` or `drako purge --destroyeverything` (backup your work first).
 
 > [!NOTE]
 > **Upgrading from an older version?** Your existing `core.profile.toml` keeps working and is never overwritten. It was generated for your OS at install time; the Core deck now ships as a single cross-platform variant deck instead. To switch (optional): `drako purge --target core` (your old file goes to `trash/`), then `drako restore-core`. Any customizations you made to the old file need to be carried over by hand.
 
-**Clean Slate:** The default inventory is intentionally minimal to avoid cluttering your workspace. You can summon curated command decks directly from the **Install Tools** menu in the Core profile, or use the CLI to summon them manually:
-
-- **101 Series** ([Source](https://github.com/lucky7xz/101-deck)): `drako summon https://github.com/lucky7xz/101-deck.git`
-- **GGML** ([Source](https://github.com/lucky7xz/ggml-deck)): `drako summon https://github.com/lucky7xz/ggml-deck.git`
-
 **NOTE:** If drako mis-detects your distro or a default command is wrong for your OS, please open an issue.
 
-
-## 🧰 Power Tools
-
-Beyond the TUI, Drako provides CLI commands for advanced management.
+## 🪄 Power Tools
 
 ### 📋 Listing Decks
 
@@ -169,10 +187,7 @@ drako ls
 Share and reuse command decks across machines and teams. Instead of manually copying profiles, summon them directly from remote sources:
 
 ```bash
-
-# Clones the repo and looks for .profile.toml files.
-# Discards the temporary repo
-
+# Clones the repo, looks for .profile.toml files, discards the temporary repo.
 drako summon git@github.com:user/my_profile_collection.git
 
 # Verify what arrived matches what the author published (optional, recommended):
@@ -187,8 +202,7 @@ If a profile needs extra files (scripts, configs), declare it under `assets = ["
 
 You can then reference them in your commands using their full path. This can be useful when managing multiple ansible playbooks using drako, for example.
 
-### 📚 Profile Specs 
-
+### 📚 Profile Specs
 
 Apply a "spec" to bulk-manage your profiles.
 
@@ -205,8 +219,18 @@ drako stash example
 # Move all profiles to inventory/. With nothing equipped, drako starts
 # in Rescue mode — `drako restore-core` brings the default deck back.
 drako strip
-
 ```
+
+### ✅ Deck Linting
+
+`drako check` lints profile files for authoring mistakes and prints one row per file. With no arguments it checks every equipped and inventory profile; pass files or directories to check a deck repo instead:
+
+```bash
+drako check                  # everything equipped + inventory
+drako check path/to/deck/    # a deck repo checkout
+```
+
+It exits `1` when any error-level finding exists — wire it into your deck repository's CI and a broken deck never ships.
 
 ## ⚠️ Safety First
 
@@ -220,6 +244,7 @@ drako strip
 ## 🗑️ Purge
 
 Safely reset or remove configurations.
+
 ```bash
 # Remove Core profile (moves to trash/); `drako restore-core` regenerates it
 drako purge --target core
@@ -237,7 +262,6 @@ drako purge --config
 drako purge --destroyeverything
 ```
 
-
 ## 🚑 Rescue Mode
 
 If your configuration breaks (syntax error, invalid grid), Drako won't crash. It enters **Rescue Mode**.
@@ -245,7 +269,6 @@ If your configuration breaks (syntax error, invalid grid), Drako won't crash. It
 - **Repair Tools:** Provides buttons to edit `config.toml`, open the config directory, remove broken profiles, or restore the default Core deck.
 - **Manual Access:** You can enter `[ Rescue Mode ]` manually via the **Inventory** (`i`).
 - **Exit:** Select "Exit Rescue Mode" or switch to a working profile (`o`/`p`) to return to normal operation.
-
 
 ## 🧊 Glassroot Mode (experimental)
 
@@ -265,22 +288,22 @@ Glassroot locks the interface, but the commands still do whatever they do — so
 
 > Hosting drako over Wish is still experimental — feedback welcome.
 
-
-## Roadmap 
+## Roadmap
 
  - [x] Update Bootstrap collection
  - [x] Summon profiles incl assets
- - [x] DRY Refactor  
+ - [x] DRY Refactor
  - [x] Grid Size Safety & Rescue Mode
  - [x] Per-platform command variants (cross-platform decks)
  - [x] Summon verification pins (`--sha256` / `--rev`)
  - [x] `drako ls` — deck listing for pipes, scripts & AI agents
+ - [x] `drako check` — deck linter, CI-ready
  - [~] Glassroot Mode
 
  ## Dev
  - [~] Full unit test suite
  - [ ] CI/CD
- - [ ] Install 
+ - [ ] Install
  - [ ] Auto Update
 
  ### Support
@@ -302,15 +325,17 @@ Ideas are welcome. Bugs will be hunted. drako follows an SQLite-style contributi
 
 ---
 
-## ❤️ Thanks to Charmbracelet
+## ❤️ Built with
 
-`drako` uses several Charmbracelet projects to deliver the TUI:
+drako is a single static Go binary with no runtime dependencies. Direct build dependencies only — [`go.mod`](go.mod) is the full, authoritative list. Special thanks to Charmbracelet:
 
-- [`bubbletea`](https://github.com/charmbracelet/bubbletea) for the model/view/update loop
-- [`lipgloss`](https://github.com/charmbracelet/lipgloss) for layout and styling
-- [`bubbles`](https://github.com/charmbracelet/bubbles) for common components
-
-
+- [`charmbracelet/bubbletea`](https://github.com/charmbracelet/bubbletea) — the model/view/update loop
+- [`charmbracelet/lipgloss`](https://github.com/charmbracelet/lipgloss) — layout and styling
+- [`charmbracelet/bubbles`](https://github.com/charmbracelet/bubbles) — common components
+- [`BurntSushi/toml`](https://github.com/BurntSushi/toml) — profile & config parsing
+- [`shirou/gopsutil`](https://github.com/shirou/gopsutil) — system info (process monitor, sysinfo)
+- [`fsnotify/fsnotify`](https://github.com/fsnotify/fsnotify) — config/profile file watching
+- [`golang.org/x/term`](https://pkg.go.dev/golang.org/x/term) — terminal handling
 
 ## 🤖 AI disclosure
 
@@ -318,7 +343,15 @@ drako is developed with heavy AI assistance — code, research, and docs. The co
 
 ## 📜 License
 
-The core Drako engine is released under the [GNU Affero General Public License v3.0](LICENSE). Bootstrap assets in the `bootstrap/` directory are released under either [MIT](bootstrap/LICENSE-MIT) or [Apache-2.0](bootstrap/LICENSE-Apache) licenses.
+The core Drako engine is released under the [GNU Affero General Public License v3.0](LICENCE). Bootstrap assets are released under the [MIT license](internal/config/bootstrap/LICENSE-MIT).
+
+## 🔗 Resources
+
+| Decks                                                 | Project                                    |
+| ----------------------------------------------------- | ------------------------------------------ |
+| [101 Series](https://github.com/lucky7xz/101-deck)    | [Contributing](docs/CONTRIBUTING.md)       |
+| [GGML](https://github.com/lucky7xz/ggml-deck)         | [Roadmap](#roadmap)                        |
+| [groot demo](https://github.com/lucky7xz/groot_demo)  | [License (AGPL-3.0)](LICENCE)              |
 
 ---
 <div align="center">
