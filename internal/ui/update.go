@@ -59,7 +59,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case reloadProfilesMsg:
-		bundle, err := config.LoadConfig(nil)
+		bundle, err := config.ReloadConfig(m.profile.sessionProfile)
 		if err != nil {
 			log.Printf("config reload failed: %v", err)
 			return m, m.setProfileStatus("Config reload failed", false)
@@ -80,7 +80,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ConfigChangedMsg:
 		// Config file changed on disk, reload everything
 		log.Printf("Config file change detected: %s", msg.Path)
-		bundle, err := config.LoadConfig(nil)
+		bundle, err := config.ReloadConfig(m.profile.sessionProfile)
 		if err != nil {
 			// Keep watching: the environment may recover before the next change.
 			log.Printf("config reload failed: %v", err)
@@ -367,7 +367,7 @@ func (m Model) afterEdit(msg editorFinishedMsg) (tea.Model, tea.Cmd) {
 	}
 
 	// The edit may have changed any equipped profile — reload the bundle.
-	bundle, err := config.LoadConfig(nil)
+	bundle, err := config.ReloadConfig(m.profile.sessionProfile)
 	if err != nil {
 		m.inventory.status = "Reload failed: " + err.Error()
 		m.mode = inventoryMode
@@ -458,7 +458,7 @@ func (m Model) switchToProfileIndex(target int) (Model, bool) {
 
 	updated := m
 	updated.profile.activeIndex = target
-	_ = os.Setenv("DRAKO_PROFILE", selected.Name)
+	updated.profile.sessionProfile = selected.Name
 	updated.Config = config.ApplyProfileOverlay(m.profile.base, selected.Profile)
 	updated.applyConfig(updated.Config)
 

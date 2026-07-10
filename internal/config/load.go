@@ -86,6 +86,18 @@ func loadBaseConfig(configDir string) (Config, []ProfileParseError) {
 // environment is unusable — no config directory can be resolved or created;
 // everything else degrades to the rescue config and Broken entries.
 func LoadConfig(profileOverride *string) (ConfigBundle, error) {
+	return loadConfig(profileOverride, "")
+}
+
+// ReloadConfig is LoadConfig for a running session: sessionProfile is the
+// profile the session currently has active, and it takes the env var's slot
+// in the selection precedence (pivot lock still snaps back over it). An empty
+// sessionProfile behaves exactly like LoadConfig(nil).
+func ReloadConfig(sessionProfile string) (ConfigBundle, error) {
+	return loadConfig(nil, sessionProfile)
+}
+
+func loadConfig(profileOverride *string, sessionProfile string) (ConfigBundle, error) {
 	configDir, err := paths.ConfigDir()
 	if err != nil {
 		return ConfigBundle{}, fmt.Errorf("could not resolve a config directory: %w", err)
@@ -123,7 +135,14 @@ func LoadConfig(profileOverride *string) (ConfigBundle, error) {
 
 	profiles = reorderByPivot(profiles, pf.EquippedOrder)
 
-	requested, fromPivot := resolveRequested(profileOverride, pf.Locked, os.Getenv("DRAKO_PROFILE"), base.Profile)
+	// The session's active profile occupies the env var's precedence slot:
+	// the env var seeds the first load, the session carries it from there.
+	envProfile := sessionProfile
+	if envProfile == "" {
+		envProfile = os.Getenv("DRAKO_PROFILE")
+	}
+
+	requested, fromPivot := resolveRequested(profileOverride, pf.Locked, envProfile, base.Profile)
 	pivotRequested = fromPivot
 
 	pivotStillValid := requestedPivot != ""

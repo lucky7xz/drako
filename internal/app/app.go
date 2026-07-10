@@ -114,7 +114,7 @@ func Run() int {
 			case strings.HasPrefix(state.Selected, "drako open"):
 				cli.HandleOpenCommand(state.Selected)
 			default:
-				core.RunCommand(state.Config, state.Selected)
+				core.RunCommand(state.Config, state.Selected, state.ActiveProfileName())
 			}
 
 			cmd := exec.Command("clear")

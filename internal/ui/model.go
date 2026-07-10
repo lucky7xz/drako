@@ -73,6 +73,9 @@ type profileState struct {
 	pendingErrors      []config.ProfileParseError
 	errorQueueActive   bool
 	acknowledged       map[string]bool
+	// sessionProfile is the profile the user explicitly switched to this
+	// session; config reloads re-select it (unless a pivot lock wins).
+	sessionProfile string
 }
 
 type Model struct {
@@ -252,6 +255,17 @@ func (p profileState) activeName() string {
 		return "Rescue"
 	}
 	return name
+}
+
+// ActiveProfileName is the name of the currently active profile, or "" when
+// no profiles are loaded. The app layer exports it to spawned commands as
+// DRAKO_PROFILE.
+func (m Model) ActiveProfileName() string {
+	p := m.profile
+	if len(p.profiles) == 0 || p.activeIndex < 0 || p.activeIndex >= len(p.profiles) {
+		return ""
+	}
+	return p.profiles[p.activeIndex].Name
 }
 
 func InitialModel(glassrootMode bool) Model {

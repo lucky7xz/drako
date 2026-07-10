@@ -137,6 +137,47 @@ func TestLoadConfig_OverrideBeatsEnvAndPivot(t *testing.T) {
 	}
 }
 
+func TestReloadConfig_SessionBeatsEnvAndCfg(t *testing.T) {
+	loadTestDir(t, "alpha", "beta", "work")
+	t.Setenv("DRAKO_PROFILE", "work")
+
+	bundle, err := ReloadConfig("beta")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := bundle.Profiles[bundle.ActiveIndex].Name; got != "beta" {
+		t.Errorf("session profile should beat env and config.toml, got %q", got)
+	}
+}
+
+func TestReloadConfig_PivotBeatsSession(t *testing.T) {
+	dir := loadTestDir(t, "alpha", "work")
+	if err := WritePivotLocked(dir, "work"); err != nil {
+		t.Fatal(err)
+	}
+
+	bundle, err := ReloadConfig("alpha")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := bundle.Profiles[bundle.ActiveIndex].Name; got != "work" {
+		t.Errorf("pivot lock should snap back over the session profile, got %q", got)
+	}
+}
+
+func TestReloadConfig_EmptySessionFallsBackToEnv(t *testing.T) {
+	loadTestDir(t, "alpha", "work")
+	t.Setenv("DRAKO_PROFILE", "work")
+
+	bundle, err := ReloadConfig("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := bundle.Profiles[bundle.ActiveIndex].Name; got != "work" {
+		t.Errorf("no session yet: the env var handshake still applies, got %q", got)
+	}
+}
+
 func TestLoadConfig_PivotOrderReorders(t *testing.T) {
 	dir := loadTestDir(t, "alpha", "beta", "work")
 	if err := WritePivotEquippedOrder(dir, []string{"work"}); err != nil {

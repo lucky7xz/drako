@@ -60,7 +60,7 @@ func TestRunCommand_ConfigMatchButEmptyCommand(t *testing.T) {
 	cfg := config.Config{
 		Commands: []config.Command{{Name: "test", Command: ""}},
 	}
-	RunCommand(cfg, "test")
+	RunCommand(cfg, "test", "")
 
 	// Should pause but not execute anything
 	if !paused {
@@ -87,7 +87,7 @@ func TestRunCommand_PathFallback(t *testing.T) {
 	}
 
 	cfg := config.Config{} // No matching configured command
-	RunCommand(cfg, "echo")
+	RunCommand(cfg, "echo", "")
 
 	if len(gotArgs) == 0 || gotArgs[0] != "/bin/echo" {
 		t.Fatalf("expected to build cmd with looked-up path, got %v", gotArgs)

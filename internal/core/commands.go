@@ -101,59 +101,27 @@ func buildShellCmd(shell_config, commandStr string) *exec.Cmd {
 	}
 }
 
-// RunCommand finds the selected command from the loaded config and executes it.
-func RunCommand(cfg config.Config, selected string) {
-	// cmd will hold the prepared command to run. It's a pointer type; zero value is nil.
-	var cmd *exec.Cmd
-	// Pointers to per-command overrides; nil means "use default".
-	var autoClosePtr *bool
-	var debugPtr *bool
+// RunCommand finds the selected command from the loaded config and executes
+// it. activeProfile is the name of the profile the selection came from; it is
+// exported to the child process as DRAKO_PROFILE.
+func RunCommand(cfg config.Config, selected, activeProfile string) {
+	plan := buildExecPlan(cfg, selected, lookPathFn)
 
-	// Default shell to use for string commands (honors config/profile).
-	shell_config := cfg.DefaultShell
-
-	// Resolve a top-level command or nested item by name.
-	parentCmd, itemCfg, found := FindCommandByName(cfg, selected)
-	if found {
-		if itemCfg == nil {
-			// top-level command
-			commandStr := parentCmd.Command
-			if commandStr != "" {
-				cmd = buildShellCmd(shell_config, commandStr)
-				autoClosePtr = parentCmd.AutoCloseExecution
-				debugPtr = parentCmd.DebugExecution
-			}
-		} else {
-			// dropdown item
-			commandStr := itemCfg.Command
-			if commandStr != "" {
-				cmd = buildShellCmd(shell_config, commandStr)
-				autoClosePtr = itemCfg.AutoCloseExecution
-				debugPtr = itemCfg.DebugExecution
-			}
-		}
+	switch plan.kind {
+	case planNoCommand:
+		log.Printf("No command configured for: %s", selected)
+		fmt.Printf("\n--- No Command Configured ---\n")
+		fmt.Printf("Command: '%s'\n", selected)
+		pauseFn("\nPress any key to return to the application.")
+		return
+	case planNotFound:
+		log.Printf("Executable not found in PATH: %s", selected)
+		return
 	}
 
-	// If we didn't find a prepared command to run via a shell:
-	// - If a config match existed but had no command string, don't try PATH; just inform and return.
-	// - Otherwise, try to execute the "selected" token directly as a binary in PATH (no shell).
-	if cmd == nil {
-		if found {
-			log.Printf("No command configured for: %s", selected)
-			fmt.Printf("\n--- No Command Configured ---\n")
-			fmt.Printf("Command: '%s'\n", selected)
-			pauseFn("\nPress any key to return to the application.")
-
-			return
-		}
-		if path, err := lookPathFn(selected); err == nil {
-			// This is like subprocess.run([path]) in Python; argv is literal (no shell).
-			cmd = commandFn(path)
-		} else {
-			log.Printf("Executable not found in PATH: %s", selected)
-			return
-		}
-	}
+	// Sanitize the child environment: the whitelist (if configured) restricts
+	// what commands inherit; drako's own DRAKO_PROFILE is always present.
+	cmd := assembleCmd(plan, commandEnv(os.Environ(), cfg.EnvWhitelist, activeProfile))
 
 	// --- LOGGING START ---
 	// Log the command execution to history.log in the config directory
@@ -196,11 +164,7 @@ func RunCommand(cfg config.Config, selected string) {
 	}()
 	// --- LOGGING END ---
 
-	// Resolve flags after overrides may have been set.
-	autoClose := boolOrDefault(autoClosePtr, true)
-	debug := boolOrDefault(debugPtr, false)
-
-	if debug {
+	if plan.debug {
 		// Debug: capture combined output and pause.
 		output, err := cmd.CombinedOutput()
 		fmt.Printf("\n--- Command Output ---\n")
@@ -219,11 +183,6 @@ func RunCommand(cfg config.Config, selected string) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	// Sanitize environment variables
-	// If EnvWhitelist is configured, we restrict the environment.
-	// Otherwise, we inherit the full parent environment (pass-through).
-	cmd.Env = PrepareEnv(os.Environ(), cfg.EnvWhitelist)
-
 	if err := cmd.Run(); err != nil {
 		fmt.Printf("\n--- Command Failed ---\n")
 		fmt.Printf("Command: '%s'\n", selected)
@@ -234,7 +193,7 @@ func RunCommand(cfg config.Config, selected string) {
 	}
 
 	// If we shouldn't auto-close after success, pause so the user can read output.
-	if !autoClose {
+	if !plan.autoClose {
 		fmt.Printf("\n--- Command Finished ---\n")
 		fmt.Printf("Command: '%s'\n", selected)
 		pause("\nPress any key to return to the application.")
