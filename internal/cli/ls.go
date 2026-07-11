@@ -32,6 +32,18 @@ const (
 	lsFallbackWidth = 80
 )
 
+// quietLogs keeps stdout a pure listing for pipes and AI agents: log output
+// goes to the usual log file, or nowhere. The file stays open for the rest of
+// this short-lived CLI process.
+func quietLogs() {
+	log.SetOutput(io.Discard)
+	if configDir, err := paths.ConfigDir(); err == nil {
+		if f, err := os.OpenFile(paths.LogFile(configDir), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o644); err == nil {
+			log.SetOutput(f)
+		}
+	}
+}
+
 // lsWidth is the terminal width to fit the listing into.
 func lsWidth() int {
 	if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 0 {
@@ -47,15 +59,7 @@ func HandleLsCommand(args []string) int {
 		return 1
 	}
 
-	// Keep stdout pure listing: route log output to the usual log file
-	// (or drop it) — an AI or a pipe reads this output verbatim.
-	log.SetOutput(io.Discard)
-	if configDir, err := paths.ConfigDir(); err == nil {
-		if f, err := os.OpenFile(paths.LogFile(configDir), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o644); err == nil {
-			defer f.Close()
-			log.SetOutput(f)
-		}
-	}
+	quietLogs()
 
 	bundle, err := config.LoadConfig(nil)
 	if err != nil {

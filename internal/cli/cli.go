@@ -35,6 +35,8 @@ func HandleCLI(args []string) (handled bool, code int) {
 		return true, HandleStripCommand(args)
 	case "restore-core", "--restore-core":
 		return true, HandleRestoreCoreCommand()
+	case "explain", "--explain":
+		return true, HandleExplainCommand(args)
 	case "check", "--check":
 		return true, HandleCheckCommand(args)
 	case "open", "--open":
@@ -58,6 +60,7 @@ func PrintUsage() {
 	fmt.Printf("Usage: drako <command> [arguments]\n\n")
 	table(os.Stdout, []string{"Command", "Description"}, [][]string{
 		{"ls", "List equipped profiles and their commands with cell addresses"},
+		{"explain [profile:]<addr>", "Show a cell's command, description and flags (e.g. A0, work:A1.2)"},
 		{"check [path ...]", "Validate profile files (default: equipped + inventory)"},
 		{"summon <url>", "Summon profile(s) from a URL"},
 		{"spec list", "Shows available specs"},

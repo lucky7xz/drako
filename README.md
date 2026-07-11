@@ -79,6 +79,7 @@ Beyond the TUI, drako gives you CLI commands for managing decks at scale:
 | Command                     | What it does                                                                 |
 | --------------------------- | ---------------------------------------------------------------------------- |
 | `drako ls`                  | Print every equipped deck as a table — pipe it, grep it, or feed it to an AI |
+| `drako explain [profile:]<addr>` | Zoom into one cell: name, actual command, description, auto_close (e.g. `A0`, `work:A1.2`) |
 | `drako summon <repo>`       | Pull a deck from any Git host into your inventory; pin with `--sha256`/`--rev` |
 | `drako check [path ...]`    | Lint profile files; exits 1 on errors — run it in your deck repo's CI        |
 | `drako spec <name>`         | Equip the profiles a spec lists; stash the rest (context switch)             |
@@ -182,6 +183,14 @@ On first run, `drako` creates:
 
 ```bash
 drako ls
+```
+
+`drako explain` zooms into a single cell by the addresses `ls` prints — the CLI twin of the TUI's `e` popup. Bare addresses read the active profile; qualify with `profile:` for any equipped one:
+
+```bash
+drako explain A0            # active profile
+drako explain work:B2       # equipped profile 'work'
+drako explain A1.2          # dropdown item 2 of cell A1
 ```
 
 ### 🪄 Summoning Profiles

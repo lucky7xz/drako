@@ -25,6 +25,7 @@ func TestHandleCLI(t *testing.T) {
 		{"version succeeds", []string{"drako", "version"}, true, 0},
 		{"help succeeds", []string{"drako", "help"}, true, 0},
 		{"check routes and succeeds", []string{"drako", "check", clean}, true, 0},
+		{"explain without refs errors", []string{"drako", "explain"}, true, 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
