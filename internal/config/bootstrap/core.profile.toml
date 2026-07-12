@@ -102,8 +102,22 @@ row = 2
 # └────────────────────────────────────────┘
 [[commands]]
 name = " 🔎 File Finder"
-description = "Type and watch it hunt through thousands of files instantly. When your filesystem sprawls like endlessly, this cuts straight to what you're tracking. Fast, precise, relentless."
-command = { linux_generic = "fzf --preview 'head -n 50 {}' --preview-window=right:50%:wrap --border --header '🔎 START TYPING TO SEARCH...'", macos = "fzf --preview 'head -n 50 {}' --preview-window=right:50%:wrap --border --header '🔎 START TYPING TO SEARCH...'", windows = "gci -Recurse | Where-Object { ! $_.PSIsContainer } | Out-GridView" }
+description = "Type and watch it hunt through thousands of files instantly — then press Enter to open what it caught. It hunts wherever the dragon currently stands: use path mode to move the den first, and the search follows. Fast, precise, relentless."
+command = { linux_generic = """
+if ! command -v fzf >/dev/null; then
+    echo "❌ fzf is not installed. Run 'Install common tools' in Cell [C-0] first."
+    exit 1
+fi
+f=$(fzf --preview 'bat --color=always --style=numbers {} 2>/dev/null || head -n 50 {}' --preview-window=right:50%:wrap --border --header "🔎 Searching: $PWD")
+if [ -n "$f" ]; then ${EDITOR:-less} "$f"; fi
+""", macos = """
+if ! command -v fzf >/dev/null; then
+    echo "❌ fzf is not installed. Run 'Install common tools' in Cell [C-0] first."
+    exit 1
+fi
+f=$(fzf --preview 'bat --color=always --style=numbers {} 2>/dev/null || head -n 50 {}' --preview-window=right:50%:wrap --border --header "🔎 Searching: $PWD")
+if [ -n "$f" ]; then ${EDITOR:-less} "$f"; fi
+""", windows = "gci -Recurse | Where-Object { ! $_.PSIsContainer } | Out-GridView" }
 col = "B"
 row = 0
 auto_close_execution = false
@@ -157,7 +171,7 @@ fastfetch 2>/dev/null || neofetch 2>/dev/null || {
         grep PRETTY_NAME /etc/os-release 2>/dev/null | cut -d= -f2- | sed 's/"//g'
     fi
 }
-""", macos = "system_profiler SPSoftwareDataType SPDetailLevel=mini", windows = "systeminfo" }, auto_close_execution = false },
+""", macos = "fastfetch 2>/dev/null || system_profiler SPSoftwareDataType SPHardwareDataType -detailLevel mini", windows = "systeminfo" }, auto_close_execution = false },
     { name = "Disk Usage", description = "Map of your storage. See where space went, find what's been forgotten in dusty corners.", command = { linux_generic = """
 duf 2>/dev/null || {
     echo "duf not available. Defaulting to du..."
@@ -183,7 +197,7 @@ elif command -v pacman >/dev/null; then sudo pacman -S btop bmon fastfetch clama
 elif command -v xbps-install >/dev/null; then sudo xbps-install -S btop bmon fastfetch clamav fzf duf
 else echo "❓ No known package manager found — install btop bmon neofetch clamav fzf duf with your distro's own tool."
 fi
-""", macos = "brew install btop bmon neofetch fzf duf", windows = "winget install btop bmon neofetch fzf duf" }, auto_close_execution = false },
+""", macos = "brew install btop bmon fastfetch fzf duf", windows = "winget install btop bmon neofetch fzf duf" }, auto_close_execution = false },
     { name = "Install micro", description = "Installs micro, a modern terminal text editor. Clean interface, easy to use. Set it as your default EDITOR via Settings if you want.", command = { linux_debian = "sudo apt install micro", linux_arch = "sudo pacman -S micro", linux_fedora = "sudo dnf install micro", linux_void = "sudo xbps-install -S micro", linux_generic = """
 if command -v apt >/dev/null; then sudo apt install micro
 elif command -v dnf >/dev/null; then sudo dnf install micro
@@ -222,7 +236,7 @@ drako summon "git@github.com:$username/$reponame.git"
 [[commands]]
 name = "📜 Open Shell Config"
 description = "This is where all your terminal customizations live. The shell config file loads every time you open a terminal and controls your aliases, environment variables, and prompt appearance. It's like the settings panel for your command line experience. I open this file whenever I want to add a new shortcut or tweak how my terminal behaves."
-command = { linux_generic = "$EDITOR ~/.bashrc", macos = "$EDITOR ~/.zshrc", windows = "drako open $PROFILE" }
+command = { linux_generic = "${EDITOR:-nano} ~/.bashrc", macos = "${EDITOR:-nano} ~/.zshrc", windows = "drako open $PROFILE" }
 col = "C"
 row = 1
 
@@ -233,11 +247,11 @@ col = "C"
 row = 2
 description = "The dragon's lair. Tweak the internal mechanics, adjust your environment, and refine how you interact with the system. This is where you make the machine yours."
 items = [
-    { name = "⚙️  Edit config.toml ", description = "The file you're reading right now. Key bindings, themes, etc.—all controlled here. Change anything. Break things. That's the point. Power lives in plain text files. Rescue mode can help you restore a broken config.", command = { linux_generic = "$EDITOR ~/.config/drako/config.toml", macos = "$EDITOR ~/.config/drako/config.toml", windows = "drako open %APPDATA%\\drako\\config.toml" } },
-    { name = "📁 Browse config dir", description = "Hidden chambers where configurations live. Most users never look here, but this is where real control exists. Explore it. Break things. Make it yours. The vastness of cyber starts in folders like these.", command = { linux_generic = "drako open ~/.config/drako", macos = "drako open ~/.config/drako", windows = "drako open %APPDATA%\\drako" } },
-    { name = "ℹ️  Open Pivot  ", description = "Small scale state tracking, profile switches, paths. Useful for debugging or just curiosity.", command = { linux_generic = "$EDITOR ~/.config/drako/pivot.toml", macos = "$EDITOR ~/.config/drako/pivot.toml", windows = "drako open %APPDATA%\\drako\\pivot.toml" } },
-    { name = "📜 Open History Logs", description = "A record of past movements. Every command executed, every choice made, preserved in the archives. Peer into the past to trace your steps.", command = { linux_generic = "$EDITOR ~/.config/drako/history.log", macos = "$EDITOR ~/.config/drako/history.log", windows = "drako open %APPDATA%\\drako\\history.log" } },
-    { name = "📜 Open Logs (Debug)", description = "The trail of what happened. Events, errors, state changes recorded. Read the logs when things break or when you want to see the machinery.", command = { linux_generic = "$EDITOR ~/.config/drako/drako.log", macos = "$EDITOR ~/.config/drako/drako.log", windows = "drako open %APPDATA%\\drako\\drako.log" } },
+    { name = "⚙️  Edit config.toml ", description = "The file you're reading right now. Key bindings, themes, etc.—all controlled here. Change anything. Break things. That's the point. Power lives in plain text files. Rescue mode can help you restore a broken config.", command = { linux_generic = "${EDITOR:-nano} ~/.config/drako/config.toml", macos = "${EDITOR:-nano} \"$HOME/Library/Application Support/drako/config.toml\"", windows = "drako open %APPDATA%\\drako\\config.toml" } },
+    { name = "📁 Browse config dir", description = "Hidden chambers where configurations live. Most users never look here, but this is where real control exists. Explore it. Break things. Make it yours. The vastness of cyber starts in folders like these.", command = { linux_generic = "drako open ~/.config/drako", macos = "drako open \"$HOME/Library/Application Support/drako\"", windows = "drako open %APPDATA%\\drako" } },
+    { name = "ℹ️  Open Pivot  ", description = "Small scale state tracking, profile switches, paths. Useful for debugging or just curiosity.", command = { linux_generic = "${EDITOR:-nano} ~/.config/drako/pivot.toml", macos = "${EDITOR:-nano} \"$HOME/Library/Application Support/drako/pivot.toml\"", windows = "drako open %APPDATA%\\drako\\pivot.toml" } },
+    { name = "📜 Open History Logs", description = "A record of past movements. Every command executed, every choice made, preserved in the archives. Peer into the past to trace your steps.", command = { linux_generic = "${EDITOR:-nano} ~/.config/drako/history.log", macos = "${EDITOR:-nano} \"$HOME/Library/Application Support/drako/history.log\"", windows = "drako open %APPDATA%\\drako\\history.log" } },
+    { name = "📜 Open Logs (Debug)", description = "The trail of what happened. Events, errors, state changes recorded. Read the logs when things break or when you want to see the machinery.", command = { linux_generic = "${EDITOR:-nano} ~/.config/drako/drako.log", macos = "${EDITOR:-nano} \"$HOME/Library/Application Support/drako/drako.log\"", windows = "drako open %APPDATA%\\drako\\drako.log" } },
 
     #===========================================================================================================
     { name = "Reload Shell", description = "NOTE: Won't affect your current shell (child process limitation). Use this to copy the command: press 'y', then paste it into your terminal to actually reload.", command = { linux_generic = "source ~/.bashrc", macos = "source ~/.zshrc", windows = "" }, auto_close_execution = false },
