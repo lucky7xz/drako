@@ -1,6 +1,9 @@
-# The SSH & Rsync Interactive Grid
-# A 3x3 profile with dedicated Firewall controls and user prompts for connections.
-# POSIX-only: commands assume bash/sh (read, systemctl, ufw) — no Windows variants.
+# The SSH Grid — service, keys, transfers, tunnels.
+# A 3x3 flagship deck: every cell is a folder, every item teaches the concept
+# it runs. Doctrine: dry-run before sync, validate before restart, test keys
+# before hardening.
+# POSIX/Linux-first: commands assume a POSIX shell and (mostly) systemd.
+# No Windows variants.
 
 # ┌─ Grid Dimensions ──────────────────────────────┐
 X = 3
@@ -8,124 +11,325 @@ Y = 3
 # └────────────────────────────────────────────────┘
 
 #=======================================================================================================================
-# ┌─ COLUMN A: Server Management (The Fortress) ────────────────────────────────────────────────────────────────────────┐
-# │ Control the service, configure the firewall (UFW), and monitor security logs.
+# ┌─ COLUMN A: The Server Side ─────────────────────────────────────────────────────────────────────────────────────────┐
+# │ Run the daemon, guard the door, read the logs.
+# │ Distro quirk handled throughout: the systemd unit is 'sshd' on Fedora/Arch but 'ssh' on Debian/Ubuntu —
+# │ items detect the right name at runtime instead of guessing.
 # └─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 [[commands]]
-name = "🚦 SSH Service"
-description = "Turn the SSH server on, off, or check if it's alive."
+name = "🚦 SSH Service ⋮ "
+description = "The daemon that answers incoming connections. Start it, stop it, make it survive reboots. Items detect whether your distro calls the unit 'sshd' (Fedora, Arch) or 'ssh' (Debian, Ubuntu), so they work on both."
 col = "A"
 row = 0
 items = [
-    { name = "Is it running?", command = "systemctl status ssh", description = "Checks if the SSH daemon is active.", auto_close_execution = false },
-    { name = "Start Service", command = "sudo systemctl start ssh", description = "Turn on SSH now.", auto_close_execution = false },
-    { name = "Enable on Boot", command = "sudo systemctl enable ssh", description = "Ensure SSH starts automatically when the server restarts.", auto_close_execution = false },
-    { name = "Restart Service", command = "sudo systemctl restart ssh", description = "Run this after changing config files to apply changes.", auto_close_execution = false },
-    { name = "Stop Service", command = "sudo systemctl stop ssh", description = "Stop the SSH daemon.", auto_close_execution = false },
-    
-    { name = "Install Service", command = "sudo apt install openssh-server", description = "Installs openshh server from apt repository.", auto_close_execution = false }
+    { name = "Is It Running?", command = """
+command -v systemctl >/dev/null || { echo "No systemd here — drive SSH with your init's own tool (sv, rc-service, ...)."; exit 1; }
+u=sshd; systemctl cat sshd >/dev/null 2>&1 || u=ssh
+systemctl status "$u"
+""", description = "Asks systemd for the daemon's pulse: active, since when, recent log lines. 'inactive (dead)' just means it's off; 'not-found' means the server isn't installed yet — see Install Server below.", auto_close_execution = false },
+    { name = "Start Service", command = """
+u=sshd; systemctl cat sshd >/dev/null 2>&1 || u=ssh
+sudo systemctl start "$u" && systemctl status "$u" --no-pager | head -5
+""", description = "Turn the server on right now. This lasts until reboot — starting and surviving a reboot are two different switches. Pair with Enable on Boot to make it permanent.", auto_close_execution = false },
+    { name = "Enable on Boot", command = """
+u=sshd; systemctl cat sshd >/dev/null 2>&1 || u=ssh
+sudo systemctl enable "$u"
+""", description = "The other switch: makes SSH start automatically after every reboot. Enable does NOT start it now — that's what Start is for (or use both, once you know the difference).", auto_close_execution = false },
+    { name = "Restart Service", command = """
+u=sshd; systemctl cat sshd >/dev/null 2>&1 || u=ssh
+sudo systemctl restart "$u" && echo "Restarted. Existing sessions survive a restart — only new logins use the new config."
+""", description = "Apply config changes. Run Validate Config (📝 cell) FIRST — restarting into a broken sshd_config on a remote box is how lockouts happen.", auto_close_execution = false },
+    { name = "Stop Service", command = """
+u=sshd; systemctl cat sshd >/dev/null 2>&1 || u=ssh
+sudo systemctl stop "$u"
+""", description = "Shut the door. Existing connections stay alive; new ones are refused. If you're connected over SSH right now, your session survives — but you won't get a second one.", auto_close_execution = false },
+    { name = "Install Server", command = { linux_debian = "sudo apt install openssh-server", linux_arch = "sudo pacman -S openssh", linux_fedora = "sudo dnf install openssh-server", linux_void = "sudo xbps-install -S openssh", linux_generic = """
+if command -v apt >/dev/null; then sudo apt install openssh-server
+elif command -v dnf >/dev/null; then sudo dnf install openssh-server
+elif command -v pacman >/dev/null; then sudo pacman -S openssh
+elif command -v xbps-install >/dev/null; then sudo xbps-install -S openssh
+else echo "❓ No known package manager found — install the OpenSSH server with your distro's own tool."
+fi
+""" }, description = "Installs the OpenSSH server (the client is usually preinstalled). After installing: Start, then Enable on Boot, then open the firewall (🧱 cell).", auto_close_execution = false }
 ]
 
 [[commands]]
-name = "🧱 Firewall (UFW)"
-description = "Control who gets in. Essential security."
+name = "🧱 Firewall ⋮ "
+description = "Who may knock on port 22 at all. Distros disagree on the tool — Ubuntu ships ufw, Fedora ships firewalld, some ship neither — so every item here detects what you actually have and uses that."
 col = "A"
 row = 1
 items = [
-    { name = "Check Status", command = "sudo ufw status verbose", description = "See exactly which ports are open or closed.", auto_close_execution = false },
-    { name = "Allow SSH (22)", command = "sudo ufw allow ssh", description = "Open port 22 so you don't lock yourself out.", auto_close_execution = false },
-    { name = "Allow Specific IP", command = "read -p 'Enter trusted IP: ' ip; sudo ufw allow from \"$ip\" to any port 22", description = "High Security: Only allow SSH from ONE specific location (e.g., your office IP).", auto_close_execution = false },
-    { name = "Enable Firewall", command = "sudo ufw enable", description = "Turn the firewall on. Make sure SSH is allowed first!", auto_close_execution = false },
-    { name = "Disable Firewall", command = "sudo ufw disable", description = "Turn it off if you are debugging connection issues.", auto_close_execution = false }
+    { name = "Check Status", command = """
+if command -v ufw >/dev/null; then sudo ufw status verbose
+elif command -v firewall-cmd >/dev/null; then sudo firewall-cmd --state && sudo firewall-cmd --list-all
+elif command -v nft >/dev/null; then echo "(no ufw/firewalld — raw nftables ruleset, first 40 lines)"; sudo nft list ruleset | head -40
+else echo "❓ No ufw, firewalld or nft found. See 'Which Firewall Do I Have?' below."
+fi
+""", description = "Which ports are open, which are closed, and whether the firewall is even on. Read this before and after every change you make here.", auto_close_execution = false },
+    { name = "Allow SSH (22)", command = """
+if command -v ufw >/dev/null; then sudo ufw allow ssh
+elif command -v firewall-cmd >/dev/null; then sudo firewall-cmd --permanent --add-service=ssh && sudo firewall-cmd --reload
+else echo "❓ No ufw/firewalld found — allow TCP port 22 with your firewall's own tool."
+fi
+""", description = "Open port 22 for everyone. Do this BEFORE enabling the firewall on a remote machine — the order is the whole game: allow first, enable second, or you saw off the branch you're sitting on.", auto_close_execution = false },
+    { name = "Allow From One IP", command = """
+read -p 'Trusted IP (e.g. your office/VPN address): ' ip
+if command -v ufw >/dev/null; then sudo ufw allow from "$ip" to any port 22 proto tcp
+elif command -v firewall-cmd >/dev/null; then sudo firewall-cmd --permanent --add-rich-rule="rule family=ipv4 source address=$ip service name=ssh accept" && sudo firewall-cmd --reload
+else echo "❓ No ufw/firewalld found — restrict port 22 with your firewall's own tool."
+fi
+""", description = "Tighter: SSH answers only one address. Great when you always connect from the same place; painful the day your IP changes. Keep a second way in before you combine this with removing the general allow rule.", auto_close_execution = false },
+    { name = "🚨 Enable Firewall", command = """
+echo "⚠️  Once enabled, everything not explicitly allowed is blocked."
+echo "    On a REMOTE machine, run 'Allow SSH (22)' first — otherwise this is a self-lockout."
+read -p "Enable the firewall now? [y/N]: " ok
+[ "$ok" = y ] || { echo cancelled; exit 0; }
+if command -v ufw >/dev/null; then sudo ufw enable
+elif command -v firewall-cmd >/dev/null; then sudo systemctl enable --now firewalld && sudo firewall-cmd --state
+else echo "❓ No ufw/firewalld found — nothing to enable."
+fi
+""", description = "Turn the wall on. The confirm prompt exists because the classic mistake is enabling a default-deny firewall over the very SSH connection it's about to block.", auto_close_execution = false },
+    { name = "Disable Firewall", command = """
+if command -v ufw >/dev/null; then sudo ufw disable
+elif command -v firewall-cmd >/dev/null; then sudo systemctl disable --now firewalld
+else echo "❓ No ufw/firewalld found — nothing to disable."
+fi
+""", description = "Drop the wall entirely. A debugging move, not a state to live in — if a connection suddenly works with the firewall off, you've found your culprit; add the missing allow rule and enable it again.", auto_close_execution = false },
+    { name = "Which Firewall Do I Have?", command = """
+echo "Probing the usual suspects..."
+echo ""
+if command -v ufw >/dev/null; then echo "✅ ufw          — Ubuntu's friendly front-end (this deck will use it)"; else echo "❌ ufw          — not installed"; fi
+if command -v firewall-cmd >/dev/null; then echo "✅ firewalld    — Fedora/RHEL's zone-based manager (this deck will use it)"; else echo "❌ firewalld    — not installed"; fi
+if command -v nft >/dev/null; then echo "✅ nftables     — the kernel-level engine both of the above drive"; else echo "❌ nftables     — not found"; fi
+if command -v iptables >/dev/null; then echo "✅ iptables     — the legacy interface (often a wrapper over nftables now)"; else echo "❌ iptables     — not found"; fi
+echo ""
+echo "ufw and firewalld are steering wheels; nftables/iptables is the engine."
+echo "If you have neither wheel, install ufw for a simple start — or drive nft directly."
+""", description = "A map of the firewall landscape on THIS machine. Linux has one packet-filtering engine (nftables) and several steering wheels for it; this shows which wheel you've got, so the other items here make sense.", auto_close_execution = false }
 ]
 
 [[commands]]
-name = "📝 Config & Logs"
-description = "Edit server settings and see who is trying to log in."
+name = "📝 Config & Logs ⋮ "
+description = "The server's rulebook and its diary. Edit settings safely (validate before restart — always), see what the daemon actually resolved, and watch login attempts live."
 col = "A"
 row = 2
 items = [
-    { name = "Edit Config", command = "sudo nano /etc/ssh/sshd_config", description = "Change ports, disable root login, etc. (Requires restart).", auto_close_execution = false },
-    { name = "Check Auth Log", command = "tail -f /var/log/auth.log", description = "Watch live login attempts. Great for spotting hackers or debugging failures.", auto_close_execution = false },
-    { name = "Check Fail2Ban", command = "sudo fail2ban-client status sshd", description = "If installed: See how many bad IPs have been banned.", auto_close_execution = false }
+    { name = "Edit Server Config", command = "sudo -e /etc/ssh/sshd_config", description = "Opens the server rulebook via sudoedit: it copies the file to a temp location, runs your editor WITHOUT root, and installs the result back. Safer than 'sudo nano' — your editor and its plugins never run as root." },
+    { name = "Validate Config", command = "sudo sshd -t && echo '✅ sshd_config is valid.'", description = "The anti-lockout move. sshd checks the whole config and prints exactly what's wrong, without touching the running daemon. Make this reflex: edit → validate → restart. Silence plus the checkmark means you're safe.", auto_close_execution = false },
+    { name = "Effective Settings", command = "sudo sshd -T | grep -Ei '^(port|passwordauthentication|permitrootlogin|pubkeyauthentication) '", description = "What the daemon ACTUALLY resolved — defaults, includes and overrides all flattened. When 'but I changed the config!' strikes, this is the truth; the file shows what you wrote, sshd -T shows what won.", auto_close_execution = false },
+    { name = "Watch Auth Log", command = """
+u=sshd; systemctl cat sshd >/dev/null 2>&1 || u=ssh
+if [ -f /var/log/auth.log ]; then sudo tail -f /var/log/auth.log
+else sudo journalctl -fu "$u"
+fi
+""", description = "Live feed of every login attempt — successes, failures, and the internet's background noise of bots guessing passwords. Debian logs to auth.log, Fedora/Arch to the journal; this picks the right one. Ctrl+C stops watching.", auto_close_execution = false },
+    { name = "Fail2ban Status", command = """
+if command -v fail2ban-client >/dev/null; then sudo fail2ban-client status sshd
+else echo "fail2ban isn't installed. It watches the auth log and bans IPs that keep failing — install it from the 🧰 Toolbox cell."
+fi
+""", description = "If fail2ban is on guard: how many brute-force IPs it has banned. Watching the ban count climb on an internet-facing box is the fastest way to appreciate key-only auth.", auto_close_execution = false }
 ]
 
 
 #=======================================================================================================================
-# ┌─ COLUMN B: Client Connection (The Keys) ────────────────────────────────────────────────────────────────────────────┐
-# │ Interactive login tools and identity management (Keys).
+# ┌─ COLUMN B: The Client Side ─────────────────────────────────────────────────────────────────────────────────────────┐
+# │ Connecting out: logins, host aliases, keys, and turning passwords off for good.
 # └─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 [[commands]]
-name = "🔌 Connect (Input)"
-description = "Log in to servers. Prompts you for the target info."
+name = "🔌 Connect ⋮ "
+description = "Ways in. Interactive logins for any server, plus the two client-side files that make SSH pleasant: ~/.ssh/config (your address book) and known_hosts (your memory of who's who)."
 col = "B"
 row = 0
 items = [
-    { name = "Standard Login", command = "read -p 'Enter user@host: ' target; ssh \"$target\"", description = "The basic connection command.", auto_close_execution = false },
-    { name = "Custom Port Login", command = "read -p 'Enter user@host: ' target; read -p 'Port: ' port; ssh -p \"$port\" \"$target\"", description = "For servers not on default port 22.", auto_close_execution = false },
-    { name = "Debug Connection", command = "read -p 'Enter user@host: ' target; ssh -v \"$target\"", description = "Verbose mode. Prints exactly what is happening during connection.", auto_close_execution = false },
-    { name = "Run Remote Cmd", command = "read -p 'Target: ' t; read -p 'Command: ' c; ssh \"$t\" \"$c\"", description = "Log in, run a command, and exit immediately.", auto_close_execution = false }
+    { name = "Standard Login", command = "read -p 'user@host: ' target; ssh \"$target\"", description = "The basic connection. First contact with a new server asks you to trust its fingerprint — that yes is remembered in known_hosts, and SSH will scream later if the server's identity ever changes.", auto_close_execution = false },
+    { name = "Custom Port Login", command = "read -p 'user@host: ' target; read -p 'Port: ' port; ssh -p \"$port\" \"$target\"", description = "For servers that moved off port 22. If you connect to this box often, stop typing the port every time — put it in a Host Aliases block instead.", auto_close_execution = false },
+    { name = "Debug Connection", command = "read -p 'user@host: ' target; ssh -v \"$target\"", description = "Verbose mode narrates the whole handshake: which keys it offered, which auth methods the server accepted, where it gave up. When a login fails mysteriously, the answer is almost always in this output.", auto_close_execution = false },
+    { name = "Run Remote Cmd", command = "read -p 'Target (user@host): ' t; read -p 'Command: ' c; ssh \"$t\" \"$c\"", description = "Log in, run one command, leave. This is the primitive that scripts and CI are built on — anything you can type in a remote shell, you can fire from here in one shot.", auto_close_execution = false },
+    { name = "Host Aliases", command = """
+mkdir -p ~/.ssh && chmod 700 ~/.ssh
+if [ ! -f ~/.ssh/config ]; then
+cat > ~/.ssh/config <<'EOF'
+# ~/.ssh/config — your SSH address book. One block per server:
+#
+# Host myserver
+#     HostName 203.0.113.7
+#     User bob
+#     Port 2222
+#
+# Then connect with just:  ssh myserver
+# scp, rsync and git read this file too.
+EOF
+chmod 600 ~/.ssh/config
+echo "Created ~/.ssh/config with a template — opening it now."
+fi
+${EDITOR:-nano} ~/.ssh/config
+""", description = "Turn 'ssh -p 2222 bob@203.0.113.7' into 'ssh myserver'. Host aliases live in ~/.ssh/config — one block per server, and every tool that speaks SSH (scp, rsync, git) understands them too. The single biggest quality-of-life upgrade in SSH.", auto_close_execution = false },
+    { name = "List My Hosts", command = "grep -E '^Host ' ~/.ssh/config 2>/dev/null || echo 'No aliases yet — press Host Aliases to create your first.'", description = "Every alias in your address book, at a glance. These names work in ssh, scp, rsync and git remotes alike.", auto_close_execution = false },
+    { name = "Fix Changed Host Key", command = "read -p 'Host (name or IP) to forget: ' h; ssh-keygen -R \"$h\"", description = "Cures 'REMOTE HOST IDENTIFICATION HAS CHANGED'. That warning means the server's fingerprint no longer matches your known_hosts memory — normal after a reinstall, suspicious otherwise. If you didn't expect it, investigate before you forget-and-trust.", auto_close_execution = false }
 ]
 
 [[commands]]
-name = "🔑 Key Gen"
-description = "Create and list your digital identity keys."
+name = "🔑 Keys ⋮ "
+description = "Your digital identity: a private key that never leaves this machine and a public key you hand out freely. Generate them, inspect them, and meet the agent that stops the passphrase nagging."
 col = "B"
 row = 1
 items = [
-    { name = "Generate New Key", command = "ssh-keygen -t ed25519", description = "Creates a modern, secure key pair. Just press Enter for defaults.", auto_close_execution = false },
-    { name = "List My Keys", command = "ls -l ~/.ssh/id_*", description = "Show your public (.pub) and private keys.", auto_close_execution = false },
-    { name = "Show Public Key", command = "cat ~/.ssh/id_ed25519.pub", description = "This is the text you copy to the server.", auto_close_execution = false },
-    { name = "Fix Permissions", command = "chmod 700 ~/.ssh && chmod 600 ~/.ssh/id_*", description = "Fixes 'Unprotected private key file' errors.", auto_close_execution = false }
+    { name = "Generate New Key", command = "ssh-keygen -t ed25519", description = "Creates a modern ed25519 key pair — small, fast, secure. Enter accepts the default location; the passphrase is a local password for the key file itself (the agent below means you type it once per session, so don't skip it).", auto_close_execution = false },
+    { name = "List My Keys", command = "ls -l ~/.ssh/id_* 2>/dev/null || echo 'No keys yet — Generate New Key is one item up.'", description = "What's in your keyring. Pairs of files: id_xxx is the PRIVATE key (never leaves, never shared), id_xxx.pub is the PUBLIC half you give to servers.", auto_close_execution = false },
+    { name = "Show Public Key", command = "cat ~/.ssh/id_*.pub 2>/dev/null || echo 'No public keys found — Generate New Key first.'", description = "The shareable half — this exact text is what lands in a server's authorized_keys, a GitHub settings page, or a teammate's inbox. Public means public: no harm if it leaks.", auto_close_execution = false },
+    { name = "Fix Permissions", command = "chmod 700 ~/.ssh && chmod 600 ~/.ssh/id_* 2>/dev/null; echo 'Permissions set: ~/.ssh 700, keys 600.'", description = "Cures 'UNPROTECTED PRIVATE KEY FILE' errors. SSH refuses keys that other users could read — a feature, not a bug. This sets the directory and keys back to owner-only.", auto_close_execution = false },
+    { name = "Agent Status", command = "ssh-add -l 2>/dev/null || echo 'No agent running, or no keys loaded yet. Press Unlock Key to load yours.'", description = "The ssh-agent holds your unlocked keys in memory for the session. This lists what's currently loaded — if your key is here, connections just work, no passphrase prompts.", auto_close_execution = false },
+    { name = "Unlock Key", command = "ssh-add", description = "Loads your default key into the agent: type the passphrase once, then every ssh/scp/rsync/git call this session rides free. The answer to 'why does it keep asking me?'.", auto_close_execution = false }
 ]
 
 [[commands]]
-name = "🚀 Deploy Keys"
-description = "Install your key on a server to enable passwordless login."
+name = "🚀 Deploy & Harden ⋮ "
+description = "The passwordless-login ritual, in order: copy your key to the server, PROVE key login works, and only then switch passwords off. The 🚨 items edit the server's config with a backup and validation built in."
 col = "B"
 row = 2
 items = [
-    { name = "Copy ID (Default)", command = "read -p 'Enter user@host: ' target; ssh-copy-id \"$target\"", description = "Uploads your default public key to the target.", auto_close_execution = false },
-    { name = "Copy Specific ID", command = "read -p 'Enter user@host: ' target; read -p 'Key path (start with ~/.ssh/): ' key; ssh-copy-id -i \"$key\" \"$target\"", description = "Upload a specific key file.", auto_close_execution = false },
-    { name = "Test Key Login", command = "read -p 'Enter user@host: ' target; ssh -o PasswordAuthentication=no \"$target\"", description = "Forces key usage. If it asks for password, setup failed.", auto_close_execution = false }
+    { name = "Copy ID (Default)", command = "read -p 'user@host: ' target; ssh-copy-id \"$target\"", description = "Uploads your default public key into the server's authorized_keys — the one password login you make so you never need another. From then on, the key does the talking.", auto_close_execution = false },
+    { name = "Copy Specific ID", command = "read -p 'user@host: ' target; read -p 'Key path (e.g. ~/.ssh/id_ed25519.pub): ' key; ssh-copy-id -i \"$key\" \"$target\"", description = "Same ritual with a chosen key — for when you keep separate identities per client, project, or paranoia level.", auto_close_execution = false },
+    { name = "Test Key Login", command = "read -p 'user@host: ' target; ssh -o PasswordAuthentication=no \"$target\"", description = "The proof. Forces key-only auth for one connection: if you land in a shell, your key works; if you're refused, do NOT harden yet. This test passing is the entry ticket to the 🚨 items below.", auto_close_execution = false },
+    { name = "🚨 Disable Password Auth", command = """
+echo "Current effective setting:"
+sudo sshd -T 2>/dev/null | grep -i '^passwordauthentication' || { echo "Could not query sshd — is the server installed?"; exit 1; }
+echo ""
+echo "⚠️  Only proceed if 'Test Key Login' JUST worked from the machine you connect from."
+echo "    With passwords off and a broken key, there is no way back in."
+read -p "Set PasswordAuthentication no? [y/N]: " ok
+[ "$ok" = y ] || { echo cancelled; exit 0; }
+sudo sed -i.bak -E 's/^[#[:space:]]*PasswordAuthentication[[:space:]].*/PasswordAuthentication no/' /etc/ssh/sshd_config
+sudo grep -q '^PasswordAuthentication no' /etc/ssh/sshd_config || echo 'PasswordAuthentication no' | sudo tee -a /etc/ssh/sshd_config >/dev/null
+if sudo sshd -t; then
+    echo "✅ Config valid (backup at sshd_config.bak). Restart the service (🚦 cell) to apply."
+    echo "   Keep this session open and test a fresh login from another terminal first."
+else
+    echo "❌ Validation failed — restoring the backup."
+    sudo mv /etc/ssh/sshd_config.bak /etc/ssh/sshd_config
+fi
+""", description = "The big hardening switch: bots can guess passwords forever, they cannot guess your key. Guided and gated — shows the current setting, demands a confirm, keeps a .bak, validates with sshd -t, and rolls back if the config breaks.", auto_close_execution = false },
+    { name = "🚨 Disable Root Login", command = """
+echo "Current effective setting:"
+sudo sshd -T 2>/dev/null | grep -i '^permitrootlogin' || { echo "Could not query sshd — is the server installed?"; exit 1; }
+echo ""
+echo "⚠️  Make sure a normal user with sudo works BEFORE locking root out of SSH."
+read -p "Set PermitRootLogin no? [y/N]: " ok
+[ "$ok" = y ] || { echo cancelled; exit 0; }
+sudo sed -i.bak -E 's/^[#[:space:]]*PermitRootLogin[[:space:]].*/PermitRootLogin no/' /etc/ssh/sshd_config
+sudo grep -q '^PermitRootLogin no' /etc/ssh/sshd_config || echo 'PermitRootLogin no' | sudo tee -a /etc/ssh/sshd_config >/dev/null
+if sudo sshd -t; then
+    echo "✅ Config valid (backup at sshd_config.bak). Restart the service (🚦 cell) to apply."
+else
+    echo "❌ Validation failed — restoring the backup."
+    sudo mv /etc/ssh/sshd_config.bak /etc/ssh/sshd_config
+fi
+""", description = "Root is the one username every bot on earth tries. Log in as yourself, sudo when needed — this closes SSH's front door for root entirely. Same safety rails: confirm, backup, validate, rollback.", auto_close_execution = false }
 ]
 
 
 #=======================================================================================================================
-# ┌─ COLUMN C: Data Transfer (Moving Files) ────────────────────────────────────────────────────────────────────────────┐
-# │ Move files securely. SCP for quick drops, Rsync for syncing folders.
+# ┌─ COLUMN C: Movement ────────────────────────────────────────────────────────────────────────────────────────────────┐
+# │ Files across the wire, ports through the tunnel, and the tools that make it all work.
 # └─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 [[commands]]
-name = "📦 SCP (File Copy)"
-description = "Simple file copy. Good for single files. Prompts for inputs."
+name = "📦 Transfer ⋮ "
+description = "Files over SSH. scp for quick single-file drops, rsync for anything that repeats — it only sends what changed. House doctrine: dry-run before you sync, and the 🚨 mirror shows its kill list before touching anything. (The dedicated rsync deck goes deeper.)"
 col = "C"
 row = 0
 items = [
-    { name = "Upload File", command = "read -p 'Local File: ' l; read -p 'Remote user@host:/path: ' r; scp \"$l\" \"$r\"", description = "Send a file UP to the server.", auto_close_execution = false },
-    { name = "Download File", command = "read -p 'Remote user@host:/file: ' r; read -p 'Local Path: ' l; scp \"$r\" \"$l\"", description = "Pull a file DOWN from the server.", auto_close_execution = false },
-    { name = "Upload Directory", command = "read -p 'Local Folder: ' l; read -p 'Remote user@host:/path: ' r; scp -r \"$l\" \"$r\"", description = "Send a whole folder (-r recursive).", auto_close_execution = false }
+    { name = "Upload File (scp)", command = "read -p 'Local file: ' l; read -p 'Remote (user@host:/path): ' r; scp \"$l\" \"$r\"", description = "Send one file UP. scp is the no-ceremony option: fine for a config file or a tarball, wasteful for anything you'll transfer twice — that's rsync territory.", auto_close_execution = false },
+    { name = "Download File (scp)", command = "read -p 'Remote (user@host:/path/file): ' r; read -p 'Local destination: ' l; scp \"$r\" \"$l\"", description = "Pull one file DOWN. Same command as upload with the arguments swapped — in scp and rsync alike, the LAST argument is always the destination.", auto_close_execution = false },
+    { name = "Dry-Run Sync", command = "read -p 'Source: ' s; read -p 'Destination: ' d; rsync -avhn \"$s\" \"$d\" | head -30; echo '--- dry run only, nothing copied ---'", description = "See exactly what a sync WOULD transfer — nothing is written. Trailing slash on the source means 'copy the contents'; no slash means 'copy the folder itself'. Make this your reflex before every real sync.", auto_close_execution = false },
+    { name = "Sync Up (push)", command = "read -p 'Local source: ' s; read -p 'Remote (user@host:/path): ' d; rsync -avh --info=progress2 \"$s\" \"$d\"", description = "Local → server. Archive mode (-a) preserves permissions, times and links; interrupted transfers resume on rerun because rsync only sends what's missing. Additive: nothing on the far side gets deleted.", auto_close_execution = false },
+    { name = "Sync Down (pull)", command = "read -p 'Remote source (user@host:/path): ' s; read -p 'Local destination: ' d; rsync -avh --info=progress2 \"$s\" \"$d\"", description = "Server → local. Identical to push — the direction of the arguments is the entire difference.", auto_close_execution = false },
+    { name = "🚨 Mirror (--delete)", command = """
+read -p 'Source: ' s; read -p 'Destination: ' d
+echo '--- plan (deletions marked with "deleting") ---'
+rsync -avhn --delete "$s" "$d" | head -40
+read -p 'Execute this mirror, including deletions? [y/N]: ' ok
+[ "$ok" = y ] && rsync -avh --info=progress2 --delete "$s" "$d" || echo cancelled
+""", description = "Make the destination EXACTLY match the source — files that exist only on the destination are DELETED. This item refuses to run blind: it forces the dry-run, shows you the kill list, and asks. Point it the wrong way and it will faithfully mirror your mistake.", auto_close_execution = false }
 ]
 
 [[commands]]
-name = "🔄 Rsync (Sync)"
-description = "Smart sync. Only copies changed parts. The professional choice."
+name = "🚇 Tunnels ⋮ "
+description = "SSH's superpower nobody tells beginners about: any TCP port, carried through the encrypted connection. Reach the unreachable (-L), expose the local (-R), or route your whole browser (-D). All of these hold the tunnel open until Ctrl+C."
 col = "C"
 row = 1
 items = [
-    { name = "Sync UP to Remote", command = "read -p 'Local Folder: ' l; read -p 'Remote user@host:/path: ' r; rsync -avzP \"$l\" \"$r\"", description = "Push changes to server. -a (archive), -v (verbose), -z (compress), -P (progress).", auto_close_execution = false },
-    { name = "Sync DOWN from Remote", command = "read -p 'Remote user@host:/path: ' r; read -p 'Local Folder: ' l; rsync -avzP \"$r\" \"$l\"", description = "Pull changes from server.", auto_close_execution = false },
-    { name = "Dry Run (Safety)", command = "read -p 'Local: ' l; read -p 'Remote: ' r; rsync -avz --dry-run \"$l\" \"$r\"", description = "Simulate the transfer to see what would happen.", auto_close_execution = false }
+    { name = "Local Forward (-L)", command = """
+read -p 'Server (user@host): ' t
+read -p 'Remote port to reach (e.g. 8080): ' rp
+read -p 'Local port to open (e.g. 8080): ' lp
+echo "→ While this runs: http://localhost:$lp is the server's localhost:$rp. Ctrl+C ends the tunnel."
+ssh -N -L "$lp:localhost:$rp" "$t"
+""", description = "Bring a remote thing to you. The classic: a dashboard or database on the server listens on localhost only — this makes it appear on YOUR localhost, through the tunnel. -N means 'no shell, just carry traffic'.", auto_close_execution = false },
+    { name = "Remote Forward (-R)", command = """
+read -p 'Server (user@host): ' t
+read -p 'Local port to share (e.g. 3000): ' lp
+read -p 'Port to open on the server (e.g. 9090): ' rp
+echo "→ While this runs: the server's localhost:$rp is your localhost:$lp. Ctrl+C ends it."
+ssh -N -R "$rp:localhost:$lp" "$t"
+""", description = "Show a local thing to the far side — your laptop's dev server, reachable from the server (and, if sshd sets GatewayPorts yes, from beyond it). The mirror image of -L: same tunnel, opposite direction.", auto_close_execution = false },
+    { name = "SOCKS Proxy (-D)", command = """
+read -p 'Server (user@host): ' t
+read -p 'Local SOCKS port (e.g. 1080): ' lp
+echo "→ While this runs: point your browser's SOCKS5 proxy at localhost:$lp and you browse AS the server."
+ssh -N -D "$lp" "$t"
+""", description = "Borrow the server's viewpoint. One flag turns SSH into a SOCKS5 proxy: set your browser to localhost:port and all its traffic exits from the server — a poor man's VPN for one application at a time.", auto_close_execution = false },
+    { name = "Tunnel Cheat Card", command = """
+cat <<'CARD'
+  🚇 SSH TUNNELS — which flag do I want?
+
+  -L  LOCAL forward ......... bring a remote thing to me
+      ssh -N -L 8080:localhost:3000 user@server
+      my localhost:8080  →  server's localhost:3000
+
+  -R  REMOTE forward ........ show my local thing to the far side
+      ssh -N -R 9090:localhost:3000 user@server
+      server's localhost:9090  →  my localhost:3000
+
+  -D  DYNAMIC (SOCKS) ....... route my apps through the server
+      ssh -N -D 1080 user@server
+      browser SOCKS5 localhost:1080  →  exits at the server
+
+  -N = carry traffic only, no remote shell.  Ctrl+C closes the tunnel.
+CARD
+""", description = "The pocket reference. Reading direction: -L pulls the far side toward you, -R pushes your side toward them, -D routes everything. When in doubt, come back to this card.", auto_close_execution = false }
 ]
 
 [[commands]]
-name = "⏩ Rsync Advanced"
-description = "Mirroring and exclusion. Power tools for backups."
+name = "🧰 Toolbox ⋮ "
+description = "Ground truth and supplies: check which tools this machine actually has, then install what's missing — the right package name for your distro, handled."
 col = "C"
 row = 2
 items = [
-    { name = "Mirror (Delete)", command = "read -p 'Local: ' l; read -p 'Remote: ' r; rsync -avz --delete \"$l\" \"$r\"", description = "WARNING: Deletes files on remote that don't exist locally. Makes exact mirror.", auto_close_execution = false },
-    { name = "Exclude Pattern", command = "read -p 'Local: ' l; read -p 'Remote: ' r; read -p 'Exclude pattern (e.g. *.tmp): ' ex; rsync -avz --exclude \"$ex\" \"$l\" \"$r\"", description = "Syncs but skips files matching the pattern.", auto_close_execution = false }
+    { name = "💻 Check Tools", command = """
+PATH="$PATH:/usr/sbin:/sbin"
+for t in ssh sshd ssh-keygen ssh-copy-id scp rsync ufw firewall-cmd fail2ban-client; do
+    if command -v "$t" >/dev/null 2>&1; then printf '✅ %s\\n' "$t"; else printf '❌ %s — missing\\n' "$t"; fi
+done
+echo ""
+echo "ssh/scp/ssh-keygen = client · sshd = server · ufw OR firewall-cmd is enough (they're alternatives)."
+""", description = "One line per tool: present or missing. Run this first on a fresh machine — it tells you which install items below you actually need, and explains which ❌ marks are fine to ignore.", auto_close_execution = false },
+    { name = "Install Client Tools", command = { linux_debian = "sudo apt install openssh-client rsync", linux_arch = "sudo pacman -S openssh rsync", linux_fedora = "sudo dnf install openssh-clients rsync", linux_void = "sudo xbps-install -S openssh rsync", linux_generic = """
+if command -v apt >/dev/null; then sudo apt install openssh-client rsync
+elif command -v dnf >/dev/null; then sudo dnf install openssh-clients rsync
+elif command -v pacman >/dev/null; then sudo pacman -S openssh rsync
+elif command -v xbps-install >/dev/null; then sudo xbps-install -S openssh rsync
+else echo "❓ No known package manager found — install the OpenSSH client and rsync with your distro's own tool."
+fi
+""" }, description = "The outbound kit: ssh, scp, ssh-keygen, ssh-copy-id and rsync. Usually preinstalled on desktops, often missing in containers and minimal images.", auto_close_execution = false },
+    { name = "Install Fail2ban", command = { linux_debian = "sudo apt install fail2ban", linux_arch = "sudo pacman -S fail2ban", linux_fedora = "sudo dnf install fail2ban", linux_void = "sudo xbps-install -S fail2ban", linux_generic = """
+if command -v apt >/dev/null; then sudo apt install fail2ban
+elif command -v dnf >/dev/null; then sudo dnf install fail2ban
+elif command -v pacman >/dev/null; then sudo pacman -S fail2ban
+elif command -v xbps-install >/dev/null; then sudo xbps-install -S fail2ban
+else echo "❓ No known package manager found — install fail2ban with your distro's own tool."
+fi
+""" }, description = "The night watchman for internet-facing servers: reads the auth log, bans IPs that keep failing. Install it, start it, then watch the ban count in 📝 Fail2ban Status with grim satisfaction.", auto_close_execution = false }
 ]
