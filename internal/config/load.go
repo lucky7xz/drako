@@ -109,8 +109,10 @@ func loadConfig(profileOverride *string, sessionProfile string) (ConfigBundle, e
 		if mkErr := os.MkdirAll(configDir, 0o755); mkErr != nil {
 			return ConfigBundle{}, fmt.Errorf("could not create config directory: %w", mkErr)
 		}
-		if err := bootstrapCopy(configDir); err != nil {
+		if restored, err := RestoreBootstrap(configDir); err != nil {
 			log.Printf("warning: bootstrap copy failed: %v", err)
+		} else {
+			log.Printf("bootstrap: restored %d file(s): %v", len(restored), restored)
 		}
 	}
 

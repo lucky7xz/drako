@@ -102,9 +102,9 @@ func RescueConfig() Config {
 				Col:         "b", // Center bottom
 			},
 			{
-				Name:        "Restore Core Deck",
-				Command:     "drako restore-core",
-				Description: "Regenerates the default core.profile.toml for this platform.\n\n• Use this if you stashed or deleted the core deck and want it back.\n• Existing core.profile.toml is never overwritten.",
+				Name:        "Restore Bootstrap Files",
+				Command:     "drako restore-bootstrap",
+				Description: "Restores any bootstrap files that are missing — the core deck, starter decks like ssh-utils, themes, and specs.\n\n• Use this if you stashed or deleted files shipped with drako and want them back.\n• Existing files are never overwritten.",
 				Row:         2,
 				Col:         "c", // Right bottom
 			},

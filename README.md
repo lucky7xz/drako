@@ -87,7 +87,7 @@ Beyond the TUI, drako gives you CLI commands for managing decks at scale:
 | `drako spec <name>`         | Equip the profiles a spec lists; stash the rest (context switch)             |
 | `drako stash <name>`        | Move a spec's profiles to the inventory                                      |
 | `drako strip`               | Move every profile to the inventory (next launch: Rescue Mode)               |
-| `drako restore-core`        | Regenerate the default Core deck                                             |
+| `drako restore-bootstrap`   | Restore any missing bootstrap files (core deck, ssh-utils, themes, specs)     |
 | `drako purge`               | Reset or remove configuration — trash-first, `--interactive` available       |
 | `drako open <path>`         | Open a file, directory, or URL with the OS default application              |
 | `drako --glassroot`         | Launch a sealed surface for SSH/Wish hosting                                 |
@@ -165,7 +165,7 @@ One deck file, every machine. This is what makes summoned decks portable across 
 On first run, `drako` creates:
 
 - `config.toml`: Global settings (Input Keys, Global Theme).
-- `core.profile.toml`: The default command profile (Process Monitor, System Info, etc.) — a variant deck shipped inside the binary, so the same file works on every OS. Deleted or stashed it? `drako restore-core` restores it any time.
+- `core.profile.toml`: The default command profile (Process Monitor, System Info, etc.) — a variant deck shipped inside the binary, so the same file works on every OS. Deleted or stashed it? `drako restore-bootstrap` restores it — along with any other missing bootstrap file — any time.
 - `themes.toml`: Color palettes. The built-in `dracula` theme lives in the binary as the fallback, so it no longer needs to be defined here.
 
 **NOTE:** If you've customized your color schemes, keep a backup of your `themes.toml` — how themes are configured may change in a future release.
@@ -173,7 +173,7 @@ On first run, `drako` creates:
 **NOTE:** Bootstrapping only occurs if files (config.toml and core.profile.toml) are missing. To clean up, use `drako purge --interactive` or `drako purge --destroyeverything` (backup your work first).
 
 > [!NOTE]
-> **Upgrading from an older version?** Your existing `core.profile.toml` keeps working and is never overwritten. It was generated for your OS at install time; the Core deck now ships as a single cross-platform variant deck instead. To switch (optional): `drako purge --target core` (your old file goes to `trash/`), then `drako restore-core`. Any customizations you made to the old file need to be carried over by hand.
+> **Upgrading from an older version?** Your existing `core.profile.toml` keeps working and is never overwritten. It was generated for your OS at install time; the Core deck now ships as a single cross-platform variant deck instead. To switch (optional): `drako purge --target core` (your old file goes to `trash/`), then `drako restore-bootstrap`. Any customizations you made to the old file need to be carried over by hand.
 
 **NOTE:** If drako mis-detects your distro or a default command is wrong for your OS, please open an issue.
 
@@ -230,7 +230,7 @@ drako spec example
 drako stash example
 
 # Move all profiles to inventory/. With nothing equipped, drako starts
-# in Rescue mode — `drako restore-core` brings the default deck back.
+# in Rescue mode — `drako restore-bootstrap` brings the default deck back.
 drako strip
 ```
 
@@ -259,14 +259,14 @@ It exits `1` when any error-level finding exists — wire it into your deck repo
 Safely reset or remove configurations.
 
 ```bash
-# Remove Core profile (moves to trash/); `drako restore-core` regenerates it
-drako purge --target core
+# Remove Core profile (moves to trash/); `drako restore-bootstrap` regenerates it
+drako purge --target/-t core
 
 # Remove a specific profile (moves to trash/)
-drako purge --target git
+drako purge --target/-t git
 
 # Use interactive mode to purge profiles
-drako purge --interactive
+drako purge --interactive/-i
 
 # Remove config.toml specifically (to trash/)
 drako purge --config
@@ -322,7 +322,7 @@ Glassroot locks the interface, but the commands still do whatever they do — so
  ### Support
  - [~] MacOS support (untested)
  - [~] Windows support (untested)
- - [~] ARM Support
+ - [~] ARM Support (untested)
  - [ ] Mouse Support
  - [ ] Steamdeck Support
  - [ ] Touch Support
@@ -333,8 +333,8 @@ Glassroot locks the interface, but the commands still do whatever they do — so
 Ideas are welcome. Bugs will be hunted. drako follows an SQLite-style contribution model — full details in [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md):
 
 -   **Issues:** Bug reports, feature ideas, and design discussion — yes, please.
--   **Pull Requests:** Not accepted; they are closed without review, with thanks. drako's code stays single-author so the whole codebase remains auditable end to end (the AGPL still grants you every freedom to fork and modify).
--   **Alpha State:** `drako` is currently in (late) ALPHA. It is stable but evolving. This is your opportunity to influence its development.
+-   **Pull Requests:** Not accepted; they are closed without review, with thanks. drako's code stays single-author for now (the AGPL still grants you freedom to fork and modify).
+-   **Beta State:** `drako` is currently in (ealy) Beta. The project is relatively stable but still evolving.
 
 ---
 

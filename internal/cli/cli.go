@@ -33,8 +33,9 @@ func HandleCLI(args []string) (handled bool, code int) {
 		return true, HandleStashCommand(args)
 	case "strip", "--strip":
 		return true, HandleStripCommand(args)
-	case "restore-core", "--restore-core":
-		return true, HandleRestoreCoreCommand()
+	case "restore-bootstrap", "--restore-bootstrap",
+		"restore-core", "--restore-core": // legacy alias
+		return true, HandleRestoreBootstrapCommand()
 	case "explain", "--explain":
 		return true, HandleExplainCommand(args)
 	case "check", "--check":
@@ -67,7 +68,7 @@ func PrintUsage() {
 		{"spec <name>", "Apply a spec: move related profiles files to inventory."},
 		{"stash <name>", "Stash the related prifle files to inventory."},
 		{"strip", "Move all equipped profiles to inventory."},
-		{"restore-core", "Regenerate the default core profile for this platform"},
+		{"restore-bootstrap", "Restore any missing bootstrap files (core deck, ssh-utils, themes, specs)"},
 		{"purge <name>", "Delete profiles or config. Use 'purge -i' for interacive mode"},
 		{"version", "Show version information"},
 		{"help", "Show this help message"},
@@ -189,25 +190,30 @@ func PrintSummonUsage() {
 	fmt.Fprintf(os.Stderr, "  drako summon https://github.com/user/repo.git\n")
 }
 
-// HandleRestoreCoreCommand regenerates core.profile.toml from the embedded
-// template. This is the way back after the core deck has been stashed or
-// deleted — the rescue grid offers it as a cell.
-// Returns the process exit code.
-func HandleRestoreCoreCommand() int {
+// HandleRestoreBootstrapCommand restores every embedded bootstrap file that is
+// missing from the config dir — the core deck, starter decks like ssh-utils,
+// themes, and specs — without ever overwriting an existing file. It is the way
+// back after files have been stashed or deleted; the rescue grid offers it as a
+// cell. Returns the process exit code.
+func HandleRestoreBootstrapCommand() int {
+	quietLogs() // keep the internal bootstrap log lines out of the user's terminal
 	configDir, err := paths.ConfigDir()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
 		return 1
 	}
-	created, err := config.RestoreCoreProfile(configDir)
+	restored, err := config.RestoreBootstrap(configDir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "restore-core failed: %v\n", err)
+		fmt.Fprintf(os.Stderr, "restore-bootstrap failed: %v\n", err)
 		return 1
 	}
-	if created {
-		fmt.Printf("✓ Core profile restored to %s\n", configDir)
-	} else {
-		fmt.Println("Core profile already present — nothing to do.")
+	if len(restored) == 0 {
+		fmt.Println("All bootstrap files present — nothing to restore.")
+		return 0
+	}
+	fmt.Printf("✓ Restored %d file(s) to %s:\n", len(restored), configDir)
+	for _, f := range restored {
+		fmt.Printf("  %s\n", f)
 	}
 	return 0
 }
