@@ -1,5 +1,10 @@
 # Windows Support
 
+> drako is Linux-first — that's where it lives and gets tested daily. Windows support
+> is designed in (native paths, PowerShell execution, per-platform deck variants) but
+> has not been tested on real hardware yet. Treat this page as a map of intent, and
+> please report what you find.
+
 ## Installation
 
 ### Via Go (Recommended)
@@ -22,7 +27,7 @@ On Windows, your configuration lives in the standard AppData location:
 ## Features
 
 - **Native Path Handling:** Drako understands drive letters (`C:\`) and backslashes.
-- **Shell Integration:** Commands run via your default shell (PowerShell by default if detected, or configured in `config.toml`).
+- **Shell Integration:** Commands run via `powershell.exe` by default. Users with PowerShell 7 can set `default_shell = "pwsh"` in `config.toml`.
 - **Cross-Platform Decks:** Profile authors can give a cell a `windows` command variant alongside the Linux/macOS ones — see "Cross-Platform Decks" in the README. The generated Core profile already uses Windows-native commands.
 
 ## Scoop
@@ -37,28 +42,27 @@ Make sure you are using a modern terminal like **Windows Terminal**. The legacy 
 ### Clipboard
 Drako attempts to use the system clipboard. If you have issues, ensure you are not running in a restricted environment.
 
-## Known Broken — Audit 2026-07
+## Status — Audit & Fix, July 2026
 
-Windows support has never been tested end-to-end. A code audit (July 2026) found it is
-currently broken at the executor level, before any profile TOML matters:
+A July 2026 audit found Windows support broken at the executor level: the default shell
+resolved to `pwsh` (PowerShell 7, not preinstalled on Windows — only `powershell.exe`
+5.1 ships in the box), so every cell failed at exec. On top of that, the core profile's
+windows variants mixed PowerShell and cmd syntax (`%APPDATA%` is a cmd-ism PowerShell
+won't expand), referenced a nonexistent `drako internal open-url` subcommand, and listed
+winget packages that don't exist.
 
-- **Executor default shell is bash on every platform.** `buildShellCmd()`
-  (`internal/core/commands.go`) has no GOOS awareness; with `default_shell` unset (the
-  shipped template comments it out), every cell runs via `bash -lc`, which does not exist
-  on stock Windows. Setting `default_shell = "powershell"` doesn't rescue it either: that
-  case execs `pwsh` (PowerShell 7, not preinstalled) — stock Windows only ships
-  `powershell.exe` 5.1.
-- **Core profile windows variants mix two shells.** Some are PowerShell-only (`gci`,
-  `Where-Object`, `Out-GridView`, `$PROFILE`, `Read-Host`, `Add-Content`), others are
-  cmd-style (`%APPDATA%\drako` — PowerShell won't expand that, and neither does
-  `drako open`). No single shell choice runs the current set.
-- **Per-command issues:** `curl wttr.in` hits the PowerShell 5.1 `Invoke-WebRequest`
-  alias (needs `curl.exe`); `winget install` with five package names in one call is
-  dubious; `btop`/`bmon`/`neofetch` aren't real winget package IDs; Defender's
-  `MpCmdRun.exe` path varies by version (the stable interface is the `Start-MpScan`
-  cmdlet); the "Reload Shell" windows variant is an empty string.
+**Fixed since:** the executor now runs `powershell.exe` for `default_shell =
+"powershell"` and uses it as the Windows fallback (`pwsh` remains available as an
+explicit setting); all core-profile windows variants were rewritten to PowerShell
+5.1-safe syntax with real winget IDs (`junegunn.fzf`, `aristocratos.btop4win`,
+`muesli.duf`, `Fastfetch-cli.Fastfetch`, `zyedidia.micro`); the post-command screen
+clear uses `cls` on Windows.
 
-**Fix plan (future project):** make the shell default GOOS-aware (windows →
-`powershell.exe`), then rewrite all windows variants to consistent PowerShell 5.1-safe
-syntax. Needs a Windows test machine.
+**Known gaps:**
+
+- **Batch launch** drives tmux and is not available on Windows — drako shows a friendly
+  message instead of a raw exec error.
+- **The ssh-utils inventory profile is POSIX-only** (no windows variants; `read`,
+  `systemctl`, `ufw` throughout).
+- **All of this is desk-checked, not tested on real Windows hardware.** Reports welcome.
 

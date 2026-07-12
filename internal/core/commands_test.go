@@ -42,6 +42,46 @@ func TestFindCommandByName(t *testing.T) {
 	}
 }
 
+func TestBuildShellCmd(t *testing.T) {
+	tests := []struct {
+		shell    string
+		wantArgs []string
+	}{
+		{"bash", []string{"bash", "-lc", "echo hi"}},
+		{"sh", []string{"sh", "-c", "echo hi"}},
+		{"zsh", []string{"zsh", "-lc", "echo hi"}},
+		{"fish", []string{"fish", "-c", "echo hi"}},
+		{"pwsh", []string{"pwsh", "-NoLogo", "-NoProfile", "-Command", "echo hi"}},
+		{"powershell", []string{"powershell", "-NoLogo", "-NoProfile", "-Command", "echo hi"}},
+		{"powershell.exe", []string{"powershell", "-NoLogo", "-NoProfile", "-Command", "echo hi"}},
+		{"cmd", []string{"cmd", "/C", "echo hi"}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.shell, func(t *testing.T) {
+			got := buildShellCmd(tc.shell, "echo hi")
+			if len(got.Args) != len(tc.wantArgs) {
+				t.Fatalf("args=%v, want %v", got.Args, tc.wantArgs)
+			}
+			for i := range tc.wantArgs {
+				if got.Args[i] != tc.wantArgs[i] {
+					t.Fatalf("args=%v, want %v", got.Args, tc.wantArgs)
+				}
+			}
+		})
+	}
+}
+
+func TestFallbackShell(t *testing.T) {
+	if got := fallbackShell("windows"); got != "powershell" {
+		t.Fatalf("windows fallback=%q, want powershell", got)
+	}
+	for _, goos := range []string{"linux", "darwin", "freebsd"} {
+		if got := fallbackShell(goos); got != "bash" {
+			t.Fatalf("%s fallback=%q, want bash", goos, got)
+		}
+	}
+}
+
 func TestRunCommand_ConfigMatchButEmptyCommand(t *testing.T) {
 	// Save original seams
 	oldPause, oldLook, oldCmd := pauseFn, lookPathFn, commandFn

@@ -1,5 +1,6 @@
 # The SSH & Rsync Interactive Grid
 # A 3x3 profile with dedicated Firewall controls and user prompts for connections.
+# POSIX-only: commands assume bash/sh (read, systemctl, ufw) — no Windows variants.
 
 # ┌─ Grid Dimensions ──────────────────────────────┐
 X = 3

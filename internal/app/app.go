@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 
@@ -107,10 +108,7 @@ func Run() int {
 
 		if len(state.SelectedBatch) > 0 {
 			runBatch(state)
-
-			cmd := exec.Command("clear")
-			cmd.Stdout = os.Stdout
-			_ = cmd.Run()
+			clearScreen()
 			continue
 		}
 
@@ -128,17 +126,35 @@ func Run() int {
 				core.RunCommand(state.Config, state.Selected, state.ActiveProfileName())
 			}
 
-			cmd := exec.Command("clear")
-			cmd.Stdout = os.Stdout
-			_ = cmd.Run()
+			clearScreen()
 		}
 	}
+}
+
+// clearScreen resets the terminal between a finished command and the TUI
+// relaunch. Windows has no `clear`; `cls` is a cmd built-in.
+func clearScreen() {
+	var cmd *exec.Cmd
+	if runtime.GOOS == "windows" {
+		cmd = exec.Command("cmd", "/c", "cls")
+	} else {
+		cmd = exec.Command("clear")
+	}
+	cmd.Stdout = os.Stdout
+	_ = cmd.Run()
 }
 
 // runBatch hands the terminal to one tmux session running every marked cell.
 // The heavy lifting (layout, quoting, nested-$TMUX) lives in the multiplex
 // package; this is resolution and handoff, mirroring the single-run dispatch.
 func runBatch(state ui.Model) {
+	// Batch mode drives tmux, which has no Windows build.
+	if runtime.GOOS == "windows" {
+		fmt.Println("Batch launch needs tmux and is not available on Windows yet.")
+		core.Pause("\nPress any key to return to the application.")
+		return
+	}
+
 	var cmds []multiplex.Command
 	for _, name := range state.SelectedBatch {
 		parent, item, found := core.FindCommandByName(state.Config, name)

@@ -45,6 +45,8 @@ Need Go first?
 | macOS         | `brew install go`                                   |
 | Windows       | `scoop install go` *or* `winget install GoLang.Go`  |
 
+> **drako is Linux-first.** It's built and battle-tested on Linux, where it gets daily use across distros. macOS and Windows are supported by design (cross-platform decks, native paths and shells) but see far less testing — macOS lightly, Windows barely at all so far. If something misbehaves there, [reports are very welcome](https://github.com/lucky7xz/drako/issues).
+
 **First run:** Go drops binaries in `~/go/bin`, which usually isn't on your `PATH` yet — launch drako by its full path once:
 
 ```bash

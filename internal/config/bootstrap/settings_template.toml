@@ -78,11 +78,9 @@ profile_next = "p"
 # ┌─ Shell ────────────────────────────────────────┐
 # | For each Profile (including the default), you
 # | can set a custom shell to run the commands.
-# | The default is bash, though some profiles are 
-# | POSIX compatible by design, eg. for minimal
-# | server distros.
-# |
-# | TODO: list them
+# | The default is bash (powershell on Windows),
+# | though some profiles are POSIX compatible by
+# | design, eg. for minimal server distros.
 # └────────────────────────────────────────────────
 
-#default_shell = "bash"   # or "zsh", "fish", "sh", etc.
+#default_shell = "bash"   # or "zsh", "fish", "sh"; on Windows: "powershell" (5.1) or "pwsh" (7+)

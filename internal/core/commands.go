@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 
 	"github.com/lucky7xz/drako/internal/config"
@@ -90,13 +91,24 @@ func buildShellCmd(shell_config, commandStr string) *exec.Cmd {
 		return exec.Command("zsh", "-lc", commandStr)
 	case "fish":
 		return exec.Command("fish", "-c", commandStr)
-	case "pwsh", "powershell":
+	case "pwsh":
 		return exec.Command("pwsh", "-NoLogo", "-NoProfile", "-Command", commandStr)
+	// powershell.exe 5.1 ships with Windows; pwsh (7+) must be installed.
+	case "powershell", "powershell.exe":
+		return exec.Command("powershell", "-NoLogo", "-NoProfile", "-Command", commandStr)
 	case "cmd", "cmd.exe":
 		return exec.Command("cmd", "/C", commandStr)
 	default:
-		return exec.Command("bash", "-lc", commandStr)
+		return buildShellCmd(fallbackShell(runtime.GOOS), commandStr)
 	}
+}
+
+// fallbackShell picks the shell for unknown/empty shell settings.
+func fallbackShell(goos string) string {
+	if goos == "windows" {
+		return "powershell"
+	}
+	return "bash"
 }
 
 // RunCommand finds the selected command from the loaded config and executes

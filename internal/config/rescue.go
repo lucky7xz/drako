@@ -14,7 +14,7 @@ func RescueConfig() Config {
 	defaultShell := "bash"
 
 	if isWindows {
-		defaultShell = "pwsh" // Prefer PowerShell on Windows, falling back to cmd if needed by user config
+		defaultShell = "powershell" // 5.1 ships with Windows; users with PowerShell 7 can set "pwsh"
 	}
 
 	// Used only to build the "Edit Config" / "Open Config Dir" helper
