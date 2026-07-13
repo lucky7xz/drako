@@ -60,19 +60,19 @@ func PrintUsage() {
 	fmt.Printf("%s %s\n", config.AppName, config.Version())
 	fmt.Printf("Usage: drako <command> [arguments]\n\n")
 	table(os.Stdout, []string{"Command", "Description"}, [][]string{
-		{"ls", "List equipped profiles and their commands with cell addresses"},
-		{"explain [profile:]<addr>", "Show a cell's command, description and flags (e.g. A0, work:A1.2)"},
-		{"check [path ...]", "Validate profile files (default: equipped + inventory)"},
+		{"ls", "List equipped decks and their cell addresses"},
+		{"explain [profile:]<addr>", "Show one cell's command, description, flags"},
+		{"check [path ...]", "Validate profile files for authoring errors"},
 		{"summon <url>", "Summon profile(s) from a URL"},
-		{"spec list", "Shows available specs"},
-		{"spec <name>", "Apply a spec: move related profiles files to inventory."},
-		{"stash <name>", "Stash the related prifle files to inventory."},
-		{"strip", "Move all equipped profiles to inventory."},
-		{"restore-bootstrap", "Restore any missing bootstrap files (core deck, ssh-utils, themes, specs)"},
-		{"purge <name>", "Delete profiles or config. Use 'purge -i' for interacive mode"},
+		{"spec list", "Show available specs"},
+		{"spec <name>", "Equip a spec's profiles; stash the rest"},
+		{"stash <name>", "Stash a spec's profiles to the inventory"},
+		{"strip", "Move all equipped profiles to the inventory"},
+		{"restore-bootstrap", "Restore any missing bootstrap files"},
+		{"purge <name>", "Remove profiles or config (try 'purge -i')"},
 		{"version", "Show version information"},
 		{"help", "Show this help message"},
-		{"open <path/url>", "Open a text file/directory/browser link (sys-defaults rescue)"},
+		{"open <path/url>", "Open a file, dir, or URL with the OS default"},
 	})
 }
 
