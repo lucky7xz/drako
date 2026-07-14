@@ -101,7 +101,7 @@ type ConfigBundle struct {
 //   command = { linux_debian = "apt ...", linux_arch = "pacman ...", macos = "brew ..." }
 //
 // Keys use the weaver vocabulary (linux_debian, linux_arch, linux_fedora,
-// linux_void, linux_generic, macos, windows). On Linux, the detected
+// linux_suse, linux_void, linux_generic, macos, windows). On Linux, the detected
 // target is tried first, then linux_generic. No match: the command stays
 // empty (the cell renders, Enter reports "no command configured") and a
 // note naming the available variants is appended to the description.

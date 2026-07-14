@@ -153,8 +153,8 @@ col = "a"
 row = 0
 ```
 
-- **Recognized keys:** `linux_debian`, `linux_arch`, `linux_fedora`, `linux_void`, `linux_generic` (fallback for any Linux), `macos`, `windows`.
-- On Linux, the distro is detected from `/etc/os-release` (`ID` and `ID_LIKE`) — so e.g. Pop!\_OS resolves to `linux_debian`.
+- **Recognized keys:** `linux_debian`, `linux_arch`, `linux_fedora`, `linux_suse`, `linux_void`, `linux_generic` (fallback for any Linux), `macos`, `windows`.
+- On Linux, the distro is detected from `/etc/os-release` (`ID` and `ID_LIKE`) — so e.g. Pop!\_OS resolves to `linux_debian`. The keyword-to-key mapping lives in [`internal/config/platform.go`](internal/config/platform.go) (`DistroKeywords`); adding a distro is a one-line change there.
 - Dropdown items (`items = [...]`) accept variant tables too — every entry in a command folder resolves independently.
 - **No variant for the current platform?** The deck still loads; the cell just has no command, and its explain popup (`e`) lists which platforms the author covered.
 

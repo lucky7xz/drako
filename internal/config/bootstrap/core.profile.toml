@@ -21,7 +21,7 @@ y = 3
 [[commands]]
 name = "⬆️ System Update"
 description = "Queries the repositories for fresh versions and pulls them into your system. Your digital infrastructure sheds old scales for new ones—staying sharp, staying current. The machinery needs to evolve or rust settles in."
-command = { linux_debian = "sudo apt update && sudo apt upgrade", linux_arch = "sudo pacman -Syu", linux_fedora = "sudo dnf upgrade", linux_void = "sudo xbps-install -Su", linux_generic = """
+command = { linux_debian = "sudo apt update && sudo apt upgrade", linux_arch = "sudo pacman -Syu", linux_fedora = "sudo dnf upgrade", linux_suse = "sudo zypper update", linux_void = "sudo xbps-install -Su", linux_generic = """
 # Unknown distro: probe the common package managers.
 if command -v apt >/dev/null; then sudo apt update && sudo apt upgrade
 elif command -v dnf >/dev/null; then sudo dnf upgrade
@@ -42,7 +42,7 @@ description = "Maintenance and threat scanning. Clear out the debris, hunt for w
 col = "A"
 row = 1
 items = [
-    { name = "Clean Packages", description = "Clears out the old scales your system sheds during updates. Removes what's no longer needed so nothing rots in the corners.", command = { linux_debian = "sudo apt autoremove", linux_arch = "sudo pacman -Sc", linux_fedora = "sudo dnf autoremove", linux_void = "sudo xbps-remove -Oo", linux_generic = """
+    { name = "Clean Packages", description = "Clears out the old scales your system sheds during updates. Removes what's no longer needed so nothing rots in the corners.", command = { linux_debian = "sudo apt autoremove", linux_arch = "sudo pacman -Sc", linux_fedora = "sudo dnf autoremove", linux_suse = "sudo zypper clean --all", linux_void = "sudo xbps-remove -Oo", linux_generic = """
 if command -v apt >/dev/null; then sudo apt autoremove
 elif command -v dnf >/dev/null; then sudo dnf autoremove
 elif command -v pacman >/dev/null; then sudo pacman -Sc
@@ -197,7 +197,7 @@ col = "C"
 row = 0
 description = "Bundled up all the little tools that this menu uses, just in case you don't have them. It's like getting all the batteries and accessories included for once. This makes sure all the other buttons here will work as expected. I like to be prepared, you know? "
 items = [
-    { name = "Install common tools", description = "The core utilities—btop, neofetch, clamav, fzf, bmon. Tools that keep the machinery visible and responsive.", command = { linux_debian = "sudo apt install btop bmon neofetch clamav fzf duf", linux_arch = "sudo pacman -S btop bmon fastfetch clamav fzf duf", linux_fedora = "sudo dnf install btop bmon neofetch clamav fzf duf", linux_void = "sudo xbps-install -S btop bmon fastfetch clamav fzf duf", linux_generic = """
+    { name = "Install common tools", description = "The core utilities—btop, neofetch, clamav, fzf, bmon. Tools that keep the machinery visible and responsive.", command = { linux_debian = "sudo apt install btop bmon neofetch clamav fzf duf", linux_arch = "sudo pacman -S btop bmon fastfetch clamav fzf duf", linux_fedora = "sudo dnf install btop bmon neofetch clamav fzf duf", linux_suse = "sudo zypper install btop bmon fastfetch clamav fzf duf", linux_void = "sudo xbps-install -S btop bmon fastfetch clamav fzf duf", linux_generic = """
 if command -v apt >/dev/null; then sudo apt install btop bmon neofetch clamav fzf duf
 elif command -v dnf >/dev/null; then sudo dnf install btop bmon neofetch clamav fzf duf
 elif command -v pacman >/dev/null; then sudo pacman -S btop bmon fastfetch clamav fzf duf
@@ -205,7 +205,7 @@ elif command -v xbps-install >/dev/null; then sudo xbps-install -S btop bmon fas
 else echo "❓ No known package manager found — install btop bmon neofetch clamav fzf duf with your distro's own tool."
 fi
 """, macos = "brew install btop bmon fastfetch fzf duf", windows = "winget install -e --id junegunn.fzf; winget install -e --id aristocratos.btop4win; winget install -e --id muesli.duf; winget install -e --id Fastfetch-cli.Fastfetch" }, auto_close_execution = false },
-    { name = "Install micro", description = "Installs micro, a modern terminal text editor. Clean interface, easy to use. Set it as your default EDITOR via Settings if you want.", command = { linux_debian = "sudo apt install micro", linux_arch = "sudo pacman -S micro", linux_fedora = "sudo dnf install micro", linux_void = "sudo xbps-install -S micro", linux_generic = """
+    { name = "Install micro", description = "Installs micro, a modern terminal text editor. Clean interface, easy to use. Set it as your default EDITOR via Settings if you want.", command = { linux_debian = "sudo apt install micro", linux_arch = "sudo pacman -S micro", linux_fedora = "sudo dnf install micro", linux_suse = "sudo zypper install micro", linux_void = "sudo xbps-install -S micro", linux_generic = """
 if command -v apt >/dev/null; then sudo apt install micro
 elif command -v dnf >/dev/null; then sudo dnf install micro
 elif command -v pacman >/dev/null; then sudo pacman -S micro

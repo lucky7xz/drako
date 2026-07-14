@@ -1,0 +1,60 @@
+# jukebox deck — a terminal radio with genuinely good sound.
+# Stations: SomaFM (listener-supported, 256k where offered) and Radio Paradise
+# (lossless FLAC), grouped into folders — press a station folder, pick a channel.
+# Every play cell runs mpv with loudnorm (EBU R128, target -16 LUFS) so channels
+# sit at the same loudness and you stop chasing the volume between them.
+# mpv shows the live track title; while playing: space pause · 9/0 volume · q back.
+
+X = 3
+Y = 3
+
+[[commands]]
+name = "🥗 SomaFM"
+description = "SomaFM's channels — commercial-free, listener-funded, streamed at the best MP3 bitrate each channel offers. Pick one; loudnorm keeps them level."
+col = "A"
+row = 0
+items = [
+  { name = "🥗 Groove Salad", description = "The flagship: ambient downtempo, 256k. The internet's default 'music to think to' since 2000.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --display-tags=icy-title https://ice1.somafm.com/groovesalad-256-mp3", auto_close_execution = false },
+  { name = "🛸 Drone Zone", description = "256k: beatless ambient soundscapes. Deep-work fuel — nothing to latch onto, everything to float on.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --display-tags=icy-title https://ice1.somafm.com/dronezone-256-mp3", auto_close_execution = false },
+  { name = "🕶 Secret Agent", description = "Spy-movie lounge — 'the soundtrack for your stylish, mysterious, dangerous life'. 128k.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --display-tags=icy-title https://ice1.somafm.com/secretagent-128-mp3", auto_close_execution = false },
+  { name = "🎷 Sonic Universe", description = "256k: left-of-center jazz — avant-garde to euro-jazz. For when the code needs to swing.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --display-tags=icy-title https://ice1.somafm.com/sonicuniverse-256-mp3", auto_close_execution = false },
+  { name = "💀 DEF CON Radio", description = "Music for hacking — dark electro, industrial and synth, curated with the DEF CON crew. 256k.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --display-tags=icy-title https://ice1.somafm.com/defcon-256-mp3", auto_close_execution = false },
+  { name = "🌀 The Trip", description = "Progressive house and trance — the after-hours channel. Keeps momentum without demanding attention. 128k.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --display-tags=icy-title https://ice1.somafm.com/thetrip-128-mp3", auto_close_execution = false },
+  { name = "🛰 Space Station Soma", description = "Spaced-out ambient and mid-tempo electronica — mission-control calm for long sessions. 128k.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --display-tags=icy-title https://ice1.somafm.com/spacestation-128-mp3", auto_close_execution = false }
+]
+
+[[commands]]
+name = "💎 Radio Paradise"
+description = "Human-curated eclectic rock/world/electronic in LOSSLESS FLAC. This is the audiophile cell — on good headphones the difference over 128k is real."
+col = "B"
+row = 0
+items = [
+  { name = "💎 Main Mix (FLAC)", description = "The main channel, lossless FLAC — eclectic and beautifully sequenced.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --display-tags=icy-title http://stream.radioparadise.com/flac", auto_close_execution = false },
+  { name = "🌙 Mellow (FLAC)", description = "The softer channel, also lossless — late-night writing music.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --display-tags=icy-title http://stream.radioparadise.com/mellow-flac", auto_close_execution = false }
+]
+
+[[commands]]
+name = "📻 Your Station"
+description = "Any stream URL — your local station, a friend's icecast, whatever. Paste and play (loudnorm applies here too)."
+command = "read -p 'Stream URL: ' u && mpv --no-video --volume=75 --af=loudnorm=I=-16 --display-tags=icy-title \"$u\""
+col = "C"
+row = 0
+auto_close_execution = false
+
+[[commands]]
+name = "💻 Status"
+description = "mpv present? Streams reachable? (SomaFM and Radio Paradise run on listener support — the Support cell links their donate pages; keep good radio alive.)"
+command = "command -v mpv >/dev/null && mpv --version | head -1 || echo mpv NOT installed - apt/dnf/pacman install mpv; curl -s -m 3 -o /dev/null -w 'somafm: HTTP %{http_code}\\n' https://ice1.somafm.com/groovesalad-256-mp3 || echo somafm unreachable; curl -s -m 3 -o /dev/null -w 'radioparadise: HTTP %{http_code}\\n' http://stream.radioparadise.com/flac || echo radioparadise unreachable"
+col = "C"
+row = 1
+auto_close_execution = false
+
+[[commands]]
+name = "❤ Support the Stations"
+description = "Both stations are commercial-free and listener-funded — if the jukebox earns its keep, send them a coffee."
+col = "C"
+row = 2
+items = [
+  { name = "SomaFM", description = "All channels, donation page.", command = "xdg-open https://somafm.com/support/", auto_close_execution = true },
+  { name = "Radio Paradise", description = "The FLAC does not pay for itself.", command = "xdg-open https://radioparadise.com/support", auto_close_execution = true }
+]

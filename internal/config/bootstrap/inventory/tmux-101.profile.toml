@@ -1,0 +1,124 @@
+# tmux deck — sessions that survive you.
+# tmux is keyboard-driven by design, so half this deck is launcher cells
+# (list/attach/new/kill) and half is honest reference cards for the keys
+# you press once you're inside.
+
+X = 3
+Y = 3
+
+[[commands]]
+name = "📺 Sessions"
+description = "The core loop: see what's running, attach to it, or start a named one."
+col = "A"
+row = 0
+items = [
+  { name = "List", description = "Every session with windows and creation time. 'no server running' just means none yet.", command = "tmux ls 2>&1", auto_close_execution = false },
+  { name = "Attach (picker)", description = "Pick a session and jump in. Detach again with ctrl-b d.", command = "mapfile -t s < <(tmux ls -F '#{session_name}' 2>/dev/null); [ ${#s[@]} -eq 0 ] && echo no sessions - use New && exit 0; select n in \"${s[@]}\"; do [ -n \"$n\" ] && tmux attach -t \"$n\" && break; done", auto_close_execution = false },
+  { name = "New named session", description = "Name it after the task - future-you attaches by name.", command = "read -p 'Session name: ' n && tmux new -s \"${n:-work}\"", auto_close_execution = false }
+]
+
+[[commands]]
+name = "❌ Kill Session"
+description = "End a session and everything running in it — pick from the list, confirm first."
+command = "mapfile -t s < <(tmux ls -F '#{session_name}' 2>/dev/null); [ ${#s[@]} -eq 0 ] && echo no sessions && exit 0; select n in \"${s[@]}\"; do [ -n \"$n\" ] && read -p \"Kill '$n' and all its processes? [y/N]: \" ok && [ \"$ok\" = y ] && tmux kill-session -t \"$n\" && echo killed || echo kept; break; done"
+col = "A"
+row = 1
+auto_close_execution = false
+
+[[commands]]
+name = "🛟 SSH Survival"
+description = "The reason tmux exists: work on a server survives your connection dying. Read this card once and you'll never lose a remote job again."
+command = """
+awk '{a[NR]=$0;if(length>w)w=length}END{d="";for(i=0;i<w+2;i++)d=d"─";print"┌"d"┐";f="│ %-"w"s │";for(i=1;i<=NR;i++)print sprintf(f,a[i]);print"└"d"┘"}' <<'CARD'
+the pattern for ANY long remote job:
+  ssh box
+  tmux new -s mytask     # everything now lives in tmux
+  <run the long thing>
+  ctrl-b d            # detach - it keeps running
+  <laptop dies, wifi drops, you go home>
+  ssh box
+  tmux attach -t mytask  # exactly where you left it
+CARD
+"""
+col = "A"
+row = 2
+auto_close_execution = false
+
+[[commands]]
+name = "🃏 Prefix Card"
+description = "Everything in tmux starts with the prefix, ctrl-b. The keys you'll actually use, by frequency."
+command = """
+awk '{a[NR]=$0;if(length>w)w=length}END{d="";for(i=0;i<w+2;i++)d=d"─";print"┌"d"┐";f="│ %-"w"s │";for(i=1;i<=NR;i++)print sprintf(f,a[i]);print"└"d"┘"}' <<'CARD'
+prefix = ctrl-b, then:
+  d        detach (session keeps running)
+  c        new window        n / p   next / previous window
+  0-9      jump to window    ,       rename window
+  %        split left|right  "       split top/bottom
+  arrows   move between panes
+  x        kill pane         z       zoom pane (toggle)
+  [        copy mode         s       session picker
+CARD
+"""
+col = "B"
+row = 0
+auto_close_execution = false
+
+[[commands]]
+name = "🪟 Panes & Windows Card"
+description = "The mental model: one session holds windows (tabs); each window splits into panes. Sessions survive detach; windows and panes are layout."
+command = """
+awk '{a[NR]=$0;if(length>w)w=length}END{d="";for(i=0;i<w+2;i++)d=d"─";print"┌"d"┐";f="│ %-"w"s │";for(i=1;i<=NR;i++)print sprintf(f,a[i]);print"└"d"┘"}' <<'CARD'
+session  = the survivable thing (named, detachable)
+window   = a tab inside a session   (ctrl-b c / n / p)
+pane     = a split inside a window  (ctrl-b % and ")
+
+resize pane:  ctrl-b then hold ctrl + arrows
+even layout:  ctrl-b alt-1 ... alt-5
+break pane out to window: ctrl-b !
+CARD
+"""
+col = "B"
+row = 1
+auto_close_execution = false
+
+[[commands]]
+name = "📋 Copy Mode Card"
+description = "Scrollback and copying without a mouse: ctrl-b [ enters copy mode, then it's basically less/vi."
+command = """
+awk '{a[NR]=$0;if(length>w)w=length}END{d="";for(i=0;i<w+2;i++)d=d"─";print"┌"d"┐";f="│ %-"w"s │";for(i=1;i<=NR;i++)print sprintf(f,a[i]);print"└"d"┘"}' <<'CARD'
+ctrl-b [      enter copy mode (scrollback!)
+  arrows/PgUp   move          /  search
+  space         start select  enter  copy selection
+  q             leave
+ctrl-b ]      paste inside tmux
+
+tip: hold shift to select with the mouse for the SYSTEM clipboard.
+CARD
+"""
+col = "B"
+row = 2
+auto_close_execution = false
+
+[[commands]]
+name = "🔧 Config Check"
+description = "Your ~/.tmux.conf, if you have one — plus the two lines most people add first (mouse on, bigger scrollback)."
+command = "[ -f ~/.tmux.conf ] && echo your ~/.tmux.conf: && cat ~/.tmux.conf || printf 'no ~/.tmux.conf yet - the classic starter:\\n  set -g mouse on\\n  set -g history-limit 50000\\n(save to ~/.tmux.conf, then: tmux source ~/.tmux.conf)\\n'"
+col = "C"
+row = 0
+auto_close_execution = false
+
+[[commands]]
+name = "💻 Status"
+description = "Installed, which version, and is a server currently running?"
+command = "command -v tmux >/dev/null && tmux -V || echo tmux NOT installed - apt/dnf/pacman install tmux; tmux ls >/dev/null 2>&1 && echo server: running with $(tmux ls 2>/dev/null | wc -l) session\\(s\\) || echo server: not running - starts with your first session"
+col = "C"
+row = 1
+auto_close_execution = false
+
+[[commands]]
+name = "📚 Docs"
+description = "The tmux wiki — getting started page."
+command = "xdg-open https://github.com/tmux/tmux/wiki/Getting-Started"
+col = "C"
+row = 2
+auto_close_execution = true

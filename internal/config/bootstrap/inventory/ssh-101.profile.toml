@@ -44,7 +44,7 @@ sudo systemctl restart "$u" && echo "Restarted. Existing sessions survive a rest
 u=sshd; systemctl cat sshd >/dev/null 2>&1 || u=ssh
 sudo systemctl stop "$u"
 """, description = "Shut the door. Existing connections stay alive; new ones are refused. If you're connected over SSH right now, your session survives — but you won't get a second one.", auto_close_execution = false },
-    { name = "Install Server", command = { linux_debian = "sudo apt install openssh-server", linux_arch = "sudo pacman -S openssh", linux_fedora = "sudo dnf install openssh-server", linux_void = "sudo xbps-install -S openssh", linux_generic = """
+    { name = "Install Server", command = { linux_debian = "sudo apt install openssh-server", linux_arch = "sudo pacman -S openssh", linux_fedora = "sudo dnf install openssh-server", linux_suse = "sudo zypper install openssh", linux_void = "sudo xbps-install -S openssh", linux_generic = """
 if command -v apt >/dev/null; then sudo apt install openssh-server
 elif command -v dnf >/dev/null; then sudo dnf install openssh-server
 elif command -v pacman >/dev/null; then sudo pacman -S openssh
@@ -316,7 +316,7 @@ done
 echo ""
 echo "ssh/scp/ssh-keygen = client · sshd = server · ufw OR firewall-cmd is enough (they're alternatives)."
 """, description = "One line per tool: present or missing. Run this first on a fresh machine — it tells you which install items below you actually need, and explains which ❌ marks are fine to ignore.", auto_close_execution = false },
-    { name = "Install Client Tools", command = { linux_debian = "sudo apt install openssh-client rsync", linux_arch = "sudo pacman -S openssh rsync", linux_fedora = "sudo dnf install openssh-clients rsync", linux_void = "sudo xbps-install -S openssh rsync", linux_generic = """
+    { name = "Install Client Tools", command = { linux_debian = "sudo apt install openssh-client rsync", linux_arch = "sudo pacman -S openssh rsync", linux_fedora = "sudo dnf install openssh-clients rsync", linux_suse = "sudo zypper install openssh rsync", linux_void = "sudo xbps-install -S openssh rsync", linux_generic = """
 if command -v apt >/dev/null; then sudo apt install openssh-client rsync
 elif command -v dnf >/dev/null; then sudo dnf install openssh-clients rsync
 elif command -v pacman >/dev/null; then sudo pacman -S openssh rsync
@@ -324,7 +324,7 @@ elif command -v xbps-install >/dev/null; then sudo xbps-install -S openssh rsync
 else echo "❓ No known package manager found — install the OpenSSH client and rsync with your distro's own tool."
 fi
 """ }, description = "The outbound kit: ssh, scp, ssh-keygen, ssh-copy-id and rsync. Usually preinstalled on desktops, often missing in containers and minimal images.", auto_close_execution = false },
-    { name = "Install Fail2ban", command = { linux_debian = "sudo apt install fail2ban", linux_arch = "sudo pacman -S fail2ban", linux_fedora = "sudo dnf install fail2ban", linux_void = "sudo xbps-install -S fail2ban", linux_generic = """
+    { name = "Install Fail2ban", command = { linux_debian = "sudo apt install fail2ban", linux_arch = "sudo pacman -S fail2ban", linux_fedora = "sudo dnf install fail2ban", linux_suse = "sudo zypper install fail2ban", linux_void = "sudo xbps-install -S fail2ban", linux_generic = """
 if command -v apt >/dev/null; then sudo apt install fail2ban
 elif command -v dnf >/dev/null; then sudo dnf install fail2ban
 elif command -v pacman >/dev/null; then sudo pacman -S fail2ban

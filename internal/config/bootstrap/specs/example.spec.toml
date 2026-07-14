@@ -8,5 +8,6 @@
 
 profiles = [
     
-	"ssh-utils",
+	"ssh-101",
+	"tmux-101"
 ]	

@@ -17,7 +17,7 @@ func TestRestoreBootstrap_FullSetIntoEmptyDir(t *testing.T) {
 	// The whole embedded set lands, reported by relative path.
 	for _, want := range []string{
 		"core.profile.toml",
-		"inventory/ssh-utils.profile.toml",
+		"inventory/ssh-101.profile.toml",
 		"themes.toml",
 		"config.toml",
 		"specs/example.spec.toml",
@@ -52,8 +52,8 @@ func TestRestoreBootstrap_PartialNoOverwrite(t *testing.T) {
 	}
 
 	// Delete one file; tamper with another to prove it's never rewritten.
-	sshUtils := filepath.Join(dir, "inventory", "ssh-utils.profile.toml")
-	if err := os.Remove(sshUtils); err != nil {
+	sshDeck := filepath.Join(dir, "inventory", "ssh-101.profile.toml")
+	if err := os.Remove(sshDeck); err != nil {
 		t.Fatal(err)
 	}
 	corePath := filepath.Join(dir, "core.profile.toml")
@@ -66,10 +66,10 @@ func TestRestoreBootstrap_PartialNoOverwrite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(restored) != 1 || restored[0] != "inventory/ssh-utils.profile.toml" {
+	if len(restored) != 1 || restored[0] != "inventory/ssh-101.profile.toml" {
 		t.Fatalf("expected only the deleted file restored, got %v", restored)
 	}
-	if _, err := os.Stat(sshUtils); err != nil {
+	if _, err := os.Stat(sshDeck); err != nil {
 		t.Errorf("deleted deck not restored: %v", err)
 	}
 	got, _ := os.ReadFile(corePath)
