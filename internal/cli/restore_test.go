@@ -23,7 +23,7 @@ func TestHandleRestoreBootstrapCommand(t *testing.T) {
 	if code := HandleRestoreBootstrapCommand(); code != 0 {
 		t.Fatalf("first restore exit = %d, want 0", code)
 	}
-	for _, f := range []string{"core.profile.toml", "inventory/ssh-utils.profile.toml", "config.toml"} {
+	for _, f := range []string{"core.profile.toml", "inventory/ssh-101.profile.toml", "config.toml"} {
 		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(f))); err != nil {
 			t.Errorf("%s not restored: %v", f, err)
 		}
