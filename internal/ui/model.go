@@ -242,6 +242,34 @@ func (m Model) presentNextBrokenProfile() Model {
 	return m
 }
 
+// presentDroppedProfileNote shows a one-time overlay explaining that the active
+// profile was deleted or moved to the inventory, which is why drako just dropped
+// into Rescue Mode. Without it the rescue drop is silent (this path carries no
+// broken-profile error). Dismissed by any key, returning to the grid (the rescue
+// grid).
+func (m Model) presentDroppedProfileNote(name string) Model {
+	m.previousMode = gridMode
+	m.profile.errorQueueActive = false
+	m.activeDetail = &DetailState{
+		Title:    "Profile no longer available",
+		KeyLabel: "Profile",
+		Value:    name,
+		Description: "This profile is no longer available — it was deleted or moved to " +
+			"the inventory. drako has dropped into Rescue Mode (any lock on it has been " +
+			"cleared).\n\n" +
+			"To get back to work:\n" +
+			"• Inventory (i): equip a profile.\n" +
+			"• Cycle (o / p): jump to a still-equipped profile.\n" +
+			"• Exit Rescue Mode: the button at the bottom of the grid.\n\n" +
+			"Press any key to dismiss.",
+		Meta: []DetailMeta{
+			{Label: "CWD", Value: m.profile.configDir},
+		},
+	}
+	m.mode = infoMode
+	return m
+}
+
 // activeName returns the display name of the active profile, defaulting to
 // "Rescue" when there are no profiles or the name is blank (no profiles on
 // disk means the compiled-in rescue grid is what's showing).
@@ -317,6 +345,10 @@ func InitialModel(glassrootMode bool) Model {
 		m.profile.pendingErrors = append(m.profile.pendingErrors, bundle.Broken...)
 		m.profile.errorQueueActive = true
 		m = m.presentNextBrokenProfile()
+	} else if bundle.DroppedProfile != "" {
+		// Relaunched after the active profile was deleted out from under us:
+		// explain the rescue drop instead of showing a bare rescue grid.
+		m = m.presentDroppedProfileNote(bundle.DroppedProfile)
 	}
 
 	return m

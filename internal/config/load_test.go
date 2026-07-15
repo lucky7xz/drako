@@ -199,3 +199,84 @@ func TestLoadConfig_PivotOrderReorders(t *testing.T) {
 		}
 	}
 }
+
+// isRescueGrid reports whether cfg is the compiled-in rescue grid, identified
+// by its distinctive "Exit Rescue Mode" command.
+func isRescueGrid(cfg Config) bool {
+	for _, c := range cfg.Commands {
+		if c.Name == "Exit Rescue Mode" {
+			return true
+		}
+	}
+	return false
+}
+
+// Deleting the profile a pivot lock points at drops drako into the rescue grid.
+// The bundle must name the vanished profile (DroppedProfile) so the UI can
+// explain the drop instead of dumping the user into rescue silently, and the
+// now-stale lock must be cleared.
+func TestReloadConfig_DeletedLockedProfileReportsDropped(t *testing.T) {
+	dir := loadTestDir(t, "work", "alpha")
+	if err := WritePivotLocked(dir, "work"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(filepath.Join(dir, "work.profile.toml")); err != nil {
+		t.Fatal(err)
+	}
+
+	bundle, err := ReloadConfig("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bundle.DroppedProfile != "work" {
+		t.Errorf("DroppedProfile = %q, want %q", bundle.DroppedProfile, "work")
+	}
+	if !isRescueGrid(bundle.Config) {
+		t.Error("expected the rescue grid after the locked profile was deleted")
+	}
+	if bundle.LockedName != "" {
+		t.Errorf("stale lock should be cleared, LockedName = %q", bundle.LockedName)
+	}
+}
+
+// Moving the UNLOCKED *active* profile to inventory (session still names it)
+// also drops to rescue — DroppedProfile must report it so the UI can explain.
+func TestReloadConfig_UnlockedActiveGoneReportsDropped(t *testing.T) {
+	dir := loadTestDir(t, "work", "alpha")
+	// Session is on "work"; stash it (move out of the equipped dir).
+	if err := os.Remove(filepath.Join(dir, "work.profile.toml")); err != nil {
+		t.Fatal(err)
+	}
+
+	bundle, err := ReloadConfig("work")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bundle.DroppedProfile != "work" {
+		t.Errorf("DroppedProfile = %q, want %q", bundle.DroppedProfile, "work")
+	}
+	if !isRescueGrid(bundle.Config) {
+		t.Error("expected rescue after the active (session) profile was removed")
+	}
+}
+
+// Removing a non-active profile while another remains, with no request pointing
+// at it, falls back to the first available profile — no rescue, DroppedProfile
+// stays empty.
+func TestReloadConfig_GracefulFallbackNoDropped(t *testing.T) {
+	dir := loadTestDir(t, "work", "alpha")
+	if err := os.Remove(filepath.Join(dir, "work.profile.toml")); err != nil {
+		t.Fatal(err)
+	}
+
+	bundle, err := ReloadConfig("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bundle.DroppedProfile != "" {
+		t.Errorf("DroppedProfile = %q, want empty for a graceful fallback", bundle.DroppedProfile)
+	}
+	if isRescueGrid(bundle.Config) {
+		t.Error("a remaining profile with no active request should not land in rescue")
+	}
+}

@@ -74,6 +74,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m = m.presentNextBrokenProfile()
 			return m, nil
 		}
+		if bundle.DroppedProfile != "" {
+			m = m.presentDroppedProfileNote(bundle.DroppedProfile)
+			return m, nil
+		}
 		m.mode = gridMode
 		return m, nil
 
@@ -95,6 +99,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.profile.pendingErrors = append(m.profile.pendingErrors, bundle.Broken...)
 			m.profile.errorQueueActive = true
 			m = m.presentNextBrokenProfile()
+		} else if bundle.DroppedProfile != "" {
+			m = m.presentDroppedProfileNote(bundle.DroppedProfile)
 		}
 		// Restart the watcher for the next change
 		configDir, _ := paths.ConfigDir()

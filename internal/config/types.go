@@ -91,6 +91,11 @@ type ConfigBundle struct {
 	ConfigDir   string
 	LockedName  string
 	Broken      []ProfileParseError
+	// DroppedProfile names the profile that was requested on this load (via the
+	// pivot lock, the session, or config.toml) but no longer exists — deleted or
+	// moved to the inventory — forcing the drop into Rescue Mode. Empty on every
+	// other path. The UI uses it to explain the otherwise-silent rescue.
+	DroppedProfile string
 }
 
 // ── Platform-variant commands ────────────────────────────────────────

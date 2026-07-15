@@ -150,11 +150,17 @@ func loadConfig(profileOverride *string, sessionProfile string) (ConfigBundle, e
 	pivotStillValid := requestedPivot != ""
 	useFactoryDefaults := false
 
+	droppedProfile := ""
 	activeIndex, found := selectProfile(profiles, requested)
 	if !found {
 		log.Printf("profile not found (possibly broken), falling back to factory defaults: %s", requested)
 		useFactoryDefaults = true
+		// The requested profile (from the lock, the session, or config.toml)
+		// vanished — deleted or moved to inventory. Record its name so the UI
+		// can explain the otherwise-silent rescue drop.
+		droppedProfile = requested
 		if pivotRequested {
+			// It was the locked profile: clear the now-stale lock too.
 			if err := WritePivotLocked(configDir, ""); err != nil {
 				log.Printf("warning: could not clear pivot lock: %v", err)
 			}
@@ -182,6 +188,7 @@ func loadConfig(profileOverride *string, sessionProfile string) (ConfigBundle, e
 			}
 			return requestedPivot
 		}(),
-		Broken: broken,
+		Broken:         broken,
+		DroppedProfile: droppedProfile,
 	}, nil
 }
