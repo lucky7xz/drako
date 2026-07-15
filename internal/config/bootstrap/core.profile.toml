@@ -19,7 +19,7 @@ y = 3
 # ┌─ Column 0: System & Security ──────────┐
 # └────────────────────────────────────────┘
 [[commands]]
-name = "⬆️ System Update"
+name = "🔄 System Update"
 description = "Queries the repositories for fresh versions and pulls them into your system. Your digital infrastructure sheds old scales for new ones—staying sharp, staying current. The machinery needs to evolve or rust settles in."
 command = { linux_debian = "sudo apt update && sudo apt upgrade", linux_arch = "sudo pacman -Syu", linux_fedora = "sudo dnf upgrade", linux_suse = "sudo zypper update", linux_void = "sudo xbps-install -Su", linux_generic = """
 # Unknown distro: probe the common package managers.
@@ -254,9 +254,9 @@ col = "C"
 row = 2
 description = "The dragon's lair. Tweak the internal mechanics, adjust your environment, and refine how you interact with the system. This is where you make the machine yours."
 items = [
-    { name = "⚙️  Edit config.toml ", description = "The file you're reading right now. Key bindings, themes, etc.—all controlled here. Change anything. Break things. That's the point. Power lives in plain text files. Rescue mode can help you restore a broken config.", command = { linux_generic = "${EDITOR:-nano} ~/.config/drako/config.toml", macos = "${EDITOR:-nano} \"$HOME/Library/Application Support/drako/config.toml\"", windows = "drako open \"$env:APPDATA\\drako\\config.toml\"" } },
+    { name = "🔧 Edit config.toml ", description = "The file you're reading right now. Key bindings, themes, etc.—all controlled here. Change anything. Break things. That's the point. Power lives in plain text files. Rescue mode can help you restore a broken config.", command = { linux_generic = "${EDITOR:-nano} ~/.config/drako/config.toml", macos = "${EDITOR:-nano} \"$HOME/Library/Application Support/drako/config.toml\"", windows = "drako open \"$env:APPDATA\\drako\\config.toml\"" } },
     { name = "📁 Browse config dir", description = "Hidden chambers where configurations live. Most users never look here, but this is where real control exists. Explore it. Break things. Make it yours. The vastness of cyber starts in folders like these.", command = { linux_generic = "drako open ~/.config/drako", macos = "drako open \"$HOME/Library/Application Support/drako\"", windows = "drako open \"$env:APPDATA\\drako\"" } },
-    { name = "ℹ️  Open Pivot  ", description = "Small scale state tracking, profile switches, paths. Useful for debugging or just curiosity.", command = { linux_generic = "${EDITOR:-nano} ~/.config/drako/pivot.toml", macos = "${EDITOR:-nano} \"$HOME/Library/Application Support/drako/pivot.toml\"", windows = "drako open \"$env:APPDATA\\drako\\pivot.toml\"" } },
+    { name = "📌 Open Pivot  ", description = "Small scale state tracking, profile switches, paths. Useful for debugging or just curiosity.", command = { linux_generic = "${EDITOR:-nano} ~/.config/drako/pivot.toml", macos = "${EDITOR:-nano} \"$HOME/Library/Application Support/drako/pivot.toml\"", windows = "drako open \"$env:APPDATA\\drako\\pivot.toml\"" } },
     { name = "📜 Open History Logs", description = "A record of past movements. Every command executed, every choice made, preserved in the archives. Peer into the past to trace your steps.", command = { linux_generic = "${EDITOR:-nano} ~/.config/drako/history.log", macos = "${EDITOR:-nano} \"$HOME/Library/Application Support/drako/history.log\"", windows = "drako open \"$env:APPDATA\\drako\\history.log\"" } },
     { name = "📜 Open Logs (Debug)", description = "The trail of what happened. Events, errors, state changes recorded. Read the logs when things break or when you want to see the machinery.", command = { linux_generic = "${EDITOR:-nano} ~/.config/drako/drako.log", macos = "${EDITOR:-nano} \"$HOME/Library/Application Support/drako/drako.log\"", windows = "drako open \"$env:APPDATA\\drako\\drako.log\"" } },
 
