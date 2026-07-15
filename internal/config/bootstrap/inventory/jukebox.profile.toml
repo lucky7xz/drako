@@ -3,7 +3,8 @@
 # (lossless FLAC), grouped into folders — press a station folder, pick a channel.
 # Every play cell runs mpv with loudnorm (EBU R128, target -16 LUFS) so channels
 # sit at the same loudness and you stop chasing the volume between them.
-# mpv shows the live track title; while playing: space pause · 9/0 volume · q back.
+# A single "now playing" line shows the live track, volume and elapsed time.
+# While playing: space pause · 9/0 volume · q back.
 
 X = 3
 Y = 3
@@ -14,13 +15,13 @@ description = "SomaFM's channels — commercial-free, listener-funded, streamed 
 col = "A"
 row = 0
 items = [
-  { name = "🥗 Groove Salad", description = "The flagship: ambient downtempo, 256k. The internet's default 'music to think to' since 2000.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --display-tags=icy-title https://ice1.somafm.com/groovesalad-256-mp3", auto_close_execution = false },
-  { name = "🛸 Drone Zone", description = "256k: beatless ambient soundscapes. Deep-work fuel — nothing to latch onto, everything to float on.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --display-tags=icy-title https://ice1.somafm.com/dronezone-256-mp3", auto_close_execution = false },
-  { name = "🕶 Secret Agent", description = "Spy-movie lounge — 'the soundtrack for your stylish, mysterious, dangerous life'. 128k.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --display-tags=icy-title https://ice1.somafm.com/secretagent-128-mp3", auto_close_execution = false },
-  { name = "🎷 Sonic Universe", description = "256k: left-of-center jazz — avant-garde to euro-jazz. For when the code needs to swing.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --display-tags=icy-title https://ice1.somafm.com/sonicuniverse-256-mp3", auto_close_execution = false },
-  { name = "💀 DEF CON Radio", description = "Music for hacking — dark electro, industrial and synth, curated with the DEF CON crew. 256k.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --display-tags=icy-title https://ice1.somafm.com/defcon-256-mp3", auto_close_execution = false },
-  { name = "🌀 The Trip", description = "Progressive house and trance — the after-hours channel. Keeps momentum without demanding attention. 128k.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --display-tags=icy-title https://ice1.somafm.com/thetrip-128-mp3", auto_close_execution = false },
-  { name = "🛰 Space Station Soma", description = "Spaced-out ambient and mid-tempo electronica — mission-control calm for long sessions. 128k.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --display-tags=icy-title https://ice1.somafm.com/spacestation-128-mp3", auto_close_execution = false }
+  { name = "🥗 Groove Salad", description = "The flagship: ambient downtempo, 256k. The internet's default 'music to think to' since 2000.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://ice1.somafm.com/groovesalad-256-mp3", auto_close_execution = false },
+  { name = "🛸 Drone Zone", description = "256k: beatless ambient soundscapes. Deep-work fuel — nothing to latch onto, everything to float on.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://ice1.somafm.com/dronezone-256-mp3", auto_close_execution = false },
+  { name = "🕶  Secret Agent", description = "Spy-movie lounge — 'the soundtrack for your stylish, mysterious, dangerous life'. 128k.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://ice1.somafm.com/secretagent-128-mp3", auto_close_execution = false },
+  { name = "🎷 Sonic Universe", description = "256k: left-of-center jazz — avant-garde to euro-jazz. For when the code needs to swing.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://ice1.somafm.com/sonicuniverse-256-mp3", auto_close_execution = false },
+  { name = "💀 DEF CON Radio", description = "Music for hacking — dark electro, industrial and synth, curated with the DEF CON crew. 256k.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://ice1.somafm.com/defcon-256-mp3", auto_close_execution = false },
+  { name = "🌀 The Trip", description = "Progressive house and trance — the after-hours channel. Keeps momentum without demanding attention. 128k.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://ice1.somafm.com/thetrip-128-mp3", auto_close_execution = false },
+  { name = "🛰  Space Station Soma", description = "Spaced-out ambient and mid-tempo electronica — mission-control calm for long sessions. 128k.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://ice1.somafm.com/spacestation-128-mp3", auto_close_execution = false }
 ]
 
 [[commands]]
@@ -29,14 +30,14 @@ description = "Human-curated eclectic rock/world/electronic in LOSSLESS FLAC. Th
 col = "B"
 row = 0
 items = [
-  { name = "💎 Main Mix (FLAC)", description = "The main channel, lossless FLAC — eclectic and beautifully sequenced.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --display-tags=icy-title http://stream.radioparadise.com/flac", auto_close_execution = false },
-  { name = "🌙 Mellow (FLAC)", description = "The softer channel, also lossless — late-night writing music.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --display-tags=icy-title http://stream.radioparadise.com/mellow-flac", auto_close_execution = false }
+  { name = "💎 Main Mix (FLAC)", description = "The main channel, lossless FLAC — eclectic and beautifully sequenced.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' http://stream.radioparadise.com/flac", auto_close_execution = false },
+  { name = "🌙 Mellow (FLAC)", description = "The softer channel, also lossless — late-night writing music.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' http://stream.radioparadise.com/mellow-flac", auto_close_execution = false }
 ]
 
 [[commands]]
 name = "📻 Your Station"
 description = "Any stream URL — your local station, a friend's icecast, whatever. Paste and play (loudnorm applies here too)."
-command = "read -p 'Stream URL: ' u && mpv --no-video --volume=75 --af=loudnorm=I=-16 --display-tags=icy-title \"$u\""
+command = "read -p 'Stream URL: ' u && mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' \"$u\""
 col = "C"
 row = 0
 auto_close_execution = false
