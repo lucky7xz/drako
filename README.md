@@ -349,7 +349,6 @@ drako is a single static Go binary with no runtime dependencies. Direct build de
 
 - [`charmbracelet/bubbletea`](https://github.com/charmbracelet/bubbletea) — the model/view/update loop
 - [`charmbracelet/lipgloss`](https://github.com/charmbracelet/lipgloss) — layout and styling
-- [`charmbracelet/bubbles`](https://github.com/charmbracelet/bubbles) — common components
 - [`BurntSushi/toml`](https://github.com/BurntSushi/toml) — profile & config parsing
 - [`shirou/gopsutil`](https://github.com/shirou/gopsutil) — system info (process monitor, sysinfo)
 - [`fsnotify/fsnotify`](https://github.com/fsnotify/fsnotify) — config/profile file watching
