@@ -83,8 +83,14 @@ func RestoreBootstrap(dstRoot string) ([]string, error) {
 			return os.MkdirAll(target, 0o755)
 		}
 
-		// Safety: never overwrite an existing file.
-		if _, err := os.Stat(target); err == nil {
+		// Never overwrite, and never duplicate a deck the user has moved: a
+		// profile shipped under inventory/ counts as present whether it is
+		// stashed or equipped (config root). Other files live in one place.
+		if strings.HasSuffix(rel, ".profile.toml") {
+			if profileDeckPresent(dstRoot, filepath.Base(rel)) {
+				return nil
+			}
+		} else if _, err := os.Stat(target); err == nil {
 			return nil
 		}
 
@@ -122,11 +128,24 @@ func RestoreCoreProfile(dstRoot string) (bool, error) {
 		return false, err
 	}
 	targetProfile := filepath.Join(dstRoot, "core.profile.toml")
-	if _, err := os.Stat(targetProfile); err == nil {
+	if profileDeckPresent(dstRoot, "core.profile.toml") {
 		return false, nil
 	}
 	if err := os.WriteFile(targetProfile, deck, 0o644); err != nil {
 		return false, err
 	}
 	return true, nil
+}
+
+// profileDeckPresent reports whether a bootstrap-shipped deck already lives in
+// either place a deck can be: equipped (config root) or stashed (inventory/).
+// Restore uses it so a deck the user has moved is never duplicated back.
+func profileDeckPresent(dstRoot, base string) bool {
+	if _, err := os.Stat(filepath.Join(dstRoot, base)); err == nil {
+		return true // equipped
+	}
+	if _, err := os.Stat(filepath.Join(paths.InventoryDir(dstRoot), base)); err == nil {
+		return true // stashed
+	}
+	return false
 }
