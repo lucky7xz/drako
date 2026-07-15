@@ -28,10 +28,12 @@ theme = "dracula"
 # └────────────────────────────────────────────────────────────┘
 
 # ┌─ Keybinding Modifier ────────────────────────────────────┐
-# │ Set the modifier for number-based shortcuts.
-# │ "alt" is the default and generally works well.
-# │ "ctrl" is another option, but may be intercepted by your
-# │ terminal or window manager.
+# │ Modifier for the profile-switch chord: <modifier> + 1-9.
+# │ This is the legacy chord. The leader key 'm' (see below)
+# │ is the modern way to switch profiles (m then 1-9) and the
+# │ only way into batch mode (m then b).
+# │ "alt" is the default; "ctrl" also works but may be
+# │ intercepted by your terminal or window manager.
 # │ Function keys (F1-F9) are not configured via this string.
 # └───────────────────────────────────────────────────────────┘
 numb_modifier = "alt"
