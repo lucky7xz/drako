@@ -1,13 +1,14 @@
 # jukebox deck — a terminal radio with genuinely good sound.
-# Stations: SomaFM (listener-supported, 256k where offered) and Radio Paradise
-# (lossless FLAC), grouped into folders — press a station folder, pick a channel.
-# Every play cell runs mpv with loudnorm (EBU R128, target -16 LUFS) so channels
-# sit at the same loudness and you stop chasing the volume between them.
+# Stations (all show the live track title): SomaFM, Radio Swiss (jazz & classical),
+# and a Curated folder — KCRW Eclectic24, Venice Classic Radio, dublab. A separate
+# Noise folder generates pink/brown noise locally (offline, for focus & sleep).
+# Music cells run mpv with loudnorm (EBU R128, target -16 LUFS) so channels sit at
+# the same loudness and you stop chasing the volume between them.
 # A single "now playing" line shows the live track, volume and elapsed time.
 # While playing: space pause · 9/0 volume · q back.
 
 X = 3
-Y = 3
+Y = 2
 
 [[commands]]
 name = "🥗 SomaFM"
@@ -25,13 +26,34 @@ items = [
 ]
 
 [[commands]]
-name = "💎 Radio Paradise"
-description = "Human-curated eclectic rock/world/electronic in LOSSLESS FLAC. This is the audiophile cell — on good headphones the difference over 128k is real."
+name = "🇨🇭 Radio Swiss"
+description = "Swiss public radio — commercial-free and calmly announced. The jazz & classical corner the rest of the deck leaves open."
+col = "A"
+row = 1
+items = [
+  { name = "🎷 Jazz", description = "Classic to contemporary jazz around the clock, ad-free. 128k.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' http://stream.srg-ssr.ch/m/rsj/mp3_128", auto_close_execution = false },
+  { name = "🎻 Classic", description = "The classical canon, all day — no lyrics, just calm. Ad-free. 128k.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' http://stream.srg-ssr.ch/m/rsc_de/mp3_128", auto_close_execution = false }
+]
+
+[[commands]]
+name = "🎚 Curated"
+description = "Hand-picked public and nonprofit stations — all show the live track title, all commercial-free. Pick one; loudnorm keeps them level with the rest."
 col = "B"
 row = 0
 items = [
-  { name = "💎 Main Mix (FLAC)", description = "The main channel, lossless FLAC — eclectic and beautifully sequenced.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' http://stream.radioparadise.com/flac", auto_close_execution = false },
-  { name = "🌙 Mellow (FLAC)", description = "The softer channel, also lossless — late-night writing music.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' http://stream.radioparadise.com/mellow-flac", auto_close_execution = false }
+  { name = "🎙 KCRW Eclectic24", description = "LA public radio's 24-hour music stream — eclectic, DJ-curated, no talk, no ads.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://streams.kcrw.com/e24_mp3", auto_close_execution = false },
+  { name = "🎻 Venice Classic", description = "Italian classical around the clock — baroque to romantic, commercial-free and gently announced.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://uk2.streamingpulse.com/ssl/vcr1", auto_close_execution = false },
+  { name = "🌫 dublab", description = "LA nonprofit, freeform and experimental — leftfield music with the occasional talk show. Adventurous.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://dublab.out.airtime.pro/dublab_a", auto_close_execution = false }
+]
+
+[[commands]]
+name = "🎧 Noise"
+description = "Steady noise for focus and sleep — generated locally by mpv, no stream, works offline. Pink is balanced, brown is deep. Tune with 9/0."
+col = "B"
+row = 1
+items = [
+  { name = "🌸 Pink Noise", description = "Balanced and soft — the classic focus/sleep noise. Easy on the ears.", command = "mpv --no-video --volume=70 --force-media-title='🌸 Pink Noise' --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' av://lavfi:anoisesrc=color=pink:amplitude=0.3", auto_close_execution = false },
+  { name = "🟤 Brown Noise", description = "Deep, low rumble — like distant surf. The cozy one for deep focus.", command = "mpv --no-video --volume=70 --force-media-title='🟤 Brown Noise' --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' av://lavfi:anoisesrc=color=brown:amplitude=0.3", auto_close_execution = false }
 ]
 
 [[commands]]
@@ -43,19 +65,12 @@ row = 0
 auto_close_execution = false
 
 [[commands]]
-name = "💻 Status"
-description = "mpv present? Streams reachable? (SomaFM and Radio Paradise run on listener support — the Support cell links their donate pages; keep good radio alive.)"
-command = "command -v mpv >/dev/null && mpv --version | head -1 || echo mpv NOT installed - apt/dnf/pacman install mpv; curl -s -m 3 -o /dev/null -w 'somafm: HTTP %{http_code}\\n' https://ice1.somafm.com/groovesalad-256-mp3 || echo somafm unreachable; curl -s -m 3 -o /dev/null -w 'radioparadise: HTTP %{http_code}\\n' http://stream.radioparadise.com/flac || echo radioparadise unreachable"
+name = "❤ Support the Stations"
+description = "These stations are commercial-free and listener-funded — if the jukebox earns its keep, send them a coffee."
 col = "C"
 row = 1
-auto_close_execution = false
-
-[[commands]]
-name = "❤ Support the Stations"
-description = "Both stations are commercial-free and listener-funded — if the jukebox earns its keep, send them a coffee."
-col = "C"
-row = 2
 items = [
   { name = "SomaFM", description = "All channels, donation page.", command = "xdg-open https://somafm.com/support/", auto_close_execution = true },
-  { name = "Radio Paradise", description = "The FLAC does not pay for itself.", command = "xdg-open https://radioparadise.com/support", auto_close_execution = true }
+  { name = "KCRW", description = "LA public radio — member-supported.", command = "xdg-open https://www.kcrw.com/donate", auto_close_execution = true },
+  { name = "dublab", description = "LA nonprofit freeform radio.", command = "xdg-open https://dublab.com/donate", auto_close_execution = true }
 ]
