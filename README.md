@@ -36,6 +36,11 @@ No install — drako served over SSH ([Wish](https://github.com/charmbracelet/wi
 go install github.com/lucky7xz/drako@latest
 ```
 
+> **Living on the edge?** Swap `@latest` for `@dev` to install the newest changes on the `dev`-branch build — newer, less settled:
+> ```bash
+> go install github.com/lucky7xz/drako@dev
+> ```
+
 Need Go first?
 
 | Platform      | Command                                             |
