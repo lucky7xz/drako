@@ -19,6 +19,9 @@ https://github.com/user-attachments/assets/21fb2340-bc74-4886-a629-8e95d116e830
 -   **Batch launch** — mark up to 9 cells (`m`, `b`), launch them together in one tmux session
 -   **Glassroot Mode** — a [sealed surface](#-glassroot-mode-experimental) for serving drako over SSH *(experimental)*
 
+
+<img width="100%" alt="Batch Demo" src="https://github.com/user-attachments/assets/274abaed-1cd8-4c35-8b96-4b37b85556e6" />
+
 ## 📡 Try it live
 
 No install — drako served over SSH ([Wish](https://github.com/charmbracelet/wish) + [Glassroot Mode](#-glassroot-mode-experimental)):
