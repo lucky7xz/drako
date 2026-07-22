@@ -218,7 +218,7 @@ func (m Model) presentNextBrokenProfile() Model {
 			"• **Edit Config**: Open the config.toml in your default editor and fix the syntax error.\n" +
 			"• **Reset Config**: The command `drako reset -c` will delete the config.toml. Drako reinstantiates it with default settings.\n" +
 			"• **Documentation**: View default controls on Documentation website.\n\n" +
-			"• **Exit Rescue Mode**: You can still keep using drako by exiting rescue mode (the button on the bottom, the error will keep showing up though)."
+			"• **Exit Rescue Mode**: You can still keep using drako by exiting rescue mode (the top-left button, the error will keep showing up though)."
 
 	} else if strings.Contains(e.Err, "empty profile file") {
 		desc += "The file is completely empty. Either add valid TOML configuration or move/delete the file via Inventory (i).\n\n"
@@ -260,7 +260,7 @@ func (m Model) presentDroppedProfileNote(name string) Model {
 			"To get back to work:\n" +
 			"• Inventory (i): equip a profile.\n" +
 			"• Cycle (o / p): jump to a still-equipped profile.\n" +
-			"• Exit Rescue Mode: the button at the bottom of the grid.\n\n" +
+			"• Exit Rescue Mode: the top-left button of the grid.\n\n" +
 			"Press any key to dismiss.",
 		Meta: []DetailMeta{
 			{Label: "CWD", Value: m.profile.configDir},

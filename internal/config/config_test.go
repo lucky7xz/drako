@@ -228,3 +228,18 @@ func TestLoadConfig_HandlesBrokenConfig(t *testing.T) {
 		t.Error("Rescue config missing purge/reset command")
 	}
 }
+
+// The cursor opens on cell 0,a, so that cell must be the escape hatch and never
+// a destructive command.
+func TestRescueConfig_ExitIsFirstCell(t *testing.T) {
+	for _, cmd := range RescueConfig().Commands {
+		if cmd.Name != "Exit Rescue Mode" {
+			continue
+		}
+		if cmd.Row != 0 || cmd.Col != "a" {
+			t.Fatalf("Exit Rescue Mode at row %d col %q, want row 0 col \"a\"", cmd.Row, cmd.Col)
+		}
+		return
+	}
+	t.Fatal("rescue config has no Exit Rescue Mode command")
+}

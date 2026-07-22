@@ -46,18 +46,18 @@ func RescueConfig() Config {
 		},
 		Commands: []Command{
 			{
-				Name:        "Reset Core (config & profile)",
-				Command:     "drako purge --config",
-				Description: "Resets config.toml to defaults.\n\n• Your old config.toml will be moved to trash/. Note that if the Core profile has been removed, this will reinitialize it too\n• Use this to fix syntax errors in config.toml.\n• Drako will exit after this operation.",
+				Name:        "Exit Rescue Mode",
+				Command:     "true", // Intercepted by UI
+				Description: "Reloads your profiles and returns to whatever is equipped.\n\n• If no profiles are equipped, you stay in Rescue mode.",
 				Row:         0,
-				Col:         "a", // Left
+				Col:         "a", // Left top — the cell the cursor lands on when rescue opens
 			},
 			{
 				Name:        "Remove Core Profile",
 				Command:     "drako purge --target core",
 				Description: "Removes your core.profile.toml.\n\n• Use this if the core profile layout is broken.",
 				Row:         1,
-				Col:         "a", // Left below Reset Core
+				Col:         "a", // Left below Exit
 			},
 			{
 				Name:        "Remove Another Profile",
@@ -95,11 +95,11 @@ func RescueConfig() Config {
 				Col:         "c", // Right below Docs
 			},
 			{
-				Name:        "Exit Rescue Mode",
-				Command:     "true", // Intercepted by UI
-				Description: "Reloads your profiles and returns to whatever is equipped.\n\n• If no profiles are equipped, you stay in Rescue mode.",
+				Name:        "Reset Core (config & profile)",
+				Command:     "drako purge --config",
+				Description: "Resets config.toml to defaults.\n\n• Your old config.toml will be moved to trash/. Note that if the Core profile has been removed, this will reinitialize it too\n• Use this to fix syntax errors in config.toml.\n• Drako will exit after this operation.",
 				Row:         2,
-				Col:         "b", // Center bottom
+				Col:         "b", // Center bottom — the most destructive cell, farthest from the entry cursor
 			},
 			{
 				Name:        "Restore Bootstrap Files",
