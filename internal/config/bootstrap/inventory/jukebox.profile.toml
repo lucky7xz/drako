@@ -11,39 +11,49 @@ X = 3
 Y = 2
 
 [[commands]]
-name = "🥗 SomaFM"
+name = "💊 SomaFM"
 description = "SomaFM's channels — commercial-free, listener-funded, streamed at the best MP3 bitrate each channel offers. Pick one; loudnorm keeps them level."
 col = "A"
 row = 0
 items = [
   { name = "🥗 Groove Salad", description = "The flagship: ambient downtempo, 256k. The internet's default 'music to think to' since 2000.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://ice1.somafm.com/groovesalad-256-mp3", auto_close_execution = false },
-  { name = "🛸 Drone Zone", description = "256k: beatless ambient soundscapes. Deep-work fuel — nothing to latch onto, everything to float on.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://ice1.somafm.com/dronezone-256-mp3", auto_close_execution = false },
   { name = "🕶  Secret Agent", description = "Spy-movie lounge — 'the soundtrack for your stylish, mysterious, dangerous life'. 128k.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://ice1.somafm.com/secretagent-128-mp3", auto_close_execution = false },
-  { name = "🎷 Sonic Universe", description = "256k: left-of-center jazz — avant-garde to euro-jazz. For when the code needs to swing.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://ice1.somafm.com/sonicuniverse-256-mp3", auto_close_execution = false },
   { name = "💀 DEF CON Radio", description = "Music for hacking — dark electro, industrial and synth, curated with the DEF CON crew. 256k.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://ice1.somafm.com/defcon-256-mp3", auto_close_execution = false },
   { name = "🌀 The Trip", description = "Progressive house and trance — the after-hours channel. Keeps momentum without demanding attention. 128k.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://ice1.somafm.com/thetrip-128-mp3", auto_close_execution = false },
-  { name = "🛰  Space Station Soma", description = "Spaced-out ambient and mid-tempo electronica — mission-control calm for long sessions. 128k.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://ice1.somafm.com/spacestation-128-mp3", auto_close_execution = false }
+  { name = "🎷 Sonic Universe", description = "256k: left-of-center jazz — avant-garde to euro-jazz. For when the code needs to swing.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://ice1.somafm.com/sonicuniverse-256-mp3", auto_close_execution = false },
+  { name = "🛸 Drone Zone", description = "256k: beatless ambient soundscapes. Deep-work fuel — nothing to latch onto, everything to float on.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://ice1.somafm.com/dronezone-256-mp3", auto_close_execution = false },
+  { name = "📡 Space Station Soma", description = "Spaced-out ambient and mid-tempo electronica — mission-control calm for long sessions. 128k.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://ice1.somafm.com/spacestation-128-mp3", auto_close_execution = false }
 ]
 
 [[commands]]
-name = "🇨🇭 Radio Swiss"
-description = "Swiss public radio — commercial-free and calmly announced. The jazz & classical corner the rest of the deck leaves open."
+name = "📰 News Radio"
+description = "A collection of live news streams from around the world. These commands use direct audio URLs (MP3/M3U8) paired with mpv. Mostly for demo purposes, some might carry political agends. Tip: You can use the ostt TUI (rust and whisper based, see github) to translate the news live. "
 col = "A"
 row = 1
 items = [
-  { name = "🎷 Jazz", description = "Classic to contemporary jazz around the clock, ad-free. 128k.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' http://stream.srg-ssr.ch/m/rsj/mp3_128", auto_close_execution = false },
-  { name = "🎻 Classic", description = "The classical canon, all day — no lyrics, just calm. Ad-free. 128k.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' http://stream.srg-ssr.ch/m/rsc_de/mp3_128", auto_close_execution = false }
-]
+{ name = "🇫🇷 France Info", description = "France's national public broadcasting news network, delivering continuous 24-hour news.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}      🔊 ${volume}%    ⏱ ${playback-time}' https://icecast.radiofrance.fr/franceinfo-midfi.mp3", auto_close_execution = false },
+{ name = "🇩🇪 Deutschlandfunk", description = "German public broadcasting station focused on news and information.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}      🔊 ${volume}%    ⏱ ${playback-time}' https://st01.sslstream.dlf.de/dlf/01/128/mp3/stream.mp3", auto_close_execution = false },
+{ name = "🇬🇧 BBC World Service", description = "The BBC's international news, current affairs, and documentary channel.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}      🔊 ${volume}%    ⏱ ${playback-time}' http://stream.live.vc.bbcmedia.co.uk/bbc_world_service", auto_close_execution = false },
+{ name = "🇪🇸 RNE 1 (Radio Nacional)", description = "Spain's main public radio station featuring national news, talk, and culture.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}      🔊 ${volume}%    ⏱ ${playback-time}' https://rtvelivestream.rtve.es/rtvesec/rne/rne_r1_main.m3u8", auto_close_execution = false },
+{ name = "🇵🇱 Polskie Radio 24", description = "Poland's 24/7 public news, debate, and information radio station (PR24).", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}      🔊 ${volume}%    ⏱ ${playback-time}' https://stream15.polskieradio.pl/pr24/pr24.sdp/playlist.m3u8", auto_close_execution = false },
+{ name = "🇷🇴 Romania West Radio", description = "Live local broadcast from Timișoara, Romania.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}      🔊 ${volume}%    ⏱ ${playback-time}' https://live.westcityradio.ro:8443/mp3", auto_close_execution = false },
+{ name = "🇸🇪 SR Nyheter", description = "Sveriges Radio's dedicated continuous news and current affairs broadcast (Ekot) from Sweden.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}      🔊 ${volume}%    ⏱ ${playback-time}' https://cdn0-47115-liveicecast0.dna.contentdelivery.net/nyheter_mp3_h", auto_close_execution = false },
+{ name = "🇷🇺 Radio Svoboda", description = "Radio Free Europe's Russian-language 24/7 news broadcast.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}      🔊 ${volume}%    ⏱ ${playback-time}' http://stream.radiojar.com/hcrb063nn3quv", auto_close_execution = false },
+{ name = "🇺🇸 NPR (US)", description = "National Public Radio's main live stream for US news, talk, and culture.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}      🔊 ${volume}%    ⏱ ${playback-time}' https://npr-ice.streamguys1.com/live.mp3", auto_close_execution = false },
+  
+  ]
 
 [[commands]]
-name = "🎚 Curated"
-description = "Hand-picked public and nonprofit stations — all show the live track title, all commercial-free. Pick one; loudnorm keeps them level with the rest."
+name = "🤏 Hand-picked"
+description = "Hand-picked (from AI) public and nonprofit stations — all show the live track title, all commercial-free. Pick one; loudnorm keeps them level with the rest."
 col = "B"
 row = 0
 items = [
-  { name = "🎙 KCRW Eclectic24", description = "LA public radio's 24-hour music stream — eclectic, DJ-curated, no talk, no ads.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://streams.kcrw.com/e24_mp3", auto_close_execution = false },
+  { name = "🎷 Jazz", description = "Radio Swiss : Classic to contemporary jazz around the clock, ad-free. 128k.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' http://stream.srg-ssr.ch/m/rsj/mp3_128", auto_close_execution = false },
+  { name = "🎙️ KCRW Eclectic24", description = "LA public radio's 24-hour music stream — eclectic, DJ-curated, no talk, no ads.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://streams.kcrw.com/e24_mp3", auto_close_execution = false },
+  { name = "🎻 Classic", description = "Radio Swiss: The classical canon, all day — no lyrics, just calm. Ad-free. 128k.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' http://stream.srg-ssr.ch/m/rsc_de/mp3_128", auto_close_execution = false },
   { name = "🎻 Venice Classic", description = "Italian classical around the clock — baroque to romantic, commercial-free and gently announced.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://uk2.streamingpulse.com/ssl/vcr1", auto_close_execution = false },
-  { name = "🌫 dublab", description = "LA nonprofit, freeform and experimental — leftfield music with the occasional talk show. Adventurous.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://dublab.out.airtime.pro/dublab_a", auto_close_execution = false }
+  { name = "🤙 dublab", description = "LA nonprofit, freeform and experimental — leftfield music with the occasional talk show. Adventurous.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://dublab.out.airtime.pro/dublab_a", auto_close_execution = false }
 ]
 
 [[commands]]
@@ -57,15 +67,15 @@ items = [
 ]
 
 [[commands]]
-name = "📻 Your Station"
-description = "Any stream URL — your local station, a friend's icecast, whatever. Paste and play (loudnorm applies here too)."
-command = "read -p 'Stream URL: ' u && mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' \"$u\""
+name = "📻 Find your Stations"
+description = "There are A LOT of radio sations out there... find the ones you like! mpv should handle most of them. FMstream.org"
+command ="drako open https://fmstream.org/"
 col = "C"
 row = 0
 auto_close_execution = false
 
 [[commands]]
-name = "❤ Support the Stations"
+name = "❤  Support the Stations"
 description = "These stations are commercial-free and listener-funded — if the jukebox earns its keep, send them a coffee."
 col = "C"
 row = 1
