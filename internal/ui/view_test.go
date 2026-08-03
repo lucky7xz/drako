@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/core"
 )
@@ -350,5 +351,99 @@ func TestView_LockedMode(t *testing.T) {
 	}
 	if !strings.Contains(output, "Pump") {
 		t.Error("View output missing 'Pump' instruction")
+	}
+}
+
+// The active help line's wrap boundary is derived from the same W used to
+// widen the header-hide threshold; picking a termW inside (W-10, W)
+// exercises wrap without shift. The final render is appStyle.Render(...) of
+// a Place()'d block: Place sizes content to exactly m.termWidth, then
+// appStyle's own outer margin adds appStyle.GetHorizontalMargins() more —
+// that overhead is pre-existing (present at any width, unrelated to this
+// feature), so the bound accounts for it rather than asserting termW exactly.
+func TestView_NarrowTerminalWrapsHelpText(t *testing.T) {
+	helpText := "Grid Mode | Enter: Select, e: Explain, Tab: Path, r: Start-Lock, i: Inventory"
+	W := lipgloss.Width(helpText) + LayoutSideMargin
+	termW := W - 5
+	m := makeScrollTestModel(1, 1, termW, 30)
+	output := m.View()
+
+	maxAllowed := termW + appStyle.GetHorizontalMargins()
+	for _, ln := range strings.Split(output, "\n") {
+		if w := lipgloss.Width(ln); w > maxAllowed {
+			t.Errorf("line exceeds allowed width %d: %q (%d wide)", maxAllowed, ln, w)
+		}
+	}
+	if !strings.Contains(output, "Grid Mode") || !strings.Contains(output, "Inventory") {
+		t.Error("wrapped help text should still contain its content, just split across lines")
+	}
+}
+
+// Below W-10 the block should hug the left edge instead of leaving centered
+// slack: the block's widest line should trail only appStyle's static outer
+// margin, not a variable centering offset. Narrower sibling lines (e.g. the
+// profile counter, centered relative to the grid by an inner JoinVertical)
+// are unaffected by this outer-Place change and may still show their own
+// relative indentation — this checks the widest/dominant line specifically,
+// via the minimum leading whitespace across all non-empty lines.
+func TestView_ShiftLeftHugsLeftEdge(t *testing.T) {
+	helpText := "Grid Mode | Enter: Select, e: Explain, Tab: Path, r: Start-Lock, i: Inventory"
+	W := lipgloss.Width(helpText) + LayoutSideMargin
+	termW := W - 15
+	m := makeScrollTestModel(1, 1, termW, 30)
+	output := m.View()
+
+	minLeading := -1
+	for _, ln := range strings.Split(output, "\n") {
+		stripped := ansi.Strip(ln)
+		trimmed := strings.TrimLeft(stripped, " ")
+		if trimmed == "" {
+			continue
+		}
+		if leading := len(stripped) - len(trimmed); minLeading == -1 || leading < minLeading {
+			minLeading = leading
+		}
+	}
+	if maxStaticMargin := appStyle.GetHorizontalMargins()/2 + 1; minLeading > maxStaticMargin {
+		t.Errorf("expected some line to hug the left edge (leading <= %d, appStyle's static margin), smallest leading was %d", maxStaticMargin, minLeading)
+	}
+}
+
+// The NET/STATUS/THEME line must truncate, not overflow or wrap-split ANSI,
+// when net.traffic carries an unusually long already-colored string.
+func TestView_StatusLineTruncatesNotOverflows(t *testing.T) {
+	m := makeScrollTestModel(1, 1, 40, 30)
+	m.net.traffic = lipgloss.NewStyle().Foreground(lipgloss.Color("2")).
+		Render("↓ 999999.9kb/s ↑ 999999.9kb/s way too long for 40 cols")
+	m.net.online = "online (active)"
+	output := m.View()
+
+	// Scoped to the NET/STATUS/THEME line's own content specifically —
+	// renderCombinedFooter truncates that one. Its rendered line gets
+	// right-padded with trailing spaces to match the footer block's widest
+	// sibling line (lipgloss.JoinVertical rectangularizes the block), so
+	// trailing spaces are trimmed before measuring; profileBar/pathBar/
+	// childDirs are separate, pre-existing, out-of-scope elements that may
+	// be wider and drive that padding independently of this truncation.
+	availWidth := m.termWidth - LayoutSideMargin
+	found := false
+	for _, ln := range strings.Split(output, "\n") {
+		if !strings.Contains(ln, "NET:") {
+			continue
+		}
+		found = true
+		// TrimSpace on both sides: trailing space is JoinVertical's block
+		// padding, leading space is the outer static margin / left-hug
+		// positioning — neither is part of the truncated content itself.
+		content := strings.TrimSpace(ansi.Strip(ln))
+		if w := lipgloss.Width(content); w > availWidth {
+			t.Errorf("status line content exceeds available width %d: %q (%d wide)", availWidth, content, w)
+		}
+		if !strings.HasSuffix(content, "...") {
+			t.Errorf("expected truncated status line to end in '...', got: %q", content)
+		}
+	}
+	if !found {
+		t.Fatal("expected a NET: status line in the output")
 	}
 }

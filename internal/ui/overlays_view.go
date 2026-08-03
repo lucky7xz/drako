@@ -64,24 +64,31 @@ func padLinesToWidth(raw []string, bgFill lipgloss.Style) []string {
 
 func (m Model) viewDropdownMode() string {
 	// Render the base grid view
-	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config)
+	helpText := "Dropdown Mode | ↑/↓/ws: Select, Enter: Execute, Esc/q: Cancel"
+	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config, m.styles.HeaderArt, helpText)
 	header := ""
 	if layout.ShowHeader {
 		header = m.styles.renderHeaderArt(m.spinner.View())
 	}
-	helpText := "Dropdown Mode | ↑/↓/ws: Select, Enter: Execute, Esc/q: Cancel"
-	help := m.styles.Help.Render(helpText)
 
 	var footer string
 	if layout.ShowFooter {
-		footer = m.renderCombinedFooter(help)
+		footer = m.renderCombinedFooter(helpText)
 	}
 
+	hAlign := lipgloss.Center
+	if layout.ShiftLeft {
+		hAlign = lipgloss.Left
+	}
+
+	// hAlign governs these inner joins too, not just the outer Place()
+	// below — otherwise the grid would stay centered relative to a wider
+	// wrapped footer even while the block as a whole shifts left.
 	grid := m.renderGrid(gridRowBudget(m.termHeight, header, footer))
-	mainContent := lipgloss.JoinVertical(lipgloss.Center, header, grid)
+	mainContent := lipgloss.JoinVertical(hAlign, header, grid)
 
 	finalContent := lipgloss.JoinVertical(
-		lipgloss.Center,
+		hAlign,
 		mainContent,
 		footer,
 	)
@@ -89,7 +96,9 @@ func (m Model) viewDropdownMode() string {
 	// Render dropdown popup
 	dropdownPopup := m.renderDropdownPopup()
 
-	// Place the dropdown in the center of the screen
+	// Place the dropdown in the center of the screen — it's a small floating
+	// overlay, not part of the header/grid/footer width cascade, so it stays
+	// centered regardless of layout.ShiftLeft.
 	popupOverlay := lipgloss.Place(m.termWidth, m.termHeight,
 		lipgloss.Center, lipgloss.Center,
 		dropdownPopup,
@@ -97,7 +106,7 @@ func (m Model) viewDropdownMode() string {
 
 	return appStyle.Render(
 		lipgloss.Place(m.termWidth, m.termHeight,
-			lipgloss.Center, lipgloss.Center,
+			hAlign, lipgloss.Center,
 			finalContent+"\n"+popupOverlay,
 		),
 	)
@@ -219,7 +228,10 @@ func (m Model) viewLockedMode() string {
 }
 
 func (m Model) viewInfoMode() string {
-	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config)
+	// No footer/help line is rendered in this view, so helpText is "" —
+	// ShiftLeft is structurally always false here (see CalculateLayout),
+	// and this view's own Place call stays unconditionally centered.
+	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config, m.styles.HeaderArt, "")
 	header := ""
 	if layout.ShowHeader {
 		header = m.styles.renderHeaderArt(m.spinner.View())

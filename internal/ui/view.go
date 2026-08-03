@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
@@ -33,17 +34,6 @@ func (m Model) View() string {
 		return m.viewInfoMode()
 	}
 
-	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config)
-
-	header := ""
-	if layout.ShowHeader {
-		header = m.styles.renderHeaderArt(m.spinner.View())
-	}
-	counter := m.renderProfileCounter()
-	if m.mode == batchMode {
-		counter = m.renderBatchCounter()
-	}
-
 	var helpText string
 	switch m.mode {
 	case pathMode:
@@ -55,36 +45,77 @@ func (m Model) View() string {
 	default:
 		helpText = "Grid Mode | Enter: Select, e: Explain, Tab: Path, r: Start-Lock, i: Inventory"
 	}
-	help := m.styles.Help.Render(helpText)
 
-	footer := m.renderCombinedFooter(help)
+	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config, m.styles.HeaderArt, helpText)
+
+	header := ""
+	if layout.ShowHeader {
+		header = m.styles.renderHeaderArt(m.spinner.View())
+	}
+	counter := m.renderProfileCounter()
+	if m.mode == batchMode {
+		counter = m.renderBatchCounter()
+	}
+
+	footer := m.renderCombinedFooter(helpText)
 
 	// Respect layout.ShowFooter
 	if !layout.ShowFooter {
 		footer = ""
 	}
 
-	// The grid gets whatever vertical space the chrome leaves over.
+	hAlign := lipgloss.Center
+	if layout.ShiftLeft {
+		hAlign = lipgloss.Left
+	}
+
+	// The grid gets whatever vertical space the chrome leaves over. hAlign
+	// governs these inner joins too, not just the outer Place() below:
+	// otherwise the grid (narrower than the wrapped footer text) would stay
+	// centered relative to its siblings even while the block as a whole
+	// shifts left, undercutting the actual goal of moving the cells left.
 	grid := m.renderGrid(gridRowBudget(m.termHeight, header, counter, footer))
-	mainContent := lipgloss.JoinVertical(lipgloss.Center, header, counter, grid)
+	mainContent := lipgloss.JoinVertical(hAlign, header, counter, grid)
 
 	finalContent := lipgloss.JoinVertical(
-		lipgloss.Center,
+		hAlign,
 		mainContent,
 		footer,
 	)
 
 	return appStyle.Render(
 		lipgloss.Place(m.termWidth, m.termHeight,
-			lipgloss.Center, lipgloss.Center,
+			hAlign, lipgloss.Center,
 			finalContent,
 		),
 	)
 }
 
-// renderCombinedFooter creates the standard bottom block: Help | Status | Profile | Path
-// Pass empty help string to skip help (e.g. if help is rendered differently)
-func (m Model) renderCombinedFooter(helpRendered string) string {
+// renderCombinedFooter creates the standard bottom block: Help | Status | Profile | Path.
+// helpText is the raw (unstyled) active-mode help line; pass "" to skip it.
+// It is word-wrapped (WrapText) before styling, one Render() call per
+// wrapped line, so it degrades to multiple lines on narrow terminals
+// instead of overflowing — wrapping before styling matters here, since a
+// single Render() over the whole line carries one ANSI start/reset pair
+// that a post-hoc wrap could split across lines. The NET/STATUS/THEME line
+// is NOT wrapped: m.net.traffic/m.net.online already carry ANSI color
+// codes and can contain internal spaces (e.g. "↓ 1.2kb/s ↑ 3.4kb/s"), so
+// word-wrapping that joined line risks splitting an ANSI start/reset pair
+// across lines and bleeding color into unrelated text — it's truncated
+// instead.
+func (m Model) renderCombinedFooter(helpText string) string {
+	availWidth := m.termWidth - LayoutSideMargin
+
+	var help string
+	if helpText != "" {
+		lines := WrapText(helpText, availWidth)
+		styledLines := make([]string, len(lines))
+		for i, line := range lines {
+			styledLines[i] = m.styles.Help.Render(line)
+		}
+		help = strings.Join(styledLines, "\n")
+	}
+
 	netLabel := lipgloss.NewStyle().Render("NET: ")
 	netText := netLabel + m.net.traffic
 	statusText := fmt.Sprintf("STATUS: %s", m.net.online)
@@ -92,23 +123,16 @@ func (m Model) renderCombinedFooter(helpRendered string) string {
 	themeName := m.styles.ThemeName.Render(m.Config.Theme)
 	separator := m.styles.Help.Render(" | ")
 
-	networkStatusBar := lipgloss.NewStyle().PaddingTop(1).Render(
-		lipgloss.JoinHorizontal(lipgloss.Left,
-			netText,
-			separator,
-			statusText,
-			separator,
-			themeText,
-			themeName,
-		),
-	)
+	statusLine := netText + separator + statusText + separator + themeText + themeName
+	networkStatusBar := lipgloss.NewStyle().PaddingTop(1).Render(truncateText(statusLine, availWidth))
+
 	profileBar := m.renderProfileBar()
 	pathBar := m.path.RenderPathBar(m.mode == pathMode, m.styles)
 	childDirs := m.path.RenderChildDirs(m.mode, m.styles)
 
 	items := []string{}
-	if helpRendered != "" {
-		items = append(items, helpRendered)
+	if help != "" {
+		items = append(items, help)
 	}
 	items = append(items, networkStatusBar, profileBar, pathBar, childDirs)
 
