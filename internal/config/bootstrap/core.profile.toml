@@ -261,7 +261,77 @@ items = [
     { name = "📜 Open Logs (Debug)", description = "The trail of what happened. Events, errors, state changes recorded. Read the logs when things break or when you want to see the machinery.", command = { linux_generic = "${EDITOR:-nano} ~/.config/drako/drako.log", macos = "${EDITOR:-nano} \"$HOME/Library/Application Support/drako/drako.log\"", windows = "drako open \"$env:APPDATA\\drako\\drako.log\"" } },
 
     #===========================================================================================================
-    { name = "Reload Shell", description = "NOTE: Won't affect your current shell (child process limitation). Use this to copy the command: press 'y', then paste it into your terminal to actually reload.", command = { linux_generic = "source ~/.bashrc", macos = "source ~/.zshrc", windows = ". $PROFILE" }, auto_close_execution = false },
+    { name = "🚨 Sudo Switch", description = "Some machines have no sudo and need none: containers and WSL where you are already root, Termux where $PREFIX is yours. This strips sudo from every deck in your config folder so those cells still run. It backs up what it touches first, and restoring a backup puts everything back exactly. It only touches a sudo that starts a command — never the word inside a description.", command = { linux_generic = '''
+CFG="${XDG_CONFIG_HOME:-$HOME/.config}/drako"
+# A sudo only counts when it starts a command: at the start of a line, after a
+# quote or a separator, or after if/elif/then/else. The keyword branch demands
+# a non-letter in front, so the "do" inside "sudo" can never anchor a match.
+# Requiring a letter after it skips flag forms like "sudo -e", which cannot be
+# stripped into anything meaningful.
+A='(^ *|[";|&(] *|(^ *|[^a-zA-Z])(then|else|elif|if) +)'
+
+sedi() { if sed --version >/dev/null 2>&1; then sed -i "$@"; else sed -i '' "$@"; fi; }
+decks() { find "$CFG" -name '*.toml' ! -path "$CFG/sudo-backup-*" | sort; }
+hits() { grep -oE "${A}sudo [a-zA-Z]" "$1" 2>/dev/null | wc -l | tr -d ' '; }
+
+echo "🚨 Sudo Switch — $CFG"
+echo
+decks | while IFS= read -r f; do
+    n=$(hits "$f")
+    [ "$n" -gt 0 ] && printf '  %-38s %s\n' "${f#$CFG/}" "$n"
+done
+total=$(decks | while IFS= read -r f; do hits "$f"; done | awk '{s+=$1} END{print s+0}')
+kept=$(ls -d "$CFG"/sudo-backup-* 2>/dev/null | wc -l | tr -d ' ')
+echo
+echo "  $total commands start with sudo. Backups on disk: $kept"
+echo
+echo "  Left alone: the word sudo inside descriptions, and flag forms"
+echo "  like 'sudo -e', which strip into nothing meaningful."
+echo
+echo "  1) OFF — remove sudo (root, containers, Termux)"
+echo "  2) restore from a backup"
+echo "  3) cancel"
+printf "  Choice: "
+read choice
+
+case "$choice" in
+1)
+    [ "$total" -eq 0 ] && { echo "Nothing to remove."; exit 0; }
+    BK="$CFG/sudo-backup-$(date +%Y%m%d-%H%M%S)"
+    if ! decks | while IFS= read -r f; do
+        [ "$(hits "$f")" -gt 0 ] || continue
+        rel="${f#$CFG/}"
+        mkdir -p "$BK/$(dirname "$rel")" || exit 1
+        cp "$f" "$BK/$rel" || exit 1
+    done; then
+        echo "❌ Backup failed. Nothing was changed."
+        exit 1
+    fi
+    echo "📦 Backup: ${BK##*/}"
+    decks | while IFS= read -r f; do
+        sedi -E "s/${A}sudo ([a-zA-Z])/\1\4/g" "$f"
+    done
+    echo "✅ sudo removed from $total commands."
+    ;;
+2)
+    i=0
+    ls -d "$CFG"/sudo-backup-* 2>/dev/null | sort -r | while IFS= read -r d; do
+        i=$((i + 1)); echo "  $i) ${d##*/}"
+    done
+    n=$(ls -d "$CFG"/sudo-backup-* 2>/dev/null | wc -l | tr -d ' ')
+    [ "$n" -eq 0 ] && { echo "No backups found."; exit 0; }
+    printf "  Restore which? "
+    read pick
+    case "$pick" in ''|*[!0-9]*) echo "Cancelled."; exit 0 ;; esac
+    sel=$(ls -d "$CFG"/sudo-backup-* 2>/dev/null | sort -r | sed -n "${pick}p")
+    [ -z "$sel" ] && { echo "No such backup."; exit 0; }
+    cp -R "$sel/." "$CFG/" && echo "✅ Restored ${sel##*/}"
+    ;;
+*)
+    echo "Cancelled."
+    ;;
+esac
+''', macos = "echo 'Not applicable on macOS: sudo is always here, and the deck macOS variants use brew, which must never run under sudo.'", windows = "Write-Host 'Not applicable on Windows: the deck windows variants use winget and never call sudo.'" }, auto_close_execution = false },
     { name = "Add go/bin to PATH (<-- Very Recommended)", description = "Adds ~/go/bin to your PATH so Go binaries run from anywhere. Makes the tools globally accessible.", command = { linux_generic = '''
 echo 'export PATH=$PATH:~/go/bin' >> ~/.bashrc
 echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc

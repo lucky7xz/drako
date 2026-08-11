@@ -18,9 +18,7 @@ func TestEmbeddedCoreDeckResolvesEverywhere(t *testing.T) {
 	}
 
 	// Deliberately empty on some platforms — not a coverage gap.
-	knownEmpty := map[string]bool{
-		"windows/Reload Shell": true,
-	}
+	knownEmpty := map[string]bool{}
 
 	targets := []string{
 		"linux_debian", "linux_arch", "linux_fedora", "linux_void",
