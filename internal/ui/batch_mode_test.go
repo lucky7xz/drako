@@ -125,6 +125,21 @@ func TestBatchEscCancelsAndClears(t *testing.T) {
 	}
 }
 
+// q cancels like esc — the footer advertises both, and q is the cancel key
+// everywhere else in the TUI.
+func TestBatchQCancelsAndClears(t *testing.T) {
+	m := batchTestModel()
+	m.batch.marked["one"] = true
+
+	m, _ = pressBatch(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
+	if m.mode != gridMode {
+		t.Fatalf("q must return to grid mode, got %v", m.mode)
+	}
+	if len(m.batch.marked) != 0 {
+		t.Error("cancel must clear the marks")
+	}
+}
+
 func TestBatchNavigationStillMoves(t *testing.T) {
 	m := batchTestModel()
 

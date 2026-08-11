@@ -126,7 +126,7 @@ func (m Model) updateBatchMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	switch {
-	case key == "esc":
+	case IsCancel(m.Config.Keys, msg):
 		m.batch = batchState{}
 		m.mode = gridMode
 		return m, nil

@@ -18,7 +18,7 @@ func (m Model) renderBatchCounter() string {
 
 // batchHelpText is the batch-mode footer line.
 func (m Model) batchHelpText() string {
-	return fmt.Sprintf("Batch | Space: Mark, Enter: Launch %d, Esc: Cancel", len(m.batch.marked))
+	return fmt.Sprintf("Batch | Space: Mark, Enter: Launch %d, Esc/q: Cancel", len(m.batch.marked))
 }
 
 // itemMarkPrefix is batchCellPrefix's dropdown twin: mark glyphs for the
