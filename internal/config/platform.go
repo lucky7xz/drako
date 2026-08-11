@@ -33,6 +33,14 @@ func detectRuntimeTarget() string {
 }
 
 func detectLinuxDistro() string {
+	// Termux (Android) ships no /etc/os-release and no sudo — $PREFIX belongs
+	// to the app's own uid, so package commands need no privilege at all.
+	// Checked first: a proot distro inside Termux sets neither var and keeps
+	// matching its real distro below, which is what it wants.
+	if os.Getenv("TERMUX_VERSION") != "" || strings.Contains(os.Getenv("PREFIX"), "com.termux") {
+		return "linux_termux"
+	}
+
 	data, err := os.ReadFile("/etc/os-release")
 	if err != nil {
 		return "linux_generic"

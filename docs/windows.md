@@ -55,7 +55,7 @@ winget packages that don't exist.
 "powershell"` and uses it as the Windows fallback (`pwsh` remains available as an
 explicit setting); all core-profile windows variants were rewritten to PowerShell
 5.1-safe syntax with real winget IDs (`junegunn.fzf`, `aristocratos.btop4win`,
-`muesli.duf`, `Fastfetch-cli.Fastfetch`, `zyedidia.micro`); the post-command screen
+`muesli.duf`, `Fastfetch-cli.Fastfetch`, `zyedidia.micro`, `shinchiro.mpv`); the post-command screen
 clear uses `cls` on Windows.
 
 **Known gaps:**
