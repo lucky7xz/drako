@@ -94,6 +94,29 @@ func TestBrokenQueueAckWalksToRescue(t *testing.T) {
 	}
 }
 
+// Exiting rescue mode reloads the config; with a broken config.toml the
+// bundle still reports that error, but it was acknowledged on the way in. A
+// drain that shows nothing must keep the config the caller just applied
+// instead of bouncing straight back into rescue.
+func TestBrokenQueueAllAcknowledgedKeepsReloadedConfig(t *testing.T) {
+	m := queueModel(brokenErr("alpha"))
+	m.profile.acknowledged["/tmp/alpha.profile.toml"] = true
+
+	reloaded := config.Config{X: 1, Y: 1}
+	reloaded.ApplyDefaults()
+	reloaded.Commands = []config.Command{{Name: "my cell", Command: "true", Row: 0, Col: "a"}}
+	m.applyConfig(reloaded)
+
+	m = m.presentNextBrokenProfile()
+
+	if len(m.Config.Commands) != 1 || m.Config.Commands[0].Name != "my cell" {
+		t.Fatalf("nothing was shown, so the reloaded config must survive; got %+v", m.Config.Commands)
+	}
+	if m.profile.errorQueueActive {
+		t.Error("queue must deactivate once exhausted")
+	}
+}
+
 func TestApplyBundleAdoptsBundleState(t *testing.T) {
 	base := config.Config{X: 1, Y: 1}
 	base.ApplyDefaults()

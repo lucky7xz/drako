@@ -170,10 +170,12 @@ func (m *Model) applyBundle(bundle config.ConfigBundle) {
 // presentNextBrokenProfile pops the next pending broken profile error and configures infoMode to display it.
 func (m Model) presentNextBrokenProfile() Model {
 	// Filter out already acknowledged errors
+	staleOnly := 0
 	for len(m.profile.pendingErrors) > 0 {
 		e := m.profile.pendingErrors[0]
 		if m.profile.acknowledged[e.Path] { // Track by Path to be specific
 			m.profile.pendingErrors = m.profile.pendingErrors[1:]
+			staleOnly++
 			continue
 		}
 		break
@@ -181,7 +183,13 @@ func (m Model) presentNextBrokenProfile() Model {
 
 	if len(m.profile.pendingErrors) == 0 {
 		// Queue exhausted.
-		if m.profile.errorQueueActive {
+		// staleOnly counts errors dropped because the user has already seen
+		// them: a queue made only of those showed nothing, so there is nothing
+		// to drop into rescue *from*. That is the Exit Rescue Mode path — the
+		// reload still reports the broken config.toml it was acknowledged for,
+		// and re-entering here would discard the config the caller just applied
+		// and trap the user in rescue.
+		if m.profile.errorQueueActive && staleOnly == 0 {
 			// Trigger Rescue Mode if we just finished processing a queue
 			rescueCfg := config.RescueConfig()
 			rescueCfg.ApplyDefaults()
