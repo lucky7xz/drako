@@ -1,10 +1,10 @@
 # drako
 
-[![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/lucky7xz/drako?color=007D9C&label=version)](https://github.com/lucky7xz/drako/tags)
+[![GitHub tag (latest by 			date)](https://img.shields.io/github/v/tag/lucky7xz/drako?color=007D9C&label=version)](https://github.com/lucky7xz/drako/tags)
 [![License](https://img.shields.io/github/license/lucky7xz/drako?color=orange)](https://github.com/lucky7xz/drako/blob/main/LICENCE)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/lucky7xz/drako?color=00ADD8&logo=go&logoColor=white)](https://go.dev/)
 
-`drako` represents an entirely new species of terminal tools: the customizable **Command-Deck Launcher**. It is not a menu, nor a shell history. It is a brutalist **architectural framework for any CLI-based workflow**, solidifying your scattered commands, TUIs, and scripts into a cohesive control surface. As such, CLI-driven workflows become remarkably easy to document, distribute, teach, and scale across a team.
+`drako` represents a new species of terminal tool: the customizable spatial **Command-Deck Launcher**. It is not a menu or a shell history. It is a **brutalist framework for any CLI-based workflow**. Solidify scattered commands, TUIs, and scripts into cohesive control surfaces that grow with you. Built on open industry standards — `Go`, `Bash`, `TOML`, and `Git` — it offers wide portability, accessibility, and simple asset distribution. The result: CLI-driven workflows become remarkably easy to document, distribute, teach, and scale across a team.
 
 https://github.com/user-attachments/assets/21fb2340-bc74-4886-a629-8e95d116e830
 
@@ -360,7 +360,7 @@ drako is a single static Go binary with no runtime dependencies. Direct build de
 
 ## 🤖 AI disclosure
 
-drako is developed with heavy AI assistance — code, research, and docs. The codebase is deliberately kept small and modular so it can be audited end to end by one person. Judge the code, not the typing method.
+drako is developed with heavy AI assistance — code, research, and docs. The codebase is deliberately kept small and modular so it can be audited end to end by one person. Judge the code, not the method. If it can be audited, it can be corrected.
 
 ## 📜 License
 

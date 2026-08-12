@@ -10,6 +10,21 @@
 X = 3
 Y = 2
 
+header_art= """
+              ▓▓░
+              ██░            ██░
+    ▓▓░       ▓▓░            ▓▓░
+    ██░██░ ██░██░ ██░███████░███████░███████░██░ ██░
+    ▓▓░▓▓░ ▓▓░▓▓▓▓▓░░▓▓░░░▓▓░▓▓░░░▓▓░▓▓░░░▓▓░░▓▓▓▓░░
+    ██░██░ ██░██░██░ ██░    ░██░  ██░██░  ██░ ████░
+    ▓▓░▓▓▓▓▓▓░▓▓░░▓▓░▓▓▓▓▓▓▓░▓▓▓▓▓▓▓░▓▓▓▓▓▓▓░▓▓░░▓▓░
+██░ ██░░░░░░░░░░░ ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ ░░░
+▓▓▓▓▓▓░
+░░░░░░░
+"""
+
+
+
 [[commands]]
 name = "💊 SomaFM"
 description = "SomaFM's channels — commercial-free, listener-funded, streamed at the best MP3 bitrate each channel offers. Pick one; loudnorm keeps them level."
