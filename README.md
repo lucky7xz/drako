@@ -70,6 +70,15 @@ GOPROXY=direct go install github.com/lucky7xz/drako@latest
 ```
 
 > [!NOTE]
+> **Termux (Android):** you may need:
+
+```bash
+CGO_ENABLED=0 go install github.com/lucky7xz/drako@latest
+```
+
+The pure-Go build avoids a C toolchain, which Termux doesn't ship by default. Because Termux has no `sudo`, run the **🚨 Sudo Switch** (in the Core profile's **Settings** cell) once after first launch. A physical keyboard is recommended but not required.
+
+> [!NOTE]
 > **Emoji Support:** drako profiles sometimes use emojis as visual indicators. Modern terminals (Ghostty, WezTerm etc.) may support them by default. Others (older Linux terminals) may require a [Nerd Font](https://www.nerdfonts.com/) or an emoji font package (e.g., `fonts-noto-color-emoji`).
 
 ## 🎴 Decks
