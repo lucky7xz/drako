@@ -44,6 +44,10 @@ type DetailState struct {
 	Value       string // The main content (command string or error message)
 	Description string
 	Meta        []DetailMeta // Extra fields like "CWD", "Exec Mode"
+
+	// ScrollOffset is the first visible script line when the Value overflows
+	// the explain viewport. Zero on every fresh detail, so no reset is needed.
+	ScrollOffset int
 }
 
 // DetailMeta represents a single key-value pair in the detail view metadata section.

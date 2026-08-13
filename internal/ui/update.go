@@ -368,6 +368,18 @@ func (m Model) updateInfoMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(cmds...)
 	}
 	switch key {
+	case "pgup":
+		if m.activeDetail != nil {
+			_, viewportH, _ := m.infoScrollMetrics()
+			m.activeDetail.ScrollOffset = max(0, m.activeDetail.ScrollOffset-(viewportH-1))
+		}
+		return m, nil
+	case "pgdown":
+		if m.activeDetail != nil {
+			_, viewportH, maxOffset := m.infoScrollMetrics()
+			m.activeDetail.ScrollOffset = min(maxOffset, m.activeDetail.ScrollOffset+(viewportH-1))
+		}
+		return m, nil
 	case "y":
 		if !m.allowCopy() {
 			return m, nil
