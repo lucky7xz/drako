@@ -58,7 +58,7 @@ fi
 """, macos = "brew cleanup", windows = "echo 'Windows handles cleanup automatically'" }, auto_close_execution = false },
     { name = "Virus Scan (Home)", description = "Updates threat signatures and prowls through your home directory. Hunting for what doesn't belong.", command = { linux_generic = """
 # Check if ClamAV is installed first
-if ! command -v freshclam &> /dev/null || ! command -v clamscan &> /dev/null; then
+if ! command -v freshclam >/dev/null 2>&1 || ! command -v clamscan >/dev/null 2>&1; then
     echo "❌ Error: ClamAV is not installed. Run the install command from Cell [C-0] first."
     sleep 1
     exit 1
@@ -90,13 +90,13 @@ echo "✅ Scan complete."
 name = "👀 Process Monitor"
 description = "Everything running right now, laid bare. Watch processes pulse, memory flow, CPU cycles burn. The system breathing beneath the surface. See what's moving in real-time."
 command = { linux_generic = """
-btop 2>/dev/null || {
-    echo "btop not available. Defaulting to top..."
+btop 2>/dev/null || htop 2>/dev/null || {
+    echo "btop/htop not available. Defaulting to top..."
     top
 }
 """, macos = """
-btop 2>/dev/null || {
-    echo "btop not available. Defaulting to top..."
+btop 2>/dev/null || htop 2>/dev/null || {
+    echo "btop/htop not available. Defaulting to top..."
     top -o cpu
 }
 """, windows = "taskmgr" }
@@ -175,7 +175,7 @@ row = 2
 items = [
     { name = "System Info", description = "The bones of your machine. Distro, kernel version, uptime, hardware beneath the surface. See what you're running on.", command = { linux_generic = """
 fastfetch 2>/dev/null || neofetch 2>/dev/null || {
-    if command -v lshw &> /dev/null; then
+    if command -v lshw >/dev/null 2>&1; then
         echo "fastfetch/neofetch not found. Using lshw..."
         lshw -short
     else
@@ -203,13 +203,68 @@ col = "C"
 row = 0
 description = "Bundled up all the little tools that this menu uses, just in case you don't have them. It's like getting all the batteries and accessories included for once. This makes sure all the other buttons here will work as expected. I like to be prepared, you know? "
 items = [
-    { name = "Install common tools", description = "The core utilities—btop, neofetch, clamav, fzf, bmon, duf—plus tmux (batch launch needs it) and mpv (the jukebox deck runs on it). Tools that keep the machinery visible and responsive.", command = { linux_debian = "sudo apt install btop bmon neofetch clamav fzf duf tmux mpv", linux_arch = "sudo pacman -S btop bmon fastfetch clamav fzf duf tmux mpv", linux_fedora = "sudo dnf install btop bmon neofetch clamav fzf duf tmux mpv", linux_suse = "sudo zypper install btop bmon fastfetch clamav fzf duf tmux mpv", linux_void = "sudo xbps-install -S btop bmon fastfetch clamav fzf duf tmux mpv", linux_termux = "pkg install btop bmon fastfetch clamav fzf duf tmux mpv", linux_generic = """
-if command -v apt >/dev/null; then sudo apt install btop bmon neofetch clamav fzf duf tmux mpv
-elif command -v dnf >/dev/null; then sudo dnf install btop bmon neofetch clamav fzf duf tmux mpv
-elif command -v pacman >/dev/null; then sudo pacman -S btop bmon fastfetch clamav fzf duf tmux mpv
-elif command -v xbps-install >/dev/null; then sudo xbps-install -S btop bmon fastfetch clamav fzf duf tmux mpv
-else echo "❓ No known package manager found — install btop bmon neofetch clamav fzf duf tmux mpv with your distro's own tool."
+    { name = "Install common tools", description = "The core utilities—btop, fastfetch, clamav, fzf, bmon, duf—plus tmux (batch launch needs it) and mpv (the jukebox deck runs on it). Tools that keep the machinery visible and responsive.", command = { linux_generic = """
+# Install the tools this deck relies on. Best-effort: a package that's
+# missing on your distro is skipped, not fatal. Each tool is marked, and a
+# summary lists what's ready vs still missing.
+
+# 1) Pick an installer. sudo is the FIRST word of PM so the Sudo Switch
+#    (Settings) can strip it on root / container / Termux machines.
+if command -v apt-get >/dev/null 2>&1; then
+    PM="sudo apt-get install -y"
+    echo "Refreshing package lists..."
+    sudo apt-get update
+elif command -v dnf >/dev/null 2>&1; then
+    PM="sudo dnf install -y"
+elif command -v pacman >/dev/null 2>&1; then
+    PM="sudo pacman -S --needed --noconfirm"
+elif command -v zypper >/dev/null 2>&1; then
+    PM="sudo zypper --non-interactive install"
+elif command -v xbps-install >/dev/null 2>&1; then
+    PM="sudo xbps-install -Sy"
+elif command -v apk >/dev/null 2>&1; then
+    PM="sudo apk add"
+elif command -v pkg >/dev/null 2>&1; then
+    PM="pkg install -y"          # Termux: no sudo there
+else
+    echo "❓ No known package manager. Install by hand:"
+    echo "   btop bmon fastfetch clamav fzf duf tmux mpv"
+    exit 1
 fi
+
+# Announce it (drop the leading "sudo ", keep the manager's own name).
+mgr=${PM#sudo }
+echo "Detected package manager: ${mgr%% *}"
+echo
+
+# 2) Install one tool, trying alternative names until one works.
+#    ">>> name" before each attempt; "✓ name" / "✗ name" after.
+installed=""
+skipped=""
+try() {
+    for name in "$@"; do
+        echo ">>> $name"
+        if $PM "$name"; then
+            echo "  ✓ $name"
+            installed="$installed $name"
+            return 0
+        fi
+    done
+    echo "  ✗ $1"
+    skipped="$skipped $1"
+}
+
+# 3) The tools. fastfetch is the modern system-info tool; neofetch is the
+#    older fallback when fastfetch isn't packaged.
+for tool in btop bmon clamav fzf duf tmux mpv; do
+    try "$tool"
+done
+try fastfetch neofetch
+
+# 4) Summary — printed only when there's something to say.
+echo
+[ -n "$installed" ] && echo "✅ Ready:$installed"
+[ -n "$skipped" ]   && echo "❗ Missing:$skipped"
 """, macos = "brew install btop bmon fastfetch fzf duf tmux mpv", windows = "winget install -e --id junegunn.fzf; winget install -e --id aristocratos.btop4win; winget install -e --id muesli.duf; winget install -e --id Fastfetch-cli.Fastfetch; winget install -e --id shinchiro.mpv" }, auto_close_execution = false },
     { name = "Install micro", description = "Installs micro, a modern terminal text editor. Clean interface, easy to use. Set it as your default EDITOR via Settings if you want.", command = { linux_debian = "sudo apt install micro", linux_arch = "sudo pacman -S micro", linux_fedora = "sudo dnf install micro", linux_suse = "sudo zypper install micro", linux_void = "sudo xbps-install -S micro", linux_termux = "pkg install micro", linux_generic = """
 if command -v apt >/dev/null; then sudo apt install micro
