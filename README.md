@@ -83,7 +83,14 @@ The pure-Go build avoids a C toolchain, which Termux doesn't ship by default. Be
 
 ## 🎴 Decks
 
-The default install is intentionally minimal. Summon curated command decks straight from the **Install Tools** menu in the Core profile, or from the CLI:
+drako ships with **four decks to get you started**:
+
+-   **Core** — the agnostic control panel: system updates, maintenance, monitors, the **Install Tools** menu, and settings.
+-   **ssh-101** — run and secure SSH: the service, firewall, config & logs, and connecting.
+-   **tmux-101** — tmux fundamentals (sessions, panes, copy mode) — the engine [batch launch](#-navigation) runs on.
+-   **jukebox** — a terminal radio: SomaFM, world news, curated stations, and offline noise (via mpv).
+
+Core is equipped on first launch; the other three wait in your **Inventory** (`i`) — equip them when you want them. Beyond these, summon curated decks from the **Install Tools** menu in the Core profile, or from the CLI:
 
 -   [**101 Series**](https://github.com/lucky7xz/101-deck) — starter commands for learning the grid: `drako summon https://github.com/lucky7xz/101-deck.git`
 -   [**GGML**](https://github.com/lucky7xz/ggml-deck) — llama.cpp / local-LLM workflow: `drako summon https://github.com/lucky7xz/ggml-deck.git`
