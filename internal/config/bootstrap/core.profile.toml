@@ -64,19 +64,19 @@ if ! command -v freshclam &> /dev/null || ! command -v clamscan &> /dev/null; th
     exit 1
 fi
 
-echo "🛡️  Initiating Security Protocol..."
+echo "🦠 Initiating Security Protocol..."
 echo "-----------------------------------"
 
 # Step 1: Update
 echo "📦 [1/2] Updating Virus Definitions..."
-sudo freshclam || echo "⚠️  Update had warnings, proceeding to scan anyway..."
+sudo freshclam || echo "❗ Update had warnings, proceeding to scan anyway..."
 
 # Step 2: Scan
 echo "-----------------------------------"
 echo "🔍 [2/2] Scanning $HOME recursively..."
-echo "ℹ️  NOTE: The scanner is in 'Infected-Only' mode."
-echo "ℹ️  NOTE: In this mode, silence is GOOD. You will only see output if a threat is detected."
-echo "⏳  Scanning now (this may take several minutes)..."
+echo "📝 NOTE: The scanner is in 'Infected-Only' mode."
+echo "📝 NOTE: In this mode, silence is GOOD. You will only see output if a threat is detected."
+echo "⏳ Scanning now (this may take several minutes)..."
 
 # Run scan
 clamscan -r --bell -i "$HOME"

@@ -395,6 +395,17 @@ func (m Model) viewInfoMode() string {
 	}
 	tail = append(tail, m.styles.Help.Render(helpText))
 
+	// Only real command values get shell highlighting; error/profile overlays
+	// (KeyLabel "Error"/"Profile") keep plain rendering so paths and TOML errors
+	// aren't mis-colored as shell. Both forms keep valueStyle's Padding(0,1) width.
+	highlight := m.activeDetail.KeyLabel == "Command"
+	renderVal := func(ln string) string {
+		if highlight {
+			return highlightShell(ln, bg)
+		}
+		return valueStyle.Render(ln)
+	}
+
 	// value/script block: windowed with a scrollbar when it overflows.
 	var valueRows []string
 	if hasValue && scrollable {
@@ -421,18 +432,23 @@ func (m Model) viewInfoMode() string {
 			}
 		}
 
-		bars := scrollbarColumn(len(valueLines), offset, viewportH, valueStyle.Bold(true), labelStyle)
+		// Bar cells must be padding-free (valueStyle carries Item's Padding(0,1),
+		// which would widen thumb rows and stagger the column). bgFill sets only
+		// the background.
+		thumbStyle := bgFill.Bold(true)
+		trackStyle := bgFill.Foreground(hlComment)
+		bars := scrollbarColumn(len(valueLines), offset, viewportH, thumbStyle, trackStyle)
 		for i, ln := range window {
 			pad := blockW - lipgloss.Width(ln)
 			if pad < 0 {
 				pad = 0
 			}
 			valueRows = append(valueRows,
-				valueStyle.Render(ln)+bgFill.Render(strings.Repeat(" ", pad)+" ")+bars[i])
+				renderVal(ln)+bgFill.Render(strings.Repeat(" ", pad)+" ")+bars[i])
 		}
 	} else if hasValue {
 		for _, ln := range valueLines {
-			valueRows = append(valueRows, valueStyle.Render(ln))
+			valueRows = append(valueRows, renderVal(ln))
 		}
 	}
 
