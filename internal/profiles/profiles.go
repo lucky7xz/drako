@@ -19,6 +19,10 @@ const (
 	SpecSuffix    = ".spec.toml"
 )
 
+// MaxEquipped mirrors drako's 1-9 idiom: every equipped profile stays
+// reachable by one chord (leader 1-9, Alt+1-9).
+const MaxEquipped = 9
+
 // Entry is one matching file found on disk. No parsing is done, so invalid
 // profiles are still listed.
 type Entry struct {

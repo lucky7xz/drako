@@ -7,6 +7,7 @@ import (
 
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/profiles"
 )
 
 // namesN builds n synthetic profile names ("profile-0".."profile-(n-1)").
@@ -31,7 +32,7 @@ func makeInventoryTestModel(n, cursor, focusedList, termW, termH int) Model {
 		styles:     BuildStyles(cfg),
 		gridNav:    gridNav{grid: [][]string{{"a", "b"}, {"c", "d"}}},
 		inventory: inventoryModel{
-			State:       core.NewInventoryState(nil, namesN(n)),
+			State:       core.NewInventoryState(nil, namesN(n), profiles.MaxEquipped),
 			cursor:      cursor,
 			focusedList: focusedList,
 		},
@@ -56,7 +57,7 @@ func makeInventoryTestModelBothLists(equippedN, inventoryN, cursor, focusedList,
 		styles:     BuildStyles(cfg),
 		gridNav:    gridNav{grid: [][]string{{"a", "b"}, {"c", "d"}}},
 		inventory: inventoryModel{
-			State:       core.NewInventoryState(equippedNames, namesN(inventoryN)),
+			State:       core.NewInventoryState(equippedNames, namesN(inventoryN), profiles.MaxEquipped),
 			cursor:      cursor,
 			focusedList: focusedList,
 		},

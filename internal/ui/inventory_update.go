@@ -108,7 +108,7 @@ func InitInventoryModel(configDir string) inventoryModel {
 		visible = append(visible, visibleFiles...)
 	}
 
-	state := core.NewInventoryState(visible, inventory)
+	state := core.NewInventoryState(visible, inventory, profiles.MaxEquipped)
 
 	return inventoryModel{State: state}
 }
@@ -164,6 +164,10 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		inv.err = nil
 		return m, nil
 	}
+
+	// Each keystroke starts from a clean slate, so a rejected action's message
+	// reads as feedback on the last key rather than lingering over later ones.
+	inv.status = ""
 
 	switch {
 	case IsCancel(m.Config.Keys, msg):

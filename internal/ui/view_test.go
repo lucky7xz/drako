@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/profiles"
 )
 
 // Helper to create a model for view testing
@@ -38,6 +39,7 @@ func createTestModelForView(mode navMode) Model {
 			State: core.NewInventoryState(
 				[]string{"A.profile.toml"},
 				[]string{"B.profile.toml"},
+				profiles.MaxEquipped,
 			),
 			focusedList: 0,
 		},
@@ -445,5 +447,36 @@ func TestView_StatusLineTruncatesNotOverflows(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("expected a NET: status line in the output")
+	}
+}
+
+// The counter used to clamp both numbers to 9, so cycling past the ninth
+// profile froze it at "< 9 / 9 >" while the PROFILE: name kept moving.
+func TestRenderProfileCounter(t *testing.T) {
+	cases := []struct {
+		name        string
+		total       int
+		activeIndex int
+		want        string
+	}{
+		{name: "under the cap", total: 4, activeIndex: 2, want: "< 3 / 4 >"},
+		{name: "at the cap", total: 9, activeIndex: 8, want: "< 9 / 9 >"},
+		{name: "past the cap is flagged", total: 15, activeIndex: 11, want: "< 12 / 15 ⚠ >"},
+		{name: "no profiles is the rescue grid", total: 0, activeIndex: 0, want: "< 0 / 0 ⚠ >"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := config.Config{X: 2, Y: 2, Theme: "default"}
+			m := Model{
+				Config:  cfg,
+				styles:  BuildStyles(cfg),
+				profile: profileState{profiles: make([]config.ProfileInfo, tc.total), activeIndex: tc.activeIndex},
+			}
+			got := strings.TrimSpace(ansi.Strip(m.renderProfileCounter()))
+			if got != tc.want {
+				t.Errorf("counter = %q, want %q", got, tc.want)
+			}
+		})
 	}
 }

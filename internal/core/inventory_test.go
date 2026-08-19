@@ -7,7 +7,7 @@ import (
 func TestNewInventoryState(t *testing.T) {
 	v := []string{"a", "b"}
 	i := []string{"c"}
-	s := NewInventoryState(v, i)
+	s := NewInventoryState(v, i, 9)
 
 	if len(s.Visible) != 2 || s.Visible[0] != "a" {
 		t.Errorf("Visible list initialization failed")
@@ -23,7 +23,7 @@ func TestNewInventoryState(t *testing.T) {
 }
 
 func TestPickUpItem(t *testing.T) {
-	s := NewInventoryState([]string{"a", "b"}, []string{})
+	s := NewInventoryState([]string{"a", "b"}, []string{}, 9)
 
 	// Test valid pickup
 	err := s.PickUpItem(ListVisible, 0)
@@ -52,7 +52,7 @@ func TestPickUpItem(t *testing.T) {
 }
 
 func TestPlaceItem(t *testing.T) {
-	s := NewInventoryState([]string{"b"}, []string{})
+	s := NewInventoryState([]string{"b"}, []string{}, 9)
 
 	// Test place without holding
 	err := s.PlaceItem(ListVisible, 0)
@@ -84,4 +84,60 @@ func TestPlaceItem(t *testing.T) {
 	if s.Visible[2] != "c" {
 		t.Errorf("Item not appended correctly")
 	}
+}
+
+// The cap only blocks growth. Rearranging and stashing must keep working, or a
+// list that arrived over the cap would lock its owner out of fixing it.
+func TestPlaceItemCap(t *testing.T) {
+	t.Run("equipping at the cap is refused", func(t *testing.T) {
+		s := NewInventoryState([]string{"a", "b"}, []string{"c"}, 2)
+		if err := s.PickUpItem(ListInventory, 0); err != nil {
+			t.Fatalf("PickUpItem: %v", err)
+		}
+		if err := s.PlaceItem(ListVisible, 0); err == nil {
+			t.Fatal("expected the cap to refuse a third equipped profile")
+		}
+		if len(s.Visible) != 2 {
+			t.Errorf("refused place must not mutate Visible: %v", s.Visible)
+		}
+	})
+
+	t.Run("equipping below the cap is allowed", func(t *testing.T) {
+		s := NewInventoryState([]string{"a"}, []string{"c"}, 2)
+		if err := s.PickUpItem(ListInventory, 0); err != nil {
+			t.Fatalf("PickUpItem: %v", err)
+		}
+		if err := s.PlaceItem(ListVisible, 1); err != nil {
+			t.Fatalf("PlaceItem below cap: %v", err)
+		}
+		if len(s.Visible) != 2 || s.Visible[1] != "c" {
+			t.Errorf("Visible = %v, want [a c]", s.Visible)
+		}
+	})
+
+	t.Run("rearranging over the cap is allowed", func(t *testing.T) {
+		s := NewInventoryState([]string{"a", "b", "c", "d"}, nil, 2)
+		if err := s.PickUpItem(ListVisible, 3); err != nil {
+			t.Fatalf("PickUpItem: %v", err)
+		}
+		if err := s.PlaceItem(ListVisible, 0); err != nil {
+			t.Fatalf("rearrange over cap: %v", err)
+		}
+		if len(s.Visible) != 4 || s.Visible[0] != "d" {
+			t.Errorf("Visible = %v, want [d a b c]", s.Visible)
+		}
+	})
+
+	t.Run("stashing over the cap is allowed", func(t *testing.T) {
+		s := NewInventoryState([]string{"a", "b", "c"}, nil, 2)
+		if err := s.PickUpItem(ListVisible, 0); err != nil {
+			t.Fatalf("PickUpItem: %v", err)
+		}
+		if err := s.PlaceItem(ListInventory, 0); err != nil {
+			t.Fatalf("stash over cap: %v", err)
+		}
+		if len(s.Visible) != 2 || len(s.Inventory) != 1 {
+			t.Errorf("Visible = %v, Inventory = %v", s.Visible, s.Inventory)
+		}
+	})
 }

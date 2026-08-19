@@ -60,7 +60,27 @@ func HandleSpecCommand(args []string) int {
 		return 1
 	}
 
-	if err := ApplySpec(configDir, spec.Profiles); err != nil {
+	// A spec declares a whole configuration, so it may legitimately want more
+	// profiles than the leader chords can address. Say what that costs and let
+	// the user decide, rather than refusing to express what the file says.
+	overCapConfirmed := false
+	planned, err := profiles.PlannedEquippedCount(configDir, spec.Profiles)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to inspect spec: %v\n", err)
+		return 1
+	}
+	if planned > profiles.MaxEquipped {
+		fmt.Printf("\n⚠️  This spec equips %d profiles, over drako's limit of %d.\n", planned, profiles.MaxEquipped)
+		fmt.Printf("    Profiles %d-%d will be reachable only by cycling (o / p),\n", profiles.MaxEquipped+1, planned)
+		fmt.Printf("    not by the leader + 1-9 chord.\n\n")
+		if !ConfirmAction("Proceed anyway?") {
+			fmt.Println("Cancelled.")
+			return 1
+		}
+		overCapConfirmed = true
+	}
+
+	if err := ApplySpec(configDir, spec.Profiles, overCapConfirmed); err != nil {
 		fmt.Fprintf(os.Stderr, "failed to apply spec: %v\n", err)
 		return 1
 	}
@@ -213,10 +233,17 @@ func StashSpec(configDir string, targetProfiles []string) error {
 	return nil
 }
 
-func ApplySpec(configDir string, targetProfiles []string) error {
+// ApplySpec equips targetProfiles and stashes the rest. allowOverCap lifts the
+// MaxEquipped ceiling and must only be set once the user has confirmed the
+// overflow — see HandleSpecCommand.
+func ApplySpec(configDir string, targetProfiles []string, allowOverCap bool) error {
 	// Equip the targets, stash the rest — file moves live in the profiles
 	// package; the CLI keeps the pivot bookkeeping and feedback.
-	res, err := profiles.Reconcile(configDir, targetProfiles)
+	reconcile := profiles.Reconcile
+	if allowOverCap {
+		reconcile = profiles.ReconcileOverCap
+	}
+	res, err := reconcile(configDir, targetProfiles)
 	if err != nil {
 		return err
 	}

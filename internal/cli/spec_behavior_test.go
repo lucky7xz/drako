@@ -1,9 +1,12 @@
 package cli
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/lucky7xz/drako/internal/profiles"
 )
 
 // helpers ---------------------------------------------------------------
@@ -75,7 +78,7 @@ func TestApplySpec_EquipsTargetsStashesRest(t *testing.T) {
 	writeProfile(t, cfg, "git")  // equipped, not in target -> should stash
 	writeProfile(t, inv, "work") // inventory, in target -> should equip
 
-	if err := ApplySpec(cfg, []string{"work"}); err != nil {
+	if err := ApplySpec(cfg, []string{"work"}, false); err != nil {
 		t.Fatalf("ApplySpec: %v", err)
 	}
 
@@ -88,4 +91,47 @@ func TestApplySpec_EquipsTargetsStashesRest(t *testing.T) {
 	if !exists(t, inv, "core.profile.toml") {
 		t.Error("core must be stashed like any other deck (not in target)")
 	}
+}
+
+// A deck may legitimately list more profiles than the leader chords address,
+// but only the confirmed path is allowed to apply it.
+func TestApplySpec_OverCapNeedsConsent(t *testing.T) {
+	names := make([]string, profiles.MaxEquipped+3)
+	for i := range names {
+		names[i] = fmt.Sprintf("deck%02d", i)
+	}
+
+	t.Run("refused without consent", func(t *testing.T) {
+		cfg := t.TempDir()
+		inv := filepath.Join(cfg, "inventory")
+		for _, n := range names {
+			writeProfile(t, inv, n)
+		}
+
+		if err := ApplySpec(cfg, names, false); err == nil {
+			t.Fatal("expected an over-cap spec to be refused")
+		}
+		for _, n := range names {
+			if exists(t, cfg, n+".profile.toml") {
+				t.Fatalf("a refused spec must move nothing, but %s was equipped", n)
+			}
+		}
+	})
+
+	t.Run("applied with consent", func(t *testing.T) {
+		cfg := t.TempDir()
+		inv := filepath.Join(cfg, "inventory")
+		for _, n := range names {
+			writeProfile(t, inv, n)
+		}
+
+		if err := ApplySpec(cfg, names, true); err != nil {
+			t.Fatalf("ApplySpec over cap: %v", err)
+		}
+		for _, n := range names {
+			if !exists(t, cfg, n+".profile.toml") {
+				t.Errorf("%s must be equipped", n)
+			}
+		}
+	})
 }

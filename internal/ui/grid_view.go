@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/lucky7xz/drako/internal/profiles"
 )
 
 // renderGrid renders the grid into at most budgetLines terminal lines. When
@@ -138,10 +139,20 @@ func columnToLetter(col int) string {
 }
 
 func (m Model) renderProfileCounter() string {
-	y := min(len(m.profile.profiles), 9)
-	// x > y only with zero profiles on disk: rescue grid, "< 0 / 0 >"
-	x := min(m.profile.activeIndex+1, 9, y)
-	counter := fmt.Sprintf("< %d / %d >", x, y)
+	total := len(m.profile.profiles)
+	x := m.profile.activeIndex + 1
+	// No profiles on disk means the rescue grid: "< 0 / 0 >".
+	if m.profile.activeIndex < 0 || m.profile.activeIndex >= total {
+		x = 0
+	}
+	// Flag both ends of the healthy range: past the cap, cycling still reaches
+	// every profile but only the first MaxEquipped have a 1-9 chord; at zero
+	// there is nothing to switch to and the grid is the rescue fallback.
+	marker := ""
+	if total > profiles.MaxEquipped || total == 0 {
+		marker = "⚠ "
+	}
+	counter := fmt.Sprintf("< %d / %d %s>", x, total, marker)
 	return m.styles.Title.Render(counter)
 }
 

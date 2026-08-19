@@ -8,6 +8,7 @@ import (
 
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/profiles"
 )
 
 func TestResolveEditor(t *testing.T) {
@@ -56,7 +57,7 @@ func editInventoryModel(t *testing.T) (Model, string) {
 		profile: profileState{configDir: dir},
 		Config:  config.Config{Keys: config.InputConfig{EditFile: "e"}},
 		inventory: inventoryModel{
-			State:       core.NewInventoryState([]string{"eq.profile.toml"}, []string{"st.profile.toml"}),
+			State:       core.NewInventoryState([]string{"eq.profile.toml"}, []string{"st.profile.toml"}, profiles.MaxEquipped),
 			focusedList: core.ListVisible,
 		},
 	}

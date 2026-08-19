@@ -6,6 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/profiles"
 )
 
 // Helper to create a basic model for Grid testing
@@ -67,6 +68,7 @@ func createTestInventoryModel() Model {
 	state := core.NewInventoryState(
 		[]string{"a.profile.toml", "b.profile.toml"}, // Visible
 		[]string{"c.profile.toml", "d.profile.toml"}, // Inventory
+		profiles.MaxEquipped,
 	)
 	m := Model{
 		mode: inventoryMode,

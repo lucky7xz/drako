@@ -1,9 +1,12 @@
 package ui
 
 import (
+	"fmt"
+
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/profiles"
 )
 
 // inventoryHelpText is this view's footer help line — extracted to a
@@ -36,7 +39,12 @@ func (m Model) viewInventoryMode() string {
 	inventoryPtr, _ := m.inventory.State.GetList(core.ListInventory)
 	inventory := *inventoryPtr
 
-	equippedHeader := m.styles.ListHeader.Render("Equipped Items")
+	// The count is of the staged list, so the budget updates while arranging.
+	equippedLabel := fmt.Sprintf("Equipped Items (%d/%d)", len(visible), profiles.MaxEquipped)
+	if len(visible) > profiles.MaxEquipped {
+		equippedLabel += " ⚠"
+	}
+	equippedHeader := m.styles.ListHeader.Render(equippedLabel)
 	inventoryHeader := m.styles.ListHeader.Render("Inventory Items")
 
 	applyButton := m.styles.Button.Render("[ Apply Changes ]")
@@ -52,6 +60,15 @@ func (m Model) viewInventoryMode() string {
 	heldItemStatus := " " // Reserve space
 	if m.inventory.State.HeldItem != nil {
 		heldItemStatus = m.styles.Help.Render("Holding: ") + m.styles.SelectedItem.Render(*m.inventory.State.HeldItem)
+	}
+
+	// A rejected action keeps holding the item, so this sits on its own line
+	// under Holding: rather than crowding it. The line is reserved either way
+	// so the lists below don't jump when a message appears; truncated rather
+	// than wrapped to keep it exactly one row.
+	statusLine := " " // Reserve space
+	if m.inventory.status != "" {
+		statusLine = m.styles.StatusNegative.Render(truncateText(m.inventory.status, m.termWidth-LayoutSideMargin))
 	}
 
 	var footer string
@@ -72,14 +89,14 @@ func (m Model) viewInventoryMode() string {
 	// Everything except the two grids is fixed-height chrome — measure it
 	// first (gridRowBudget sums lipgloss.Height of each piece, exactly like
 	// the main grid's own budget calc) so the grids get whatever vertical
-	// room is actually left. Section headers, buttons, and the held-item
-	// line are unconditional; title/footer follow the existing
+	// room is actually left. Section headers, buttons, and the held-item and
+	// status lines are unconditional; title/footer follow the existing
 	// layout.ShowHeader/ShowFooter gates.
 	var chrome []string
 	if layout.ShowHeader {
 		chrome = append(chrome, title)
 	}
-	chrome = append(chrome, equippedHeader, inventoryHeader, applyButton, rescueButton, heldItemStatus)
+	chrome = append(chrome, equippedHeader, inventoryHeader, applyButton, rescueButton, heldItemStatus, statusLine)
 	if layout.ShowFooter {
 		chrome = append(chrome, footer)
 	}
@@ -109,7 +126,7 @@ func (m Model) viewInventoryMode() string {
 	if layout.ShowHeader {
 		sections = append(sections, title)
 	}
-	sections = append(sections, equippedHeader, equippedGrid, inventoryHeader, inventoryGrid, applyButton, rescueButton, heldItemStatus)
+	sections = append(sections, equippedHeader, equippedGrid, inventoryHeader, inventoryGrid, applyButton, rescueButton, heldItemStatus, statusLine)
 	if layout.ShowFooter {
 		sections = append(sections, footer)
 	}
