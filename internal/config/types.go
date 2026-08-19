@@ -105,14 +105,17 @@ type ConfigBundle struct {
 //   command = "echo same everywhere"
 //   command = { linux_debian = "apt ...", linux_arch = "pacman ...", macos = "brew ..." }
 //
-// Keys use the weaver vocabulary (linux_debian, linux_arch, linux_fedora,
-// linux_suse, linux_void, linux_generic, macos, windows). On Linux, the detected
-// target is tried first, then linux_generic. No match: the command stays
-// empty (the cell renders, Enter reports "no command configured") and a
-// note naming the available variants is appended to the description.
+// Keys come from a closed vocabulary (linux_debian, linux_arch, linux_fedora,
+// linux_suse, linux_void, linux_immutable, linux_generic, macos,
+// windows). Keys are tried most specific first, then linux_generic: on an
+// image-managed host that is linux_immutable, then the base distro, so only
+// cells that install something need the immutable variant. No match: the
+// command stays empty (the cell renders, Enter reports "no command
+// configured") and a note naming the available variants is appended to the
+// description.
 
-// runtimeTargetFn resolves the platform key; a var so tests can pin one.
-var runtimeTargetFn = detectRuntimeTarget
+// runtimeTargetsFn resolves the platform keys; a var so tests can pin them.
+var runtimeTargetsFn = detectRuntimeTargets
 
 // resolveCommandField turns a decoded TOML command value into a string.
 func resolveCommandField(v any) (cmd string, note string, err error) {
@@ -132,16 +135,22 @@ func resolveCommandField(v any) (cmd string, note string, err error) {
 			variants[k] = s
 			keys = append(keys, k)
 		}
-		target := runtimeTargetFn()
-		if c, ok := variants[target]; ok {
-			return c, "", nil
+		targets := runtimeTargetsFn()
+		for _, target := range targets {
+			if c, ok := variants[target]; ok {
+				return c, "", nil
+			}
 		}
-		if c, ok := variants["linux_generic"]; ok && strings.HasPrefix(target, "linux_") {
+		// The last target is the base platform, so it decides whether the
+		// generic Linux fallback applies.
+		base := targets[len(targets)-1]
+		if c, ok := variants["linux_generic"]; ok && strings.HasPrefix(base, "linux_") {
 			return c, "", nil
 		}
 		sort.Strings(keys)
+		// Name the most specific key: that is the one an author should add.
 		return "", fmt.Sprintf("[no command variant for this platform (%s); available: %s]",
-			target, strings.Join(keys, ", ")), nil
+			targets[0], strings.Join(keys, ", ")), nil
 	default:
 		return "", "", fmt.Errorf("command must be a string or a table of platform variants, got %T", v)
 	}

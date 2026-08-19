@@ -22,7 +22,7 @@ func TestEmbeddedCoreDeckResolvesEverywhere(t *testing.T) {
 
 	targets := []string{
 		"linux_debian", "linux_arch", "linux_fedora", "linux_void",
-		"linux_termux", "linux_generic", "macos", "windows",
+		"linux_immutable", "linux_generic", "macos", "windows",
 	}
 	for _, target := range targets {
 		t.Run(target, func(t *testing.T) {

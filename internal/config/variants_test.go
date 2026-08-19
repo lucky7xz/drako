@@ -9,9 +9,16 @@ import (
 
 func pinPlatform(t *testing.T, target string) {
 	t.Helper()
-	orig := runtimeTargetFn
-	runtimeTargetFn = func() string { return target }
-	t.Cleanup(func() { runtimeTargetFn = orig })
+	pinPlatformChain(t, target)
+}
+
+// pinPlatformChain pins the whole resolution chain, most specific first —
+// what an immutable host produces (linux_immutable, then its base distro).
+func pinPlatformChain(t *testing.T, targets ...string) {
+	t.Helper()
+	orig := runtimeTargetsFn
+	runtimeTargetsFn = func() []string { return targets }
+	t.Cleanup(func() { runtimeTargetsFn = orig })
 }
 
 func decodeProfile(t *testing.T, src string) ProfileFile {

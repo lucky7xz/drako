@@ -19,28 +19,54 @@ var DistroKeywords = map[string][]string{
 	"linux_void":   {"void"},
 }
 
-func detectRuntimeTarget() string {
+// ImmutableKey is tried ahead of the base distro on image-managed systems.
+const ImmutableKey = "linux_immutable"
+
+// immutableMarkers are the files whose presence means the root filesystem is
+// image-managed. Capability probes rather than a distro list: the ostree
+// marker covers the whole Fedora Atomic family (Silverblue, Kinoite, Bazzite,
+// Bluefin, Aurora), not just the one distro that prompted this.
+var immutableMarkers = []string{
+	"/run/ostree-booted",        // ostree / rpm-ostree systems
+	"/usr/bin/steamos-readonly", // SteamOS: A/B read-only root, no ostree
+}
+
+// isImmutable reports whether the distro's package manager is not the way
+// software gets installed here.
+func isImmutable() bool {
+	for _, marker := range immutableMarkers {
+		if _, err := os.Stat(marker); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
+// detectRuntimeTargets lists the variant keys to try, most specific first.
+// An immutable host prepends linux_immutable: brew replaces its package
+// manager, but it is still a Fedora or Arch box underneath, so the base key
+// stays in the chain for every cell that isn't installing something.
+func detectRuntimeTargets() []string {
 	switch runtime.GOOS {
 	case "windows":
-		return "windows"
+		return []string{"windows"}
 	case "darwin":
-		return "macos"
+		return []string{"macos"}
 	case "linux":
-		return detectLinuxDistro()
+		base := detectLinuxDistro()
+		if isImmutable() {
+			return []string{ImmutableKey, base}
+		}
+		return []string{base}
 	default:
-		return "linux_generic"
+		return []string{"linux_generic"}
 	}
 }
 
+// detectLinuxDistro identifies the base distro. Termux (Android) is not
+// special-cased: it lands on a Debian key or the generic fallback, and the
+// only thing wrong there is sudo, which the Sudo Switch strips.
 func detectLinuxDistro() string {
-	// Termux (Android) ships no /etc/os-release and no sudo — $PREFIX belongs
-	// to the app's own uid, so package commands need no privilege at all.
-	// Checked first: a proot distro inside Termux sets neither var and keeps
-	// matching its real distro below, which is what it wants.
-	if os.Getenv("TERMUX_VERSION") != "" || strings.Contains(os.Getenv("PREFIX"), "com.termux") {
-		return "linux_termux"
-	}
-
 	data, err := os.ReadFile("/etc/os-release")
 	if err != nil {
 		return "linux_generic"

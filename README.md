@@ -77,7 +77,7 @@ GOPROXY=direct go install github.com/lucky7xz/drako@latest
 CGO_ENABLED=0 go install github.com/lucky7xz/drako@latest
 ```
 
-The pure-Go build avoids a C toolchain, which Termux doesn't ship by default. Because Termux has no `sudo`, run the **🚨 Sudo Switch** (in the Core profile's **Settings** cell) once after first launch. A physical keyboard is recommended but not required.
+The pure-Go build avoids a C toolchain, which Termux doesn't ship by default. Termux resolves to a Debian key (or the generic fallback), where the only thing that doesn't fit is `sudo` — so run the **🚨 Sudo Switch** (in the Core profile's **Settings** cell) once after first launch and the deck works. A physical keyboard is recommended but not required.
 
 > [!NOTE]
 > **Emoji Support:** drako profiles sometimes use emojis as visual indicators. Modern terminals (Ghostty, WezTerm etc.) may support them by default. Others (older Linux terminals) may require a [Nerd Font](https://www.nerdfonts.com/) or an emoji font package (e.g., `fonts-noto-color-emoji`).
@@ -178,9 +178,9 @@ col = "a"
 row = 0
 ```
 
-- **Recognized keys:** `linux_debian`, `linux_arch`, `linux_fedora`, `linux_suse`, `linux_void`, `linux_termux`, `linux_generic` (fallback for any Linux), `macos`, `windows`.
-- On Linux, the distro is detected from `/etc/os-release` (`ID` and `ID_LIKE`) — so e.g. Pop!\_OS resolves to `linux_debian`. The keyword-to-key mapping lives in [`internal/config/platform.go`](internal/config/platform.go) (`DistroKeywords`); adding a distro is a one-line change there.
-- **Termux** (Android) is detected from the environment instead — it has no `/etc/os-release`, and no sudo either, since `$PREFIX` belongs to your own user. Write `linux_termux` variants without `sudo`. A proot distro running inside Termux still resolves to its own distro key.
+- **Recognized keys:** `linux_debian`, `linux_arch`, `linux_fedora`, `linux_suse`, `linux_void`, `linux_immutable`, `linux_generic` (fallback for any Linux), `macos`, `windows`.
+- On Linux, the distro is detected from `/etc/os-release` — so e.g. Pop!\_OS resolves to `linux_debian`. The keyword-to-key mapping lives in [`internal/config/platform.go`](internal/config/platform.go) (`DistroKeywords`); adding a distro is a one-line change there.
+- **Immutable systems** — Bazzite, Silverblue, SteamOS and friends — are found by probing for `/run/ostree-booted` or `steamos-readonly`, *after* the base distro. `linux_immutable` is tried first and the base key second, so only cells that install something need it: on those machines the distro's package manager isn't how software arrives, so write `brew` there and leave `rpm-ostree` and `pacman` alone.
 - Dropdown items (`items = [...]`) accept variant tables too — every entry in a command folder resolves independently.
 - **No variant for the current platform?** The deck still loads; the cell just has no command, and its explain popup (`e`) lists which platforms the author covered.
 

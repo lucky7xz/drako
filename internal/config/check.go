@@ -34,11 +34,11 @@ func warnf(format string, args ...any) Finding {
 }
 
 // knownVariantKeys is the closed vocabulary for command variant tables:
-// every distro key drako can detect, plus the generic fallbacks. linux_termux
-// is listed by hand — it is detected from the environment, not from
-// /etc/os-release, so it has no DistroKeywords entry.
+// every distro key drako can detect, plus the generic fallbacks.
+// linux_immutable is listed by hand — it is probed from the filesystem, not
+// matched from /etc/os-release, so it has no DistroKeywords entry.
 func knownVariantKeys() []string {
-	keys := []string{"linux_generic", "linux_termux", "macos", "windows"}
+	keys := []string{"linux_generic", ImmutableKey, "macos", "windows"}
 	for k := range DistroKeywords {
 		keys = append(keys, k)
 	}

@@ -28,7 +28,7 @@ y = 3
 [[commands]]
 name = "🔄 System Update"
 description = "Queries the repositories for fresh versions and pulls them into your system. Your digital infrastructure sheds old scales for new ones—staying sharp, staying current. The machinery needs to evolve or rust settles in."
-command = { linux_debian = "sudo apt update && sudo apt upgrade", linux_arch = "sudo pacman -Syu", linux_fedora = "sudo dnf upgrade", linux_suse = "sudo zypper update", linux_void = "sudo xbps-install -Su", linux_termux = "pkg upgrade", linux_generic = """
+command = { linux_immutable = "brew update && brew upgrade", linux_debian = "sudo apt update && sudo apt upgrade", linux_arch = "sudo pacman -Syu", linux_fedora = "sudo dnf upgrade", linux_suse = "sudo zypper update", linux_void = "sudo xbps-install -Su", linux_generic = """
 # Unknown distro: probe the common package managers.
 if command -v apt >/dev/null; then sudo apt update && sudo apt upgrade
 elif command -v dnf >/dev/null; then sudo dnf upgrade
@@ -49,7 +49,7 @@ description = "Maintenance and threat scanning. Clear out the debris, hunt for w
 col = "A"
 row = 1
 items = [
-    { name = "Clean Packages", description = "Clears out the old scales your system sheds during updates. Removes what's no longer needed so nothing rots in the corners.", command = { linux_debian = "sudo apt autoremove", linux_arch = "sudo pacman -Sc", linux_fedora = "sudo dnf autoremove", linux_suse = "sudo zypper clean --all", linux_void = "sudo xbps-remove -Oo", linux_termux = "apt autoremove", linux_generic = """
+    { name = "Clean Packages", description = "Clears out the old scales your system sheds during updates. Removes what's no longer needed so nothing rots in the corners.", command = { linux_immutable = "brew cleanup", linux_debian = "sudo apt autoremove", linux_arch = "sudo pacman -Sc", linux_fedora = "sudo dnf autoremove", linux_suse = "sudo zypper clean --all", linux_void = "sudo xbps-remove -Oo", linux_generic = """
 if command -v apt >/dev/null; then sudo apt autoremove
 elif command -v dnf >/dev/null; then sudo dnf autoremove
 elif command -v pacman >/dev/null; then sudo pacman -Sc
@@ -204,7 +204,7 @@ col = "C"
 row = 0
 description = "Bundled up all the little tools that this menu uses, just in case you don't have them. It's like getting all the batteries and accessories included for once. This makes sure all the other buttons here will work as expected. I like to be prepared, you know? "
 items = [
-    { name = "Install common tools", description = "The core utilities—btop, fastfetch, clamav, fzf, bmon, duf—plus tmux (batch launch needs it) and mpv (the jukebox deck runs on it). Tools that keep the machinery visible and responsive.", command = { linux_generic = """
+    { name = "Install common tools", description = "The core utilities—btop, fastfetch, clamav, fzf, bmon, duf—plus tmux (batch launch needs it) and mpv (the jukebox deck runs on it). Tools that keep the machinery visible and responsive.", command = { linux_immutable = "brew install btop bmon fastfetch clamav fzf duf tmux mpv", linux_generic = """
 # Install the tools this deck relies on. Best-effort: a package that's
 # missing on your distro is skipped, not fatal. Each tool is marked, and a
 # summary lists what's ready vs still missing.
@@ -267,7 +267,7 @@ echo
 [ -n "$installed" ] && echo "✅ Ready:$installed"
 [ -n "$skipped" ]   && echo "❗ Missing:$skipped"
 """, macos = "brew install btop bmon fastfetch fzf duf tmux mpv", windows = "winget install -e --id junegunn.fzf; winget install -e --id aristocratos.btop4win; winget install -e --id muesli.duf; winget install -e --id Fastfetch-cli.Fastfetch; winget install -e --id shinchiro.mpv" }, auto_close_execution = false },
-    { name = "Install micro", description = "Installs micro, a modern terminal text editor. Clean interface, easy to use. Set it as your default EDITOR via Settings if you want.", command = { linux_debian = "sudo apt install micro", linux_arch = "sudo pacman -S micro", linux_fedora = "sudo dnf install micro", linux_suse = "sudo zypper install micro", linux_void = "sudo xbps-install -S micro", linux_termux = "pkg install micro", linux_generic = """
+    { name = "Install micro", description = "Installs micro, a modern terminal text editor. Clean interface, easy to use. Set it as your default EDITOR via Settings if you want.", command = { linux_immutable = "brew install micro", linux_debian = "sudo apt install micro", linux_arch = "sudo pacman -S micro", linux_fedora = "sudo dnf install micro", linux_suse = "sudo zypper install micro", linux_void = "sudo xbps-install -S micro", linux_generic = """
 if command -v apt >/dev/null; then sudo apt install micro
 elif command -v dnf >/dev/null; then sudo dnf install micro
 elif command -v pacman >/dev/null; then sudo pacman -S micro
