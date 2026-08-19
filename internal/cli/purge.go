@@ -76,6 +76,10 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 			log.Printf("Failed to purge %s: %v", target, err)
 		} else {
 			fmt.Printf("  ✓ Moved %s to trash\n", filename)
+			// A purged profile is no longer equipped, so a lock still aimed at
+			// it would drop the next launch into rescue. Covers --interactive
+			// too: it appends into this same target list.
+			unlockIfLocked(configDir, filename)
 		}
 	}
 

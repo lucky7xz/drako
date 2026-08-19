@@ -149,13 +149,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// an action instead. Everything above this still wins: ctrl+c, the
 		// locked-mode handoff, and the glassroot veto.
 		if !m.capturingText() {
-			if IsLock(m.Config.Keys, msg) {
-				cmd := m.toggleProfileLock()
-				return m, cmd
-			}
-
-			// Profile switching with configurable modifier + Number or ~ (Shift + `)
+			// Both the lock and profile switching act on the *active* profile,
+			// so they belong to the grid. Offering the lock from the inventory
+			// would silently pin something other than the item under the cursor.
 			if m.mode == gridMode || m.mode == childMode {
+				if IsLock(m.Config.Keys, msg) {
+					cmd := m.toggleProfileLock()
+					return m, cmd
+				}
+
+				// Profile switching with configurable modifier + Number or ~ (Shift + `)
 				if ok, target := IsProfileSwitch(m.Config.Keys, msg, m.Config.NumbModifier); ok {
 					if target < len(m.profile.profiles) {
 						if updated, ok := m.switchToProfileIndex(target); ok {

@@ -19,6 +19,28 @@ type Spec struct {
 	Profiles []string `toml:"profiles"`
 }
 
+// unlockIfLocked clears the pivot lock when it points at name, and says so.
+// Every path that unequips or removes a profile has to call this: a lock left
+// aimed at a profile that is no longer equipped can't be resolved on the next
+// load, which drops that launch into the rescue grid.
+//
+// name may be a bare name or a path — purge's interactive mode passes
+// "inventory/x.profile.toml", and NormalizeName strips suffixes but not
+// directories.
+func unlockIfLocked(configDir, name string) {
+	pf, err := config.ReadPivotProfile(configDir)
+	if err != nil || pf.Locked == "" {
+		return
+	}
+	if profiles.NormalizeName(pf.Locked) != profiles.NormalizeName(filepath.Base(name)) {
+		return
+	}
+	fmt.Printf("  ! Unlocking profile: %s\n", pf.Locked)
+	if err := config.WritePivotLocked(configDir, ""); err != nil {
+		log.Printf("Warning: failed to unlock profile %s: %v", pf.Locked, err)
+	}
+}
+
 func HandleSpecCommand(args []string) int {
 	if len(args) < 3 {
 		fmt.Fprintf(os.Stderr, "Usage: drako spec <name>\n")
@@ -194,12 +216,6 @@ func resolveSpecPath(specsDir, name string) (string, error) {
 }
 
 func StashSpec(configDir string, targetProfiles []string) error {
-	// Read current pivot/lock state
-	pf, err := config.ReadPivotProfile(configDir)
-	if err != nil {
-		log.Printf("Warning: could not read pivot profile: %v", err)
-	}
-
 	// Normalize target list
 	targetSet := make(map[string]bool)
 	for _, p := range targetProfiles {
@@ -216,13 +232,7 @@ func StashSpec(configDir string, targetProfiles []string) error {
 		if !targetSet[e.Norm] {
 			continue
 		}
-		// Check if this profile is currently locked
-		if profiles.NormalizeName(pf.Locked) == e.Norm {
-			fmt.Printf("  ! Unlocking profile: %s\n", e.Name)
-			if err := config.WritePivotLocked(configDir, ""); err != nil {
-				log.Printf("Warning: failed to unlock profile %s: %v", e.Name, err)
-			}
-		}
+		unlockIfLocked(configDir, e.Name)
 
 		if err := profiles.Move(configDir, e.File, profiles.Equipped, profiles.Inventory); err != nil {
 			log.Printf("Warning: skipped stashing %s: %v", e.Name, err)
@@ -252,6 +262,9 @@ func ApplySpec(configDir string, targetProfiles []string, allowOverCap bool) err
 	}
 	for _, n := range res.Stashed {
 		fmt.Printf("  - Stored: %s\n", n)
+		// Only what actually left the equipped dir: a spec that keeps the
+		// locked profile equipped must leave the lock alone.
+		unlockIfLocked(configDir, n)
 	}
 
 	return config.WritePivotEquippedOrder(configDir, targetProfiles)

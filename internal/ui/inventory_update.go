@@ -144,6 +144,19 @@ func (inv inventoryModel) selectedFilePath(configDir string) (string, bool) {
 	return filepath.Join(paths.InventoryDir(configDir), name), true
 }
 
+// isLockedProfile reports whether name is the profile the pivot lock points
+// at. Moving or deleting it would quietly change what drako launches next, so
+// both refuse and send the user to the grid to break the lock themselves.
+func (m Model) isLockedProfile(name string) bool {
+	return m.profile.pivotName != "" &&
+		profiles.NormalizeName(m.profile.pivotName) == profiles.NormalizeName(name)
+}
+
+// lockedRefusal is the message both guards show, naming the configured key.
+func (m Model) lockedRefusal() string {
+	return "Locked profile — unlock it with " + m.Config.Keys.Lock + " in the grid"
+}
+
 // trashTarget resolves the highlighted item to where it actually sits on disk,
 // which can differ from the list it is currently shown in: lift-and-place is
 // staged until Apply runs, so an item dragged out of the inventory is still an
@@ -290,10 +303,8 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if !ok {
 			return m, nil
 		}
-		// Deleting what the lock points at would quietly change what drako
-		// launches next, so make the user break the lock themselves.
-		if m.profile.pivotName != "" && profiles.NormalizeName(m.profile.pivotName) == profiles.NormalizeName(name) {
-			inv.status = "Locked profile — unlock it with " + m.Config.Keys.Lock + " first"
+		if m.isLockedProfile(name) {
+			inv.status = m.lockedRefusal()
 			return m, nil
 		}
 		inv.pending = &pendingDelete{rel: rel, name: name}
@@ -312,6 +323,16 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 
 		if inv.State.HeldItem == nil {
+			// Refusing the lift is what blocks the move: nothing can be placed
+			// that was never picked up. Without this, stashing the locked
+			// profile leaves pivot.toml pointing at an unequipped profile,
+			// which drops the next launch into the rescue grid.
+			if listPtr, err := inv.State.GetList(inv.focusedList); err == nil &&
+				inv.cursor >= 0 && inv.cursor < len(*listPtr) &&
+				m.isLockedProfile(strings.TrimSuffix((*listPtr)[inv.cursor], profiles.ProfileSuffix)) {
+				inv.status = m.lockedRefusal()
+				return m, nil
+			}
 			// Pick up
 			if err := inv.State.PickUpItem(inv.focusedList, inv.cursor); err != nil {
 				inv.status = err.Error()

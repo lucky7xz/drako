@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucky7xz/drako/internal/config"
@@ -164,22 +165,30 @@ const minSecondaryListRows = 2
 // window centers on the cursor's row when this list is focused; otherwise
 // it starts from the top (window(0, ...) naturally yields offset 0), while
 // still respecting rowBudget so an unfocused list can't overflow the page.
-func (m Model) renderInventoryGrid(profiles []string, listID, rowBudget int) string {
+func (m Model) renderInventoryGrid(items []string, listID, rowBudget int) string {
 	var cells []string
 	isFocused := m.inventory.focusedList == listID
 
 	// Add a placeholder cell for dropping if the list is empty
-	if len(profiles) == 0 {
+	if len(items) == 0 {
 		style := m.styles.Cell
 		if isFocused {
 			style = m.styles.SelectedCell
 		}
 		cells = append(cells, style.Render(" (empty) "))
 	} else {
-		for i, p := range profiles {
+		for i, p := range items {
+			selected := isFocused && i == m.inventory.cursor
+			locked := m.isLockedProfile(strings.TrimSuffix(p, profiles.ProfileSuffix))
+
 			style := m.styles.Cell
-			if isFocused && i == m.inventory.cursor {
+			switch {
+			case selected && locked:
+				style = m.styles.LockedSelectedCell
+			case selected:
 				style = m.styles.SelectedCell
+			case locked:
+				style = m.styles.LockedCell
 			}
 			cells = append(cells, style.Render(p))
 		}

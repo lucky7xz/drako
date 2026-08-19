@@ -39,6 +39,10 @@ type Styles struct {
 
 	Cell         lipgloss.Style
 	SelectedCell lipgloss.Style
+	// Locked variants tint only the text, so the border keeps showing which
+	// cell the cursor is on.
+	LockedCell         lipgloss.Style
+	LockedSelectedCell lipgloss.Style
 
 	Path          lipgloss.Style
 	SelectedPath  lipgloss.Style
@@ -133,6 +137,11 @@ func BuildStyles(cfg config.Config) Styles {
 		Foreground(lipgloss.Color(ui.GridSelText)).
 		Bold(true).
 		Padding(0, 1)
+
+	// Warning is the one role that is yellow in every shipped theme, so a
+	// locked cell reads as "held back" rather than as another accent.
+	s.LockedCell = s.Cell.Foreground(lipgloss.Color(ui.Warning))
+	s.LockedSelectedCell = s.SelectedCell.Foreground(lipgloss.Color(ui.Warning))
 
 	s.Path = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.Path)).

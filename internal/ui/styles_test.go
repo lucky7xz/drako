@@ -25,6 +25,10 @@ func TestBuildStylesMapsThemeRolesToStyles(t *testing.T) {
 		{"Offline", s.Offline.GetForeground(), ui.StatusNegative},
 		{"Title", s.Title.GetForeground(), ui.TitleFG},
 		{"Footer", s.Footer.GetForeground(), ui.FooterFG},
+		// The locked cell is yellow in every theme: Warning is the only role
+		// that holds that across the shipped set.
+		{"LockedCell", s.LockedCell.GetForeground(), ui.Warning},
+		{"LockedSelectedCell", s.LockedSelectedCell.GetForeground(), ui.Warning},
 	}
 	for _, c := range cases {
 		if c.got != lipgloss.Color(c.want) {
