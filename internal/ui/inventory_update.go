@@ -31,6 +31,19 @@ type inventoryModel struct {
 	focusedList int    // 0 for visible, 1 for inventory, 2 for apply, 3 for rescue
 	status      string // Feedback message for the user
 	err         error  // Any error that has occurred
+
+	// pending is the armed delete confirmation, nil when nothing is armed.
+	pending *pendingDelete
+}
+
+// pendingDelete is a delete waiting on confirmation: the user types the
+// profile's name before the file at rel is moved to trash. Trashing is only
+// reversible by hand, so the keystroke that arms it must not be the one that
+// performs it.
+type pendingDelete struct {
+	rel   string // path relative to the config dir, for profiles.MoveToTrash
+	name  string // display name the user has to type
+	typed string
 }
 
 // NewList creates a new list of profiles by scanning a directory for .profile.toml files.
@@ -131,6 +144,36 @@ func (inv inventoryModel) selectedFilePath(configDir string) (string, bool) {
 	return filepath.Join(paths.InventoryDir(configDir), name), true
 }
 
+// trashTarget resolves the highlighted item to where it actually sits on disk,
+// which can differ from the list it is currently shown in: lift-and-place is
+// staged until Apply runs, so an item dragged out of the inventory is still an
+// inventory file. Returns the path relative to configDir, as MoveToTrash wants
+// it, plus the display name for the confirmation prompt.
+func (inv inventoryModel) trashTarget(configDir string) (rel, name string, ok bool) {
+	if inv.focusedList != core.ListVisible && inv.focusedList != core.ListInventory {
+		return "", "", false
+	}
+	listPtr, err := inv.State.GetList(inv.focusedList)
+	if err != nil || inv.cursor < 0 || inv.cursor >= len(*listPtr) {
+		return "", "", false
+	}
+	file := (*listPtr)[inv.cursor]
+	name = strings.TrimSuffix(file, profiles.ProfileSuffix)
+
+	if _, err := os.Stat(filepath.Join(configDir, file)); err == nil {
+		return file, name, true
+	}
+	stashed := filepath.Join(paths.InventoryDir(configDir), file)
+	if _, err := os.Stat(stashed); err != nil {
+		return "", "", false
+	}
+	rel, err = filepath.Rel(configDir, stashed)
+	if err != nil {
+		return "", "", false
+	}
+	return rel, name, true
+}
+
 // ApplyInventoryChangesCmd reconciles the on-disk profiles to match the
 // arranged visible list, then persists that order.
 func ApplyInventoryChangesCmd(configDir string, m inventoryModel) tea.Cmd {
@@ -163,6 +206,13 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.mode = gridMode
 		inv.err = nil
 		return m, nil
+	}
+
+	// An armed delete swallows every key: the name is typed one character at a
+	// time, so letters must reach the prompt instead of firing their normal
+	// action.
+	if inv.pending != nil {
+		return m.updatePendingDelete(msg)
 	}
 
 	// Each keystroke starts from a clean slate, so a rejected action's message
@@ -225,6 +275,29 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, openInEditorCmd(path)
 
+	// Arm a delete; the trashing itself waits on the typed name.
+	case IsDelete(m.Config.Keys, msg):
+		if m.GlassrootMode {
+			// Unreachable (glassroot gates inventory itself), kept as
+			// defense in depth: this destroys a file.
+			return m, nil
+		}
+		if inv.State.HeldItem != nil {
+			inv.status = "Place the held item before deleting"
+			return m, nil
+		}
+		rel, name, ok := inv.trashTarget(m.profile.configDir)
+		if !ok {
+			return m, nil
+		}
+		// Deleting what the lock points at would quietly change what drako
+		// launches next, so make the user break the lock themselves.
+		if m.profile.pivotName != "" && profiles.NormalizeName(m.profile.pivotName) == profiles.NormalizeName(name) {
+			inv.status = "Locked profile — unlock it with " + m.Config.Keys.Lock + " first"
+			return m, nil
+		}
+		inv.pending = &pendingDelete{rel: rel, name: name}
+
 	// Lift and Place
 	case IsConfirm(m.Config.Keys, msg):
 		if inv.focusedList == 2 { // Apply button is focused
@@ -259,4 +332,76 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+// updatePendingDelete drives the typed-name confirmation. Cancel is esc alone,
+// not IsCancel, which also matches 'q' — while typing a name every letter has
+// to stay a literal.
+func (m Model) updatePendingDelete(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	inv := &m.inventory
+
+	if m.GlassrootMode {
+		// Unreachable (glassroot gates inventory itself, and arming re-checks),
+		// kept as defense in depth: this is the step that destroys the file, so
+		// it must not be the one place that trusts the gate above it.
+		inv.pending = nil
+		return m, nil
+	}
+
+	pd := *inv.pending
+
+	switch msg.Type {
+	case tea.KeyEsc:
+		inv.pending = nil
+		inv.status = "Cancelled"
+		return m, nil
+
+	case tea.KeyCtrlC:
+		m.Quitting = true
+		return m, tea.Quit
+
+	case tea.KeyBackspace:
+		if r := []rune(pd.typed); len(r) > 0 {
+			pd.typed = string(r[:len(r)-1])
+		}
+		inv.pending = &pd
+		return m, nil
+
+	case tea.KeyEnter:
+		inv.pending = nil
+		if profiles.NormalizeName(pd.typed) != profiles.NormalizeName(pd.name) {
+			inv.status = "Name doesn't match — nothing deleted"
+			return m, nil
+		}
+		if err := profiles.MoveToTrash(m.profile.configDir, pd.rel); err != nil {
+			inv.status = "Could not delete: " + err.Error()
+			return m, nil
+		}
+		inv.dropSelected()
+		inv.status = "Trashed " + pd.name + " → trash/"
+		return m, nil
+
+	// A space arrives as KeySpace on unix and KeyRunes on Windows, but both
+	// carry the rune, so Runes alone is the portable read.
+	case tea.KeyRunes, tea.KeySpace:
+		pd.typed += string(msg.Runes)
+		inv.pending = &pd
+		return m, nil
+	}
+
+	return m, nil
+}
+
+// dropSelected removes the highlighted entry from its staged list after the
+// file behind it is gone, keeping the cursor in range. The list is edited in
+// place rather than rebuilt from disk so an unapplied arrangement survives.
+func (inv *inventoryModel) dropSelected() {
+	listPtr, err := inv.State.GetList(inv.focusedList)
+	if err != nil || inv.cursor < 0 || inv.cursor >= len(*listPtr) {
+		return
+	}
+	*listPtr = append((*listPtr)[:inv.cursor], (*listPtr)[inv.cursor+1:]...)
+	if inv.cursor >= len(*listPtr) && len(*listPtr) > 0 {
+		inv.cursor = len(*listPtr) - 1
+	}
 }

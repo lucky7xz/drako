@@ -44,6 +44,9 @@ func (c *Config) ApplyDefaults() {
 	if strings.TrimSpace(c.Keys.EditFile) == "" {
 		c.Keys.EditFile = defaults.Keys.EditFile
 	}
+	if strings.TrimSpace(c.Keys.Delete) == "" {
+		c.Keys.Delete = defaults.Keys.Delete
+	}
 	if strings.TrimSpace(c.Keys.Leader) == "" {
 		c.Keys.Leader = defaults.Keys.Leader
 	}

@@ -12,7 +12,7 @@ import (
 // inventoryHelpText is this view's footer help line — extracted to a
 // package-level const so CalculateLayout and the footer-building code below
 // measure/render the exact same string.
-const inventoryHelpText = "↑/↓/tab: Switch Grid | ←/→: Move | space/enter: Lift/Place | e: Edit | q/esc: Back"
+const inventoryHelpText = "↑/↓/tab: Switch Grid | ←/→: Move | space/enter: Lift/Place | e: Edit | del: Trash | q/esc: Back"
 
 func (m Model) viewInventoryMode() string {
 	// If there's an error, just show that.
@@ -62,12 +62,18 @@ func (m Model) viewInventoryMode() string {
 		heldItemStatus = m.styles.Help.Render("Holding: ") + m.styles.SelectedItem.Render(*m.inventory.State.HeldItem)
 	}
 
-	// A rejected action keeps holding the item, so this sits on its own line
-	// under Holding: rather than crowding it. The line is reserved either way
-	// so the lists below don't jump when a message appears; truncated rather
-	// than wrapped to keep it exactly one row.
+	// One line under Holding: carries every piece of inventory feedback — a
+	// rejected action, and the delete confirmation prompt. It is reserved
+	// either way so the lists below don't jump when a message appears, and
+	// truncated rather than wrapped to keep it exactly one row.
+	//
+	// The prompt can't travel through status: that is cleared on every
+	// keystroke, and the prompt has to survive the whole name being typed.
 	statusLine := " " // Reserve space
-	if m.inventory.status != "" {
+	if pd := m.inventory.pending; pd != nil {
+		prompt := fmt.Sprintf("Type '%s' to confirm: %s_", pd.name, pd.typed)
+		statusLine = m.styles.StatusNegative.Render(truncateText(prompt, m.termWidth-LayoutSideMargin))
+	} else if m.inventory.status != "" {
 		statusLine = m.styles.StatusNegative.Render(truncateText(m.inventory.status, m.termWidth-LayoutSideMargin))
 	}
 

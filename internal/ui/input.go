@@ -100,3 +100,8 @@ func IsProfileSwitch(c config.InputConfig, msg tea.KeyMsg, modifier string) (boo
 func IsEditFile(c config.InputConfig, msg tea.KeyMsg) bool {
 	return msg.String() == c.EditFile
 }
+
+// IsDelete checks if the key matches the trash-profile action (inventory mode).
+func IsDelete(c config.InputConfig, msg tea.KeyMsg) bool {
+	return msg.String() == c.Delete
+}

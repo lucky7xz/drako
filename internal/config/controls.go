@@ -14,6 +14,8 @@ type InputConfig struct {
 	ProfilePrev  string `toml:"profile_prev"`
 	ProfileNext  string `toml:"profile_next"`
 	EditFile     string `toml:"edit_file"`
+	// Delete trashes the highlighted profile from the inventory.
+	Delete string `toml:"delete"`
 	// Leader arms a two-key sequence: leader then 'b' (batch mode) or
 	// 1-9 (switch profile). The legacy modifier chord (alt+1-9) still works.
 	Leader string `toml:"leader"`

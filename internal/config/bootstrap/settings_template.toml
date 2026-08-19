@@ -49,6 +49,11 @@ numb_modifier = "alt"
 profile_prev = "o"
 profile_next = "p"
 
+# In the inventory: open the highlighted profile in $EDITOR, or move it to
+# trash/ (you type its name to confirm).
+#edit_file = "e"
+#delete = "delete"
+
 # The leader arms a two-key sequence in the grid:
 #   leader, 1-9  -> switch to profile 1-9
 #   leader, b    -> batch mode (mark cells, launch together in tmux)

@@ -178,3 +178,46 @@ func TestUpdateChildMode_Characterization(t *testing.T) {
 		}
 	})
 }
+
+// The path search is the TUI's other typed-text field, and it had the same
+// problem as the inventory prompt: bindings checked in Update, above the mode
+// dispatch, ate characters before the filter could see them. Directories are
+// named freely, so every letter has to reach the buffer.
+func TestPathSearch_TypesKeysBoundElsewhere(t *testing.T) {
+	cases := []struct {
+		name string
+		mode navMode
+		keys []string
+	}{
+		// 'r' is the lock key, checked globally for every mode.
+		{name: "path mode", mode: pathMode, keys: []string{"r"}},
+		// Child mode is additionally inside the profile-cycle gate, so it
+		// lost 'o' and 'p' on top of 'r'.
+		{name: "child mode", mode: childMode, keys: []string{"r", "o", "p"}},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, key := range tc.keys {
+				pm := pathTestModel(t)
+				pm.Searching = true
+
+				m := Model{
+					mode:    tc.mode,
+					path:    *pm,
+					gridNav: gridNav{grid: [][]string{{"A"}}},
+					Config: config.Config{
+						Keys: config.InputConfig{Lock: "r", ProfilePrev: "o", ProfileNext: "p"},
+					},
+				}
+
+				next, _ := m.Update(keyRune(key))
+				got := next.(Model)
+
+				if got.path.Filter != key {
+					t.Errorf("%s: filter = %q, want %q", key, got.path.Filter, key)
+				}
+			}
+		})
+	}
+}

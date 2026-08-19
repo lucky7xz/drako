@@ -55,7 +55,7 @@ func editInventoryModel(t *testing.T) (Model, string) {
 	m := Model{
 		mode:    inventoryMode,
 		profile: profileState{configDir: dir},
-		Config:  config.Config{Keys: config.InputConfig{EditFile: "e"}},
+		Config:  config.Config{Keys: config.InputConfig{EditFile: "e", Delete: "delete", Lock: "r"}},
 		inventory: inventoryModel{
 			State:       core.NewInventoryState([]string{"eq.profile.toml"}, []string{"st.profile.toml"}, profiles.MaxEquipped),
 			focusedList: core.ListVisible,

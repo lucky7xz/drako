@@ -128,7 +128,7 @@ Run any of these with no arguments for usage. Details in [Power Tools](#-power-t
 - **Switch Profile:** `m` then `1-9` (leader sequence), or the legacy `Alt` + `1-9` chord.
 - **Batch Launch:** `m` then `b`, then `Space` to mark cells and `Enter` to launch them together in tmux (requires tmux; not available in Glassroot Mode). Works inside a folder's dropdown too — `m`, `b` there batches that folder's items.
 - **Cycle Profile:** `o` (prev) and `p` (next).
-- **Profile Inventory:** `i`. Inside, `e` opens the highlighted profile file in your editor (`$VISUAL`/`$EDITOR`). 9 profiles can be equipped at once, so each one keeps a `1-9` chord; the rest wait in the inventory. (A spec can go past 9 if you confirm it — see Profile Specs.)
+- **Profile Inventory:** `i`. Inside, `e` opens the highlighted profile file in your editor (`$VISUAL`/`$EDITOR`), and `Del` moves it to `trash/` once you type its name to confirm. 9 profiles can be equipped at once, so each one keeps a `1-9` chord; the rest wait in the inventory. (A spec can go past 9 if you confirm it — see Profile Specs.)
 - **Lock Current Profile (for launching):** `r`.
 - **Grid/Path Toggle:** `Tab`.
 - **Path Mode:**

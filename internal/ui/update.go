@@ -144,27 +144,33 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		if IsLock(m.Config.Keys, msg) {
-			cmd := m.toggleProfileLock()
-			return m, cmd
-		}
+		// Bindings that reach across modes are skipped while a text field is
+		// collecting keystrokes, so a letter the user is typing isn't spent on
+		// an action instead. Everything above this still wins: ctrl+c, the
+		// locked-mode handoff, and the glassroot veto.
+		if !m.capturingText() {
+			if IsLock(m.Config.Keys, msg) {
+				cmd := m.toggleProfileLock()
+				return m, cmd
+			}
 
-		// Profile switching with configurable modifier + Number or ~ (Shift + `)
-		if m.mode == gridMode || m.mode == childMode {
-			if ok, target := IsProfileSwitch(m.Config.Keys, msg, m.Config.NumbModifier); ok {
-				if target < len(m.profile.profiles) {
-					if updated, ok := m.switchToProfileIndex(target); ok {
-						m = updated
-						return m, nil
+			// Profile switching with configurable modifier + Number or ~ (Shift + `)
+			if m.mode == gridMode || m.mode == childMode {
+				if ok, target := IsProfileSwitch(m.Config.Keys, msg, m.Config.NumbModifier); ok {
+					if target < len(m.profile.profiles) {
+						if updated, ok := m.switchToProfileIndex(target); ok {
+							m = updated
+							return m, nil
+						}
 					}
+					return m, nil
 				}
-				return m, nil
-			}
-			if IsProfilePrev(m.Config.Keys, msg) {
-				return m.handleProfileCycle(-1)
-			}
-			if IsProfileNext(m.Config.Keys, msg) {
-				return m.handleProfileCycle(1)
+				if IsProfilePrev(m.Config.Keys, msg) {
+					return m.handleProfileCycle(-1)
+				}
+				if IsProfileNext(m.Config.Keys, msg) {
+					return m.handleProfileCycle(1)
+				}
 			}
 		}
 		switch m.mode {
@@ -482,6 +488,20 @@ func (m Model) updateLockedMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m = m.exitLockedMode()
 	}
 	return m, nil
+}
+
+// capturingText reports whether a mode is collecting typed characters right
+// now — the delete confirmation, or a path search filter. Such a field owns
+// the keyboard: profile names and directory names can contain any character,
+// so no binding may claim one out from under it.
+func (m Model) capturingText() bool {
+	switch m.mode {
+	case inventoryMode:
+		return m.inventory.pending != nil
+	case pathMode, childMode:
+		return m.path.Searching
+	}
+	return false
 }
 
 func (m Model) switchToProfileIndex(target int) (Model, bool) {
