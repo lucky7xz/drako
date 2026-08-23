@@ -89,7 +89,7 @@ drako ships with **four decks to get you started**:
 -   **Core** — the agnostic control panel: system updates, maintenance, monitors, the **Install Tools** menu, and settings.
 -   **ssh-101** — run and secure SSH: the service, firewall, config & logs, and connecting.
 -   **tmux-101** — tmux fundamentals (sessions, panes, copy mode) — the engine [batch launch](#-navigation) runs on.
--   **jukebox** — a terminal radio: SomaFM, world news, curated stations, and offline noise (via mpv).
+-   **jukebox** — a terminal radio: SomaFM, world news, curated stations, and offline noise (via mpv) — plus your own music and playlists (via cliamp).
 
 Core is equipped on first launch; the other three wait in your **Inventory** (`i`) — equip them when you want them. Beyond these, summon curated decks from the **Install Tools** menu in the Core profile, or from the CLI:
 

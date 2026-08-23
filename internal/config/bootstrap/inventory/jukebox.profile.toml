@@ -1,14 +1,17 @@
 # jukebox deck — a terminal radio with genuinely good sound.
 # Stations (all show the live track title): SomaFM, Radio Swiss (jazz & classical),
-# and a Curated folder — KCRW Eclectic24, Venice Classic Radio, dublab. A separate
+# and a Curated folder — Venice Classic Radio, dublab. A separate
 # Noise folder generates pink/brown noise locally (offline, for focus & sleep).
 # Music cells run mpv with loudnorm (EBU R128, target -16 LUFS) so channels sit at
 # the same loudness and you stop chasing the volume between them.
 # A single "now playing" line shows the live track, volume and elapsed time.
 # While playing: space pause · 9/0 volume · q back.
+# For the music you already own there's cliamp — a Winamp for the terminal, with
+# a playlist CLI. Its cell acts on the folder you launched drako from, so cd
+# into your music before you start.
 
 X = 3
-Y = 2
+Y = 3
 
 header_art= """
               ▓▓░
@@ -65,7 +68,6 @@ col = "B"
 row = 0
 items = [
   { name = "🎷 Jazz", description = "Radio Swiss : Classic to contemporary jazz around the clock, ad-free. 128k.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' http://stream.srg-ssr.ch/m/rsj/mp3_128", auto_close_execution = false },
-  { name = "🎙️ KCRW Eclectic24", description = "LA public radio's 24-hour music stream — eclectic, DJ-curated, no talk, no ads.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://streams.kcrw.com/e24_mp3", auto_close_execution = false },
   { name = "🎻 Classic", description = "Radio Swiss: The classical canon, all day — no lyrics, just calm. Ad-free. 128k.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' http://stream.srg-ssr.ch/m/rsc_de/mp3_128", auto_close_execution = false },
   { name = "🎻 Venice Classic", description = "Italian classical around the clock — baroque to romantic, commercial-free and gently announced.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://uk2.streamingpulse.com/ssl/vcr1", auto_close_execution = false },
   { name = "🤙 dublab", description = "LA nonprofit, freeform and experimental — leftfield music with the occasional talk show. Adventurous.", command = "mpv --no-video --volume=75 --af=loudnorm=I=-16 --msg-level=all=error,statusline=status --term-status-msg='  ♪  ${media-title}     🔊 ${volume}%    ⏱ ${playback-time}' https://dublab.out.airtime.pro/dublab_a", auto_close_execution = false }
@@ -96,6 +98,125 @@ col = "C"
 row = 1
 items = [
   { name = "SomaFM", description = "All channels, donation page.", command = "xdg-open https://somafm.com/support/", auto_close_execution = true },
-  { name = "KCRW", description = "LA public radio — member-supported.", command = "xdg-open https://www.kcrw.com/donate", auto_close_execution = true },
   { name = "dublab", description = "LA nonprofit freeform radio.", command = "xdg-open https://dublab.com/donate", auto_close_execution = true }
+]
+
+[[commands]]
+name = "🧰 cliamp setup"
+description = "Getting cliamp onto this machine and keeping it fed. Check first, install second; the other two are for the two things that usually go wrong — silence on a PipeWire box, and formats that need ffmpeg or yt-dlp. Once it plays, you never need this cell again."
+col = "B"
+row = 2
+items = [
+  { name = "💻 Check", description = "Is it here, and where? Prints the path the shell would run, e.g. /home/you/go/bin/cliamp. Press this first — everything in the cliamp cell needs the binary on your PATH. Installed it with go and still told 'not installed'? Then ~/go/bin isn't on your PATH yet. cliamp has no --version flag; 'cliamp upgrade' pulls the latest release when you want to move forward.", command = '''
+if command -v cliamp >/dev/null; then
+  echo "✅ cliamp: $(command -v cliamp)"
+else
+  echo "❗ cliamp not installed — press 🧰 Install cliamp"
+fi
+''', auto_close_execution = false },
+
+  { name = "🧰 Install cliamp", description = "Homebrew if you have it — the tap pulls the FLAC/Vorbis/Ogg/mpg123 codecs in for you. Otherwise your distro's ALSA and codec headers, then 'go install github.com/bjarneo/cliamp@latest', which drops the binary in ~/go/bin. Example on Debian: apt fetches libasound2-dev and friends, go builds it, done in about a minute.", command = { linux_immutable = "brew install bjarneo/cliamp/cliamp", linux_debian = """
+if command -v brew >/dev/null; then
+  brew install bjarneo/cliamp/cliamp
+elif command -v go >/dev/null; then
+  sudo apt install -y libasound2-dev libflac-dev libvorbis-dev libogg-dev libmpg123-dev
+  go install github.com/bjarneo/cliamp@latest
+  echo "✅ Installed — add $(go env GOPATH)/bin to your PATH if it isn't there yet."
+else
+  echo "❓ Needs brew or go. Prebuilt binaries: https://github.com/bjarneo/cliamp/releases"
+fi
+""", linux_fedora = """
+if command -v brew >/dev/null; then
+  brew install bjarneo/cliamp/cliamp
+elif command -v go >/dev/null; then
+  sudo dnf install -y alsa-lib-devel flac-devel libvorbis-devel libogg-devel mpg123-devel
+  go install github.com/bjarneo/cliamp@latest
+  echo "✅ Installed — add $(go env GOPATH)/bin to your PATH if it isn't there yet."
+else
+  echo "❓ Needs brew or go. Prebuilt binaries: https://github.com/bjarneo/cliamp/releases"
+fi
+""", linux_arch = """
+if command -v brew >/dev/null; then
+  brew install bjarneo/cliamp/cliamp
+elif command -v go >/dev/null; then
+  sudo pacman -S --needed alsa-lib flac libvorbis libogg mpg123
+  go install github.com/bjarneo/cliamp@latest
+  echo "✅ Installed — add $(go env GOPATH)/bin to your PATH if it isn't there yet."
+else
+  echo "❓ Needs brew or go. There's also an AUR package: yay -S cliamp"
+fi
+""", linux_suse = """
+if command -v brew >/dev/null; then
+  brew install bjarneo/cliamp/cliamp
+elif command -v go >/dev/null; then
+  sudo zypper install -y alsa-devel flac-devel libvorbis-devel libogg-devel mpg123-devel
+  go install github.com/bjarneo/cliamp@latest
+  echo "✅ Installed — add $(go env GOPATH)/bin to your PATH if it isn't there yet."
+else
+  echo "❓ Needs brew or go. Prebuilt binaries: https://github.com/bjarneo/cliamp/releases"
+fi
+""", linux_void = """
+if command -v brew >/dev/null; then
+  brew install bjarneo/cliamp/cliamp
+elif command -v go >/dev/null; then
+  sudo xbps-install -Sy alsa-lib-devel libflac-devel libvorbis-devel libogg-devel mpg123-devel
+  go install github.com/bjarneo/cliamp@latest
+  echo "✅ Installed — add $(go env GOPATH)/bin to your PATH if it isn't there yet."
+else
+  echo "❓ Needs brew or go. Prebuilt binaries: https://github.com/bjarneo/cliamp/releases"
+fi
+""", linux_generic = """
+if command -v brew >/dev/null; then
+  brew install bjarneo/cliamp/cliamp
+elif command -v go >/dev/null; then
+  echo "❗ Install the ALSA and codec headers with your package manager first —"
+  echo "   alsa-lib, flac, libvorbis, libogg, mpg123 (the -dev/-devel variants)."
+  go install github.com/bjarneo/cliamp@latest
+  echo "✅ Installed — add $(go env GOPATH)/bin to your PATH if it isn't there yet."
+else
+  echo "❓ Needs brew or go. Prebuilt binaries: https://github.com/bjarneo/cliamp/releases"
+fi
+""", macos = "brew install bjarneo/cliamp/cliamp" }, auto_close_execution = false },
+
+  { name = "🔌 No sound?", description = "Timer running, spectrum dancing, total silence? cliamp speaks ALSA, and PipeWire needs a bridge package to hear it. Example: 'sudo apt install pipewire-alsa', then start cliamp again. Still on PulseAudio? Then the package is pulseaudio-alsa on Arch, libasound2-plugins on Debian — install that one instead.", command = { linux_immutable = "echo '✅ The PipeWire ALSA bridge ships in the base image here — nothing to install.'", linux_debian = "sudo apt install -y pipewire-alsa", linux_fedora = "sudo dnf install -y pipewire-alsa", linux_arch = "sudo pacman -S --needed pipewire-alsa", linux_suse = "sudo zypper install -y pipewire-alsa", linux_void = "sudo xbps-install -Sy alsa-pipewire", linux_generic = "echo '❗ Install the ALSA bridge for your sound server: pipewire-alsa (PipeWire) or pulseaudio-alsa (PulseAudio).'", macos = "echo '🍏 macOS plays through CoreAudio — this one is a Linux-only fix.'" }, auto_close_execution = false },
+
+  { name = "🧩 Extras", description = "Two optional companions: ffmpeg adds AAC, ALAC, Opus and WMA playback, yt-dlp adds YouTube, YouTube Music, SoundCloud and Bandcamp. Without them cliamp still plays MP3, FLAC, Ogg and WAV. Example: 'cliamp search \"blue monday\"' only works once yt-dlp is here. On Fedora and openSUSE this installs the patent-free ffmpeg build — the full one lives in RPM Fusion / Packman.", command = { linux_immutable = "brew install ffmpeg yt-dlp", linux_debian = "sudo apt install -y ffmpeg yt-dlp", linux_fedora = "sudo dnf install -y ffmpeg-free yt-dlp", linux_arch = "sudo pacman -S --needed ffmpeg yt-dlp", linux_suse = "sudo zypper install -y ffmpeg yt-dlp", linux_void = "sudo xbps-install -Sy ffmpeg yt-dlp", linux_generic = "echo '❗ Install ffmpeg and yt-dlp with your distro package manager.'", macos = "brew install ffmpeg yt-dlp" }, auto_close_execution = false },
+
+]
+
+[[commands]]
+name = "💿 cliamp"
+description = "A Winamp for the terminal — the one cell here that plays music you already own. Spectrum visualiser, parametric EQ, and a playlist CLI that turns a music folder into a saved playlist in one keystroke. Everything below acts on the folder you launched drako from, so cd there first. Inside the player: Ctrl+K lists every key, p opens the playlist manager, R opens 30,000+ radio stations. Nothing here works until 🧰 cliamp setup has run."
+col = "A"
+row = 2
+items = [
+  { name = "🎵 Play this folder", description = "Opens the player on the current directory — plain 'cliamp .'. Example: 'cd ~/Music && drako', then press this and the whole folder is your queue. Works on a single album folder or a whole library; subfolders come along.", command = "cliamp .", auto_close_execution = false },
+
+  { name = "📀 Playlist from this folder", description = "Saves the current folder as a playlist named after it. Example: run it from ~/Music/jazz and you get a playlist 'jazz' at ~/.config/cliamp/playlists/jazz.toml, loadable with 'cliamp --playlist jazz'. Subfolders are included, so a whole library becomes one big playlist. It's a snapshot of what's there right now — add music later with 'cliamp playlist add \"jazz\" ~/Music/jazz/new-album', or just press this again.", command = '''cliamp playlist create "$(basename "$PWD")" "$PWD"''', auto_close_execution = false },
+
+  { name = "💽 One playlist per subfolder", description = "The other half of the pair: for a library of albums, each subfolder becomes its own playlist instead of one giant pile. Example: ~/Music holding dune/, ronin/ and blade-runner/ gives you three playlists under exactly those names. One level deep only — folders inside an album stay part of that album.", command = '''find "$PWD" -mindepth 1 -maxdepth 1 -type d -exec sh -c 'cliamp playlist create "$(basename "$1")" "$1"' _ {} \;''', auto_close_execution = false },
+
+  { name = "📜 List playlists", description = "Every playlist cliamp knows — one line per .toml in ~/.config/cliamp/playlists/. Example output: jazz, dune, radio-stations. Play one with 'cliamp --playlist jazz', or press Esc (or b) inside the player to browse them.", command = "cliamp playlist list", auto_close_execution = false },
+
+  { name = "🧹 Trash all playlists", description = "Clean slate that you can walk back: tells you how many playlists it found, waits for a y, then moves every one of them to ~/.config/cliamp/playlists-trash/ with a timestamp. Nothing is deleted. Example: jazz.toml becomes playlists-trash/jazz-20260823-191204.toml — invisible to cliamp, still on your disk. Bring one back by moving it home under its old name: mv ~/.config/cliamp/playlists-trash/jazz-20260823-191204.toml ~/.config/cliamp/playlists/jazz.toml. The trash sits beside the playlists folder rather than inside it, because cliamp loads every .toml it finds in there.", command = '''
+d="$HOME/.config/cliamp/playlists"
+t="$HOME/.config/cliamp/playlists-trash"
+n=$(ls "$d"/*.toml 2>/dev/null | wc -l)
+if [ "$n" -eq 0 ]; then
+  echo "No playlists to trash."
+  exit 0
+fi
+printf 'Move all %s playlists to the trash? [y/N] ' "$n"
+read a
+if [ "$a" = "y" ] || [ "$a" = "Y" ]; then
+  mkdir -p "$t"
+  stamp=$(date +%Y%m%d-%H%M%S)
+  for f in "$d"/*.toml; do
+    mv "$f" "$t/$(basename "$f" .toml)-$stamp.toml"
+  done
+  echo "🧹 All $n moved to $t — nothing deleted."
+else
+  echo "Cancelled — nothing moved."
+fi
+''', auto_close_execution = false }
 ]
