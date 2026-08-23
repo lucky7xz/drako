@@ -35,6 +35,18 @@ form.**
 Nothing here limits what the AGPL grants you: fork it, modify your fork,
 run it anywhere — that freedom is the license, and it stays.
 
+## scales/
+
+As of now, drako takes ideas, not patches. Since that leaves good ideas
+unmentioned, people who contribute a lot to this project should at least
+receive a proof token of their contribution.
+[`scales/`](../internal/config/bootstrap/scales/) is the staging area for
+those tokens. Those who make it there have made significant contributions
+to drako, either through good design arguments or valuable bootstrap
+assets (or both).
+
+Engine code stays AGPL-3.0 and single-authored until further notice.
+
 ## The practical guide
 
 Filing a good issue:
