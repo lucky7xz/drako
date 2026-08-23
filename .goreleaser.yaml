@@ -10,6 +10,9 @@ project_name: drako
 before:
   hooks:
     - go mod tidy
+    # Collect the licences of every module linked into the binary. Generated
+    # here so it can never drift from go.mod.
+    - sh scripts/third-party-notices.sh
 
 builds:
   - id: drako
@@ -40,6 +43,12 @@ builds:
 
 archives:
   - formats: [tar.gz]
+    # Listed explicitly because this replaces the defaults — and the defaults
+    # match LICENSE*, which never matched our LICENCE.
+    files:
+      - LICENCE
+      - README.md
+      - THIRD-PARTY-NOTICES.md
     # uname-compatible names: drako_Linux_x86_64.tar.gz etc.
     name_template: >-
       {{ .ProjectName }}_
@@ -77,6 +86,11 @@ nfpms:
       - rpm
     dependencies:
       - git
+    contents:
+      - src: LICENCE
+        dst: /usr/share/doc/drako/LICENCE
+      - src: THIRD-PARTY-NOTICES.md
+        dst: /usr/share/doc/drako/THIRD-PARTY-NOTICES.md
 
 release:
   github:

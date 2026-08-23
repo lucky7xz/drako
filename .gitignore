@@ -1,6 +1,8 @@
 .cache/
 docs/tutorial/
 dist/
+# generated at release time by scripts/third-party-notices.sh
+THIRD-PARTY-NOTICES.md
 xyz.*
 *clove.md
 .claude/
