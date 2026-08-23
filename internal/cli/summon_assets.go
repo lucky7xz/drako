@@ -286,6 +286,17 @@ func isPathWithinBase(base, target string) (bool, error) {
 		return false, err
 	}
 
+	// Resolve the base too, so both sides are compared in the same form.
+	// Where /home is a symlink — Fedora atomic points it at /var/home — an
+	// unresolved base can never contain a resolved target, and every asset
+	// reads as [missing]:
+	//   base    /home/you/.config/drako/inventory/.summon-temp
+	//   target  /var/home/you/.config/drako/inventory/.summon-temp/serve.sh
+	// The target is still resolved in full, so the escape check below holds.
+	if resolvedBase, rerr := filepath.EvalSymlinks(baseAbs); rerr == nil {
+		baseAbs = resolvedBase
+	}
+
 	// Use EvalSymlinks to resolve the true final path.
 	// Example: If the repo contains a file 'script.sh' which is actually a symlink
 	// pointing to '../../../../etc/passwd', EvalSymlinks reveals that true path.
