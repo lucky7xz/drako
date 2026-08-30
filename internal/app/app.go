@@ -75,6 +75,11 @@ func Run() int {
 	defer f.Close()
 	log.SetOutput(f)
 
+	// Each lap throws the model away so a launched command gets a clean
+	// terminal, so where the cursor was has to be handed forward explicitly.
+	// The zero value restores nothing, which is what the first lap wants.
+	var session ui.Session
+
 	// Start of TUI Loop
 	for {
 
@@ -87,6 +92,10 @@ func Run() int {
 			// e.g. glassroot with a broken profile: fail before the TUI starts
 			return initial.ExitCode
 		}
+		// Strictly below that gate: a session glassroot has decided to end must
+		// not be revivable by a value carried from the previous lap.
+		initial.Restore(session)
+
 		program := tea.NewProgram(initial)
 
 		result, err := program.Run()
@@ -101,6 +110,7 @@ func Run() int {
 			// Should not happen, but safe exit
 			return 0
 		}
+		session = state.Session()
 
 		if state.Quitting {
 			return state.ExitCode

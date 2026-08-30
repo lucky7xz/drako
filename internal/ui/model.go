@@ -307,6 +307,71 @@ func (m Model) ActiveProfileName() string {
 	return p.profiles[p.activeIndex].Name
 }
 
+// Session is where a run left off, handed to the next one. drako quits the TUI
+// so a launched command gets a clean terminal, which means the model that knew
+// your position is thrown away and rebuilt -- this is the value that survives
+// that gap. It lives for the process and is never written down.
+//
+// Names, not coordinates. InitialModel re-reads the config every lap, so by the
+// time you return, row 1 column 1 may be a different command: you edited a
+// profile, or the command you ran switched one. Following the name lands you on
+// the cell you actually ran, wherever it moved to.
+type Session struct {
+	Cell    string
+	Profile string
+}
+
+// Session snapshots the position for Restore to re-establish once the config
+// has been re-read.
+func (m Model) Session() Session {
+	s := Session{Profile: m.ActiveProfileName()}
+
+	row, col := m.gridNav.cursorRow, m.gridNav.cursorCol
+	if row >= 0 && row < len(m.gridNav.grid) && col >= 0 && col < len(m.gridNav.grid[row]) {
+		s.Cell = m.gridNav.grid[row][col]
+	}
+	return s
+}
+
+// Restore puts the cursor back. The grid has been rebuilt from a config that may
+// have changed since, so nothing carried over is trusted: both names are looked
+// up afresh and anything missing is simply left alone.
+//
+// The profile goes first. Switching one replaces the grid, so a cursor set
+// before the switch would index into a grid that no longer exists.
+//
+// Restore never touches Quitting or ExitCode. It must be called *after* the
+// host's glassroot gate, so that a session glassroot decided to end cannot be
+// revived by a carried value.
+func (m *Model) Restore(s Session) {
+	if s.Profile != "" && s.Profile != m.ActiveProfileName() {
+		for i, p := range m.profile.profiles {
+			if p.Name != s.Profile {
+				continue
+			}
+			// switchToProfileIndex is the real path: it re-applies the config
+			// overlay and calls applyConfig. Setting activeIndex alone would
+			// leave the model half-switched.
+			if updated, ok := m.switchToProfileIndex(i); ok {
+				*m = updated
+			}
+			break
+		}
+	}
+
+	if s.Cell == "" {
+		return
+	}
+	for row, cells := range m.gridNav.grid {
+		for col, name := range cells {
+			if name == s.Cell {
+				m.gridNav.cursorRow, m.gridNav.cursorCol = row, col
+				return
+			}
+		}
+	}
+}
+
 func InitialModel(glassrootMode bool) Model {
 	path, err := os.Getwd()
 	if err != nil {
