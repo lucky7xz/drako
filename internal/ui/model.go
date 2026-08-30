@@ -343,6 +343,14 @@ func (m Model) Session() Session {
 // Restore never touches Quitting or ExitCode. It must be called *after* the
 // host's glassroot gate, so that a session glassroot decided to end cannot be
 // revived by a carried value.
+//
+// A carried profile outranks the pivot lock, which is the one behaviour this
+// changes. The pivot answers "which profile does a fresh process start on"
+// (config.resolveRequested: override > pivot > DRAKO_PROFILE > config.toml), and
+// it still does; a lap of the launch loop is not a fresh start, and an explicit
+// mid-session switch is the more recent statement of intent. Nothing is granted
+// by this: the pivot pins a starting point, it is not an access control, and
+// glassroot already contracts that a session can reach every equipped profile.
 func (m *Model) Restore(s Session) {
 	if s.Profile != "" && s.Profile != m.ActiveProfileName() {
 		for i, p := range m.profile.profiles {

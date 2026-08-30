@@ -187,3 +187,25 @@ func TestSessionIgnoresAProfileThatVanished(t *testing.T) {
 		t.Errorf("ActiveProfileName = %q, want alpha left untouched", got)
 	}
 }
+
+// The exact value InitialModel returns when glassroot rejects a bundle: no
+// grid, no profiles, already done. app.go returns before Restore ever sees it,
+// but that ordering is one line in another package, so pin the behaviour here
+// too — Restore on this model must be inert in every field.
+func TestRestoreIsInertOnAGlassrootRejection(t *testing.T) {
+	m := Model{Quitting: true, ExitCode: 1, GlassrootMode: true}
+
+	m.Restore(Session{Cell: "bandwidth", Profile: "beta"})
+
+	if !m.Quitting || m.ExitCode != 1 {
+		t.Errorf("Quitting=%v ExitCode=%d, want true/1 untouched", m.Quitting, m.ExitCode)
+	}
+	if m.gridNav.cursorRow != 0 || m.gridNav.cursorCol != 0 {
+		t.Errorf("cursor moved to %d,%d on an empty grid",
+			m.gridNav.cursorRow, m.gridNav.cursorCol)
+	}
+	if m.profile.sessionProfile != "" {
+		t.Errorf("sessionProfile = %q — a profile was switched with none loaded",
+			m.profile.sessionProfile)
+	}
+}
