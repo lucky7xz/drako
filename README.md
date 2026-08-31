@@ -34,6 +34,8 @@ No install — drako served over SSH ([Wish](https://github.com/charmbracelet/wi
 ## 🚀 Install
 
 > Requires Go **1.24+** —  A `curl | sh` installer is on the roadmap.
+>
+> **No Go toolchain?** Prebuilt static binaries for Linux, macOS and FreeBSD are on the [Releases](https://github.com/lucky7xz/drako/releases) page — see [Compatibility](#-compatibility) for what runs where.
 
 ```bash
 go install github.com/lucky7xz/drako@latest
@@ -81,6 +83,57 @@ The pure-Go build avoids a C toolchain, which Termux doesn't ship by default. Te
 
 > [!NOTE]
 > **Emoji Support:** drako profiles sometimes use emojis as visual indicators. Modern terminals (Ghostty, WezTerm etc.) may support them by default. Others (older Linux terminals) may require a [Nerd Font](https://www.nerdfonts.com/) or an emoji font package (e.g., `fonts-noto-color-emoji`).
+
+## 🐧 Compatibility
+
+The release binaries are built `CGO_ENABLED=0` — **statically linked, no libc**. There is nothing to resolve at load time, so glibc versions and glibc-vs-musl simply don't apply: the same `drako_Linux_x86_64.tar.gz` runs on Debian, Alpine and everything between. Linux archives ship for `x86_64`, `arm64` and `armv7`.
+
+What actually varies is your **shell** and which optional tools are on `PATH`.
+
+### Will it run?
+
+The variant key is what [the Weaver](#-cross-platform-decks-the-weaver) resolves your deck against — listed here so one table answers both questions.
+
+| Distro | Runs | Variant key | Notes |
+| --- | :---: | --- | --- |
+| Debian, Ubuntu, Mint, Pop!\_OS, Kali, Zorin, MX, elementary, Neon | ✅ | `linux_debian` | |
+| Fedora, RHEL, CentOS, Rocky, Alma, Nobara | ✅ | `linux_fedora` | Rocky/Alma match via `ID_LIKE` |
+| Arch, Manjaro, EndeavourOS, CachyOS, Garuda, Omarchy | ✅ | `linux_arch` | |
+| openSUSE, SLES | ✅ | `linux_suse` | |
+| Void | ✅ | `linux_void` | musl edition fine — static binary |
+| Bazzite, Silverblue, Kinoite, Bluefin, Aurora | ✅ | `linux_immutable` → `linux_fedora` | ostree-detected |
+| SteamOS / Steam Deck | ✅ | `linux_immutable` → `linux_arch` | read-only root, no ostree |
+| Alpine | ✅ | `linux_generic` | ⚠️ no bash by default — see below |
+| NixOS | ✅ | `linux_generic` | no patchelf needed — static binary |
+| Gentoo, Slackware, anything else | ✅ | `linux_generic` | |
+
+### What you need installed
+
+| Tool | Needed for | Without it |
+| --- | --- | --- |
+| **bash** | **running cells** — the default shell | ⚠️ **cells fail**, unless you set `default_shell` |
+| `git` | summoning profiles, git cells | those cells fail |
+| `tmux` | batch mode | the feature stays hidden |
+| `wl-copy` / `xclip` / `xsel` | clipboard copy (`y`) | copy does nothing |
+| `xdg-open` | opening paths | that action fails |
+
+Everything except bash is probed with `exec.LookPath` and degrades quietly — a missing tool costs you that one feature, never a crash.
+
+### Which decks need bash?
+
+Cells run through `bash -lc` unless you set `default_shell`. Only the two `101` decks actually depend on that — and both are stored in inventory, not equipped on first run:
+
+| Deck | Equipped by default | Runs under `sh` |
+| --- | :---: | --- |
+| **Core** | ✅ | ✅ POSIX-clean |
+| jukebox | — | ✅ POSIX-clean |
+| ssh-101 | — | ❌ uses `source` |
+| tmux-101 | — | ❌ uses `source`, `<(…)` |
+
+> [!NOTE]
+> **Alpine & minimal containers:** the binary runs fine, but unconfigured cells use `bash -lc` and busybox ships `ash`. Either `apk add bash`, or set `default_shell = "sh"` — the Core deck works either way. Note that `default_shell = "sh"` also drops the login shell, so cells no longer pick up `/etc/profile` and `~/.bash_profile`.
+
+Writing your own decks? They're only as portable as the syntax you put in them — `default_shell` and the per-command `shell` key both take `bash`, `sh`, `zsh`, `fish`, `pwsh` and `cmd`.
 
 ## 🎴 Decks
 

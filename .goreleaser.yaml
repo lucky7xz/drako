@@ -86,6 +86,9 @@ nfpms:
       - rpm
     dependencies:
       - git
+      # The default shell for unconfigured cells is `bash -lc`
+      # (core.fallbackShell), so without it an installed drako runs nothing.
+      - bash
     contents:
       - src: LICENCE
         dst: /usr/share/doc/drako/LICENCE
