@@ -81,6 +81,7 @@ type profileState struct {
 type Model struct {
 	Selected      string
 	SelectedBatch []string // cell names for a batch launch (read by app.go after quit)
+	SelectedTabs  []int    // how those cells split into tabs, chosen in the dialog
 	Quitting      bool
 	ExitCode      int // process exit code the host should use once the TUI is down
 	GlassrootMode bool

@@ -87,6 +87,8 @@ func TestBatchLaunchCollectsInSelectionOrder(t *testing.T) {
 	m, _ = pressBatch(t, m, tea.KeyMsg{Type: tea.KeyLeft})
 	m, _ = pressBatch(t, m, spaceKey)
 
+	// Enter opens the layout dialog; a second Enter accepts it and launches.
+	m, _ = pressBatch(t, m, tea.KeyMsg{Type: tea.KeyEnter})
 	m, cmd := pressBatch(t, m, tea.KeyMsg{Type: tea.KeyEnter})
 	want := []string{"two", "one"}
 	if len(m.SelectedBatch) != 2 || m.SelectedBatch[0] != want[0] || m.SelectedBatch[1] != want[1] {

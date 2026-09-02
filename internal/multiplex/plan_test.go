@@ -2,6 +2,7 @@ package multiplex
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -45,7 +46,7 @@ func wantVerbs(t *testing.T, s Session, want ...string) {
 }
 
 func TestPlan_SingleCommand(t *testing.T) {
-	s, err := Plan("drako-1", cells(1), false, "/tmp/x")
+	s, err := Plan("drako-1", cells(1), []int{1}, false, "/tmp/x")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,8 +62,10 @@ func TestPlan_SingleCommand(t *testing.T) {
 	}
 }
 
-func TestPlan_FourCommandsTiledPanes(t *testing.T) {
-	s, err := Plan("drako-1", cells(4), false, "/tmp/x")
+// One tab holding every cell: the session's first window, then a split per
+// extra cell, arranged tiled.
+func TestPlan_OneTabOfFourPanes(t *testing.T) {
+	s, err := Plan("drako-1", cells(4), []int{4}, false, "/tmp/x")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,56 +73,89 @@ func TestPlan_FourCommandsTiledPanes(t *testing.T) {
 		"select-layout", "attach-session")
 	last := s.Steps[4]
 	if last[len(last)-1] != "tiled" {
-		t.Errorf("pane path must arrange tiled, got %v", last)
+		t.Errorf("a multi-pane tab must be arranged tiled, got %v", last)
 	}
 }
 
-func TestPlan_FiveCommandsNamedWindows(t *testing.T) {
-	s, err := Plan("drako-1", cells(5), false, "/tmp/x")
+// Five cells used to explode into five windows. The vector decides now, so
+// [4 1] is two tabs — four side by side, then one.
+func TestPlan_TwoTabsFromFiveCells(t *testing.T) {
+	s, err := Plan("drako-1", cells(5), []int{4, 1}, false, "/tmp/x")
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantVerbs(t, s, "new-session", "new-window", "new-window", "new-window",
-		"new-window", "attach-session")
-	// Windows carry the cell name so the tab bar is readable.
-	found := false
-	for _, tok := range s.Steps[1] {
-		if tok == "cell 2" {
-			found = true
-		}
-	}
-	if !found {
-		t.Errorf("new-window should be named after its cell: %v", s.Steps[1])
+	wantVerbs(t, s, "new-session", "split-window", "split-window", "split-window",
+		"select-layout", "new-window", "attach-session")
+	// A one-pane tab needs no layout step.
+	if strings.Contains(strings.Join(s.Steps[5], " "), "tiled") {
+		t.Errorf("a single-pane tab must not be arranged: %v", s.Steps[5])
 	}
 }
 
-func TestPlan_InsideTmuxNested(t *testing.T) {
-	s, err := Plan("drako-1", cells(3), true, "/tmp/x")
+// A tab holds several cells, so it is named after all of them — the identity a
+// pane cannot carry.
+func TestPlan_TabsAreNamedAfterTheirCells(t *testing.T) {
+	s, err := Plan("drako-1", cells(5), []int{4, 1}, false, "/tmp/x")
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Current session: every command splits, no new-session, no attach.
-	wantVerbs(t, s, "split-window", "split-window", "split-window", "select-layout")
+	first := strings.Join(s.Steps[0], " ")
+	if !strings.Contains(first, "cell 1·cell 2·cell 3·cell 4") {
+		t.Errorf("the first tab must be named after its four cells: %v", s.Steps[0])
+	}
+	if second := strings.Join(s.Steps[5], " "); !strings.Contains(second, "cell 5") {
+		t.Errorf("the second tab must be named after its cell: %v", s.Steps[5])
+	}
+}
+
+// Inside tmux the batch gets its own windows; drako's pane is never split.
+func TestPlan_InsideTmuxMakesItsOwnTabs(t *testing.T) {
+	s, err := Plan("drako-1", cells(3), []int{3}, true, "/tmp/x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantVerbs(t, s, "new-window", "split-window", "split-window", "select-layout")
 	if s.Attach {
 		t.Error("nested launch must not attach (drako already owns a pane)")
 	}
+	// No -t: the steps join the session drako is already in.
+	for _, step := range s.Steps {
+		if slices.Contains(step, "-t") {
+			t.Errorf("a nested step must not target a session by name: %v", step)
+		}
+	}
 }
 
-func TestPlan_InsideTmuxManyWindows(t *testing.T) {
-	s, err := Plan("drako-1", cells(6), true, "/tmp/x")
+func TestPlan_InsideTmuxTwoTabs(t *testing.T) {
+	s, err := Plan("drako-1", cells(6), []int{4, 2}, true, "/tmp/x")
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantVerbs(t, s, "new-window", "new-window", "new-window", "new-window",
-		"new-window", "new-window")
+	wantVerbs(t, s, "new-window", "split-window", "split-window", "split-window",
+		"select-layout", "new-window", "split-window", "select-layout")
 }
 
 func TestPlan_CapAndEmpty(t *testing.T) {
-	if _, err := Plan("s", cells(10), false, "/tmp/x"); err == nil {
+	if _, err := Plan("s", cells(10), []int{4, 4, 2}, false, "/tmp/x"); err == nil {
 		t.Error("more than 9 commands must be rejected")
 	}
-	if _, err := Plan("s", nil, false, "/tmp/x"); err == nil {
+	if _, err := Plan("s", nil, nil, false, "/tmp/x"); err == nil {
 		t.Error("zero commands must be rejected")
+	}
+}
+
+// The vector and the cells must agree, or panes would be dropped or invented.
+func TestPlan_RejectsATabVectorThatMissesCells(t *testing.T) {
+	for _, tabs := range [][]int{nil, {3}, {5}, {2, 3}, {4, 0, 1}} {
+		if _, err := Plan("s", cells(4), tabs, false, "/tmp/x"); err == nil {
+			t.Errorf("tabs %v does not lay out 4 cells, want an error", tabs)
+		}
+	}
+	// Any vector that does add up is accepted, however it splits them.
+	for _, tabs := range [][]int{{4}, {2, 2}, {1, 1, 1, 1}} {
+		if _, err := Plan("s", cells(4), tabs, false, "/tmp/x"); err != nil {
+			t.Errorf("tabs %v lays out 4 cells, got %v", tabs, err)
+		}
 	}
 }
 
@@ -129,7 +165,7 @@ func TestPlan_ScriptQuoting(t *testing.T) {
 		Script: `echo 'hi' && say "there" | grep $HOME`,
 		Shell:  "bash",
 	}}
-	s, err := Plan("drako-1", cmds, false, "/tmp/x")
+	s, err := Plan("drako-1", cmds, []int{len(cmds)}, false, "/tmp/x")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,7 +188,7 @@ func TestPlan_KeepOpenAppendsPause(t *testing.T) {
 		{Name: "open", Script: "ls", Shell: "bash", KeepOpen: true},
 		{Name: "closed", Script: "ls", Shell: "bash"},
 	}
-	s, err := Plan("drako-1", cmds, false, "/tmp/x")
+	s, err := Plan("drako-1", cmds, []int{len(cmds)}, false, "/tmp/x")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -175,7 +211,7 @@ func TestPlan_KeepOpenAppendsPause(t *testing.T) {
 
 func scriptFor(t *testing.T, c Command) string {
 	t.Helper()
-	s, err := Plan("drako-1", []Command{c}, false, "/tmp/x")
+	s, err := Plan("drako-1", []Command{c}, []int{1}, false, "/tmp/x")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -224,7 +260,7 @@ func TestPlan_EnvValuesQuoted(t *testing.T) {
 
 func TestPlan_SanitizedFilenames(t *testing.T) {
 	cmds := []Command{{Name: "🧹 Weird / Name ⋮", Script: "ls", Shell: "bash"}}
-	s, err := Plan("drako-1", cmds, false, "/tmp/x")
+	s, err := Plan("drako-1", cmds, []int{len(cmds)}, false, "/tmp/x")
 	if err != nil {
 		t.Fatal(err)
 	}

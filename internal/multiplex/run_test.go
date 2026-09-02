@@ -29,7 +29,7 @@ func TestRun_WritesScriptsAndExecutesSteps(t *testing.T) {
 	got := captureSteps(t)
 	dir := filepath.Join(t.TempDir(), "batch")
 
-	s, err := Plan("drako-t", cells(2), true, dir) // nested: no attach, no cleanup
+	s, err := Plan("drako-t", cells(2), []int{2}, true, dir) // nested: no attach, no cleanup
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +69,7 @@ func TestRun_AttachStepGetsTerminalAndEnv(t *testing.T) {
 	got := captureSteps(t)
 	dir := filepath.Join(t.TempDir(), "batch")
 
-	s, err := Plan("drako-t", cells(1), false, dir)
+	s, err := Plan("drako-t", cells(1), []int{1}, false, dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +95,7 @@ func TestRun_NestedLeavesScriptsAlone(t *testing.T) {
 	captureSteps(t)
 	dir := filepath.Join(t.TempDir(), "batch")
 
-	s, err := Plan("drako-t", cells(2), true, dir)
+	s, err := Plan("drako-t", cells(2), []int{2}, true, dir)
 	if err != nil {
 		t.Fatal(err)
 	}

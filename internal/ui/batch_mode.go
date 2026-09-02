@@ -2,7 +2,6 @@ package ui
 
 import (
 	"os/exec"
-	"slices"
 	"strconv"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -25,7 +24,16 @@ type batchState struct {
 	// dropdown scopes the mark set to the open folder's items: an inside
 	// batch never mixes with grid cells, and vice versa.
 	dropdown bool
+
+	// tabs is the layout being chosen: nil while marking, set once the
+	// dialog opens. focus is 0 for the tab-count field, 1..len(tabs) for a
+	// tab's pane count.
+	tabs  []int
+	focus int
 }
+
+// choosing reports whether the layout dialog is open.
+func (b batchState) choosing() bool { return b.tabs != nil }
 
 // mark is name's 1-based position in the mark set, or 0 when unmarked.
 func (b batchState) mark(name string) int {
@@ -91,6 +99,12 @@ func (m Model) enterDropdownBatch() (tea.Model, tea.Cmd) {
 // handled=false hands the key back for the dropdown's normal behavior
 // (navigation, digit jumps, explain).
 func (m Model) updateDropdownMarking(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
+	// The layout dialog owns every key once it is open.
+	if m.batch.choosing() {
+		next, cmd := m.updateBatchDialog(msg)
+		return next, cmd, true
+	}
+
 	switch msg.String() {
 	case " ":
 		if m.dropdown.selectedIdx < 0 || m.dropdown.selectedIdx >= len(m.dropdown.items) {
@@ -107,11 +121,8 @@ func (m Model) updateDropdownMarking(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) 
 		return m, nil, true
 
 	case "enter":
-		if len(m.batch.marked) == 0 {
-			return m, m.setProfileStatus("Nothing marked", false), true
-		}
-		m.SelectedBatch = slices.Clone(m.batch.marked)
-		return m, tea.Quit, true
+		next, cmd := m.beginLaunch()
+		return next, cmd, true
 
 	case "esc":
 		// End marking, keep the dropdown open; the next esc closes it.
@@ -134,6 +145,11 @@ func (m Model) markable(name string) bool {
 // batchState — the grid itself never learns about them.
 func (m Model) updateBatchMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
+
+	// The layout dialog owns every key once it is open.
+	if m.batch.choosing() {
+		return m.updateBatchDialog(msg)
+	}
 
 	// Quick navigation works exactly like grid mode: digits jump the cursor.
 	if num, err := strconv.Atoi(key); err == nil && num >= 1 && num <= 9 {
@@ -163,11 +179,7 @@ func (m Model) updateBatchMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case key == "enter":
-		if len(m.batch.marked) == 0 {
-			return m, m.setProfileStatus("Nothing marked", false)
-		}
-		m.SelectedBatch = slices.Clone(m.batch.marked)
-		return m, tea.Quit
+		return m.beginLaunch()
 
 	case IsUp(m.Config.Keys, msg):
 		m.gridNav.moveCursor(-1, 0)

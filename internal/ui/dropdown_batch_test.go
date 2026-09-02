@@ -140,6 +140,8 @@ func TestDropdownLaunchCollectsSelectionOrder(t *testing.T) {
 	m, _ = pressDropdown(t, m, keyRunes("1"))
 	m, _ = pressDropdown(t, m, spaceKey)
 
+	// Enter opens the layout dialog; a second Enter accepts it and launches.
+	m, _ = pressDropdown(t, m, tea.KeyMsg{Type: tea.KeyEnter})
 	m, cmd := pressDropdown(t, m, tea.KeyMsg{Type: tea.KeyEnter})
 	want := []string{"second", "first"}
 	if len(m.SelectedBatch) != 2 || m.SelectedBatch[0] != want[0] || m.SelectedBatch[1] != want[1] {

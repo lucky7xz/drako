@@ -205,7 +205,13 @@ func runBatch(state ui.Model) {
 
 	session := fmt.Sprintf("drako-%d", time.Now().Unix())
 	insideTmux := os.Getenv("TMUX") != ""
-	plan, err := multiplex.Plan(session, cmds, insideTmux, scriptDir)
+	// The layout chosen in the dialog, or the default when a cell was skipped
+	// above and the vector no longer matches.
+	tabs := state.SelectedTabs
+	if len(cmds) != len(state.SelectedBatch) {
+		tabs = multiplex.Distribute(len(cmds), multiplex.MinTabs(len(cmds)))
+	}
+	plan, err := multiplex.Plan(session, cmds, tabs, insideTmux, scriptDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "batch launch failed: %v\n", err)
 		return

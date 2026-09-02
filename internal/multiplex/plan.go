@@ -37,18 +37,21 @@ type Session struct {
 	Attach  bool              // the last step attaches: hand it the terminal
 }
 
-// Plan lays out the tmux session for cmds. Up to four commands share one
-// window as tiled panes; more get one named window each so the tab bar stays
-// readable. insideTmux means drako already runs inside a session ($TMUX set):
-// then the commands join the current session and there is no attach step.
-// scriptDir is where the caller will write the scripts; only paths are
-// computed here.
-func Plan(session string, cmds []Command, insideTmux bool, scriptDir string) (Session, error) {
+// Plan lays out the tmux session for cmds. tabs says how many cells each tab
+// holds, in order, and must account for every cell — the layout is decided
+// before Plan is called, not derived from the cell count here. insideTmux means
+// drako already runs inside a session ($TMUX set): then the tabs join the
+// current session and there is no attach step. scriptDir is where the caller
+// will write the scripts; only paths are computed here.
+func Plan(session string, cmds []Command, tabs []int, insideTmux bool, scriptDir string) (Session, error) {
 	if len(cmds) == 0 {
 		return Session{}, fmt.Errorf("nothing to launch")
 	}
 	if len(cmds) > MaxCommands {
 		return Session{}, fmt.Errorf("at most %d commands per batch (got %d)", MaxCommands, len(cmds))
+	}
+	if err := checkTabs(tabs, len(cmds)); err != nil {
+		return Session{}, err
 	}
 
 	s := Session{Name: session, Scripts: map[string]string{}}
@@ -60,31 +63,32 @@ func Plan(session string, cmds []Command, insideTmux bool, scriptDir string) (Se
 		paths[i] = filepath.Join(scriptDir, filename)
 	}
 
-	panes := len(cmds) <= 4
-
-	for i, c := range cmds {
-		switch {
-		case insideTmux && panes:
-			s.Steps = append(s.Steps, []string{"tmux", "split-window", paths[i]})
-		case insideTmux:
-			s.Steps = append(s.Steps, []string{"tmux", "new-window", "-n", c.Name, paths[i]})
-		case i == 0 && panes:
-			s.Steps = append(s.Steps, []string{"tmux", "new-session", "-d", "-s", session, paths[i]})
-		case i == 0:
-			s.Steps = append(s.Steps, []string{"tmux", "new-session", "-d", "-s", session, "-n", c.Name, paths[i]})
-		case panes:
-			s.Steps = append(s.Steps, []string{"tmux", "split-window", "-t", session, paths[i]})
-		default:
-			s.Steps = append(s.Steps, []string{"tmux", "new-window", "-t", session, "-n", c.Name, paths[i]})
-		}
+	// Outside tmux every step names the session we are building; inside it,
+	// nothing is targeted and the steps land in the session drako is in.
+	var target []string
+	if !insideTmux {
+		target = []string{"-t", session}
 	}
 
-	if panes && len(cmds) > 1 {
-		layout := []string{"tmux", "select-layout"}
-		if !insideTmux {
-			layout = append(layout, "-t", session)
+	cell := 0
+	for t, panes := range tabs {
+		group := cmds[cell : cell+panes]
+		switch {
+		case !insideTmux && t == 0:
+			s.Steps = append(s.Steps, []string{"tmux", "new-session", "-d", "-s", session, "-n", tabLabel(group), paths[cell]})
+		default:
+			step := append([]string{"tmux", "new-window"}, target...)
+			s.Steps = append(s.Steps, append(step, "-n", tabLabel(group), paths[cell]))
 		}
-		s.Steps = append(s.Steps, append(layout, "tiled"))
+		for i := 1; i < panes; i++ {
+			step := append([]string{"tmux", "split-window"}, target...)
+			s.Steps = append(s.Steps, append(step, paths[cell+i]))
+		}
+		if panes > 1 {
+			step := append([]string{"tmux", "select-layout"}, target...)
+			s.Steps = append(s.Steps, append(step, "tiled"))
+		}
+		cell += panes
 	}
 
 	if !insideTmux {
@@ -92,6 +96,38 @@ func Plan(session string, cmds []Command, insideTmux bool, scriptDir string) (Se
 		s.Attach = true
 	}
 	return s, nil
+}
+
+// checkTabs rejects a vector that would drop or invent panes.
+func checkTabs(tabs []int, cells int) error {
+	total := 0
+	for _, panes := range tabs {
+		if panes < 1 {
+			return fmt.Errorf("a tab must hold at least one cell (got %v)", tabs)
+		}
+		total += panes
+	}
+	if total != cells {
+		return fmt.Errorf("tabs %v lay out %d cells, want %d", tabs, total, cells)
+	}
+	return nil
+}
+
+// maxTabLabel keeps a joined label from swamping the tab bar.
+const maxTabLabel = 40
+
+// tabLabel names a tab after the cells it holds — the identity a pane cannot
+// carry, since neither tmux nor herdr can name a pane at creation.
+func tabLabel(cmds []Command) string {
+	names := make([]string, len(cmds))
+	for i, c := range cmds {
+		names[i] = strings.ReplaceAll(c.Name, "\n", " ")
+	}
+	label := []rune(strings.Join(names, "·"))
+	if len(label) > maxTabLabel {
+		label = label[:maxTabLabel]
+	}
+	return string(label)
 }
 
 // buildScript wraps one command for its pane. The script itself is plain sh;
