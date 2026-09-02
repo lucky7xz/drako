@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 )
 
 // The full tab: split the root right, then each column down, so the panes end
@@ -74,9 +75,12 @@ func TestCheckTabs_RejectsATabOverTheCeiling(t *testing.T) {
 // pane ids the way the server would.
 func fakeHerdr(t *testing.T) *[][]string {
 	t.Helper()
-	old := herdrExec
-	t.Cleanup(func() { herdrExec = old })
+	oldExec, oldSleep := herdrExec, herdrSleep
+	t.Cleanup(func() { herdrExec, herdrSleep = oldExec, oldSleep })
+	herdrSleep = func(time.Duration) {}
+
 	var got [][]string
+	running := map[string]string{} // pane id -> the script now in the foreground
 	n := 0
 	herdrExec = func(argv []string) ([]byte, error) {
 		got = append(got, argv)
@@ -87,10 +91,30 @@ func fakeHerdr(t *testing.T) *[][]string {
 		case argv[1] == "pane" && argv[2] == "split":
 			n++
 			return fmt.Appendf(nil, `{"result":{"pane":{"pane_id":"w1:p%d"}}}`, n), nil
+		case argv[2] == "run":
+			running[argv[3]] = argv[len(argv)-1]
+			return []byte(`{"result":{}}`), nil
+		case argv[2] == "process-info":
+			return fmt.Appendf(nil,
+				`{"result":{"process_info":{"foreground_processes":[{"cmdline":"/bin/sh %s"}]}}}`,
+				running[argv[len(argv)-1]]), nil
 		}
 		return []byte(`{"result":{}}`), nil
 	}
 	return &got
+}
+
+// withoutConfirmations drops the process-info polling, so a sequence assertion
+// reads as what the launcher does rather than how it checks.
+func withoutConfirmations(calls [][]string) [][]string {
+	var out [][]string
+	for _, c := range calls {
+		if len(c) > 2 && c[2] == "process-info" {
+			continue
+		}
+		out = append(out, c)
+	}
+	return out
 }
 
 func launchHerdr(t *testing.T, n int, tabs []int) ([][]string, []string) {
@@ -107,6 +131,7 @@ func launchHerdr(t *testing.T, n int, tabs []int) ([][]string, []string) {
 // up a shell, never a pane already busy with a cell.
 func TestHerdr_CreatesEveryPaneBeforeRunningInThem(t *testing.T) {
 	got, paths := launchHerdr(t, 3, []int{2, 1})
+	got = withoutConfirmations(got)
 	want := [][]string{
 		{"herdr", "tab", "create", "--label", "cell 1·cell 2", "--focus"},
 		{"herdr", "pane", "split", "--pane", "w1:p1", "--direction", "right", "--no-focus"},
@@ -220,5 +245,124 @@ func TestPaneID_ReadsBothReplyShapes(t *testing.T) {
 		if _, err := paneID([]byte(bad)); err == nil {
 			t.Errorf("%s names no pane, want an error", bad)
 		}
+	}
+}
+
+// racingHerdr fakes a shell that is still starting up: the first swallowUntil
+// sends into a pane are lost, as they are on a machine whose login shell does
+// real work before it reads.
+func racingHerdr(t *testing.T, swallowUntil int) *[][]string {
+	t.Helper()
+	oldExec, oldSleep := herdrExec, herdrSleep
+	t.Cleanup(func() { herdrExec, herdrSleep = oldExec, oldSleep })
+	herdrSleep = func(time.Duration) {}
+
+	var got [][]string
+	sends := map[string]int{}
+	running := map[string]string{} // pane id -> the script now in the foreground
+	n := 0
+
+	herdrExec = func(argv []string) ([]byte, error) {
+		got = append(got, argv)
+		switch argv[2] {
+		case "create", "split":
+			n++
+			field := "pane"
+			if argv[1] == "tab" {
+				field = "root_pane"
+			}
+			return fmt.Appendf(nil, `{"result":{"%s":{"pane_id":"w1:p%d"}}}`, field, n), nil
+		case "run":
+			id, script := argv[3], argv[len(argv)-1]
+			sends[id]++
+			if sends[id] > swallowUntil {
+				running[id] = script
+			}
+			return []byte(`{"result":{}}`), nil
+		case "process-info":
+			id := argv[len(argv)-1]
+			if s, ok := running[id]; ok {
+				return fmt.Appendf(nil,
+					`{"result":{"process_info":{"foreground_processes":[{"cmdline":"/bin/sh %s"}]}}}`, s), nil
+			}
+			return []byte(`{"result":{"process_info":{"foreground_processes":[{"cmdline":"/bin/bash"}]}}}`), nil
+		}
+		return []byte(`{"result":{}}`), nil
+	}
+	return &got
+}
+
+func sendsPerPane(calls [][]string) map[string]int {
+	out := map[string]int{}
+	for _, c := range calls {
+		if len(c) > 3 && c[2] == "run" {
+			out[c[3]]++
+		}
+	}
+	return out
+}
+
+// A shell that is not yet reading discards what was typed at it. The launcher
+// confirms the script actually became the pane's foreground process, and sends
+// again when it did not.
+func TestHerdr_ResendsWhenTheShellSwallowedTheFirstSend(t *testing.T) {
+	got := racingHerdr(t, 1) // the first send into each pane is lost
+	if err := Launch(NewHerdr(), "drako-t", cells(2), []int{2},
+		filepath.Join(t.TempDir(), "batch"), nil); err != nil {
+		t.Fatal(err)
+	}
+	for id, n := range sendsPerPane(*got) {
+		if n != 2 {
+			t.Errorf("pane %s got %d sends, want a retry after the first was swallowed", id, n)
+		}
+	}
+}
+
+// When the first send lands there must be no second one — it would be typed
+// into the cell that is already running.
+func TestHerdr_DoesNotResendOnceTheCellIsRunning(t *testing.T) {
+	got := racingHerdr(t, 0) // every send lands
+	if err := Launch(NewHerdr(), "drako-t", cells(2), []int{2},
+		filepath.Join(t.TempDir(), "batch"), nil); err != nil {
+		t.Fatal(err)
+	}
+	for id, n := range sendsPerPane(*got) {
+		if n != 1 {
+			t.Errorf("pane %s got %d sends, want exactly 1", id, n)
+		}
+	}
+}
+
+// A shell that never takes it is reported rather than retried forever.
+func TestHerdr_GivesUpAndSaysSo(t *testing.T) {
+	racingHerdr(t, 99)
+	err := Launch(NewHerdr(), "drako-t", cells(1), []int{1},
+		filepath.Join(t.TempDir(), "batch"), nil)
+	if err == nil {
+		t.Fatal("a cell that never starts must surface")
+	}
+	if !strings.Contains(err.Error(), "did not start") {
+		t.Errorf("error %q should say the cell never started", err)
+	}
+}
+
+// A cell that finishes before we look closes its pane; that is success, not a
+// pane we failed to start.
+func TestHerdr_TreatsAVanishedPaneAsStarted(t *testing.T) {
+	oldExec, oldSleep := herdrExec, herdrSleep
+	t.Cleanup(func() { herdrExec, herdrSleep = oldExec, oldSleep })
+	herdrSleep = func(time.Duration) {}
+	herdrExec = func(argv []string) ([]byte, error) {
+		switch argv[2] {
+		case "create":
+			return []byte(`{"result":{"root_pane":{"pane_id":"w1:p1"}}}`), nil
+		case "process-info":
+			return nil, errors.New("pane w1:p1 not found")
+		}
+		return []byte(`{"result":{}}`), nil
+	}
+	if err := Launch(NewHerdr(), "drako-t", cells(1), []int{1},
+		filepath.Join(t.TempDir(), "batch"), nil); err != nil {
+		t.Errorf("a pane that already closed means the cell ran: %v", err)
 	}
 }
