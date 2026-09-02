@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/lucky7xz/drako/internal/config"
 )
 
@@ -22,7 +23,7 @@ func batchTestModel() Model {
 		styles:  BuildStyles(cfg),
 		mode:    batchMode,
 		gridNav: gridNav{grid: config.BuildGrid(cfg)},
-		batch:   batchState{marked: map[string]bool{}},
+		batch:   batchState{},
 	}
 }
 
@@ -42,11 +43,11 @@ func TestBatchMarkToggle(t *testing.T) {
 	m := batchTestModel()
 
 	m, _ = pressBatch(t, m, spaceKey)
-	if !m.batch.marked["one"] {
+	if m.batch.mark("one") != 1 {
 		t.Fatal("space must mark the cursor cell")
 	}
 	m, _ = pressBatch(t, m, spaceKey)
-	if m.batch.marked["one"] {
+	if m.batch.mark("one") != 0 {
 		t.Fatal("space again must unmark")
 	}
 }
@@ -56,7 +57,7 @@ func TestBatchFolderCellNotMarkable(t *testing.T) {
 	m.gridNav.cursorRow, m.gridNav.cursorCol = 1, 0 // "folder"
 
 	m, _ = pressBatch(t, m, spaceKey)
-	if m.batch.marked["folder"] {
+	if m.batch.mark("folder") != 0 {
 		t.Fatal("cells without a direct command must not be markable")
 	}
 	if m.profile.statusMessage == "" {
@@ -66,12 +67,10 @@ func TestBatchFolderCellNotMarkable(t *testing.T) {
 
 func TestBatchCapAtNine(t *testing.T) {
 	m := batchTestModel()
-	for _, n := range []string{"c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8", "c9"} {
-		m.batch.marked[n] = true
-	}
+	m.batch.marked = []string{"c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8", "c9"}
 
 	m, _ = pressBatch(t, m, spaceKey)
-	if m.batch.marked["one"] {
+	if m.batch.mark("one") != 0 {
 		t.Fatal("the tenth mark must be refused")
 	}
 	if !strings.Contains(m.profile.statusMessage, "9") {
@@ -79,13 +78,17 @@ func TestBatchCapAtNine(t *testing.T) {
 	}
 }
 
-func TestBatchLaunchCollectsInGridOrder(t *testing.T) {
+func TestBatchLaunchCollectsInSelectionOrder(t *testing.T) {
 	m := batchTestModel()
-	m.batch.marked["two"] = true // marked out of order
-	m.batch.marked["one"] = true
+	// Mark "two" first, then "one" — the launch must follow the marking,
+	// not the grid, because the order decides how cells group into tabs.
+	m, _ = pressBatch(t, m, tea.KeyMsg{Type: tea.KeyRight})
+	m, _ = pressBatch(t, m, spaceKey)
+	m, _ = pressBatch(t, m, tea.KeyMsg{Type: tea.KeyLeft})
+	m, _ = pressBatch(t, m, spaceKey)
 
 	m, cmd := pressBatch(t, m, tea.KeyMsg{Type: tea.KeyEnter})
-	want := []string{"one", "two"} // row-major grid scan, not mark order
+	want := []string{"two", "one"}
 	if len(m.SelectedBatch) != 2 || m.SelectedBatch[0] != want[0] || m.SelectedBatch[1] != want[1] {
 		t.Fatalf("SelectedBatch = %v, want %v", m.SelectedBatch, want)
 	}
@@ -114,7 +117,7 @@ func TestBatchLaunchWithNothingMarked(t *testing.T) {
 
 func TestBatchEscCancelsAndClears(t *testing.T) {
 	m := batchTestModel()
-	m.batch.marked["one"] = true
+	m.batch.marked = []string{"one"}
 
 	m, _ = pressBatch(t, m, tea.KeyMsg{Type: tea.KeyEsc})
 	if m.mode != gridMode {
@@ -129,7 +132,7 @@ func TestBatchEscCancelsAndClears(t *testing.T) {
 // everywhere else in the TUI.
 func TestBatchQCancelsAndClears(t *testing.T) {
 	m := batchTestModel()
-	m.batch.marked["one"] = true
+	m.batch.marked = []string{"one"}
 
 	m, _ = pressBatch(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
 	if m.mode != gridMode {
@@ -159,21 +162,35 @@ func TestBatchQuickNavJumps(t *testing.T) {
 
 	// The jump composes with marking: space marks the cell we jumped to.
 	m, _ = pressBatch(t, m, spaceKey)
-	if !m.batch.marked["two"] {
+	if m.batch.mark("two") == 0 {
 		t.Error("space after a quick-nav jump should mark the target cell")
 	}
 }
 
-func TestBatchViewShowsMarksAndCounter(t *testing.T) {
+func TestBatchViewShowsMarkPositions(t *testing.T) {
 	m := batchTestModel()
 	m.termWidth, m.termHeight = 100, 40
-	m.batch.marked["one"] = true
+	// "two" marked first, so it carries ① and "one" carries ②.
+	m, _ = pressBatch(t, m, tea.KeyMsg{Type: tea.KeyRight})
+	m, _ = pressBatch(t, m, spaceKey)
+	m, _ = pressBatch(t, m, tea.KeyMsg{Type: tea.KeyLeft})
+	m, _ = pressBatch(t, m, spaceKey)
 
-	out := m.View()
-	if !strings.Contains(out, "BATCH 1/9") {
+	out := ansi.Strip(m.View())
+	if !strings.Contains(out, "BATCH 2/9") {
 		t.Errorf("view should show the batch counter, got:\n%s", out)
 	}
-	if !strings.Contains(out, "◉") || !strings.Contains(out, "○") {
-		t.Errorf("view should show marked and unmarked glyphs, got:\n%s", out)
+	if !strings.Contains(out, "① two") || !strings.Contains(out, "② one") {
+		t.Errorf("marks must show their selection position, got:\n%s", out)
+	}
+}
+
+func TestBatchViewShowsUnmarkedGlyph(t *testing.T) {
+	m := batchTestModel()
+	m.termWidth, m.termHeight = 100, 40
+
+	out := ansi.Strip(m.View())
+	if !strings.Contains(out, "○ one") || !strings.Contains(out, "○ two") {
+		t.Errorf("markable cells start unmarked, got:\n%s", out)
 	}
 }

@@ -2,6 +2,7 @@ package ui
 
 import (
 	"os/exec"
+	"slices"
 	"strconv"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -18,10 +19,39 @@ import (
 var tmuxLookPath = exec.LookPath
 
 type batchState struct {
-	marked map[string]bool // cell/item name → marked
+	// marked holds cell/item names in the order they were marked — that
+	// order is the launch order, and decides how cells group into tabs.
+	marked []string
 	// dropdown scopes the mark set to the open folder's items: an inside
 	// batch never mixes with grid cells, and vice versa.
 	dropdown bool
+}
+
+// mark is name's 1-based position in the mark set, or 0 when unmarked.
+func (b batchState) mark(name string) int {
+	for i, n := range b.marked {
+		if n == name {
+			return i + 1
+		}
+	}
+	return 0
+}
+
+// toggle adds name to the mark set or drops it, keeping the rest in order.
+func (b *batchState) toggle(name string) {
+	out := make([]string, 0, len(b.marked)+1)
+	found := false
+	for _, n := range b.marked {
+		if n == name {
+			found = true
+			continue
+		}
+		out = append(out, n)
+	}
+	if !found {
+		out = append(out, name)
+	}
+	b.marked = out
 }
 
 // batchGate is the single availability check for every batch entry point.
@@ -42,7 +72,7 @@ func (m Model) enterBatchMode() (tea.Model, tea.Cmd) {
 	if ok, cmd := m.batchGate(); !ok {
 		return m, cmd
 	}
-	m.batch = batchState{marked: map[string]bool{}}
+	m.batch = batchState{}
 	m.mode = batchMode
 	return m, nil
 }
@@ -53,7 +83,7 @@ func (m Model) enterDropdownBatch() (tea.Model, tea.Cmd) {
 	if ok, cmd := m.batchGate(); !ok {
 		return m, cmd
 	}
-	m.batch = batchState{marked: map[string]bool{}, dropdown: true}
+	m.batch = batchState{dropdown: true}
 	return m, nil
 }
 
@@ -70,27 +100,17 @@ func (m Model) updateDropdownMarking(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) 
 		if item.Command == "" {
 			return m, m.setProfileStatus("Item not batchable", false), true
 		}
-		if m.batch.marked[item.Name] {
-			delete(m.batch.marked, item.Name)
-			return m, nil, true
-		}
-		if len(m.batch.marked) >= multiplex.MaxCommands {
+		if m.batch.mark(item.Name) == 0 && len(m.batch.marked) >= multiplex.MaxCommands {
 			return m, m.setProfileStatus("Batch is full (9 max)", false), true
 		}
-		m.batch.marked[item.Name] = true
+		m.batch.toggle(item.Name)
 		return m, nil, true
 
 	case "enter":
-		var names []string
-		for _, item := range m.dropdown.items {
-			if m.batch.marked[item.Name] {
-				names = append(names, item.Name)
-			}
-		}
-		if len(names) == 0 {
+		if len(m.batch.marked) == 0 {
 			return m, m.setProfileStatus("Nothing marked", false), true
 		}
-		m.SelectedBatch = names
+		m.SelectedBatch = slices.Clone(m.batch.marked)
 		return m, tea.Quit, true
 
 	case "esc":
@@ -136,22 +156,17 @@ func (m Model) updateBatchMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if name == "" || !m.markable(name) {
 			return m, m.setProfileStatus("Cell not batchable", false)
 		}
-		if m.batch.marked[name] {
-			delete(m.batch.marked, name)
-			return m, nil
-		}
-		if len(m.batch.marked) >= multiplex.MaxCommands {
+		if m.batch.mark(name) == 0 && len(m.batch.marked) >= multiplex.MaxCommands {
 			return m, m.setProfileStatus("Batch is full (9 max)", false)
 		}
-		m.batch.marked[name] = true
+		m.batch.toggle(name)
 		return m, nil
 
 	case key == "enter":
-		names := m.markedInGridOrder()
-		if len(names) == 0 {
+		if len(m.batch.marked) == 0 {
 			return m, m.setProfileStatus("Nothing marked", false)
 		}
-		m.SelectedBatch = names
+		m.SelectedBatch = slices.Clone(m.batch.marked)
 		return m, tea.Quit
 
 	case IsUp(m.Config.Keys, msg):
@@ -173,18 +188,4 @@ func (m Model) currentCellName() string {
 		return ""
 	}
 	return g[m.gridNav.cursorRow][m.gridNav.cursorCol]
-}
-
-// markedInGridOrder collects the marked cells in row-major grid order, so the
-// launch layout matches what the user sees, not the order they marked in.
-func (m Model) markedInGridOrder() []string {
-	var names []string
-	for _, row := range m.gridNav.grid {
-		for _, name := range row {
-			if name != "" && m.batch.marked[name] {
-				names = append(names, name)
-			}
-		}
-	}
-	return names
 }

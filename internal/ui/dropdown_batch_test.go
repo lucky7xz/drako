@@ -104,11 +104,11 @@ func TestDropdownMarkToggle(t *testing.T) {
 	m := markingModel(t)
 
 	m, _ = pressDropdown(t, m, spaceKey)
-	if !m.batch.marked["first"] {
+	if m.batch.mark("first") != 1 {
 		t.Fatal("space must mark the selected item")
 	}
 	m, _ = pressDropdown(t, m, spaceKey)
-	if m.batch.marked["first"] {
+	if m.batch.mark("first") != 0 {
 		t.Fatal("space again must unmark")
 	}
 }
@@ -118,7 +118,7 @@ func TestDropdownBareItemNotMarkable(t *testing.T) {
 	m.dropdown.selectedIdx = 2 // "bare"
 
 	m, _ = pressDropdown(t, m, spaceKey)
-	if m.batch.marked["bare"] {
+	if m.batch.mark("bare") != 0 {
 		t.Fatal("items without a command must not be markable")
 	}
 }
@@ -132,15 +132,18 @@ func TestDropdownDigitsStillJumpWhileMarking(t *testing.T) {
 	}
 }
 
-func TestDropdownLaunchCollectsItemOrder(t *testing.T) {
+func TestDropdownLaunchCollectsSelectionOrder(t *testing.T) {
 	m := markingModel(t)
-	m.batch.marked["second"] = true // marked out of order
-	m.batch.marked["first"] = true
+	// Mark "second" before "first"; the launch follows the marking.
+	m, _ = pressDropdown(t, m, keyRunes("2"))
+	m, _ = pressDropdown(t, m, spaceKey)
+	m, _ = pressDropdown(t, m, keyRunes("1"))
+	m, _ = pressDropdown(t, m, spaceKey)
 
 	m, cmd := pressDropdown(t, m, tea.KeyMsg{Type: tea.KeyEnter})
-	want := []string{"first", "second"}
+	want := []string{"second", "first"}
 	if len(m.SelectedBatch) != 2 || m.SelectedBatch[0] != want[0] || m.SelectedBatch[1] != want[1] {
-		t.Fatalf("SelectedBatch = %v, want %v (item order)", m.SelectedBatch, want)
+		t.Fatalf("SelectedBatch = %v, want %v (selection order)", m.SelectedBatch, want)
 	}
 	if cmd == nil {
 		t.Fatal("launch must quit the TUI")
@@ -167,7 +170,7 @@ func TestDropdownLaunchWithNothingMarkedDoesNotRunItem(t *testing.T) {
 
 func TestDropdownEscExitsMarkingKeepsDropdown(t *testing.T) {
 	m := markingModel(t)
-	m.batch.marked["first"] = true
+	m.batch.marked = []string{"first"}
 
 	m, _ = pressDropdown(t, m, tea.KeyMsg{Type: tea.KeyEsc})
 	if m.batch.dropdown || len(m.batch.marked) != 0 {
@@ -185,18 +188,26 @@ func TestDropdownEscExitsMarkingKeepsDropdown(t *testing.T) {
 
 func TestDropdownPopupShowsMarksWhileMarking(t *testing.T) {
 	m := markingModel(t)
-	m.batch.marked["first"] = true
+	// "second" marked first, so the item numbering (1 first, 2 second) and
+	// the mark positions (② first, ① second) stay tellable apart.
+	m, _ = pressDropdown(t, m, keyRunes("2"))
+	m, _ = pressDropdown(t, m, spaceKey)
+	m, _ = pressDropdown(t, m, keyRunes("1"))
+	m, _ = pressDropdown(t, m, spaceKey)
 
 	out := ansi.Strip(m.renderDropdownPopup())
-	if !strings.Contains(out, "◉") || !strings.Contains(out, "○") {
-		t.Errorf("marking popup must show mark glyphs:\n%s", out)
+	if !strings.Contains(out, "1 ② first") || !strings.Contains(out, "2 ① second") {
+		t.Errorf("marking popup must show mark positions beside item numbers:\n%s", out)
 	}
-	if !strings.Contains(out, "[ BATCH 1/9 ]") {
+	if !strings.Contains(out, "3 bare") {
+		t.Errorf("an unbatchable item gets no mark chrome at all:\n%s", out)
+	}
+	if !strings.Contains(out, "[ BATCH 2/9 ]") {
 		t.Errorf("marking popup must show the prominent batch counter:\n%s", out)
 	}
 
 	plain := ansi.Strip(dropdownTestModel().renderDropdownPopup())
-	if strings.Contains(plain, "◉") || strings.Contains(plain, "○") || strings.Contains(plain, "/9") {
+	if strings.Contains(plain, "①") || strings.Contains(plain, "○") || strings.Contains(plain, "/9") {
 		t.Errorf("plain dropdown must not show batch chrome:\n%s", plain)
 	}
 }

@@ -21,26 +21,33 @@ func (m Model) batchHelpText() string {
 	return fmt.Sprintf("Batch | Space: Mark, Enter: Launch %d, Esc/q: Cancel", len(m.batch.marked))
 }
 
+// markGlyphs carry a mark's position in the launch order. Circled digits stay
+// tellable apart from the dropdown's own item numbering, and MaxCommands never
+// exceeds nine so every mark has one.
+var markGlyphs = []string{"①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨"}
+
+// markGlyph is the prefix for name: its position when marked, ○ when not.
+func (b batchState) markGlyph(name string) string {
+	if i := b.mark(name); i > 0 {
+		return markGlyphs[i-1] + " "
+	}
+	return "○ "
+}
+
 // itemMarkPrefix is batchCellPrefix's dropdown twin: mark glyphs for the
 // folder's items while a dropdown batch is active, nothing otherwise.
 func (m Model) itemMarkPrefix(item config.CommandItem) string {
 	if !m.batch.dropdown || item.Command == "" {
 		return ""
 	}
-	if m.batch.marked[item.Name] {
-		return "◉ "
-	}
-	return "○ "
+	return m.batch.markGlyph(item.Name)
 }
 
-// batchCellPrefix returns the mark glyph for a cell: ◉ marked, ○ markable,
-// nothing for cells a batch can't include.
+// batchCellPrefix returns the mark prefix for a cell, and nothing for cells a
+// batch can't include.
 func (m Model) batchCellPrefix(name string) string {
 	if m.mode != batchMode || name == "" || !m.markable(name) {
 		return ""
 	}
-	if m.batch.marked[name] {
-		return "◉ "
-	}
-	return "○ "
+	return m.batch.markGlyph(name)
 }
