@@ -47,6 +47,8 @@ func (m Model) updateBatchDialog(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case msg.String() == "enter":
 		return m.launchBatch()
 
+	// The fields sit in a row, so left/right picks one and up/down changes
+	// the value it holds.
 	case IsLeft(m.Config.Keys, msg):
 		m.batch.focus = max(m.batch.focus-1, 0)
 	case IsRight(m.Config.Keys, msg):

@@ -2,8 +2,10 @@ package ui
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/multiplex"
 )
@@ -12,37 +14,47 @@ import (
 // cells get a mark glyph, and the footer explains the three keys. Everything
 // else reuses the normal grid view.
 
-// renderBatchCounter replaces the profile counter while marking, and the
-// layout row once the dialog is open.
+// renderBatchCounter replaces the profile counter while marking.
 func (m Model) renderBatchCounter() string {
-	if m.batch.choosing() {
-		return m.styles.Title.Render(m.tabDialogRow())
-	}
 	return m.styles.Title.Render(fmt.Sprintf("[ BATCH %d/%d ]", len(m.batch.marked), multiplex.MaxCommands))
-}
-
-// tabDialogRow shows the layout being edited: the tab count, then one box per
-// tab. The focused field is marked with ‹› so focus reads without colour.
-func (m Model) tabDialogRow() string {
-	field := func(i int, label string, v int) string {
-		if m.batch.focus == i {
-			return fmt.Sprintf("%s‹%d›", label, v)
-		}
-		return fmt.Sprintf("%s[%d]", label, v)
-	}
-	parts := []string{field(0, "tabs", len(m.batch.tabs))}
-	for i, panes := range m.batch.tabs {
-		parts = append(parts, field(i+1, fmt.Sprintf("T%d", i+1), panes))
-	}
-	return strings.Join(parts, " ")
 }
 
 // batchHelpText is the batch-mode footer line.
 func (m Model) batchHelpText() string {
 	if m.batch.choosing() {
-		return "Layout | ←→: Field, ↑↓: Adjust, Enter: Launch, Esc: Back"
+		return "Layout | ←/→/ad: Field, ↑/↓/ws: Adjust, Enter: Launch, Esc/q: Back"
 	}
 	return fmt.Sprintf("Batch | Space: Mark, Enter: Launch %d, Esc/q: Cancel", len(m.batch.marked))
+}
+
+// layoutFields are the dialog's selectable boxes, in a row: the tab count,
+// then one per tab holding the marks it will run. Unstyled — the popup draws
+// them with the grid's own cell chrome.
+func (m Model) layoutFields() (labels, bodies []string) {
+	labels = []string{"tabs"}
+	bodies = []string{strconv.Itoa(len(m.batch.tabs))}
+	cell := 0
+	for i, panes := range m.batch.tabs {
+		glyphs := make([]string, panes)
+		for j := range glyphs {
+			glyphs[j] = markGlyphs[cell+j]
+		}
+		labels = append(labels, fmt.Sprintf("T%d", i+1))
+		bodies = append(bodies, strings.Join(glyphs, " "))
+		cell += panes
+	}
+	return labels, bodies
+}
+
+// layoutFieldWidth is the content width every box uses. A full tab is the
+// widest a box can get, so it does not change while the knobs turn and the
+// boxes stay put under the cursor.
+func (m Model) layoutFieldWidth() int {
+	full := make([]string, min(len(m.batch.marked), multiplex.PanesPerTab))
+	for i := range full {
+		full[i] = markGlyphs[i]
+	}
+	return max(lipgloss.Width(strings.Join(full, " ")), len("tabs")+2)
 }
 
 // markGlyphs carry a mark's position in the launch order. Circled digits stay

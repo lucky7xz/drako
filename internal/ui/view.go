@@ -26,6 +26,12 @@ func (m Model) View() string {
 		return m.viewInventoryMode()
 	}
 
+	// The layout dialog is reachable from the grid and from inside a folder,
+	// and looks the same either way — so it is checked before the mode.
+	if m.batch.choosing() {
+		return m.viewLayoutDialog()
+	}
+
 	if m.mode == dropdownMode {
 		return m.viewDropdownMode()
 	}

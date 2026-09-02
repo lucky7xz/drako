@@ -146,6 +146,90 @@ func (m Model) renderDropdownPopup() string {
 	return m.styles.DropdownPopup.Render(content)
 }
 
+// viewLayoutDialog draws the grid with the layout overlay on top. It replaces
+// the dropdown popup when the batch came from a folder, so one framed box is
+// on screen at a time and the dialog looks the same from either entry point.
+func (m Model) viewLayoutDialog() string {
+	helpText := m.batchHelpText()
+	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config, m.styles.HeaderArt, helpText)
+	header := ""
+	if layout.ShowHeader {
+		header = m.styles.renderHeaderArt(m.spinner.View())
+	}
+	var footer string
+	if layout.ShowFooter {
+		footer = m.renderCombinedFooter(helpText)
+	}
+
+	hAlign := lipgloss.Center
+	if layout.ShiftLeft {
+		hAlign = lipgloss.Left
+	}
+
+	grid := m.renderGrid(gridRowBudget(m.termHeight, header, footer))
+	finalContent := lipgloss.JoinVertical(hAlign,
+		lipgloss.JoinVertical(hAlign, header, grid),
+		footer,
+	)
+
+	popup := lipgloss.Place(m.termWidth, m.termHeight,
+		lipgloss.Center, lipgloss.Center,
+		m.renderLayoutPopup(),
+	)
+
+	return appStyle.Render(
+		lipgloss.Place(m.termWidth, m.termHeight,
+			hAlign, lipgloss.Center,
+			finalContent+"\n"+popup,
+		),
+	)
+}
+
+// renderLayoutPopup draws the fields as a row of grid cells — the same
+// ┌──[A]──┐ header over the same retro-bordered box the grid uses — so the
+// dialog reads as drako rather than as a form. The focused field's header rule
+// turns double, which shows focus without relying on colour.
+func (m Model) renderLayoutPopup() string {
+	// Every segment renders with the popup background, or the resets that end
+	// each nested Render punch holes in it — the same care renderDropdownPopup
+	// takes, and for the same reason.
+	bg := m.styles.DropdownPopup.GetBackground()
+	bgFill := lipgloss.NewStyle().Background(bg)
+	title := m.styles.Title.Background(bg)
+
+	labels, bodies := m.layoutFields()
+	content := m.layoutFieldWidth()
+
+	var heads, cells []string
+	for i := range labels {
+		fill := "─"
+		style := m.styles.Cell
+		if i == m.batch.focus {
+			fill, style = "═", m.styles.SelectedCell
+		}
+		// Centre the label, then turn the padding into rule — the same trick
+		// renderGrid uses for its column headers, so the two always match.
+		// The cell's border and padding add one column each side.
+		head := bgFill.Width(content + 2).Align(lipgloss.Center).
+			Render(title.Render("[" + labels[i] + "]"))
+		heads = append(heads, bgFill.Render("┌")+strings.ReplaceAll(head, " ", fill)+bgFill.Render("┐"))
+
+		body := bgFill.Width(content).Align(lipgloss.Center).Render(bodies[i])
+		cells = append(cells, style.Background(bg).BorderBackground(bg).Render(body))
+	}
+
+	headRow := lipgloss.JoinHorizontal(lipgloss.Left, heads...)
+	cellRows := strings.Split(lipgloss.JoinHorizontal(lipgloss.Top, cells...), "\n")
+	counter := bgFill.Width(lipgloss.Width(headRow)).Align(lipgloss.Center).
+		Render(title.Render(fmt.Sprintf("[ BATCH %d/%d ]", len(m.batch.marked), multiplex.MaxCommands)))
+
+	raw := append([]string{headRow}, cellRows...)
+	raw = append(raw, "", counter)
+	lines := padLinesToWidth(raw, bgFill)
+
+	return m.styles.DropdownPopup.Render(lipgloss.JoinVertical(lipgloss.Left, lines...))
+}
+
 func (m Model) viewLockedMode() string {
 	// Calculate time since last activity
 	elapsed := time.Since(m.lock.lastActivity)
