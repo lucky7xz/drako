@@ -56,9 +56,21 @@ profile_next = "p"
 
 # The leader arms a two-key sequence in the grid:
 #   leader, 1-9  -> switch to profile 1-9
-#   leader, b    -> batch mode (mark cells, launch together in tmux)
+#   leader, b    -> batch mode (mark cells, launch them together)
 # The legacy Alt+1-9 chord still works alongside it.
 #leader = "m"
+
+# ┌─ Batch Multiplexer ──────────────────────────────────────┐
+# │ Batch mode runs the cells you marked side by side, in
+# │ whichever multiplexer drako is already inside — herdr if
+# │ you launched drako from a herdr pane, otherwise tmux.
+# │ That way a batch never nests one inside the other.
+# │
+# │ Set this to run batches through tmux even from inside
+# │ herdr. Everywhere else it changes nothing: outside herdr,
+# │ tmux is already the only option.
+# └──────────────────────────────────────────────────────────┘
+#batch_force_tmux = true
 
 # ┌─ Environment Variables ──────────────────────────────┐
 # | By default, drako inherits your full shell environment

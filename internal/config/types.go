@@ -36,6 +36,7 @@ type AppSettings struct {
 	AutoLockEnabled    *bool       `toml:"auto_lock_enabled"`
 	EnvWhitelist       []string    `toml:"env_whitelist"`
 	EnvBlocklist       []string    `toml:"env_blocklist"`
+	BatchForceTmux     bool        `toml:"batch_force_tmux"`
 	Theme              string      `toml:"theme"` // Global Fallback Theme
 	Keys               InputConfig `toml:"keys"`
 }
@@ -53,6 +54,7 @@ type Config struct {
 	AutoLockEnabled    *bool       `toml:"auto_lock_enabled"`
 	EnvWhitelist       []string    `toml:"env_whitelist"`
 	EnvBlocklist       []string    `toml:"env_blocklist"`
+	BatchForceTmux     bool        `toml:"batch_force_tmux"`
 	Keys               InputConfig `toml:"keys"`
 	Commands           []Command   `toml:"commands"`
 }

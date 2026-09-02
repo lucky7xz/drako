@@ -6,22 +6,24 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/lucky7xz/drako/internal/multiplex"
 )
 
 func keyRunes(s string) tea.KeyMsg {
 	return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)}
 }
 
-// withTmux stubs the batch tmux gate.
-func withTmux(t *testing.T, present bool) {
+// withBackend stubs the batch capability gate: whether drako can reach a
+// multiplexer at all.
+func withBackend(t *testing.T, available bool) {
 	t.Helper()
-	old := tmuxLookPath
-	t.Cleanup(func() { tmuxLookPath = old })
-	tmuxLookPath = func(string) (string, error) {
-		if present {
-			return "/usr/bin/tmux", nil
+	old := resolveBackend
+	t.Cleanup(func() { resolveBackend = old })
+	resolveBackend = func(bool, multiplex.Env) (multiplex.Backend, error) {
+		if available {
+			return multiplex.NewTmux(false), nil
 		}
-		return "", errors.New("not found")
+		return nil, errors.New("Batch needs tmux or herdr installed")
 	}
 }
 
@@ -53,7 +55,7 @@ func TestLeaderThenDigitSwitchesProfile(t *testing.T) {
 }
 
 func TestLeaderThenBEntersBatchMode(t *testing.T) {
-	withTmux(t, true)
+	withBackend(t, true)
 	m := switchTestModel(t)
 
 	m = press(t, m, keyRunes("m"))
@@ -64,7 +66,7 @@ func TestLeaderThenBEntersBatchMode(t *testing.T) {
 }
 
 func TestLeaderBatchWithoutTmux(t *testing.T) {
-	withTmux(t, false)
+	withBackend(t, false)
 	m := switchTestModel(t)
 
 	m = press(t, m, keyRunes("m"))
@@ -114,7 +116,7 @@ func TestLegacyAltDigitStillSwitches(t *testing.T) {
 }
 
 func TestLeaderGlassrootBlocksBatchOnly(t *testing.T) {
-	withTmux(t, true)
+	withBackend(t, true)
 	m := switchTestModel(t)
 	m.GlassrootMode = true
 

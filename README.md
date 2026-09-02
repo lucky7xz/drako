@@ -16,7 +16,7 @@ https://github.com/user-attachments/assets/21fb2340-bc74-4886-a629-8e95d116e830
 -   **Summon** — [`drako summon <repo>`](#-summoning-profiles) pulls a deck from any Git host, verifiable with `--sha256`/`--rev`
 -   **The Weaver** — [one cell, every OS](#-cross-platform-decks-the-weaver): commands resolve per platform (apt/pacman/brew/…)
 -   **Specs & linting** — equip "Work Mode" in [one command](#-profile-specs); keep decks CI-clean with [`drako check`](#-deck-linting)
--   **Batch launch** — mark up to 9 cells (`m`, `b`), launch them together in one tmux session
+-   **Batch launch** — mark up to 9 cells (`m`, `b`), choose how they split into tabs, launch them together in [tmux or herdr](#-batch-launch)
 -   **Glassroot Mode** — a [sealed surface](#-glassroot-mode-experimental) for serving drako over SSH *(experimental)*
 
 
@@ -113,7 +113,7 @@ The variant key is what [the Weaver](#-cross-platform-decks-the-weaver) resolves
 | --- | --- | --- |
 | **bash** | **running cells** — the default shell | ⚠️ **cells fail**, unless you set `default_shell` |
 | `git` | summoning profiles, git cells | those cells fail |
-| `tmux` | batch mode | the feature stays hidden |
+| `tmux` **or** `herdr` | batch mode | the feature stays hidden |
 | `wl-copy` / `xclip` / `xsel` | clipboard copy (`y`) | copy does nothing |
 | `xdg-open` | opening paths | that action fails |
 
@@ -179,7 +179,7 @@ Run any of these with no arguments for usage. Details in [Power Tools](#-power-t
 - **Grid Navigation:** Use arrows, `w/a/s/d`, or `h/j/k/l` (customizable in config.toml).
 - **Quick Navigation:** For example: pressing `2` and `3` in quick sequence moves the cursor to the 2nd column, 3rd row.
 - **Switch Profile:** `m` then `1-9` (leader sequence), or the legacy `Alt` + `1-9` chord.
-- **Batch Launch:** `m` then `b`, then `Space` to mark cells and `Enter` to launch them together in tmux (requires tmux; not available in Glassroot Mode). Works inside a folder's dropdown too — `m`, `b` there batches that folder's items.
+- **Batch Launch:** `m` then `b`, then `Space` to mark cells and `Enter` to lay them out and launch — see [Batch Launch](#-batch-launch). Not available in Glassroot Mode. Works inside a folder's dropdown too — `m`, `b` there batches that folder's items.
 - **Cycle Profile:** `o` (prev) and `p` (next).
 - **Profile Inventory:** `i`. Inside, `e` opens the highlighted profile file in your editor (`$VISUAL`/`$EDITOR`), and `Del` moves it to `trash/` once you type its name to confirm. 9 profiles can be equipped at once, so each one keeps a `1-9` chord; the rest wait in the inventory. (A spec can go past 9 if you confirm it — see Profile Specs.)
 - **Lock Current Profile (for launching):** `r`.
@@ -191,6 +191,44 @@ Run any of these with no arguments for usage. Details in [Power Tools](#-power-t
 - **Quit:** `Ctrl+C` (Global), or `q` (Grid Mode).
 
 > **Customization:** Remap keys in `~/.config/drako/config.toml` under `[keys]`.
+
+## 🧵 Batch Launch
+
+Run several cells side by side. `m` then `b` enters batch mode; `Space` marks a
+cell, `Enter` moves on to the layout.
+
+Marks are numbered in the order you press them (`① ② ③`), and that order is the
+launch order — it decides which cells end up sharing a tab.
+
+The layout dialog splits them for you, and lets you change it:
+
+```
+┌─[tabs]─┐┌──[T1]──┐┌──[T2]──┐
+┍━━━━━━━━┑┍━━━━━━━━┑┍━━━━━━━━┑
+    2      ① ② ③ ④     ⑤
+┕━━━━━━━━┙┕━━━━━━━━┙┕━━━━━━━━┙
+```
+
+`←`/`→` picks a field, `↑`/`↓` changes it. On `tabs` that redistributes
+everything; on a `T`_n_ box it moves a single pane between tabs. A tab holds at
+most 4 panes, so 5 cells open as `4 + 1`. `Enter` launches, `Esc` goes back to
+marking. Tabs are named after the cells they hold (`build·test·lint`).
+
+**Which multiplexer:** whichever one drako is already running inside — herdr if
+you started drako from a herdr pane, otherwise tmux. That way a batch never
+nests one inside the other. Outside both, tmux is used (herdr can only be driven
+from inside itself).
+
+To run batches through tmux even from inside herdr:
+
+```toml
+# ~/.config/drako/config.toml
+batch_force_tmux = true
+```
+
+Cells keep their own `auto_close_execution` setting on both, and a batch cell
+gets the same environment a single run would — including `DRAKO_PROFILE` and
+your `env_whitelist`.
 
 ## 📇 Profile Creation Example
 

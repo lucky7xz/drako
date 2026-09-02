@@ -49,7 +49,7 @@ func TestDropdownItemsAlwaysNumbered(t *testing.T) {
 }
 
 func TestDropdownLeaderEntersMarking(t *testing.T) {
-	withTmux(t, true)
+	withBackend(t, true)
 	m := dropdownTestModel()
 
 	m, _ = pressDropdown(t, m, keyRunes("m"))
@@ -80,7 +80,7 @@ func TestDropdownLeaderDigitSwallowed(t *testing.T) {
 }
 
 func TestDropdownLeaderGlassrootRefused(t *testing.T) {
-	withTmux(t, true)
+	withBackend(t, true)
 	m := dropdownTestModel()
 	m.GlassrootMode = true
 
@@ -93,7 +93,7 @@ func TestDropdownLeaderGlassrootRefused(t *testing.T) {
 
 func markingModel(t *testing.T) Model {
 	t.Helper()
-	withTmux(t, true)
+	withBackend(t, true)
 	m := dropdownTestModel()
 	m, _ = pressDropdown(t, m, keyRunes("m"))
 	m, _ = pressDropdown(t, m, keyRunes("b"))

@@ -1,13 +1,7 @@
-// Package multiplex builds tmux launch plans for drako's batch mode. It
-// follows the same discipline as core's buildExecPlan: Plan constructs — it
-// never executes, touches the filesystem, or reads process state. The risky
-// parts of batch launching (quoting, nested-tmux, layout) all live here where
-// they are table-testable.
 package multiplex
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 )
 
@@ -28,40 +22,28 @@ type Command struct {
 	Isolate bool
 }
 
-// Session is a complete, inert launch plan: the scripts to write and the tmux
-// invocations to run, in order. Nothing has happened yet when Plan returns.
+// Session is an inert tmux launch plan: the invocations to run, in order.
+// Nothing has happened yet when Plan returns.
 type Session struct {
-	Name    string
-	Scripts map[string]string // filename (inside the script dir) → content
-	Steps   [][]string        // argv slices, executed in order
-	Attach  bool              // the last step attaches: hand it the terminal
+	Name   string
+	Steps  [][]string // argv slices, executed in order
+	Attach bool       // the last step attaches: hand it the terminal
 }
 
 // Plan lays out the tmux session for cmds. tabs says how many cells each tab
-// holds, in order, and must account for every cell — the layout is decided
-// before Plan is called, not derived from the cell count here. insideTmux means
-// drako already runs inside a session ($TMUX set): then the tabs join the
-// current session and there is no attach step. scriptDir is where the caller
-// will write the scripts; only paths are computed here.
-func Plan(session string, cmds []Command, tabs []int, insideTmux bool, scriptDir string) (Session, error) {
-	if len(cmds) == 0 {
-		return Session{}, fmt.Errorf("nothing to launch")
-	}
-	if len(cmds) > MaxCommands {
-		return Session{}, fmt.Errorf("at most %d commands per batch (got %d)", MaxCommands, len(cmds))
-	}
+// holds, in order; paths[i] is the already-written script for cmds[i]. The
+// layout is decided before Plan is called, not derived from the cell count
+// here. insideTmux means drako already runs inside a session ($TMUX set): then
+// the tabs join the current session and there is no attach step.
+func Plan(session string, cmds []Command, tabs []int, paths []string, insideTmux bool) (Session, error) {
 	if err := checkTabs(tabs, len(cmds)); err != nil {
 		return Session{}, err
 	}
-
-	s := Session{Name: session, Scripts: map[string]string{}}
-
-	paths := make([]string, len(cmds))
-	for i, c := range cmds {
-		filename := fmt.Sprintf("%02d-%s.sh", i+1, sanitizeName(c.Name))
-		s.Scripts[filename] = buildScript(c)
-		paths[i] = filepath.Join(scriptDir, filename)
+	if len(paths) != len(cmds) {
+		return Session{}, fmt.Errorf("got %d scripts for %d cells", len(paths), len(cmds))
 	}
+
+	s := Session{Name: session}
 
 	// Outside tmux every step names the session we are building; inside it,
 	// nothing is targeted and the steps land in the session drako is in.
@@ -98,12 +80,17 @@ func Plan(session string, cmds []Command, tabs []int, insideTmux bool, scriptDir
 	return s, nil
 }
 
-// checkTabs rejects a vector that would drop or invent panes.
+// checkTabs rejects a vector that would drop or invent panes, or overfill a
+// tab. The ceiling is what lets splitTree assume a layout exists for every tab
+// it is handed.
 func checkTabs(tabs []int, cells int) error {
 	total := 0
 	for _, panes := range tabs {
 		if panes < 1 {
 			return fmt.Errorf("a tab must hold at least one cell (got %v)", tabs)
+		}
+		if panes > PanesPerTab {
+			return fmt.Errorf("a tab holds at most %d cells (got %v)", PanesPerTab, tabs)
 		}
 		total += panes
 	}
@@ -180,8 +167,9 @@ func shellBinary(shell string) string {
 	}
 }
 
-// posixSingleQuote wraps s in single quotes with the standard '\'' escape, so
-// the string survives the sh line verbatim regardless of its content.
+// posixSingleQuote wraps s in single quotes, escaping any it already contains
+// the standard POSIX way (see below), so the string survives the sh line
+// verbatim regardless of its content.
 func posixSingleQuote(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }

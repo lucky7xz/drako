@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"os/exec"
 	"strconv"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -9,13 +8,13 @@ import (
 	"github.com/lucky7xz/drako/internal/multiplex"
 )
 
-// Batch mode: mark several cells, launch them together in tmux. All state
+// Batch mode: mark several cells, launch them together in a multiplexer. All state
 // lives in batchState and all behavior in this file + batch_view.go — the
 // feature is subtractable (spec: docs/tutorial/2026-06-23-batch-launch-design.md).
 
-// tmuxLookPath is the capability gate seam; batch mode only exists when tmux
-// is installed.
-var tmuxLookPath = exec.LookPath
+// resolveBackend is the capability gate seam: batch mode only exists when a
+// multiplexer drako can reach is available.
+var resolveBackend = multiplex.Resolve
 
 type batchState struct {
 	// marked holds cell/item names in the order they were marked — that
@@ -69,8 +68,8 @@ func (m *Model) batchGate() (bool, tea.Cmd) {
 	if m.GlassrootMode {
 		return false, m.setProfileStatus("Batch unavailable here", false)
 	}
-	if _, err := tmuxLookPath("tmux"); err != nil {
-		return false, m.setProfileStatus("Batch needs tmux installed", false)
+	if _, err := resolveBackend(m.Config.BatchForceTmux, multiplex.OSEnv()); err != nil {
+		return false, m.setProfileStatus(err.Error(), false)
 	}
 	return true, nil
 }

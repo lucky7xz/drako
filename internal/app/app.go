@@ -154,13 +154,13 @@ func clearScreen() {
 	_ = cmd.Run()
 }
 
-// runBatch hands the terminal to one tmux session running every marked cell.
-// The heavy lifting (layout, quoting, nested-$TMUX) lives in the multiplex
-// package; this is resolution and handoff, mirroring the single-run dispatch.
+// runBatch launches every marked cell together in a multiplexer. The heavy
+// lifting (layout, quoting, which backend) lives in the multiplex package;
+// this is resolution and handoff, mirroring the single-run dispatch.
 func runBatch(state ui.Model) {
-	// Batch mode drives tmux, which has no Windows build.
+	// Neither multiplexer drako drives has a Windows build worth shipping on.
 	if runtime.GOOS == "windows" {
-		fmt.Println("Batch launch needs tmux and is not available on Windows yet.")
+		fmt.Println("Batch launch needs tmux or herdr and is not available on Windows yet.")
 		core.Pause("\nPress any key to return to the application.")
 		return
 	}
@@ -204,32 +204,34 @@ func runBatch(state ui.Model) {
 	}
 
 	session := fmt.Sprintf("drako-%d", time.Now().Unix())
-	insideTmux := os.Getenv("TMUX") != ""
 	// The layout chosen in the dialog, or the default when a cell was skipped
 	// above and the vector no longer matches.
 	tabs := state.SelectedTabs
 	if len(cmds) != len(state.SelectedBatch) {
 		tabs = multiplex.Distribute(len(cmds), multiplex.MinTabs(len(cmds)))
 	}
-	plan, err := multiplex.Plan(session, cmds, tabs, insideTmux, scriptDir)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "batch launch failed: %v\n", err)
-		return
-	}
-
 	for _, c := range cmds {
 		core.LogExecution(c.Name, "batch: "+c.Script)
 	}
 
+	backend, err := multiplex.Resolve(state.Config.BatchForceTmux, multiplex.OSEnv())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		core.Pause("\nPress any key to return to the application.")
+		return
+	}
+
 	env := core.CommandEnv(os.Environ(), state.Config.EnvWhitelist, state.ActiveProfileName())
-	if err := multiplex.Run(plan, scriptDir, env); err != nil {
+	if err := multiplex.Launch(backend, session, cmds, tabs, scriptDir, env); err != nil {
 		fmt.Fprintf(os.Stderr, "batch launch failed: %v\n", err)
 		core.Pause("\nPress any key to return to the application.")
 		return
 	}
 
-	// A detached session is still alive — tell the user how to get back in.
-	if plan.Attach && exec.Command("tmux", "has-session", "-t", session).Run() == nil {
+	// Only a tmux launch that attached can leave a session behind; if it is
+	// still there the user detached rather than quitting, so say how to return.
+	tmux, attached := backend.(*multiplex.Tmux)
+	if attached && !tmux.Inside && exec.Command("tmux", "has-session", "-t", session).Run() == nil {
 		core.Pause(fmt.Sprintf("\nBatch session still running: tmux attach -t %s\nPress any key to return to drako.", session))
 	}
 }
