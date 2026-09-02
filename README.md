@@ -183,6 +183,7 @@ Run any of these with no arguments for usage. Details in [Power Tools](#-power-t
 - **Cycle Profile:** `o` (prev) and `p` (next).
 - **Profile Inventory:** `i`. Inside, `e` opens the highlighted profile file in your editor (`$VISUAL`/`$EDITOR`), and `Del` moves it to `trash/` once you type its name to confirm. 9 profiles can be equipped at once, so each one keeps a `1-9` chord; the rest wait in the inventory. (A spec can go past 9 if you confirm it — see Profile Specs.)
 - **Lock Current Profile (for launching):** `r`.
+- **Lock the Session:** `Alt` + `r` — blanks the screen behind the pump slider; `a`/`d` (or `h`/`l`, or arrows) back and forth to unlock. Works from any screen, and doesn't need `auto_lock_enabled`, which only governs the idle timeout.
 - **Grid/Path Toggle:** `Tab`.
 - **Path Mode:**
     - **Search:** `e` (type to filter, arrows to select, esc to cancel).

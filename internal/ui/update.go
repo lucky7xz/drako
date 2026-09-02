@@ -138,6 +138,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateLockedMode(msg)
 		}
 
+		// Locking on purpose has to work from wherever you are when you get
+		// up — including a mode with a search field open, which is why this
+		// sits above the text guard. It is a chord, so nothing was typing it.
+		// Glassroot keeps it too: it hides the screen rather than exposing
+		// anything, and the guest pumps straight back in.
+		if IsSessionLock(m.Config.Keys, msg, m.Config.NumbModifier) {
+			return m.enterLockedMode(), nil
+		}
+
 		// Glassroot gatekeeper: restricted keys are no-ops. The full policy
 		// lives in glassroot.go.
 		if m.glassrootBlocksKey(msg) {

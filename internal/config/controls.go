@@ -11,9 +11,13 @@ type InputConfig struct {
 	Inventory    string `toml:"inventory"`
 	PathGridMode string `toml:"path_grid_mode"`
 	Lock         string `toml:"lock"`
-	ProfilePrev  string `toml:"profile_prev"`
-	ProfileNext  string `toml:"profile_next"`
-	EditFile     string `toml:"edit_file"`
+	// SessionLock is pressed with NumbModifier (alt+r by default) and blanks
+	// the session behind the pump slider. Separate from Lock, which pins a
+	// profile for launching.
+	SessionLock string `toml:"session_lock"`
+	ProfilePrev string `toml:"profile_prev"`
+	ProfileNext string `toml:"profile_next"`
+	EditFile    string `toml:"edit_file"`
 	// Delete trashes the highlighted profile from the inventory.
 	Delete string `toml:"delete"`
 	// Leader arms a two-key sequence: leader then 'b' (batch mode) or

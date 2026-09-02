@@ -35,6 +35,9 @@ func (c *Config) ApplyDefaults() {
 	if strings.TrimSpace(c.Keys.Lock) == "" {
 		c.Keys.Lock = defaults.Keys.Lock
 	}
+	if strings.TrimSpace(c.Keys.SessionLock) == "" {
+		c.Keys.SessionLock = defaults.Keys.SessionLock
+	}
 	if strings.TrimSpace(c.Keys.ProfilePrev) == "" {
 		c.Keys.ProfilePrev = defaults.Keys.ProfilePrev
 	}

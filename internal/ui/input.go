@@ -96,6 +96,12 @@ func IsProfileSwitch(c config.InputConfig, msg tea.KeyMsg, modifier string) (boo
 	return false, -1
 }
 
+// IsSessionLock checks if the key is the manual session-lock chord
+// (Modifier + the configured letter).
+func IsSessionLock(c config.InputConfig, msg tea.KeyMsg, modifier string) bool {
+	return msg.String() == modifier+"+"+c.SessionLock
+}
+
 // IsEditFile checks if the key matches the edit-file action (inventory mode).
 func IsEditFile(c config.InputConfig, msg tea.KeyMsg) bool {
 	return msg.String() == c.EditFile

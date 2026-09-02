@@ -46,6 +46,13 @@ numb_modifier = "alt"
 #inventory = "i"
 #path_grid_mode = "tab"
 #lock = "r"
+
+# Two different locks, one modifier apart:
+#   lock          (r)      pins the active profile so launches stay on it
+#   session_lock  (alt+r)  blanks the session behind the pump slider
+# The session lock uses numb_modifier above, works from any screen, and does
+# not need auto_lock_enabled — that setting only governs the idle timer.
+#session_lock = "r"
 profile_prev = "o"
 profile_next = "p"
 

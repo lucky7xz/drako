@@ -39,6 +39,7 @@ func RescueConfig() Config {
 			Inventory:    "i",
 			PathGridMode: "tab",
 			Lock:         "r",
+			SessionLock:  "r",
 			ProfilePrev:  "o",
 			ProfileNext:  "p",
 			EditFile:     "e",
