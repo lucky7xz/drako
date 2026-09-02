@@ -165,6 +165,8 @@ func runBatch(state ui.Model) {
 		return
 	}
 
+	cellEnv, isolate := core.BatchEnv(os.Environ(), state.Config.EnvWhitelist, state.ActiveProfileName())
+
 	var cmds []multiplex.Command
 	for _, name := range state.SelectedBatch {
 		parent, item, found := core.FindCommandByName(state.Config, name)
@@ -187,6 +189,8 @@ func runBatch(state ui.Model) {
 			Script:   command,
 			Shell:    state.Config.DefaultShell,
 			KeepOpen: autoClosePtr != nil && !*autoClosePtr,
+			Env:      cellEnv,
+			Isolate:  isolate,
 		})
 	}
 	if len(cmds) == 0 {

@@ -173,6 +173,55 @@ func TestPlan_KeepOpenAppendsPause(t *testing.T) {
 	}
 }
 
+func scriptFor(t *testing.T, c Command) string {
+	t.Helper()
+	s, err := Plan("drako-1", []Command{c}, false, "/tmp/x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, content := range s.Scripts {
+		return content
+	}
+	t.Fatal("no script produced")
+	return ""
+}
+
+func TestPlan_EnvExportedOnTopOfInherited(t *testing.T) {
+	content := scriptFor(t, Command{
+		Name: "cell", Script: "ls", Shell: "bash",
+		Env: []string{"DRAKO_PROFILE=work"},
+	})
+	if !strings.Contains(content, "export DRAKO_PROFILE='work'\n") {
+		t.Errorf("env entry must be exported before the command:\n%s", content)
+	}
+	if strings.Contains(content, "env -i") {
+		t.Errorf("without Isolate the inherited environment stays:\n%s", content)
+	}
+}
+
+func TestPlan_IsolateReplacesEnvironment(t *testing.T) {
+	content := scriptFor(t, Command{
+		Name: "cell", Script: "ls", Shell: "bash",
+		Env: []string{"PATH=/bin", "DRAKO_PROFILE=work"}, Isolate: true,
+	})
+	if !strings.Contains(content, "env -i PATH='/bin' DRAKO_PROFILE='work' bash -lc 'ls'") {
+		t.Errorf("isolated cell must run under env -i with exactly Env:\n%s", content)
+	}
+	if strings.Contains(content, "export ") {
+		t.Errorf("isolated cell needs no exports:\n%s", content)
+	}
+}
+
+func TestPlan_EnvValuesQuoted(t *testing.T) {
+	content := scriptFor(t, Command{
+		Name: "cell", Script: "ls", Shell: "bash",
+		Env: []string{`DRAKO_PROFILE=it's here`},
+	})
+	if !strings.Contains(content, `export DRAKO_PROFILE='it'\''s here'`) {
+		t.Errorf("env values must be single-quote escaped:\n%s", content)
+	}
+}
+
 func TestPlan_SanitizedFilenames(t *testing.T) {
 	cmds := []Command{{Name: "🧹 Weird / Name ⋮", Script: "ls", Shell: "bash"}}
 	s, err := Plan("drako-1", cmds, false, "/tmp/x")

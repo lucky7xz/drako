@@ -20,6 +20,12 @@ type Command struct {
 	Script   string // the resolved command string, verbatim from the profile
 	Shell    string // the profile's shell, invoked like single-run (-lc)
 	KeepOpen bool   // auto_close_execution = false: pause before the pane closes
+
+	// Env entries applied to this cell's command. Isolate replaces the
+	// inherited environment with exactly Env (env -i); otherwise Env is
+	// exported on top of it.
+	Env     []string
+	Isolate bool
 }
 
 // Session is a complete, inert launch plan: the scripts to write and the tmux
@@ -96,13 +102,34 @@ func buildScript(c Command) string {
 	var b strings.Builder
 	b.WriteString("#!/bin/sh\n")
 	fmt.Fprintf(&b, "# drako batch cell: %s\n", strings.ReplaceAll(c.Name, "\n", " "))
-	fmt.Fprintf(&b, "%s -lc %s\n", shellBinary(c.Shell), posixSingleQuote(c.Script))
+
+	prefix := ""
+	if c.Isolate {
+		prefix = strings.Join(append([]string{"env", "-i"}, envAssignments(c.Env)...), " ") + " "
+	} else {
+		for _, a := range envAssignments(c.Env) {
+			fmt.Fprintf(&b, "export %s\n", a)
+		}
+	}
+	fmt.Fprintf(&b, "%s%s -lc %s\n", prefix, shellBinary(c.Shell), posixSingleQuote(c.Script))
 	if c.KeepOpen {
 		b.WriteString("status=$?\n")
 		b.WriteString(`printf '\n--- Command Finished (exit %s) ---\nPress Enter to close.' "$status"` + "\n")
 		b.WriteString("read _\n")
 	}
 	return b.String()
+}
+
+// envAssignments renders env entries as shell-safe `K='v'` pairs, dropping
+// anything without a '='.
+func envAssignments(env []string) []string {
+	out := make([]string, 0, len(env))
+	for _, e := range env {
+		if k, v, ok := strings.Cut(e, "="); ok {
+			out = append(out, k+"="+posixSingleQuote(v))
+		}
+	}
+	return out
 }
 
 // shellBinary maps a configured shell to the binary invoked with -lc,

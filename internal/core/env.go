@@ -24,6 +24,20 @@ func CommandEnv(base []string, whitelist []string, activeProfile string) []strin
 	return append(out, "DRAKO_PROFILE="+activeProfile)
 }
 
+// BatchEnv builds the environment for one batch cell, which carries its own
+// env in a script rather than inheriting it from a multiplexer server. A
+// whitelist isolates the cell in exactly that environment; otherwise the cell
+// inherits the caller's and only learns the active profile.
+func BatchEnv(base []string, whitelist []string, activeProfile string) (env []string, isolate bool) {
+	if len(whitelist) > 0 {
+		return CommandEnv(base, whitelist, activeProfile), true
+	}
+	if activeProfile == "" {
+		return nil, false
+	}
+	return []string{"DRAKO_PROFILE=" + activeProfile}, false
+}
+
 // PrepareEnv returns the environment variables to use for command execution.
 // If whitelist is empty, it returns the original environment (pass-through).
 // If whitelist is set, it returns only the variables that match the whitelist.
