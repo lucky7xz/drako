@@ -459,7 +459,7 @@ func (m Model) afterEdit(msg editorFinishedMsg) (tea.Model, tea.Cmd) {
 	if err := config.CheckProfileFile(msg.path); err != nil {
 		m.inventory.status = fmt.Sprintf("⚠️ %s has errors: %v", name, err)
 	} else {
-		m.inventory.status = "✓ Saved: " + name
+		m.inventory.status, m.inventory.statusOK = "✓ Saved: "+name, true
 	}
 	m.mode = inventoryMode
 	return m, nil

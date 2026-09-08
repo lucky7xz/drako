@@ -39,7 +39,11 @@ type inventoryModel struct {
 	cursor      int    // Position in the current list
 	focusedList int    // one of core.ListVisible/ListInventory, focusApply, focusRescue
 	status      string // Feedback message for the user
-	err         error  // Any error that has occurred
+	// statusOK marks status as a confirmation rather than a refusal. The line
+	// used to carry only rejections, so it was unconditionally red; saving an
+	// edit and trashing a profile are the two things that succeed there.
+	statusOK bool
+	err      error // Any error that has occurred
 
 	// pending is the armed delete confirmation, nil when nothing is armed.
 	pending *pendingDelete
@@ -239,7 +243,7 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	// Each keystroke starts from a clean slate, so a rejected action's message
 	// reads as feedback on the last key rather than lingering over later ones.
-	inv.status = ""
+	inv.status, inv.statusOK = "", false
 
 	switch {
 	case IsCancel(m.Config.Keys, msg):
@@ -408,7 +412,7 @@ func (m Model) updatePendingDelete(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		inv.dropSelected()
-		inv.status = "Trashed " + pd.name + " → trash/"
+		inv.status, inv.statusOK = "Trashed "+pd.name+" → trash/", true
 		return m, nil
 
 	// A space arrives as KeySpace on unix and KeyRunes on Windows, but both

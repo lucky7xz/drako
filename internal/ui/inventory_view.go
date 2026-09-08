@@ -75,7 +75,11 @@ func (m Model) viewInventoryMode() string {
 		prompt := fmt.Sprintf("Type '%s' to confirm: %s_", pd.name, pd.typed)
 		statusLine = m.styles.StatusNegative.Render(truncateText(prompt, m.termWidth-LayoutSideMargin))
 	} else if m.inventory.status != "" {
-		statusLine = m.styles.StatusNegative.Render(truncateText(m.inventory.status, m.termWidth-LayoutSideMargin))
+		style := m.styles.StatusNegative
+		if m.inventory.statusOK {
+			style = m.styles.StatusPositive
+		}
+		statusLine = style.Render(truncateText(m.inventory.status, m.termWidth-LayoutSideMargin))
 	}
 
 	var footer string
