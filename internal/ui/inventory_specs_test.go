@@ -483,7 +483,7 @@ func TestSpecsPopup_RendersEveryGroup(t *testing.T) {
 	m = send(t, m, keyType(tea.KeyTab))
 	out := m.View()
 
-	for _, want := range []string{"Spec functions", "EQUIP", "STASH", "STRIP", "dev", "enter: equip"} {
+	for _, want := range []string{"Specs Found", "EQUIP", "STASH", "STRIP", "dev", "enter: equip"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("popup missing %q. Got:\n%s", want, out)
 		}

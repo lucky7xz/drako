@@ -602,7 +602,7 @@ func (m Model) renderSpecsPopup() string {
 
 	// The title is truncated like every other line: one string left out of the
 	// width discipline is enough to push the border off a narrow screen.
-	raw := append([]string{bgFill.Render("  ") + title.Render(truncateText("Spec functions", rowText)), ""}, lines...)
+	raw := append([]string{bgFill.Render("  ") + title.Render(truncateText("Specs Found", rowText)), ""}, lines...)
 	raw = append(raw, "")
 	raw = append(raw, verdict...)
 	raw = append(raw, bgFill.Render("  ")+hints)
