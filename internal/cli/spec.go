@@ -8,16 +8,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/BurntSushi/toml"
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profiles"
 )
-
-// Spec defines a named set of visible profiles.
-type Spec struct {
-	Profiles []string `toml:"profiles"`
-}
 
 // unlockIfLocked clears the pivot lock when it points at name, and says so.
 // Every path that unequips or removes a profile has to call this: a lock left
@@ -76,8 +70,8 @@ func HandleSpecCommand(args []string) int {
 		return 1
 	}
 
-	var spec Spec
-	if _, err := toml.DecodeFile(specPath, &spec); err != nil {
+	specProfiles, err := config.LoadSpec(specPath)
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to parse spec: %v\n", err)
 		return 1
 	}
@@ -86,7 +80,7 @@ func HandleSpecCommand(args []string) int {
 	// profiles than the leader chords can address. Say what that costs and let
 	// the user decide, rather than refusing to express what the file says.
 	overCapConfirmed := false
-	planned, err := profiles.PlannedEquippedCount(configDir, spec.Profiles)
+	planned, err := profiles.PlannedEquippedCount(configDir, specProfiles)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to inspect spec: %v\n", err)
 		return 1
@@ -102,7 +96,7 @@ func HandleSpecCommand(args []string) int {
 		overCapConfirmed = true
 	}
 
-	if err := ApplySpec(configDir, spec.Profiles, overCapConfirmed); err != nil {
+	if err := ApplySpec(configDir, specProfiles, overCapConfirmed); err != nil {
 		fmt.Fprintf(os.Stderr, "failed to apply spec: %v\n", err)
 		return 1
 	}
@@ -133,13 +127,13 @@ func HandleStashCommand(args []string) int {
 		return 1
 	}
 
-	var spec Spec
-	if _, err := toml.DecodeFile(specPath, &spec); err != nil {
+	specProfiles, err := config.LoadSpec(specPath)
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to parse spec: %v\n", err)
 		return 1
 	}
 
-	if err := StashSpec(configDir, spec.Profiles); err != nil {
+	if err := StashSpec(configDir, specProfiles); err != nil {
 		fmt.Fprintf(os.Stderr, "failed to stash spec: %v\n", err)
 		return 1
 	}
@@ -174,25 +168,24 @@ func HandleStripCommand(args []string) int {
 // The name shown is the filename with the .spec.toml suffix removed — exactly
 // what "drako spec <name>" expects.
 func ListSpecs(specsDir string, out io.Writer) error {
-	entries, err := profiles.ListSpecs(specsDir)
+	specs, err := config.DiscoverSpecs(specsDir)
 	if err != nil {
 		return err
 	}
-	if len(entries) == 0 {
+	if len(specs) == 0 {
 		fmt.Fprintf(out, "No specs found. Create one in %s\n", specsDir)
 		return nil
 	}
 
 	// Resolve each spec's profiles into a printable cell before drawing, so we
 	// can size the columns to the widest content.
-	rows := make([][]string, 0, len(entries))
-	for _, e := range entries {
-		var spec Spec
+	rows := make([][]string, 0, len(specs))
+	for _, s := range specs {
 		profilesCol := "(unreadable)"
-		if _, derr := toml.DecodeFile(filepath.Join(specsDir, e.File), &spec); derr == nil {
-			profilesCol = strings.Join(spec.Profiles, ", ")
+		if s.Err == nil {
+			profilesCol = strings.Join(s.Profiles, ", ")
 		}
-		rows = append(rows, []string{e.Name, profilesCol})
+		rows = append(rows, []string{s.Name, profilesCol})
 	}
 
 	table(out, []string{"Spec", "Profiles"}, rows)
