@@ -82,6 +82,12 @@ type Styles struct {
 
 // BuildStyles resolves a config into a concrete Styles value. It is pure: same
 // config in, same styles out, no globals touched — so it is unit-testable.
+// warnAmber is drako's caution colour: not themed, because the two places that
+// use it must stay recognisable whatever theme is loaded — the session lock's
+// border, and the spec picker's "this will skip a deck" line. A caution is not
+// a rejection, which is what the themed StatusNegative red is for.
+const warnAmber = lipgloss.Color("#FFA500")
+
 func BuildStyles(cfg config.Config) Styles {
 	theme := config.GetTheme(cfg.Theme)
 	ui := config.MapThemeToUI(theme)

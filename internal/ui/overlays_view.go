@@ -51,12 +51,18 @@ func padLinesToWidth(raw []string, bgFill lipgloss.Style) []string {
 	if maxW == 0 {
 		maxW = 1
 	}
+	return padLinesTo(raw, maxW, bgFill)
+}
+
+// padLinesTo right-pads every line to an explicit width. A popup that sizes
+// itself to its content resizes whenever the content changes; one that passes
+// a fixed width here keeps its border still while the text inside it moves.
+// Lines already wider than width are left alone — truncate the text before
+// styling it, since cutting a rendered line would slice its escape sequences.
+func padLinesTo(raw []string, width int, bgFill lipgloss.Style) []string {
 	lines := make([]string, len(raw))
 	for i, line := range raw {
-		pad := maxW - lipgloss.Width(line)
-		if pad < 0 {
-			pad = 0
-		}
+		pad := max(0, width-lipgloss.Width(line))
 		lines[i] = line + bgFill.Render(strings.Repeat(" ", pad))
 	}
 	return lines
@@ -288,7 +294,7 @@ func (m Model) viewLockedMode() string {
 	box := lipgloss.NewStyle().
 		Padding(2, 4).
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#FFA500")).
+		BorderForeground(warnAmber).
 		Align(lipgloss.Center).
 		Render(content)
 
