@@ -23,12 +23,21 @@ type inventoryErrorMsg struct{ err error }
 
 func (e inventoryErrorMsg) Error() string { return e.err.Error() }
 
+// The four things focusedList can point at, stacked in the order ↑/↓ walk
+// them. The first two are core's list IDs, since focusedList is passed straight
+// to GetList; the buttons continue the same run of numbers.
+const (
+	focusApply  = core.ListInventory + 1
+	focusRescue = focusApply + 1
+	focusLast   = focusRescue
+)
+
 // inventoryModel holds the state for the inventory management TUI.
 type inventoryModel struct {
 	State *core.InventoryState
 
 	cursor      int    // Position in the current list
-	focusedList int    // 0 for visible, 1 for inventory, 2 for apply, 3 for rescue
+	focusedList int    // one of core.ListVisible/ListInventory, focusApply, focusRescue
 	status      string // Feedback message for the user
 	err         error  // Any error that has occurred
 
@@ -247,16 +256,16 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			inv.cursor = 0
 		}
 	case IsDown(m.Config.Keys, msg):
-		if inv.focusedList < 3 {
+		if inv.focusedList < focusLast {
 			inv.focusedList++
 			inv.cursor = 0
 		}
 	case IsLeft(m.Config.Keys, msg):
-		if inv.focusedList < 2 && inv.cursor > 0 {
+		if inv.focusedList < focusApply && inv.cursor > 0 {
 			inv.cursor--
 		}
 	case IsRight(m.Config.Keys, msg):
-		if inv.focusedList < 2 {
+		if inv.focusedList < focusApply {
 			listPtr, _ := inv.State.GetList(inv.focusedList)
 			list := *listPtr
 			if inv.cursor < len(list)-1 {
@@ -264,7 +273,7 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 		}
 	case IsPathGridMode(m.Config.Keys, msg): // Reuse tab for focus cycle
-		inv.focusedList = (inv.focusedList + 1) % 4 // 0: visible, 1: inventory, 2: apply, 3: rescue
+		inv.focusedList = (inv.focusedList + 1) % (focusLast + 1)
 		inv.cursor = 0
 
 	// Edit the selected profile file in the user's editor
@@ -311,10 +320,10 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	// Lift and Place
 	case IsConfirm(m.Config.Keys, msg):
-		if inv.focusedList == 2 { // Apply button is focused
+		if inv.focusedList == focusApply {
 			return m, ApplyInventoryChangesCmd(m.profile.configDir, m.inventory)
 		}
-		if inv.focusedList == 3 { // Rescue Mode button
+		if inv.focusedList == focusRescue {
 			m.mode = gridMode
 			rescueCfg := config.RescueConfig()
 			rescueCfg.ApplyDefaults()

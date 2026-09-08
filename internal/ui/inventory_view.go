@@ -49,12 +49,12 @@ func (m Model) viewInventoryMode() string {
 	inventoryHeader := m.styles.ListHeader.Render("Inventory Items")
 
 	applyButton := m.styles.Button.Render("[ Apply Changes ]")
-	if m.inventory.focusedList == 2 {
+	if m.inventory.focusedList == focusApply {
 		applyButton = m.styles.SelectedButton.Render("[ Apply Changes ]")
 	}
 
 	rescueButton := m.styles.RescueButton.Render("[ Rescue Mode ]")
-	if m.inventory.focusedList == 3 {
+	if m.inventory.focusedList == focusRescue {
 		rescueButton = m.styles.SelectedRescueButton.Render("[ Rescue Mode ]")
 	}
 
