@@ -13,7 +13,7 @@ import (
 // inventoryHelpText is this view's footer help line — extracted to a
 // package-level const so CalculateLayout and the footer-building code below
 // measure/render the exact same string.
-const inventoryHelpText = "↑/↓/tab: Switch Grid | ←/→: Move | space/enter: Lift/Place | e: Edit | del: Trash | q/esc: Back"
+const inventoryHelpText = "↑/↓: Lists | ←/→: Move | enter: Lift/Place | tab: Specs | e: Edit | del: Trash | q/esc: Back"
 
 func (m Model) viewInventoryMode() string {
 	// If there's an error, just show that.
@@ -146,6 +146,16 @@ func (m Model) viewInventoryMode() string {
 	hAlign := lipgloss.Center
 	if layout.ShiftLeft {
 		hAlign = lipgloss.Left
+	}
+
+	if m.inventory.specs != nil {
+		popup := lipgloss.Place(m.termWidth, m.termHeight,
+			lipgloss.Center, lipgloss.Center,
+			m.renderSpecsPopup(),
+		)
+		return appStyle.Render(
+			lipgloss.Place(m.termWidth, m.termHeight, hAlign, lipgloss.Center, content+"\n"+popup),
+		)
 	}
 
 	return appStyle.Render(

@@ -40,13 +40,16 @@ type inventoryModel struct {
 	focusedList int    // one of core.ListVisible/ListInventory, focusApply, focusRescue
 	status      string // Feedback message for the user
 	// statusOK marks status as a confirmation rather than a refusal. The line
-	// used to carry only rejections, so it was unconditionally red; saving an
-	// edit and trashing a profile are the two things that succeed there.
+	// used to carry only rejections, so it was unconditionally red; staging a
+	// spec and saving an edit are the two things that succeed there.
 	statusOK bool
 	err      error // Any error that has occurred
 
 	// pending is the armed delete confirmation, nil when nothing is armed.
 	pending *pendingDelete
+
+	// specs is the spec-function picker, nil when it is closed.
+	specs *specsOverlay
 }
 
 // pendingDelete is a delete waiting on confirmation: the user types the
@@ -241,6 +244,12 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.updatePendingDelete(msg)
 	}
 
+	// The spec picker owns every key while it is open — the inventory's own
+	// bindings act on a cursor the user can no longer see.
+	if inv.specs != nil {
+		return m.updateSpecsOverlay(msg)
+	}
+
 	// Each keystroke starts from a clean slate, so a rejected action's message
 	// reads as feedback on the last key rather than lingering over later ones.
 	inv.status, inv.statusOK = "", false
@@ -276,9 +285,14 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				inv.cursor++
 			}
 		}
-	case IsPathGridMode(m.Config.Keys, msg): // Reuse tab for focus cycle
-		inv.focusedList = (inv.focusedList + 1) % (focusLast + 1)
-		inv.cursor = 0
+	// Open the spec picker. Tab used to cycle focus, which is the walk up/down
+	// already do — so it was free to take.
+	case IsPathGridMode(m.Config.Keys, msg):
+		if inv.State.HeldItem != nil {
+			inv.status = "Place the held item before choosing a spec"
+			return m, nil
+		}
+		inv.specs = &specsOverlay{plans: m.buildSpecPlans()}
 
 	// Edit the selected profile file in the user's editor
 	case IsEditFile(m.Config.Keys, msg):

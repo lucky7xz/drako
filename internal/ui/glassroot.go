@@ -15,6 +15,8 @@ import (
 // copying to the clipboard, and exposing config/rescue details when a profile
 // is broken or no profiles are equipped at all (the session ends silently
 // instead — see failGlassroot and glassrootRejectsBundle).
+// The inventory's spec-function picker needs no rule of its own: it lives
+// inside inventory mode, and its key is the path-mode key blocked here.
 // File editing is blocked transitively (it lives inside inventory mode) plus
 // a defense-in-depth check at the handler — an editor is a shell (:!sh).
 //
