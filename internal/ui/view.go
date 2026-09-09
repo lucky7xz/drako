@@ -43,9 +43,11 @@ func (m Model) View() string {
 	var helpText string
 	switch m.mode {
 	case pathMode:
-		helpText = "Path Mode | ←/→/ad: Select, ↓/s: Children, Enter: cd, e: Search, q/Esc: Back"
+		helpText = fmt.Sprintf("Path Mode | ←/→/ad: Select, ↓/s: Children, Enter: cd, %s: Search, q/Esc: Back",
+			m.Config.Keys.PathSearch)
 	case childMode:
-		helpText = "Child Mode | ↑/↓/ws: Select, Enter: cd, e: Search, q/Esc: Back"
+		helpText = fmt.Sprintf("Child Mode | ↑/↓/ws: Select, Enter: cd, %s: Search, q/Esc: Back",
+			m.Config.Keys.PathSearch)
 	case batchMode:
 		helpText = m.batchHelpText()
 	default:

@@ -61,6 +61,13 @@ profile_next = "p"
 #edit_file = "e"
 #delete = "delete"
 
+# In path mode: filter the directory listing as you type, or show hidden
+# entries. path_search shares 'e' with edit_file by default — they never
+# collide, since one is only live in the inventory and the other only in
+# path mode — but they are separate settings, so rebind whichever you mean.
+#path_search = "e"
+#toggle_hidden = "."
+
 # The leader arms a two-key sequence in the grid:
 #   leader, 1-9  -> switch to profile 1-9
 #   leader, b    -> batch mode (mark cells, launch them together)

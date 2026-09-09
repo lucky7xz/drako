@@ -44,6 +44,8 @@ func RescueConfig() Config {
 			ProfileNext:  "p",
 			EditFile:     "e",
 			Delete:       "delete",
+			PathSearch:   "e",
+			ToggleHidden: ".",
 			Leader:       "m",
 		},
 		Commands: []Command{

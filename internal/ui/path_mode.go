@@ -24,6 +24,9 @@ type PathModel struct {
 	ShowHidden         bool
 	Searching          bool
 	Filter             string
+	// DeniedDir names the directory the last Enter could not move into. It
+	// clears on the next keypress.
+	DeniedDir string
 }
 
 func InitPathModel(startPath string) PathModel {
@@ -35,84 +38,105 @@ func InitPathModel(startPath string) PathModel {
 	return m
 }
 
-func (m *PathModel) UpdatePathComponents() {
-	home, err := os.UserHomeDir()
-	path := m.CurrentPath
-	if err == nil {
-		if path == home {
-			path = "~"
-		} else if strings.HasPrefix(path, home+"/") {
-			path = "~/" + strings.TrimPrefix(path, home+"/")
-		}
+// collapseHome rewrites a path inside the user's home directory to start with
+// "~". Anything outside it — and an empty home, which is what os.UserHomeDir
+// hands back when it fails — comes back unchanged.
+//
+// sep is a parameter rather than os.PathSeparator so both platforms stay
+// testable from either one, the same reason core.fallbackShell takes a goos.
+func collapseHome(path, home string, sep rune) string {
+	if home == "" {
+		return path
 	}
-
-	var components []string
-	if path == "/" {
-		components = []string{"/"}
-	} else {
-		components = strings.Split(path, string(os.PathSeparator))
+	if path == home {
+		return "~"
 	}
-
-	if len(components) > 1 && components[0] == "" {
-		components[0] = "/"
+	if rest, ok := strings.CutPrefix(path, home+string(sep)); ok {
+		return "~" + string(sep) + rest
 	}
-
-	m.PathComponents = components
-	m.SelectedPathIndex = len(m.PathComponents) - 1
+	return path
 }
 
-func (m *PathModel) ListChildDirs() {
-	m.ChildDirs = []string{}
-	m.ChildDirsError = nil
-	path := m.BuildPathFromComponents(m.SelectedPathIndex)
+// splitPath breaks a path into breadcrumb components. The empty string a
+// rooted Unix path splits into becomes the root itself, and a drive root
+// ("C:\") leaves no empty tail:
+//
+//	/home/lucky  ->  [/ home lucky]
+//	C:\Users     ->  [C: Users]
+func splitPath(path string, sep rune) []string {
+	s := string(sep)
+	if path == s {
+		return []string{s}
+	}
+	parts := strings.Split(path, s)
+	if len(parts) > 1 && parts[0] == "" {
+		parts[0] = s
+	}
+	if n := len(parts); n > 1 && parts[n-1] == "" {
+		parts = parts[:n-1]
+	}
+	return parts
+}
+
+func (pm *PathModel) UpdatePathComponents() {
+	home, _ := os.UserHomeDir()
+	pm.PathComponents = splitPath(collapseHome(pm.CurrentPath, home, os.PathSeparator), os.PathSeparator)
+	pm.SelectedPathIndex = len(pm.PathComponents) - 1
+}
+
+func (pm *PathModel) ListChildDirs() {
+	pm.ChildDirs = []string{}
+	pm.ChildDirsError = nil
+	path := pm.BuildPathFromComponents(pm.SelectedPathIndex)
 
 	files, err := os.ReadDir(path)
 	if err != nil {
 		log.Printf("could not read directory %s: %v", path, err)
-		m.ChildDirsError = err
+		pm.ChildDirsError = err
 		return
 	}
 
 	for _, f := range files {
 		// Basic visibility check: skip hidden files unless toggled
 		name := f.Name()
-		if !m.ShowHidden && strings.HasPrefix(name, ".") {
+		if !pm.ShowHidden && strings.HasPrefix(name, ".") {
 			continue
 		}
 		// Search filter check
-		if m.Filter != "" && !strings.Contains(strings.ToLower(name), strings.ToLower(m.Filter)) {
+		if pm.Filter != "" && !strings.Contains(strings.ToLower(name), strings.ToLower(pm.Filter)) {
 			continue
 		}
 		if f.IsDir() {
-			m.ChildDirs = append(m.ChildDirs, name)
+			pm.ChildDirs = append(pm.ChildDirs, name)
 		}
 	}
-	sort.Strings(m.ChildDirs)
+	sort.Strings(pm.ChildDirs)
 }
 
-func (m *PathModel) BuildPathFromComponents(index int) string {
+func (pm *PathModel) BuildPathFromComponents(index int) string {
 	home, _ := os.UserHomeDir()
+	root := string(os.PathSeparator)
 
-	if len(m.PathComponents) == 0 {
-		return m.CurrentPath
+	if len(pm.PathComponents) == 0 {
+		return pm.CurrentPath
 	}
 
-	if len(m.PathComponents) == 1 && m.PathComponents[0] == "/" {
-		return "/"
+	if len(pm.PathComponents) == 1 && pm.PathComponents[0] == root {
+		return root
 	}
 
 	var pathToJoin []string
 	var result string
 
-	switch m.PathComponents[0] {
-	case "/":
-		pathToJoin = m.PathComponents[1 : index+1]
-		result = "/" + filepath.Join(pathToJoin...)
+	switch pm.PathComponents[0] {
+	case root:
+		pathToJoin = pm.PathComponents[1 : index+1]
+		result = root + filepath.Join(pathToJoin...)
 	case "~":
-		pathToJoin = m.PathComponents[1 : index+1]
+		pathToJoin = pm.PathComponents[1 : index+1]
 		result = filepath.Join(home, filepath.Join(pathToJoin...))
 	default:
-		pathToJoin = m.PathComponents[:index+1]
+		pathToJoin = pm.PathComponents[:index+1]
 		result = filepath.Join(pathToJoin...)
 	}
 
@@ -172,6 +196,7 @@ func (pm *PathModel) selectedChild() (string, bool) {
 func (pm *PathModel) enterDir(target string) bool {
 	if err := os.Chdir(target); err != nil {
 		log.Printf("could not enter directory %s: %v", target, err)
+		pm.DeniedDir = filepath.Base(target)
 		return false
 	}
 	pm.CurrentPath, _ = os.Getwd()
@@ -205,6 +230,7 @@ func (pm *PathModel) toggleHidden() {
 
 // Update handles key events when in PathMode
 func (pm *PathModel) UpdatePathMode(msg tea.KeyMsg, cfg config.Config) navMode {
+	pm.DeniedDir = "" // any keypress dismisses the last refusal
 	if pm.Searching {
 		switch key := msg.String(); key {
 		case "esc":
@@ -229,7 +255,7 @@ func (pm *PathModel) UpdatePathMode(msg tea.KeyMsg, cfg config.Config) navMode {
 	switch {
 	case IsCancel(cfg.Keys, msg):
 		return gridMode // Return to grid mode (no brainer improvement)
-	case msg.String() == "e":
+	case IsPathSearch(cfg.Keys, msg):
 		pm.startSearch()
 	// Quit is handled by parent, usually
 	case IsLeft(cfg.Keys, msg):
@@ -251,7 +277,7 @@ func (pm *PathModel) UpdatePathMode(msg tea.KeyMsg, cfg config.Config) navMode {
 		return gridMode
 	case IsConfirm(cfg.Keys, msg):
 		pm.enterDir(pm.BuildPathFromComponents(pm.SelectedPathIndex))
-	case msg.String() == ".":
+	case IsToggleHidden(cfg.Keys, msg):
 		pm.toggleHidden()
 	}
 	return pathMode
@@ -259,6 +285,7 @@ func (pm *PathModel) UpdatePathMode(msg tea.KeyMsg, cfg config.Config) navMode {
 
 // Update handles key events when in ChildMode
 func (pm *PathModel) UpdateChildMode(msg tea.KeyMsg, cfg config.Config) navMode {
+	pm.DeniedDir = "" // any keypress dismisses the last refusal
 	if pm.Searching {
 		switch key := msg.String(); key {
 		case "esc":
@@ -296,7 +323,7 @@ func (pm *PathModel) UpdateChildMode(msg tea.KeyMsg, cfg config.Config) navMode 
 	switch {
 	case IsCancel(cfg.Keys, msg):
 		return gridMode // Return to grid mode
-	case msg.String() == "e":
+	case IsPathSearch(cfg.Keys, msg):
 		pm.startSearch()
 	case IsUp(cfg.Keys, msg):
 		if pm.SelectedChildIndex > 0 {
@@ -318,7 +345,7 @@ func (pm *PathModel) UpdateChildMode(msg tea.KeyMsg, cfg config.Config) navMode 
 		if pm.enterDir(target) {
 			return pm.descendMode()
 		}
-	case msg.String() == ".":
+	case IsToggleHidden(cfg.Keys, msg):
 		pm.toggleHidden()
 	}
 	return childMode
@@ -336,7 +363,7 @@ func (pm *PathModel) RenderPathBar(active bool, styles Styles) string {
 		renderedParts = append(renderedParts, style.Render(component))
 	}
 
-	separator := styles.PathSeparator.Render("/")
+	separator := styles.PathSeparator.Render(string(os.PathSeparator))
 	return styles.StatusBar.Render(lipgloss.JoinHorizontal(lipgloss.Top, strings.Join(renderedParts, separator)))
 }
 
@@ -374,6 +401,13 @@ func (pm *PathModel) RenderChildDirs(mode navMode, styles Styles) string {
 			end = len(rows)
 		}
 		content = lipgloss.JoinVertical(lipgloss.Left, rows[start:end]...)
+	}
+
+	// The listing still describes the directory we are in, so the refusal goes
+	// under it rather than replacing it.
+	if pm.DeniedDir != "" {
+		refusal := fmt.Sprintf("  [cannot enter %s: permission denied or path invalid]", pm.DeniedDir)
+		content = lipgloss.JoinVertical(lipgloss.Left, content, styles.Offline.Render(refusal))
 	}
 
 	if pm.Searching {

@@ -23,6 +23,28 @@ func TestApplyDefaults(t *testing.T) {
 	if len(cfg.Keys.NavUp) == 0 {
 		t.Error("ApplyDefaults failed to initialize Navigation Keys (NavUp is empty)")
 	}
+
+	// Every configurable action needs a binding out of ApplyDefaults. A field
+	// added to InputConfig but forgotten in defaults.go leaves the action
+	// bound to "", which silently never fires.
+	for name, binding := range map[string]string{
+		"explain":        cfg.Keys.Explain,
+		"inventory":      cfg.Keys.Inventory,
+		"path_grid_mode": cfg.Keys.PathGridMode,
+		"lock":           cfg.Keys.Lock,
+		"session_lock":   cfg.Keys.SessionLock,
+		"profile_prev":   cfg.Keys.ProfilePrev,
+		"profile_next":   cfg.Keys.ProfileNext,
+		"edit_file":      cfg.Keys.EditFile,
+		"delete":         cfg.Keys.Delete,
+		"path_search":    cfg.Keys.PathSearch,
+		"toggle_hidden":  cfg.Keys.ToggleHidden,
+		"leader":         cfg.Keys.Leader,
+	} {
+		if binding == "" {
+			t.Errorf("ApplyDefaults left %q unbound", name)
+		}
+	}
 }
 
 // TestApplyProfileOverlay verifies that merging a profile into the base config works correctly.

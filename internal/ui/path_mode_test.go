@@ -3,6 +3,7 @@ package ui
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -18,6 +19,8 @@ func navKeys() config.Config {
 			NavLeft:      []string{"left", "h"},
 			NavRight:     []string{"right", "l"},
 			PathGridMode: "tab",
+			PathSearch:   "e",
+			ToggleHidden: ".",
 		},
 	}
 }
@@ -259,6 +262,156 @@ func TestUpdateChildMode_Characterization(t *testing.T) {
 		mode := pm.UpdateChildMode(keyRune("q"), cfg)
 		if mode != gridMode {
 			t.Errorf("mode = %v, want gridMode", mode)
+		}
+	})
+}
+
+// collapseHome and splitPath take the separator as a parameter, so the Windows
+// cases below run on Linux too — which is the point, since the old inline
+// version hardcoded "/" and its "~" branch could never fire on Windows.
+func TestCollapseHome(t *testing.T) {
+	const unix, win = '/', '\\'
+	tests := []struct {
+		name       string
+		path, home string
+		sep        rune
+		want       string
+	}{
+		{"exactly home", "/home/lucky", "/home/lucky", unix, "~"},
+		{"under home", "/home/lucky/shara/drako", "/home/lucky", unix, "~/shara/drako"},
+		{"outside home", "/etc/hosts", "/home/lucky", unix, "/etc/hosts"},
+		{"prefix but not a child", "/home/lucky2/x", "/home/lucky", unix, "/home/lucky2/x"},
+		{"unresolvable home", "/home/lucky/x", "", unix, "/home/lucky/x"},
+		{"root", "/", "/home/lucky", unix, "/"},
+		{"windows exactly home", `C:\Users\lucky`, `C:\Users\lucky`, win, "~"},
+		{"windows under home", `C:\Users\lucky\dev`, `C:\Users\lucky`, win, `~\dev`},
+		{"windows outside home", `C:\Windows`, `C:\Users\lucky`, win, `C:\Windows`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := collapseHome(tt.path, tt.home, tt.sep); got != tt.want {
+				t.Errorf("collapseHome(%q, %q) = %q, want %q", tt.path, tt.home, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSplitPath(t *testing.T) {
+	const unix, win = '/', '\\'
+	tests := []struct {
+		name string
+		path string
+		sep  rune
+		want []string
+	}{
+		{"root only", "/", unix, []string{"/"}},
+		{"absolute", "/home/lucky", unix, []string{"/", "home", "lucky"}},
+		{"tilde only", "~", unix, []string{"~"}},
+		{"under tilde", "~/shara/drako", unix, []string{"~", "shara", "drako"}},
+		{"windows drive root", `C:\`, win, []string{"C:"}},
+		{"windows path", `C:\Users\lucky`, win, []string{"C:", "Users", "lucky"}},
+		{"windows tilde", `~\dev`, win, []string{"~", "dev"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := splitPath(tt.path, tt.sep)
+			if len(got) != len(tt.want) {
+				t.Fatalf("splitPath(%q) = %v, want %v", tt.path, got, tt.want)
+			}
+			for i := range tt.want {
+				if got[i] != tt.want[i] {
+					t.Errorf("splitPath(%q)[%d] = %q, want %q", tt.path, i, got[i], tt.want[i])
+				}
+			}
+		})
+	}
+}
+
+// A refused chdir used to be silent: the key did nothing and nothing said why.
+func TestEnterDir_RefusalIsVisible(t *testing.T) {
+	cfg := navKeys()
+
+	t.Run("failed chdir names the directory and stays put", func(t *testing.T) {
+		pm := pathTestModel(t)
+		before, _ := os.Getwd()
+		pm.UpdatePathMode(tea.KeyMsg{Type: tea.KeyDown}, cfg) // alpha
+
+		// Removing it is the portable way to make chdir fail; 0000 perms would
+		// still let root through.
+		if err := os.RemoveAll(filepath.Join(pm.CurrentPath, "alpha")); err != nil {
+			t.Fatal(err)
+		}
+
+		mode := pm.UpdateChildMode(tea.KeyMsg{Type: tea.KeyEnter}, cfg)
+		if mode != childMode {
+			t.Errorf("mode = %v, want childMode", mode)
+		}
+		if pm.DeniedDir != "alpha" {
+			t.Errorf("DeniedDir = %q, want alpha", pm.DeniedDir)
+		}
+		if cwd, _ := os.Getwd(); cwd != before {
+			t.Errorf("cwd = %q, want it unchanged at %q", cwd, before)
+		}
+	})
+
+	t.Run("the refusal renders under the listing", func(t *testing.T) {
+		pm := pathTestModel(t)
+		pm.DeniedDir = "root"
+		out := pm.RenderChildDirs(childMode, BuildStyles(config.Config{}))
+		if !strings.Contains(out, "cannot enter root") {
+			t.Errorf("RenderChildDirs missing the refusal. Got:\n%s", out)
+		}
+		if !strings.Contains(out, "alpha") {
+			t.Errorf("RenderChildDirs dropped the listing. Got:\n%s", out)
+		}
+	})
+
+	t.Run("the next keypress dismisses it", func(t *testing.T) {
+		pm := pathTestModel(t)
+		pm.DeniedDir = "root"
+		pm.UpdatePathMode(tea.KeyMsg{Type: tea.KeyDown}, cfg)
+		if pm.DeniedDir != "" {
+			t.Errorf("DeniedDir = %q, want it cleared", pm.DeniedDir)
+		}
+	})
+}
+
+// Both keys were hardcoded, so rebinding edit_file (which also defaults to "e")
+// left the path filter stranded on "e".
+func TestPathKeys_AreConfigurable(t *testing.T) {
+	cfg := navKeys()
+	cfg.Keys.PathSearch = "/"
+	cfg.Keys.ToggleHidden = "H"
+
+	t.Run("rebound search key opens the filter", func(t *testing.T) {
+		pm := pathTestModel(t)
+		pm.UpdatePathMode(keyRune("/"), cfg)
+		if !pm.Searching {
+			t.Error("Searching = false, want true")
+		}
+	})
+
+	t.Run("the old default no longer searches", func(t *testing.T) {
+		pm := pathTestModel(t)
+		pm.UpdatePathMode(keyRune("e"), cfg)
+		if pm.Searching {
+			t.Error("Searching = true, want false — 'e' was rebound away")
+		}
+	})
+
+	t.Run("rebound hidden toggle works", func(t *testing.T) {
+		pm := pathTestModel(t)
+		pm.UpdatePathMode(keyRune("H"), cfg)
+		if !pm.ShowHidden {
+			t.Error("ShowHidden = false, want true")
+		}
+	})
+
+	t.Run("the old hidden default no longer toggles", func(t *testing.T) {
+		pm := pathTestModel(t)
+		pm.UpdatePathMode(keyRune("."), cfg)
+		if pm.ShowHidden {
+			t.Error("ShowHidden = true, want false — '.' was rebound away")
 		}
 	})
 }

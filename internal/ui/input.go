@@ -67,6 +67,16 @@ func IsPathGridMode(c config.InputConfig, msg tea.KeyMsg) bool {
 	return msg.String() == c.PathGridMode
 }
 
+// IsPathSearch checks if the key matches the directory-filter action.
+func IsPathSearch(c config.InputConfig, msg tea.KeyMsg) bool {
+	return msg.String() == c.PathSearch
+}
+
+// IsToggleHidden checks if the key matches the hidden-entry toggle.
+func IsToggleHidden(c config.InputConfig, msg tea.KeyMsg) bool {
+	return msg.String() == c.ToggleHidden
+}
+
 // IsLock checks if the key matches the lock action.
 func IsLock(c config.InputConfig, msg tea.KeyMsg) bool {
 	return msg.String() == c.Lock

@@ -20,6 +20,9 @@ type InputConfig struct {
 	EditFile    string `toml:"edit_file"`
 	// Delete trashes the highlighted profile from the inventory.
 	Delete string `toml:"delete"`
+	// In path mode: filter the directory listing, and show hidden entries.
+	PathSearch   string `toml:"path_search"`
+	ToggleHidden string `toml:"toggle_hidden"`
 	// Leader arms a two-key sequence: leader then 'b' (batch mode) or
 	// 1-9 (switch profile). The legacy modifier chord (alt+1-9) still works.
 	Leader string `toml:"leader"`

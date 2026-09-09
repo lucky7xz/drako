@@ -50,6 +50,12 @@ func (c *Config) ApplyDefaults() {
 	if strings.TrimSpace(c.Keys.Delete) == "" {
 		c.Keys.Delete = defaults.Keys.Delete
 	}
+	if strings.TrimSpace(c.Keys.PathSearch) == "" {
+		c.Keys.PathSearch = defaults.Keys.PathSearch
+	}
+	if strings.TrimSpace(c.Keys.ToggleHidden) == "" {
+		c.Keys.ToggleHidden = defaults.Keys.ToggleHidden
+	}
 	if strings.TrimSpace(c.Keys.Leader) == "" {
 		c.Keys.Leader = defaults.Keys.Leader
 	}
