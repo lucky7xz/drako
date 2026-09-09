@@ -236,21 +236,13 @@ func (m Model) renderLayoutPopup() string {
 	return m.styles.DropdownPopup.Render(lipgloss.JoinVertical(lipgloss.Left, lines...))
 }
 
-// The lock screen is the one view that never runs CalculateLayout — it has no
-// header, grid or help line to hide, so it needs a width budget rather than a
-// layout cascade. These are the costs it has to pay out of the terminal.
+// The lock screen never runs CalculateLayout — no header, grid or help line to
+// hide — so it budgets its own width. The heights count usable rows, not
+// terminal rows: appStyle's margins sit outside Place.
 const (
-	// lockBoxChrome is the box's own horizontal cost: Padding(_, 4) on both
-	// sides plus the rounded border.
-	lockBoxChrome = 10
-	// Below lockRoomyHeight the blank spacer lines go; below lockTightHeight
-	// the vertical padding and the idle line go too. Same "give up the least
-	// useful thing first" ordering CalculateLayout uses for header vs footer.
-	//
-	// Both count against the usable height, not the terminal's: appStyle's
-	// margins sit outside Place, so the last two rows fall off the screen.
-	lockRoomyHeight = 23
-	lockTightHeight = 15
+	lockBoxChrome   = 10 // Padding(_, 4) both sides plus the border
+	lockRoomyHeight = 23 // below this the spacers go, then the padding
+	lockTightHeight = 15 // below this the idle line goes too
 )
 
 func (m Model) viewLockedMode() string {
@@ -270,22 +262,18 @@ func (m Model) viewLockedMode() string {
 	avail := max(1, m.termWidth-appStyle.GetHorizontalMargins()-lockBoxChrome)
 
 	progress := min(max(m.lock.progress, 0), goal)
-	// The bar keeps its brackets and at least a stub of track, so it still
-	// reads as a slider when there is nothing else left.
 	barWidth := min(24, max(2, avail-2))
 	filled := progress * barWidth / goal
 
 	bar := "[" + strings.Repeat("█", filled) + strings.Repeat("░", barWidth-filled) + "]"
 
-	// A narrow terminal gets the short phrasing rather than the full line
-	// wrapped over four rows — height is scarcer than the key names are useful.
+	// Shorter phrasing beats wrapping the full line over four rows.
 	instructionText := "Pump ← → (A/D or H/L) to fill the slider and unlock"
 	if lipgloss.Width(instructionText) > avail {
 		instructionText = "Pump ← → to unlock"
 	}
 
-	// Every row is bounded to avail: the box sizes itself to its widest child,
-	// so one unbounded line sets the floor for the whole screen.
+	// The box is as wide as its widest child, so every row is bounded.
 	fit := func(s string) string { return truncateText(s, avail) }
 
 	lockIcon := "🔒"

@@ -122,7 +122,6 @@ func loadConfig(profileOverride *string, sessionProfile string) (ConfigBundle, e
 		log.Printf("warning: could not read pivot profile: %v", err)
 		pf = pivotFile{}
 	}
-	pivotRequested := false
 	requestedPivot := strings.TrimSpace(pf.Locked)
 
 	base, broken := loadBaseConfig(configDir)
@@ -145,28 +144,28 @@ func loadConfig(profileOverride *string, sessionProfile string) (ConfigBundle, e
 		envProfile = os.Getenv("DRAKO_PROFILE")
 	}
 
-	requested, fromPivot := resolveRequested(profileOverride, pf.Locked, envProfile, base.Profile)
-	pivotRequested = fromPivot
+	req := resolveRequested(profileOverride, pf.Locked, envProfile, base.Profile, profiles)
 
 	pivotStillValid := requestedPivot != ""
 	useFactoryDefaults := false
 
-	droppedProfile := ""
-	activeIndex, found := selectProfile(profiles, requested)
-	if !found {
-		log.Printf("profile not found (possibly broken), falling back to factory defaults: %s", requested)
-		useFactoryDefaults = true
-		// The requested profile (from the lock, the session, or config.toml)
-		// vanished — deleted or moved to inventory. Record its name so the UI
-		// can explain the otherwise-silent rescue drop.
-		droppedProfile = requested
-		if pivotRequested {
-			// It was the locked profile: clear the now-stale lock too.
-			if err := WritePivotLocked(configDir, ""); err != nil {
-				log.Printf("warning: could not clear pivot lock: %v", err)
-			}
-			pivotStillValid = false
+	droppedProfile := req.Dropped
+	if droppedProfile != "" {
+		log.Printf("requested profile is not equipped, falling through: %s", droppedProfile)
+	}
+	if req.StaleLock {
+		if err := WritePivotLocked(configDir, ""); err != nil {
+			log.Printf("warning: could not clear pivot lock: %v", err)
 		}
+		pivotStillValid = false
+	}
+
+	activeIndex, found := selectProfile(profiles, req.Name)
+	if !found {
+		// Only an explicit override reaches here.
+		log.Printf("profile not found, falling back to factory defaults: %s", req.Name)
+		useFactoryDefaults = true
+		droppedProfile = req.Name
 	}
 
 	effective, activeIndex, extraBroken, fellBack := buildEffective(base, profiles, activeIndex, useFactoryDefaults)

@@ -231,16 +231,17 @@ func TestReloadConfig_DeletedLockedProfileReportsDropped(t *testing.T) {
 	if bundle.DroppedProfile != "work" {
 		t.Errorf("DroppedProfile = %q, want %q", bundle.DroppedProfile, "work")
 	}
-	if !isRescueGrid(bundle.Config) {
-		t.Error("expected the rescue grid after the locked profile was deleted")
+	if isRescueGrid(bundle.Config) {
+		t.Error("rescue is for having nothing to run; \"alpha\" was still equipped")
 	}
 	if bundle.LockedName != "" {
 		t.Errorf("stale lock should be cleared, LockedName = %q", bundle.LockedName)
 	}
 }
 
-// Moving the UNLOCKED *active* profile to inventory (session still names it)
-// also drops to rescue — DroppedProfile must report it so the UI can explain.
+// Stashing the active profile leaves the session naming an unequipped deck.
+// Rescue there was inescapable: only the lock self-heals, so every reload
+// re-requested the stashed deck.
 func TestReloadConfig_UnlockedActiveGoneReportsDropped(t *testing.T) {
 	dir := loadTestDir(t, "work", "alpha")
 	// Session is on "work"; stash it (move out of the equipped dir).
@@ -255,8 +256,8 @@ func TestReloadConfig_UnlockedActiveGoneReportsDropped(t *testing.T) {
 	if bundle.DroppedProfile != "work" {
 		t.Errorf("DroppedProfile = %q, want %q", bundle.DroppedProfile, "work")
 	}
-	if !isRescueGrid(bundle.Config) {
-		t.Error("expected rescue after the active (session) profile was removed")
+	if isRescueGrid(bundle.Config) {
+		t.Error("stashing the deck you are on should land on the next one")
 	}
 }
 
@@ -278,5 +279,43 @@ func TestReloadConfig_GracefulFallbackNoDropped(t *testing.T) {
 	}
 	if isRescueGrid(bundle.Config) {
 		t.Error("a remaining profile with no active request should not land in rescue")
+	}
+}
+
+// Stashing the deck you are currently on makes the requested profile missing —
+// but the other equipped decks are still there and still valid. Dropping to the
+// rescue grid then abandoned working profiles, and, because only the pivot lock
+// self-heals while the session profile does not, "Exit Rescue Mode" reloaded the
+// same missing name and landed straight back in rescue.
+func TestLoadConfig_MissingRequestedProfileKeepsEquippedDecks(t *testing.T) {
+	dir := loadTestDir(t, "core", "asdx")
+	// The stashed deck lives in the inventory, so it is not equipped.
+	if err := os.MkdirAll(filepath.Join(dir, "inventory"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	bundle, err := ReloadConfig("ggml.llama-cpp")
+	if err != nil {
+		t.Fatalf("ReloadConfig: %v", err)
+	}
+
+	if bundle.DroppedProfile != "ggml.llama-cpp" {
+		t.Errorf("DroppedProfile = %q, want the stashed deck's name", bundle.DroppedProfile)
+	}
+	if len(bundle.Profiles) == 0 {
+		t.Fatal("expected the equipped decks to still be discovered")
+	}
+	if got := bundle.Config.Commands[0].Name; got == "Exit Rescue Mode" {
+		t.Errorf("landed on the rescue grid with %d valid decks equipped", len(bundle.Profiles))
+	}
+
+	// What "Exit Rescue Mode" does: reload with the same session profile. It
+	// must not be a loop.
+	again, err := ReloadConfig("ggml.llama-cpp")
+	if err != nil {
+		t.Fatalf("second ReloadConfig: %v", err)
+	}
+	if got := again.Config.Commands[0].Name; got == "Exit Rescue Mode" {
+		t.Error("reloading with the same session profile is stuck in rescue")
 	}
 }

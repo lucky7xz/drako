@@ -51,26 +51,48 @@ func TestReorderByPivot(t *testing.T) {
 
 func TestResolveRequested(t *testing.T) {
 	override := func(s string) *string { return &s }
+	all := []ProfileInfo{
+		validProfile("work"), validProfile("env"), validProfile("envprofile"),
+		validProfile("cfg"), validProfile("cfgprofile"), validProfile("alpha"),
+	}
 	tests := []struct {
-		name                     string
-		override                 *string
-		pivot, env, cfg          string
-		want                     string
-		wantFromPivot            bool
+		name            string
+		override        *string
+		pivot, env, cfg string
+		available       []ProfileInfo
+		want            profileRequest
 	}{
-		{"override wins over everything", override("alpha"), "work", "env", "cfg", "alpha", false},
-		{"empty override still wins (verbatim)", override(""), "work", "env", "cfg", "", false},
-		{"pivot beats env and cfg", nil, "work", "env", "cfg", "work", true},
-		{"env beats cfg", nil, "", "envprofile", "cfg", "envprofile", false},
-		{"cfg is the last resort", nil, "", "", "cfgprofile", "cfgprofile", false},
-		{"whitespace pivot is no pivot", nil, "   ", " env ", "", "env", false},
-		{"nothing requested", nil, "", "", "", "", false},
+		{"override wins over everything", override("alpha"), "work", "env", "cfg", all,
+			profileRequest{Name: "alpha"}},
+		{"empty override still wins (verbatim)", override(""), "work", "env", "cfg", all,
+			profileRequest{Name: ""}},
+		{"pivot beats env and cfg", nil, "work", "env", "cfg", all,
+			profileRequest{Name: "work", FromPivot: true}},
+		{"env beats cfg", nil, "", "envprofile", "cfg", all,
+			profileRequest{Name: "envprofile"}},
+		{"cfg is the last resort", nil, "", "", "cfgprofile", all,
+			profileRequest{Name: "cfgprofile"}},
+		{"whitespace pivot is no pivot", nil, "   ", " env ", "", all,
+			profileRequest{Name: "env"}},
+		{"nothing requested", nil, "", "", "", all,
+			profileRequest{}},
+
+		// Stashing the deck a source names must fall through to the next
+		// source, not be honoured and then fail downstream.
+		{"stashed lock falls through to env", nil, "gone", "env", "cfg", all,
+			profileRequest{Name: "env", Dropped: "gone", StaleLock: true}},
+		{"stashed session falls through to cfg", nil, "", "gone", "cfg", all,
+			profileRequest{Name: "cfg", Dropped: "gone"}},
+		{"only the first casualty is reported", nil, "gone", "alsogone", "cfg", all,
+			profileRequest{Name: "cfg", Dropped: "gone", StaleLock: true}},
+		{"nothing equipped leaves no name", nil, "gone", "", "", nil,
+			profileRequest{Dropped: "gone", StaleLock: true}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, fromPivot := resolveRequested(tt.override, tt.pivot, tt.env, tt.cfg)
-			if got != tt.want || fromPivot != tt.wantFromPivot {
-				t.Errorf("resolveRequested = (%q, %v), want (%q, %v)", got, fromPivot, tt.want, tt.wantFromPivot)
+			got := resolveRequested(tt.override, tt.pivot, tt.env, tt.cfg, tt.available)
+			if got != tt.want {
+				t.Errorf("resolveRequested = %+v, want %+v", got, tt.want)
 			}
 		})
 	}

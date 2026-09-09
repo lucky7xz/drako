@@ -42,20 +42,53 @@ func reorderByPivot(profiles []ProfileInfo, order []string) []ProfileInfo {
 	return ordered
 }
 
-// resolveRequested picks which profile name to activate:
+type profileRequest struct {
+	Name      string // profile to activate; empty means "the first one"
+	Dropped   string // a higher-priority source named this, but it is not equipped
+	FromPivot bool
+	StaleLock bool // the lock names something unequipped; clear it on disk
+}
+
+// resolveRequested picks which profile to activate:
 // override > pivot lock > DRAKO_PROFILE env > config.toml profile.
-// A non-nil override is used verbatim; the rest are trimmed.
-func resolveRequested(override *string, pivotLocked, envProfile, cfgProfile string) (requested string, fromPivot bool) {
+// A source naming an unequipped profile is skipped rather than honoured and
+// then failed — falling through is what a precedence list is for. A non-nil
+// override is used verbatim.
+func resolveRequested(override *string, pivotLocked, envProfile, cfgProfile string, available []ProfileInfo) profileRequest {
 	if override != nil {
-		return *override, false
+		return profileRequest{Name: *override}
 	}
-	if pivot := strings.TrimSpace(pivotLocked); pivot != "" {
-		return pivot, true
+
+	equipped := func(name string) bool {
+		_, ok := selectProfile(available, name)
+		return ok
 	}
-	if env := strings.TrimSpace(envProfile); env != "" {
-		return env, false
+
+	req := profileRequest{}
+	for _, src := range []struct {
+		name  string
+		pivot bool
+	}{
+		{strings.TrimSpace(pivotLocked), true},
+		{strings.TrimSpace(envProfile), false},
+		{strings.TrimSpace(cfgProfile), false},
+	} {
+		if src.name == "" {
+			continue
+		}
+		if equipped(src.name) {
+			req.Name = src.name
+			req.FromPivot = src.pivot
+			return req
+		}
+		if req.Dropped == "" {
+			req.Dropped = src.name
+		}
+		if src.pivot {
+			req.StaleLock = true
+		}
 	}
-	return strings.TrimSpace(cfgProfile), false
+	return req
 }
 
 // buildEffective produces the effective config by overlaying the active

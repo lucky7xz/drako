@@ -24,9 +24,7 @@ type PathModel struct {
 	ShowHidden         bool
 	Searching          bool
 	Filter             string
-	// DeniedDir names the directory the last Enter could not move into. It
-	// clears on the next keypress.
-	DeniedDir string
+	DeniedDir          string // dir the last Enter refused; cleared on the next keypress
 }
 
 func InitPathModel(startPath string) PathModel {
@@ -38,12 +36,9 @@ func InitPathModel(startPath string) PathModel {
 	return m
 }
 
-// collapseHome rewrites a path inside the user's home directory to start with
-// "~". Anything outside it — and an empty home, which is what os.UserHomeDir
-// hands back when it fails — comes back unchanged.
-//
-// sep is a parameter rather than os.PathSeparator so both platforms stay
-// testable from either one, the same reason core.fallbackShell takes a goos.
+// collapseHome rewrites a path under home to start with "~"; anything else,
+// and an empty home, comes back unchanged. sep is a parameter so Windows stays
+// testable from Linux, like core.fallbackShell's goos.
 func collapseHome(path, home string, sep rune) string {
 	if home == "" {
 		return path
@@ -57,9 +52,7 @@ func collapseHome(path, home string, sep rune) string {
 	return path
 }
 
-// splitPath breaks a path into breadcrumb components. The empty string a
-// rooted Unix path splits into becomes the root itself, and a drive root
-// ("C:\") leaves no empty tail:
+// splitPath breaks a path into breadcrumb components:
 //
 //	/home/lucky  ->  [/ home lucky]
 //	C:\Users     ->  [C: Users]
@@ -180,8 +173,8 @@ func (pm *PathModel) editFilter(key string) {
 	}
 }
 
-// selectedChild is the full path of the highlighted child directory. A filter
-// or the hidden toggle can empty the listing under the cursor, so check ok.
+// selectedChild is the highlighted child's full path. A filter or the hidden
+// toggle can empty the listing under the cursor, so check ok.
 func (pm *PathModel) selectedChild() (string, bool) {
 	if pm.SelectedChildIndex < 0 || pm.SelectedChildIndex >= len(pm.ChildDirs) {
 		return "", false
@@ -190,9 +183,8 @@ func (pm *PathModel) selectedChild() (string, bool) {
 	return filepath.Join(parent, pm.ChildDirs[pm.SelectedChildIndex]), true
 }
 
-// enterDir makes target the process working directory and rebuilds the
-// breadcrumb and listing around it. Reading the path back with Getwd resolves
-// "..", symlinks and relative components. Nothing changes on failure.
+// enterDir chdirs to target and rebuilds the breadcrumb around it. Reading the
+// path back with Getwd resolves "..", symlinks and relative components.
 func (pm *PathModel) enterDir(target string) bool {
 	if err := os.Chdir(target); err != nil {
 		log.Printf("could not enter directory %s: %v", target, err)
@@ -207,8 +199,8 @@ func (pm *PathModel) enterDir(target string) bool {
 	return true
 }
 
-// descendMode keeps the cursor on the child list so the next Enter descends
-// again, or drops it to the breadcrumb when the new directory is a dead end.
+// descendMode keeps the cursor on the child list, or drops it to the
+// breadcrumb when the new directory is a dead end.
 func (pm *PathModel) descendMode() navMode {
 	if len(pm.ChildDirs) == 0 {
 		return pathMode
@@ -351,12 +343,8 @@ func (pm *PathModel) UpdateChildMode(msg tea.KeyMsg, cfg config.Config) navMode 
 	return childMode
 }
 
-// pathWindow picks the run of breadcrumb components that fits budget while
-// always including cursor, growing outward from it and preferring the deeper
-// end of the path. It accounts for the "…" markers that stand in for whatever
-// it drops, so the window it returns fits once those are rendered too.
-//
-// It takes widths rather than strings to stay pure integer arithmetic: the
+// pathWindow picks the run of components that fits budget, always including
+// cursor and growing outward from it. Widths rather than strings: the
 // components are styled, so only the caller can measure them.
 func pathWindow(widths []int, sepWidth, ellipsisWidth, cursor, budget int) (int, int) {
 	n := len(widths)
@@ -365,8 +353,7 @@ func pathWindow(widths []int, sepWidth, ellipsisWidth, cursor, budget int) (int,
 	}
 	cursor = max(0, min(cursor, n-1))
 
-	// span is the rendered width of components [s,e) plus the separators
-	// between them and the ellipsis markers the elided sides still need.
+	// Counts the "…" markers only on the sides that actually elide.
 	span := func(s, e int) int {
 		w := (e - s - 1) * sepWidth
 		for i := s; i < e; i++ {
@@ -385,8 +372,7 @@ func pathWindow(widths []int, sepWidth, ellipsisWidth, cursor, budget int) (int,
 		return 0, n
 	}
 
-	// The selected component is always shown, even when it alone overflows —
-	// RenderPathBar truncates as the backstop.
+	// Always shown, even when it alone overflows; RenderPathBar truncates.
 	start, end := cursor, cursor+1
 	for {
 		grew := false
@@ -474,8 +460,7 @@ func (pm *PathModel) RenderChildDirs(mode navMode, styles Styles, width int) str
 		content = lipgloss.JoinVertical(lipgloss.Left, rows[start:end]...)
 	}
 
-	// The listing still describes the directory we are in, so the refusal goes
-	// under it rather than replacing it.
+	// We are still in the old directory, so the refusal goes under its listing.
 	if pm.DeniedDir != "" {
 		refusal := fmt.Sprintf("  [cannot enter %s: permission denied or path invalid]", pm.DeniedDir)
 		content = lipgloss.JoinVertical(lipgloss.Left, content, truncateText(styles.Offline.Render(refusal), width))

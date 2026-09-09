@@ -38,13 +38,8 @@ func Run() int {
 		}
 	}
 
-	// A child cannot change its parent's directory, so a shell wrapper reads
-	// this file and cds for us. drako's whole part is writing the path: the
-	// caller creates the file and removes it, which is what keeps two drakos
-	// in two terminals from reporting into each other.
-	//
-	// Glassroot needs no rule of its own — it blocks path mode (glassroot.go),
-	// so the working directory it starts in is the one it ends in.
+	// A child cannot change its parent's directory; a shell wrapper reads this
+	// file and cds. The caller owns the file, so two drakos never share one.
 	if cwdFile := cwdFileArg(os.Args); cwdFile != "" {
 		isTuiMode = true
 		defer writeCwdFile(cwdFile)
@@ -269,8 +264,7 @@ func runInternalPurge(command string) bool {
 	return true
 }
 
-// cwdFileArg returns the path given to --cwd-file, accepting both
-// "--cwd-file=PATH" and "--cwd-file PATH". Empty means the flag was absent.
+// cwdFileArg accepts both "--cwd-file=PATH" and "--cwd-file PATH".
 func cwdFileArg(args []string) string {
 	for i, a := range args {
 		if v, ok := strings.CutPrefix(a, "--cwd-file="); ok {
@@ -283,9 +277,8 @@ func cwdFileArg(args []string) string {
 	return ""
 }
 
-// writeCwdFile reports the directory drako is ending in. Failures are logged
-// and swallowed: the caller's wrapper already skips an empty read, and a
-// launcher should not change its exit code over a file the shell owns.
+// writeCwdFile reports the directory drako is ending in. The shell owns the
+// file, so a failure is logged, not fatal.
 func writeCwdFile(path string) {
 	cwd, err := os.Getwd()
 	if err != nil {
