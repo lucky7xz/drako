@@ -134,9 +134,14 @@ func (m Model) renderCombinedFooter(helpText string) string {
 	statusLine := netText + separator + statusText + separator + themeText + themeName
 	networkStatusBar := lipgloss.NewStyle().PaddingTop(1).Render(truncateText(statusLine, availWidth))
 
-	profileBar := m.renderProfileBar()
-	pathBar := m.path.RenderPathBar(m.mode == pathMode, m.styles)
-	childDirs := m.path.RenderChildDirs(m.mode, m.styles)
+	// Every item below is bounded to availWidth. lipgloss.JoinVertical
+	// rectangularizes to the widest sibling and lipgloss.Place refuses to pad
+	// content wider than the box, so one unbounded line silently drags the
+	// whole frame out of alignment — see CalculateLayout, which measures only
+	// the header art and help line.
+	profileBar := truncateText(m.renderProfileBar(), availWidth)
+	pathBar := m.path.RenderPathBar(m.mode == pathMode, m.styles, availWidth)
+	childDirs := m.path.RenderChildDirs(m.mode, m.styles, availWidth)
 
 	items := []string{}
 	if help != "" {

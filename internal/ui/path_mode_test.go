@@ -357,7 +357,7 @@ func TestEnterDir_RefusalIsVisible(t *testing.T) {
 	t.Run("the refusal renders under the listing", func(t *testing.T) {
 		pm := pathTestModel(t)
 		pm.DeniedDir = "root"
-		out := pm.RenderChildDirs(childMode, BuildStyles(config.Config{}))
+		out := pm.RenderChildDirs(childMode, BuildStyles(config.Config{}), 80)
 		if !strings.Contains(out, "cannot enter root") {
 			t.Errorf("RenderChildDirs missing the refusal. Got:\n%s", out)
 		}
@@ -456,5 +456,60 @@ func TestPathSearch_TypesKeysBoundElsewhere(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// pathWindow is the fix for a long cwd dragging the whole frame out of
+// alignment: lipgloss.JoinVertical rectangularizes to the widest sibling, and
+// lipgloss.Place refuses to pad content wider than the box, so an unbounded
+// path bar silently un-centers the UI.
+func TestPathWindow(t *testing.T) {
+	// Four components of width 10, separators 3, ellipsis 3.
+	widths := []int{10, 10, 10, 10}
+	const sep, ell = 3, 3
+
+	tests := []struct {
+		name       string
+		cursor     int
+		budget     int
+		start, end int
+	}{
+		// 4*10 + 3*3 = 49, no ellipsis needed.
+		{"everything fits", 3, 49, 0, 4},
+		// span(1,4) = 6 sep + 30 + 6 ellipsis = 42, so three components and a
+		// left "…" still fit; only the root drops.
+		{"one column short of fitting all", 3, 48, 1, 4},
+		// Cursor at the deep end keeps the deep end.
+		{"tight budget keeps the cursor", 3, 20, 3, 4},
+		{"tight budget at the root", 0, 20, 0, 1},
+		// Growing right needs span(1,3) = 35 > 30. Growing left instead drops
+		// the left "…" entirely and lands at 29, so it wins.
+		{"cursor in the middle", 1, 30, 0, 2},
+		// Even an impossible budget still shows the selected component; the
+		// caller truncates as the backstop.
+		{"budget below one component", 2, 1, 2, 3},
+		{"zero budget", 0, 0, 0, 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			start, end := pathWindow(widths, sep, ell, tt.cursor, tt.budget)
+			if start != tt.start || end != tt.end {
+				t.Errorf("pathWindow(cursor=%d, budget=%d) = (%d,%d), want (%d,%d)",
+					tt.cursor, tt.budget, start, end, tt.start, tt.end)
+			}
+			if tt.cursor >= start && tt.cursor < end {
+				return
+			}
+			t.Errorf("window (%d,%d) excludes the cursor %d", start, end, tt.cursor)
+		})
+	}
+}
+
+func TestPathWindow_EmptyAndSingle(t *testing.T) {
+	if s, e := pathWindow(nil, 3, 3, 0, 40); s != 0 || e != 0 {
+		t.Errorf("empty = (%d,%d), want (0,0)", s, e)
+	}
+	if s, e := pathWindow([]int{5}, 3, 3, 0, 40); s != 0 || e != 1 {
+		t.Errorf("single = (%d,%d), want (0,1)", s, e)
 	}
 }

@@ -480,3 +480,82 @@ func TestRenderProfileCounter(t *testing.T) {
 		})
 	}
 }
+
+// A long cwd used to drag the whole frame out of alignment. lipgloss.JoinVertical
+// rectangularizes to the widest sibling, and lipgloss.Place returns content
+// unpadded once it is wider than the box (position.go: `if gap <= 0`), so an
+// unbounded path bar silently un-centered the UI — at a width that depended on
+// the cwd rather than the terminal. CalculateLayout measures only the header art
+// and help line, so it never saw it coming.
+//
+// These models were part of why it went unnoticed: they leave m.path at its
+// zero value, so no existing view test rendered a path bar at all.
+func longPathModel(mode navMode, termWidth int) Model {
+	m := createTestModelForView(mode)
+	m.termWidth = termWidth
+	m.path = PathModel{
+		CurrentPath: "/home/lucky/shara/scripts/drako/internal/ui/testdata/deeply/nested",
+		PathComponents: []string{
+			"/", "home", "lucky", "shara", "scripts", "drako",
+			"internal", "ui", "testdata", "deeply", "nested",
+		},
+		SelectedPathIndex: 10,
+		ChildDirs: []string{
+			"a-directory-with-a-really-quite-excessively-long-name",
+			"short",
+		},
+	}
+	return m
+}
+
+func TestView_LongPathNeverExceedsTerminalWidth(t *testing.T) {
+	// appStyle is Margin(1,2) and Place is handed the full termWidth, so real
+	// output already runs 4 columns over. That is a separate, known overflow;
+	// account for it rather than accidentally asserting it away.
+	slack := appStyle.GetHorizontalMargins()
+
+	for _, mode := range []navMode{gridMode, pathMode, childMode} {
+		for _, termWidth := range []int{60, 80, 120, 200} {
+			m := longPathModel(mode, termWidth)
+			for i, line := range strings.Split(m.View(), "\n") {
+				if w := lipgloss.Width(line); w > termWidth+slack {
+					t.Errorf("mode=%v termWidth=%d: line %d is %d wide (max %d):\n%q",
+						mode, termWidth, i, w, termWidth+slack, line)
+				}
+			}
+		}
+	}
+}
+
+func TestRenderCombinedFooter_LongPathFitsBudget(t *testing.T) {
+	for _, termWidth := range []int{40, 60, 80, 200} {
+		m := longPathModel(pathMode, termWidth)
+		availWidth := termWidth - LayoutSideMargin
+		footer := m.renderCombinedFooter("Path Mode | Enter: cd")
+		for i, line := range strings.Split(footer, "\n") {
+			if w := lipgloss.Width(line); w > availWidth {
+				t.Errorf("termWidth=%d: footer line %d is %d wide (budget %d):\n%q",
+					termWidth, i, w, availWidth, line)
+			}
+		}
+	}
+}
+
+// The selected crumb must survive the windowing, or the cursor lands on
+// something invisible.
+func TestRenderPathBar_KeepsSelectionVisible(t *testing.T) {
+	styles := BuildStyles(config.Config{})
+	m := longPathModel(pathMode, 60)
+
+	for i := range m.path.PathComponents {
+		m.path.SelectedPathIndex = i
+		bar := m.path.RenderPathBar(true, styles, 56)
+		want := m.path.PathComponents[i]
+		if !strings.Contains(bar, want) {
+			t.Errorf("SelectedPathIndex=%d: bar %q missing selected component %q", i, bar, want)
+		}
+		if w := lipgloss.Width(bar); w > 56 {
+			t.Errorf("SelectedPathIndex=%d: bar is %d wide, want <= 56", i, w)
+		}
+	}
+}

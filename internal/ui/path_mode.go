@@ -351,44 +351,115 @@ func (pm *PathModel) UpdateChildMode(msg tea.KeyMsg, cfg config.Config) navMode 
 	return childMode
 }
 
-func (pm *PathModel) RenderPathBar(active bool, styles Styles) string {
-	var renderedParts []string
+// pathWindow picks the run of breadcrumb components that fits budget while
+// always including cursor, growing outward from it and preferring the deeper
+// end of the path. It accounts for the "…" markers that stand in for whatever
+// it drops, so the window it returns fits once those are rendered too.
+//
+// It takes widths rather than strings to stay pure integer arithmetic: the
+// components are styled, so only the caller can measure them.
+func pathWindow(widths []int, sepWidth, ellipsisWidth, cursor, budget int) (int, int) {
+	n := len(widths)
+	if n == 0 {
+		return 0, 0
+	}
+	cursor = max(0, min(cursor, n-1))
+
+	// span is the rendered width of components [s,e) plus the separators
+	// between them and the ellipsis markers the elided sides still need.
+	span := func(s, e int) int {
+		w := (e - s - 1) * sepWidth
+		for i := s; i < e; i++ {
+			w += widths[i]
+		}
+		if s > 0 {
+			w += ellipsisWidth + sepWidth
+		}
+		if e < n {
+			w += ellipsisWidth + sepWidth
+		}
+		return w
+	}
+
+	if span(0, n) <= budget {
+		return 0, n
+	}
+
+	// The selected component is always shown, even when it alone overflows —
+	// RenderPathBar truncates as the backstop.
+	start, end := cursor, cursor+1
+	for {
+		grew := false
+		if end < n && span(start, end+1) <= budget {
+			end++
+			grew = true
+		}
+		if start > 0 && span(start-1, end) <= budget {
+			start--
+			grew = true
+		}
+		if !grew {
+			return start, end
+		}
+	}
+}
+
+func (pm *PathModel) RenderPathBar(active bool, styles Styles, width int) string {
+	if len(pm.PathComponents) == 0 {
+		return ""
+	}
+
+	rendered := make([]string, len(pm.PathComponents))
+	widths := make([]int, len(pm.PathComponents))
 	for i, component := range pm.PathComponents {
-		var style lipgloss.Style
+		style := styles.Path
 		if active && i == pm.SelectedPathIndex {
 			style = styles.SelectedPath
-		} else {
-			style = styles.Path
 		}
-		renderedParts = append(renderedParts, style.Render(component))
+		rendered[i] = style.Render(component)
+		widths[i] = lipgloss.Width(rendered[i])
 	}
 
 	separator := styles.PathSeparator.Render(string(os.PathSeparator))
-	return styles.StatusBar.Render(lipgloss.JoinHorizontal(lipgloss.Top, strings.Join(renderedParts, separator)))
+	ellipsis := styles.Path.Render("…")
+	start, end := pathWindow(widths, lipgloss.Width(separator), lipgloss.Width(ellipsis),
+		pm.SelectedPathIndex, width)
+
+	parts := make([]string, 0, end-start+2)
+	if start > 0 {
+		parts = append(parts, ellipsis)
+	}
+	parts = append(parts, rendered[start:end]...)
+	if end < len(rendered) {
+		parts = append(parts, ellipsis)
+	}
+
+	return styles.StatusBar.Render(truncateText(strings.Join(parts, separator), width))
 }
 
-func (pm *PathModel) RenderChildDirs(mode navMode, styles Styles) string {
+func (pm *PathModel) RenderChildDirs(mode navMode, styles Styles, width int) string {
 	if mode != childMode && mode != pathMode {
 		return ""
 	}
 	var content string
 
 	if pm.ChildDirsError != nil {
-		content = styles.Offline.Render("  [cannot read directory: permission denied or path invalid]")
+		content = truncateText(styles.Offline.Render("  [cannot read directory: permission denied or path invalid]"), width)
 	} else if len(pm.ChildDirs) == 0 {
 		msg := "  [no sub-directories]"
 		if pm.Filter != "" {
 			msg = "  [no matches]"
 		}
-		content = styles.Help.Render(msg)
+		content = truncateText(styles.Help.Render(msg), width)
 	} else {
 		var rows []string
 		for i, dir := range pm.ChildDirs {
+			style := styles.ChildDir
+			marker := "  "
 			if mode == childMode && i == pm.SelectedChildIndex {
-				rows = append(rows, styles.SelectedChildDir.Render("› "+dir))
-			} else {
-				rows = append(rows, styles.ChildDir.Render("  "+dir))
+				style, marker = styles.SelectedChildDir, "› "
 			}
+			rows = append(rows, truncateText(style.Render(marker+dir), width))
 		}
 
 		maxVisible := 5
@@ -407,12 +478,12 @@ func (pm *PathModel) RenderChildDirs(mode navMode, styles Styles) string {
 	// under it rather than replacing it.
 	if pm.DeniedDir != "" {
 		refusal := fmt.Sprintf("  [cannot enter %s: permission denied or path invalid]", pm.DeniedDir)
-		content = lipgloss.JoinVertical(lipgloss.Left, content, styles.Offline.Render(refusal))
+		content = lipgloss.JoinVertical(lipgloss.Left, content, truncateText(styles.Offline.Render(refusal), width))
 	}
 
 	if pm.Searching {
 		status := fmt.Sprintf("Search: %s_", pm.Filter)
-		searchBar := lipgloss.NewStyle().Foreground(lipgloss.Color("220")).Render(status)
+		searchBar := truncateText(lipgloss.NewStyle().Foreground(lipgloss.Color("220")).Render(status), width)
 		return lipgloss.JoinVertical(lipgloss.Left, content, searchBar)
 	}
 
