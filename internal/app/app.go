@@ -38,6 +38,18 @@ func Run() int {
 		}
 	}
 
+	// A child cannot change its parent's directory, so a shell wrapper reads
+	// this file and cds for us. drako's whole part is writing the path: the
+	// caller creates the file and removes it, which is what keeps two drakos
+	// in two terminals from reporting into each other.
+	//
+	// Glassroot needs no rule of its own — it blocks path mode (glassroot.go),
+	// so the working directory it starts in is the one it ends in.
+	if cwdFile := cwdFileArg(os.Args); cwdFile != "" {
+		isTuiMode = true
+		defer writeCwdFile(cwdFile)
+	}
+
 	// 1. If NOT in TUI mode, try to handle as a CLI command (e.g. "drako summon", "drako purge")
 	if !isTuiMode {
 		if handled, code := cli.HandleCLI(os.Args); handled {
@@ -255,4 +267,32 @@ func runInternalPurge(command string) bool {
 	fmt.Printf("\npress any key to exit...")
 	core.Pause("")
 	return true
+}
+
+// cwdFileArg returns the path given to --cwd-file, accepting both
+// "--cwd-file=PATH" and "--cwd-file PATH". Empty means the flag was absent.
+func cwdFileArg(args []string) string {
+	for i, a := range args {
+		if v, ok := strings.CutPrefix(a, "--cwd-file="); ok {
+			return v
+		}
+		if a == "--cwd-file" && i+1 < len(args) {
+			return args[i+1]
+		}
+	}
+	return ""
+}
+
+// writeCwdFile reports the directory drako is ending in. Failures are logged
+// and swallowed: the caller's wrapper already skips an empty read, and a
+// launcher should not change its exit code over a file the shell owns.
+func writeCwdFile(path string) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Printf("could not resolve the working directory for --cwd-file: %v", err)
+		return
+	}
+	if err := os.WriteFile(path, []byte(cwd), 0o600); err != nil {
+		log.Printf("could not write --cwd-file %s: %v", path, err)
+	}
 }

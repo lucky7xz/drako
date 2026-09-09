@@ -74,6 +74,13 @@ func PrintUsage() {
 		{"help", "Show this help message"},
 		{"open <path/url>", "Open a file, dir, or URL with the OS default"},
 	})
+	// Flags that launch the TUI rather than name a command, so they have no
+	// row above.
+	fmt.Printf("\nFlags: drako [flags]\n\n")
+	table(os.Stdout, []string{"Flag", "Description"}, [][]string{
+		{"--glassroot", "Kiosk mode: only the equipped decks, nothing else"},
+		{"--cwd-file <path>", "Write the directory drako ends in to <path>"},
+	})
 }
 
 // HandleSummonCommand processes the 'drako summon <url>' command.
