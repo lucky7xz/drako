@@ -53,11 +53,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.termHeight = msg.Height
 		return m, nil
 
-	case pathChangedMsg:
-		m.path.UpdatePathComponents()
-		m.path.ListChildDirs()
-		return m, nil
-
 	case reloadProfilesMsg:
 		bundle, err := config.ReloadConfig(m.profile.sessionProfile)
 		if err != nil {
@@ -189,13 +184,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case gridMode:
 			return m.updateGridMode(msg)
 		case pathMode:
-			mode, cmd := m.path.UpdatePathMode(msg, m.Config)
-			m.mode = mode
-			return m, cmd
+			m.mode = m.path.UpdatePathMode(msg, m.Config)
+			return m, nil
 		case childMode:
-			mode, cmd := m.path.UpdateChildMode(msg, m.Config)
-			m.mode = mode
-			return m, cmd
+			m.mode = m.path.UpdateChildMode(msg, m.Config)
+			return m, nil
 		case inventoryMode:
 			return m.updateInventoryMode(msg)
 		case dropdownMode:

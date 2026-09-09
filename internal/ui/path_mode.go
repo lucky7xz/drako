@@ -156,6 +156,41 @@ func (pm *PathModel) editFilter(key string) {
 	}
 }
 
+// selectedChild is the full path of the highlighted child directory. A filter
+// or the hidden toggle can empty the listing under the cursor, so check ok.
+func (pm *PathModel) selectedChild() (string, bool) {
+	if pm.SelectedChildIndex < 0 || pm.SelectedChildIndex >= len(pm.ChildDirs) {
+		return "", false
+	}
+	parent := pm.BuildPathFromComponents(pm.SelectedPathIndex)
+	return filepath.Join(parent, pm.ChildDirs[pm.SelectedChildIndex]), true
+}
+
+// enterDir makes target the process working directory and rebuilds the
+// breadcrumb and listing around it. Reading the path back with Getwd resolves
+// "..", symlinks and relative components. Nothing changes on failure.
+func (pm *PathModel) enterDir(target string) bool {
+	if err := os.Chdir(target); err != nil {
+		log.Printf("could not enter directory %s: %v", target, err)
+		return false
+	}
+	pm.CurrentPath, _ = os.Getwd()
+	pm.Searching, pm.Filter = false, "" // the filter was scoped to the directory we left
+	pm.UpdatePathComponents()
+	pm.ListChildDirs()
+	pm.SelectedChildIndex = 0
+	return true
+}
+
+// descendMode keeps the cursor on the child list so the next Enter descends
+// again, or drops it to the breadcrumb when the new directory is a dead end.
+func (pm *PathModel) descendMode() navMode {
+	if len(pm.ChildDirs) == 0 {
+		return pathMode
+	}
+	return childMode
+}
+
 // toggleHidden flips hidden-file visibility and clamps the child cursor to
 // the resized listing.
 func (pm *PathModel) toggleHidden() {
@@ -169,7 +204,7 @@ func (pm *PathModel) toggleHidden() {
 }
 
 // Update handles key events when in PathMode
-func (pm *PathModel) UpdatePathMode(msg tea.KeyMsg, cfg config.Config) (navMode, tea.Cmd) {
+func (pm *PathModel) UpdatePathMode(msg tea.KeyMsg, cfg config.Config) navMode {
 	if pm.Searching {
 		switch key := msg.String(); key {
 		case "esc":
@@ -185,15 +220,15 @@ func (pm *PathModel) UpdatePathMode(msg tea.KeyMsg, cfg config.Config) (navMode,
 		case tea.KeyDown:
 			if len(pm.ChildDirs) > 0 {
 				pm.SelectedChildIndex = 0
-				return childMode, nil
+				return childMode
 			}
 		}
-		return pathMode, nil
+		return pathMode
 	}
 
 	switch {
 	case IsCancel(cfg.Keys, msg):
-		return gridMode, nil // Return to grid mode (no brainer improvement)
+		return gridMode // Return to grid mode (no brainer improvement)
 	case msg.String() == "e":
 		pm.startSearch()
 	// Quit is handled by parent, usually
@@ -210,37 +245,34 @@ func (pm *PathModel) UpdatePathMode(msg tea.KeyMsg, cfg config.Config) (navMode,
 	case IsDown(cfg.Keys, msg):
 		if len(pm.ChildDirs) > 0 {
 			pm.SelectedChildIndex = 0
-			return childMode, nil
+			return childMode
 		}
 	case IsPathGridMode(cfg.Keys, msg):
-		return gridMode, nil
+		return gridMode
 	case IsConfirm(cfg.Keys, msg):
-		targetPath := pm.BuildPathFromComponents(pm.SelectedPathIndex)
-		if err := os.Chdir(targetPath); err == nil {
-			pm.CurrentPath, _ = os.Getwd()
-			return gridMode, func() tea.Msg { return pathChangedMsg{} }
-		}
+		pm.enterDir(pm.BuildPathFromComponents(pm.SelectedPathIndex))
 	case msg.String() == ".":
 		pm.toggleHidden()
 	}
-	return pathMode, nil
+	return pathMode
 }
 
 // Update handles key events when in ChildMode
-func (pm *PathModel) UpdateChildMode(msg tea.KeyMsg, cfg config.Config) (navMode, tea.Cmd) {
+func (pm *PathModel) UpdateChildMode(msg tea.KeyMsg, cfg config.Config) navMode {
 	if pm.Searching {
 		switch key := msg.String(); key {
 		case "esc":
 			pm.clearSearch()
-			return pathMode, nil // Return to path mode to avoid accidental selection
+			return pathMode // Return to path mode to avoid accidental selection
 		case "enter":
 			pm.Searching = false
 			// Act on selection immediately if Enter
-			parentPath := pm.BuildPathFromComponents(pm.SelectedPathIndex)
-			targetPath := filepath.Join(parentPath, pm.ChildDirs[pm.SelectedChildIndex])
-			if err := os.Chdir(targetPath); err == nil {
-				pm.CurrentPath, _ = os.Getwd()
-				return gridMode, func() tea.Msg { return pathChangedMsg{} }
+			target, ok := pm.selectedChild()
+			if !ok {
+				return pathMode
+			}
+			if pm.enterDir(target) {
+				return pm.descendMode()
 			}
 		default:
 			pm.editFilter(key)
@@ -251,44 +283,45 @@ func (pm *PathModel) UpdateChildMode(msg tea.KeyMsg, cfg config.Config) (navMode
 			if pm.SelectedChildIndex > 0 {
 				pm.SelectedChildIndex--
 			} else {
-				return pathMode, nil
+				return pathMode
 			}
 		case tea.KeyDown:
 			if pm.SelectedChildIndex < len(pm.ChildDirs)-1 {
 				pm.SelectedChildIndex++
 			}
 		}
-		return childMode, nil
+		return childMode
 	}
 
 	switch {
 	case IsCancel(cfg.Keys, msg):
-		return gridMode, nil // Return to grid mode
+		return gridMode // Return to grid mode
 	case msg.String() == "e":
 		pm.startSearch()
 	case IsUp(cfg.Keys, msg):
 		if pm.SelectedChildIndex > 0 {
 			pm.SelectedChildIndex--
 		} else {
-			return pathMode, nil
+			return pathMode
 		}
 	case IsDown(cfg.Keys, msg):
 		if pm.SelectedChildIndex < len(pm.ChildDirs)-1 {
 			pm.SelectedChildIndex++
 		}
 	case IsPathGridMode(cfg.Keys, msg):
-		return gridMode, nil
+		return gridMode
 	case IsConfirm(cfg.Keys, msg):
-		parentPath := pm.BuildPathFromComponents(pm.SelectedPathIndex)
-		targetPath := filepath.Join(parentPath, pm.ChildDirs[pm.SelectedChildIndex])
-		if err := os.Chdir(targetPath); err == nil {
-			pm.CurrentPath, _ = os.Getwd()
-			return gridMode, func() tea.Msg { return pathChangedMsg{} }
+		target, ok := pm.selectedChild()
+		if !ok {
+			return pathMode
+		}
+		if pm.enterDir(target) {
+			return pm.descendMode()
 		}
 	case msg.String() == ".":
 		pm.toggleHidden()
 	}
-	return childMode, nil
+	return childMode
 }
 
 func (pm *PathModel) RenderPathBar(active bool, styles Styles) string {

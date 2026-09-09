@@ -29,7 +29,6 @@ type (
 		t        time.Time
 		err      error
 	}
-	pathChangedMsg        struct{}
 	profileStatusClearMsg struct {
 		id int
 	}
