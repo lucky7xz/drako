@@ -236,6 +236,23 @@ func (m Model) renderLayoutPopup() string {
 	return m.styles.DropdownPopup.Render(lipgloss.JoinVertical(lipgloss.Left, lines...))
 }
 
+// The lock screen is the one view that never runs CalculateLayout — it has no
+// header, grid or help line to hide, so it needs a width budget rather than a
+// layout cascade. These are the costs it has to pay out of the terminal.
+const (
+	// lockBoxChrome is the box's own horizontal cost: Padding(_, 4) on both
+	// sides plus the rounded border.
+	lockBoxChrome = 10
+	// Below lockRoomyHeight the blank spacer lines go; below lockTightHeight
+	// the vertical padding and the idle line go too. Same "give up the least
+	// useful thing first" ordering CalculateLayout uses for header vs footer.
+	//
+	// Both count against the usable height, not the terminal's: appStyle's
+	// margins sit outside Place, so the last two rows fall off the screen.
+	lockRoomyHeight = 23
+	lockTightHeight = 15
+)
+
 func (m Model) viewLockedMode() string {
 	// Calculate time since last activity
 	elapsed := time.Since(m.lock.lastActivity)
@@ -250,49 +267,59 @@ func (m Model) viewLockedMode() string {
 		goal = defaultLockPumpGoal
 	}
 
-	barWidth := 24
-	progress := m.lock.progress
-	if progress < 0 {
-		progress = 0
-	}
-	if progress > goal {
-		progress = goal
-	}
+	avail := max(1, m.termWidth-appStyle.GetHorizontalMargins()-lockBoxChrome)
 
+	progress := min(max(m.lock.progress, 0), goal)
+	// The bar keeps its brackets and at least a stub of track, so it still
+	// reads as a slider when there is nothing else left.
+	barWidth := min(24, max(2, avail-2))
 	filled := progress * barWidth / goal
-	if filled > barWidth {
-		filled = barWidth
-	}
 
 	bar := "[" + strings.Repeat("█", filled) + strings.Repeat("░", barWidth-filled) + "]"
 
-	lockIcon := "🔒"
-	title := m.styles.Title.Render("Session Locked")
-	timeInfo := m.styles.Help.Render(fmt.Sprintf("Idle for %d minute(s)", elapsedMins))
-	instructions := m.styles.Help.Render("Pump ← → (A/D or H/L) to fill the slider and unlock")
-	progressLabel := m.styles.Help.Render(fmt.Sprintf("%d / %d pumps", m.lock.progress, goal))
-	quitHint := m.styles.Help.Render("Press Ctrl+C to quit")
+	// A narrow terminal gets the short phrasing rather than the full line
+	// wrapped over four rows — height is scarcer than the key names are useful.
+	instructionText := "Pump ← → (A/D or H/L) to fill the slider and unlock"
+	if lipgloss.Width(instructionText) > avail {
+		instructionText = "Pump ← → to unlock"
+	}
 
-	content := lipgloss.JoinVertical(
-		lipgloss.Center,
-		"",
-		lockIcon,
-		"",
-		title,
-		"",
-		timeInfo,
-		"",
-		instructions,
-		"",
-		progressLabel,
-		bar,
-		"",
-		quitHint,
-	)
+	// Every row is bounded to avail: the box sizes itself to its widest child,
+	// so one unbounded line sets the floor for the whole screen.
+	fit := func(s string) string { return truncateText(s, avail) }
+
+	lockIcon := "🔒"
+	title := fit(m.styles.Title.Render("Session Locked"))
+	timeInfo := fit(m.styles.Help.Render(fmt.Sprintf("Idle for %d minute(s)", elapsedMins)))
+	instructions := m.styles.Help.Render(strings.Join(WrapText(instructionText, avail), "\n"))
+	progressLabel := fit(m.styles.Help.Render(fmt.Sprintf("%d / %d pumps", m.lock.progress, goal)))
+	quitHint := fit(m.styles.Help.Render("Press Ctrl+C to quit"))
+
+	roomy := m.termHeight >= lockRoomyHeight
+	tight := m.termHeight < lockTightHeight
+
+	rows := []string{lockIcon, title}
+	if !tight {
+		rows = append(rows, timeInfo)
+	}
+	rows = append(rows, instructions, progressLabel, bar, quitHint)
+	if roomy {
+		rows = spaced(rows)
+	}
+
+	content := lipgloss.JoinVertical(lipgloss.Center, rows...)
+
+	vPad := 2
+	if !roomy {
+		vPad = 1
+	}
+	if tight {
+		vPad = 0
+	}
 
 	// Add a border box around the lock screen
 	box := lipgloss.NewStyle().
-		Padding(2, 4).
+		Padding(vPad, 4).
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(warnAmber).
 		Align(lipgloss.Center).
@@ -301,7 +328,7 @@ func (m Model) viewLockedMode() string {
 	footer := lipgloss.NewStyle().
 		Width(m.termWidth).
 		Align(lipgloss.Center).
-		Render(m.renderFooter())
+		Render(truncateText(m.renderFooter(), m.termWidth))
 
 	body := lipgloss.JoinVertical(
 		lipgloss.Center,
@@ -315,6 +342,15 @@ func (m Model) viewLockedMode() string {
 			body,
 		),
 	)
+}
+
+// spaced puts a blank line between each row, and one above the first.
+func spaced(rows []string) []string {
+	out := make([]string, 0, len(rows)*2)
+	for _, r := range rows {
+		out = append(out, "", r)
+	}
+	return out
 }
 
 // infoViewportRows is the target height of the scrollable script block in the

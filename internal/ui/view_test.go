@@ -559,3 +559,70 @@ func TestRenderPathBar_KeepsSelectionVisible(t *testing.T) {
 		}
 	}
 }
+
+// The lock screen returns from View() before CalculateLayout runs — it has no
+// header, grid or help line to hide — so it needs a width budget of its own.
+// It used to be a fixed box: the "Idle for N minute(s)" line alone held a
+// 28-column floor, and the box sizes itself to its widest child.
+func TestView_LockScreenFitsAnyTerminal(t *testing.T) {
+	slackW := appStyle.GetHorizontalMargins()
+	slackH := appStyle.GetVerticalMargins()
+
+	for termWidth := 28; termWidth <= 130; termWidth++ {
+		for _, termHeight := range []int{13, 14, 15, 16, 21, 22, 23, 30, 40} {
+			m := createTestModelForView(lockedMode)
+			m.termWidth, m.termHeight = termWidth, termHeight
+			lines := strings.Split(m.View(), "\n")
+
+			for i, line := range lines {
+				if w := lipgloss.Width(line); w > termWidth+slackW {
+					t.Fatalf("%dx%d: line %d is %d wide (max %d):\n%q",
+						termWidth, termHeight, i, w, termWidth+slackW, line)
+				}
+			}
+			if len(lines) > termHeight+slackH {
+				t.Fatalf("%dx%d: %d rows (max %d)",
+					termWidth, termHeight, len(lines), termHeight+slackH)
+			}
+			// Row count alone would pass while the margin overflow quietly
+			// ate the top of the box, so require both corners to survive.
+			out := strings.Join(lines, "\n")
+			if !strings.Contains(out, "╭") || !strings.Contains(out, "╰") {
+				t.Fatalf("%dx%d: box is clipped:\n%s", termWidth, termHeight, out)
+			}
+		}
+	}
+}
+
+// Shrinking must not cost the two things the screen exists for: saying it is
+// locked, and showing the slider that unlocks it.
+func TestView_LockScreenKeepsTheSliderWhenTight(t *testing.T) {
+	for _, size := range [][2]int{{30, 13}, {40, 15}, {120, 40}} {
+		m := createTestModelForView(lockedMode)
+		m.termWidth, m.termHeight = size[0], size[1]
+		out := m.View()
+
+		if !strings.Contains(out, "░") && !strings.Contains(out, "█") {
+			t.Errorf("%dx%d: no slider in output:\n%s", size[0], size[1], out)
+		}
+		if !strings.Contains(out, "Locked") {
+			t.Errorf("%dx%d: no lock notice in output:\n%s", size[0], size[1], out)
+		}
+	}
+}
+
+// The idle line is the first thing given up, so a short terminal spends its
+// rows on the slider instead.
+func TestView_LockScreenDropsIdleLineWhenShort(t *testing.T) {
+	tall := createTestModelForView(lockedMode)
+	tall.termWidth, tall.termHeight = 80, 30
+	if !strings.Contains(tall.View(), "Idle for") {
+		t.Error("tall terminal should show the idle line")
+	}
+
+	short := createTestModelForView(lockedMode)
+	short.termWidth, short.termHeight = 80, 14
+	if strings.Contains(short.View(), "Idle for") {
+		t.Error("short terminal should drop the idle line")
+	}
+}
