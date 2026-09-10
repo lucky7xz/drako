@@ -169,6 +169,7 @@ Beyond the TUI, drako gives you CLI commands for managing decks at scale:
 | `drako purge`               | Reset or remove configuration — trash-first, `--interactive` available       |
 | `drako open <path>`         | Open a file, directory, or URL with the OS default application              |
 | `drako --glassroot`         | Launch a sealed surface for SSH/Wish hosting                                 |
+| `drako --cwd-file <path>`   | Write the directory drako ends in to `<path>`, so a shell wrapper can follow it |
 
 Run any of these with no arguments for usage. Details in [Power Tools](#-power-tools) and [Purge](#-purge) below.
 
@@ -186,12 +187,16 @@ Run any of these with no arguments for usage. Details in [Power Tools](#-power-t
 - **Lock the Session:** `Alt` + `r` — blanks the screen behind the pump slider; `a`/`d` (or `h`/`l`, or arrows) back and forth to unlock. Works from any screen, and doesn't need `auto_lock_enabled`, which only governs the idle timeout.
 - **Grid/Path Toggle:** `Tab`.
 - **Path Mode:**
+    - **Move:** `←`/`→` along the breadcrumb, `↓` into the directory listing.
+    - **Enter:** cd into the highlighted directory and stay in path mode, so you keep descending with `Enter`, `Enter`, `Enter`. On a breadcrumb component it jumps straight there.
     - **Search:** `e` (type to filter, arrows to select, esc to cancel).
     - **Hidden Files:** `.` to toggle.
     - **Back:** `q` or `Esc`.
 - **Quit:** `Ctrl+C` (Global), or `q` (Grid Mode).
 
-> **Customization:** Remap keys in `~/.config/drako/config.toml` under `[keys]`.
+> **Customization:** Remap keys in `~/.config/drako/config.toml` under `[keys]`,
+> including path mode's `path_search` and `toggle_hidden`. The config drako
+> writes on first run lists every remappable action with its default.
 
 ## 🧵 Batch Launch
 
