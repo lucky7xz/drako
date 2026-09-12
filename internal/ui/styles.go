@@ -346,53 +346,32 @@ func (s Styles) renderHeaderArt(spinnerView string) string {
 	return lipgloss.NewStyle().PaddingBottom(1).Render(result)
 }
 
-// styleLineSegment applies styling to a line segment, with X and Chinese chars in white
+// whiteAccents lists the header-art glyphs rendered in white instead of
+// the theme's Primary color, longest pattern first so a multi-rune match
+// (e.g. "╱╲") is tried before any of its runes could match individually.
+var whiteAccents = []string{"啸龙志", "╱╲", "✘", "◄", "►", "/", "\\"}
+
+// styleLineSegment renders segment with whiteAccents in white and
+// everything else in primaryStyle.
 func (s Styles) styleLineSegment(segment string, primaryStyle lipgloss.Style) string {
 	var styledLine strings.Builder
 	runes := []rune(segment)
-	for i := 0; i < len(runes); i++ {
-		// Check for 'X'
-		if runes[i] == '✘' {
-			styledLine.WriteString(s.White.Render("✘"))
-			continue
+	for i := 0; i < len(runes); {
+		matched := false
+		for _, pat := range whiteAccents {
+			patRunes := []rune(pat)
+			end := i + len(patRunes)
+			if end <= len(runes) && string(runes[i:end]) == pat {
+				styledLine.WriteString(s.White.Render(pat))
+				i = end
+				matched = true
+				break
+			}
 		}
-
-		// Check for "╱╲"
-		if i+1 < len(runes) && string(runes[i:i+2]) == "╱╲" {
-			styledLine.WriteString(s.White.Render("╱╲"))
-			i++ // Skip next char (loop will increment by 1)
-			continue
+		if !matched {
+			styledLine.WriteString(primaryStyle.Render(string(runes[i])))
+			i++
 		}
-
-		// Check for "◄"
-		if i+1 < len(runes) && runes[i] == '◄' {
-			styledLine.WriteString(s.White.Render("◄"))
-			continue
-		}
-
-		// Check for "►"
-		if i+1 < len(runes) && runes[i] == '►' {
-			styledLine.WriteString(s.White.Render("►"))
-			continue
-		}
-
-		// Check for "◄═══════════════════════════════►"
-		pattern := "◄═══════════════════════════════►"
-		if i+len([]rune(pattern))-1 < len(runes) && string(runes[i:i+len([]rune(pattern))]) == pattern {
-			styledLine.WriteString(s.White.Render(pattern))
-			i += len([]rune(pattern)) - 1 // Skip the matched runes
-			continue
-		}
-
-		// Check for Chinese characters "啸龙志"
-		if i+2 < len(runes) && string(runes[i:i+3]) == "啸龙志" {
-			styledLine.WriteString(s.White.Render("啸龙志"))
-			i += 2 // Skip next 2 chars (loop will increment by 1)
-			continue
-		}
-
-		// Regular character with primary color
-		styledLine.WriteString(primaryStyle.Render(string(runes[i])))
 	}
 	return styledLine.String()
 }
