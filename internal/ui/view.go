@@ -6,6 +6,8 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/lucky7xz/drako/internal/core"
+	"github.com/muesli/termenv"
 )
 
 func (m Model) View() string {
@@ -129,6 +131,9 @@ func (m Model) renderCombinedFooter(helpText string) string {
 	statusText := fmt.Sprintf("STATUS: %s", m.net.online)
 	themeText := "THEME: "
 	themeName := m.styles.ThemeName.Render(m.Config.Theme)
+	if profile := lipgloss.ColorProfile(); profile != termenv.TrueColor {
+		themeName += m.styles.ThemeName.Render(" (" + core.ColorProfileName(profile) + ")")
+	}
 	separator := m.styles.Help.Render(" | ")
 
 	statusLine := netText + separator + statusText + separator + themeText + themeName
