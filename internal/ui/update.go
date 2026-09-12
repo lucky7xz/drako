@@ -238,6 +238,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.gridNav.timer = nil
 		return m, nil
 
+	case rowFlashTimeoutMsg:
+		if m.gridNav.flashTimer != nil {
+			m.gridNav.flashTimer.Stop()
+		}
+		m.gridNav.flashTimer = nil
+		m.gridNav.flashActive = false
+		return m, nil
+
 	case profileStatusClearMsg:
 		if msg.id != m.profile.statusClearTimerID {
 			return m, nil

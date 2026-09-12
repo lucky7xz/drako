@@ -159,6 +159,11 @@ func (m Model) updateBatchMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.gridNav.timer.Stop()
 		m.gridNav.timer = nil
 	}
+	if m.gridNav.flashTimer != nil {
+		m.gridNav.flashTimer.Stop()
+		m.gridNav.flashTimer = nil
+		m.gridNav.flashActive = false
+	}
 
 	switch {
 	case IsCancel(m.Config.Keys, msg):

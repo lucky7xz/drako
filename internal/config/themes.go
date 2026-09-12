@@ -98,9 +98,10 @@ type UIColors struct {
 	HeaderFG string
 	FooterFG string
 
-	GridBorder    string
-	GridSelBorder string
-	GridSelText   string
+	GridBorder        string
+	GridSelBorder     string
+	GridSelText       string
+	GridPendingBorder string
 
 	Path          string
 	PathSelected  string
@@ -132,9 +133,10 @@ func MapThemeToUI(t DracoThemeConfig) UIColors {
 		HeaderFG: t.Primary,
 		FooterFG: t.Comment,
 
-		GridBorder:    t.Comment,
-		GridSelBorder: t.Accent,
-		GridSelText:   t.Accent,
+		GridBorder:        t.Comment,
+		GridSelBorder:     t.Accent,
+		GridSelText:       t.Accent,
+		GridPendingBorder: t.Secondary,
 
 		Path:          t.Primary,
 		PathSelected:  t.Accent,

@@ -71,9 +71,9 @@ func TestView_GridMode(t *testing.T) {
 	if !strings.Contains(output, "[A]") {
 		t.Error("View output missing column header '[A]'")
 	}
-	// Check for Row Number indicators (e.g., 0❭)
-	if !strings.Contains(output, "0❭") {
-		t.Errorf("View output missing row number '0❭'. Got:\n%s", output)
+	// Check for Row Number indicators (e.g., 1❭)
+	if !strings.Contains(output, "1❭") {
+		t.Errorf("View output missing row number '1❭'. Got:\n%s", output)
 	}
 }
 
@@ -197,7 +197,7 @@ func TestView_WindowFloor(t *testing.T) {
 				t.Fatalf("overlay = %v, want %v. Got:\n%s", gotOverlay, tt.wantOverlay, output)
 			}
 			if !tt.wantOverlay {
-				for _, want := range []string{"0❭", "1❭", "[A]", "[B]", "▾", "▸"} {
+				for _, want := range []string{"1❭", "2❭", "[A]", "[B]", "▾", "▸"} {
 					if !strings.Contains(output, want) {
 						t.Errorf("floor render missing %q. Got:\n%s", want, output)
 					}

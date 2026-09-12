@@ -28,6 +28,13 @@ type gridNav struct {
 	cursorRow int
 	cursorCol int
 	timer     *time.Timer
+
+	// flashTimer/flashActive briefly highlight the row the cursor just
+	// landed on after the second quicknav digit completes the jump — a
+	// "locked in" confirmation, separate from the column-pending window
+	// above. The flashed row is always cursorRow, so no extra field for it.
+	flashTimer  *time.Timer
+	flashActive bool
 }
 
 // dropdownState is an open dropdown: the grid cell that owns it, its items,

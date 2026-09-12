@@ -31,6 +31,11 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.gridNav.timer.Stop()
 		m.gridNav.timer = nil
 	}
+	if m.gridNav.flashTimer != nil {
+		m.gridNav.flashTimer.Stop()
+		m.gridNav.flashTimer = nil
+		m.gridNav.flashActive = false
+	}
 
 	switch {
 	case IsQuit(m.Config.Keys, msg):
@@ -125,8 +130,9 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 // quickNav handles one 1-9 keypress (as a 0-based index) of the two-step
 // column-then-row jump. The first press selects a column, parks on its first
 // populated row, and arms a 500ms timer; a second press while that timer is
-// live selects a row within the chosen column. The timer expiry
-// (navTimeoutMsg) ends the sequence elsewhere.
+// live selects a row within the chosen column and briefly flashes it as a
+// "locked in" confirmation. The timer expiry (navTimeoutMsg) and the flash
+// expiry (rowFlashTimeoutMsg) end their respective states elsewhere.
 func (m Model) quickNav(targetIndex int) (tea.Model, tea.Cmd) {
 	if m.gridNav.timer != nil {
 		// Second press: choose a row within the already-selected column.
@@ -134,10 +140,27 @@ func (m Model) quickNav(targetIndex int) (tea.Model, tea.Cmd) {
 		m.gridNav.timer = nil
 		lastRow := core.FindLastPopulatedRow(m.gridNav.grid, m.gridNav.cursorCol)
 		m.gridNav.cursorRow = min(targetIndex, lastRow)
-		return m, nil
+
+		if m.gridNav.flashTimer != nil {
+			m.gridNav.flashTimer.Stop()
+		}
+		m.gridNav.flashActive = true
+		m.gridNav.flashTimer = time.NewTimer(280 * time.Millisecond)
+		return m, func() tea.Msg {
+			<-m.gridNav.flashTimer.C
+			return rowFlashTimeoutMsg{}
+		}
 	}
 
-	// First press: choose a column, parking on its first populated row.
+	// First press: choose a column, parking on its first populated row. A
+	// fresh sequence starting mid-flash shouldn't leave the old row's flash
+	// showing alongside the new column highlight.
+	if m.gridNav.flashTimer != nil {
+		m.gridNav.flashTimer.Stop()
+		m.gridNav.flashTimer = nil
+		m.gridNav.flashActive = false
+	}
+
 	targetCol := min(targetIndex, core.FindLastPopulatedCol(m.gridNav.grid))
 	if targetCol < 0 {
 		return m, nil

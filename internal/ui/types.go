@@ -32,8 +32,9 @@ type (
 	profileStatusClearMsg struct {
 		id int
 	}
-	navTimeoutMsg struct{}
-	lockCheckMsg  struct{}
+	navTimeoutMsg      struct{}
+	rowFlashTimeoutMsg struct{}
+	lockCheckMsg       struct{}
 )
 
 // DetailState defines the content for the info/error popup.

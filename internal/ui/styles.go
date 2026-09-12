@@ -43,6 +43,11 @@ type Styles struct {
 	// cell the cursor is on.
 	LockedCell         lipgloss.Style
 	LockedSelectedCell lipgloss.Style
+	// ColumnPendingCell marks the target column of a quicknav jump while its
+	// second digit is still pending; FlashedRowLabel briefly tints the row
+	// number of the row just landed on once that second digit lands.
+	ColumnPendingCell lipgloss.Style
+	FlashedRowLabel   lipgloss.Style
 
 	Path          lipgloss.Style
 	SelectedPath  lipgloss.Style
@@ -148,6 +153,18 @@ func BuildStyles(cfg config.Config) Styles {
 	// locked cell reads as "held back" rather than as another accent.
 	s.LockedCell = s.Cell.Foreground(lipgloss.Color(ui.Warning))
 	s.LockedSelectedCell = s.SelectedCell.Foreground(lipgloss.Color(ui.Warning))
+
+	// Border-color-only variants of Cell: subtler than SelectedCell's tinted
+	// text, since these mark "in progress"/"just confirmed", not "here now".
+	s.ColumnPendingCell = lipgloss.NewStyle().
+		Border(retroBorder).
+		BorderForeground(lipgloss.Color(ui.GridPendingBorder)).
+		Bold(true).
+		Padding(0, 1)
+
+	s.FlashedRowLabel = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(ui.GridSelText)).
+		Bold(true)
 
 	s.Path = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ui.Path)).

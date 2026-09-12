@@ -22,8 +22,9 @@ func (m Model) renderGrid(budgetLines int) string {
 		totalCols = len(m.gridNav.grid[0])
 	}
 
-	// Calculate the padding needed for the largest row number.
-	maxRowNumWidth := len(fmt.Sprintf("%d", max(totalRows-1, 0)))
+	// Calculate the padding needed for the largest row number. Row labels
+	// are 1-based, so the last row is labeled totalRows, not totalRows-1.
+	maxRowNumWidth := len(fmt.Sprintf("%d", totalRows))
 
 	widthBudget := m.termWidth - appStyle.GetHorizontalMargins() - (maxRowNumWidth + 1)
 	totalCellWidth := fitFootprint(cellFootprint(m.gridNav.grid), widthBudget, totalCols)
@@ -63,10 +64,14 @@ func (m Model) renderGrid(budgetLines int) string {
 	for r := rowWin.start; r < rowWin.end; r++ {
 		var renderedCells []string
 		for c := colWin.start; c < colWin.end; c++ {
+			inGridOrBatch := m.mode == gridMode || m.mode == batchMode
 			var style lipgloss.Style
-			if (m.mode == gridMode || m.mode == batchMode) && r == m.gridNav.cursorRow && c == m.gridNav.cursorCol {
+			switch {
+			case inGridOrBatch && r == m.gridNav.cursorRow && c == m.gridNav.cursorCol:
 				style = m.styles.SelectedCell
-			} else {
+			case inGridOrBatch && m.gridNav.timer != nil && c == m.gridNav.cursorCol:
+				style = m.styles.ColumnPendingCell
+			default:
 				style = m.styles.Cell
 			}
 
@@ -83,11 +88,17 @@ func (m Model) renderGrid(budgetLines int) string {
 		}
 		row := lipgloss.JoinHorizontal(lipgloss.Top, renderedCells...)
 
-		rowNum := fmt.Sprintf("%*d❭", maxRowNumWidth, r)
-		// Split the row into lines and add proper prefix to each line
+		rowNum := fmt.Sprintf("%*d❭", maxRowNumWidth, r+1)
+		if (m.mode == gridMode || m.mode == batchMode) && m.gridNav.flashActive && r == m.gridNav.cursorRow {
+			rowNum = m.styles.FlashedRowLabel.Render(rowNum)
+		}
+		// Split the row into lines and place the label on the vertical
+		// middle line (row above/below get the blank prefix instead), so a
+		// wrapped multi-line cell doesn't glue the number to its top line.
 		lines := strings.Split(row, "\n")
+		mid := len(lines) / 2
 		for j, line := range lines {
-			if j == 0 {
+			if j == mid {
 				lines[j] = rowNum + line
 			} else {
 				lines[j] = rowPrefix + line
