@@ -117,6 +117,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		key := msg.String()
 		log.Printf("Key pressed: %q", key)
 
+		// Fixed order, each step can fully short-circuit the ones below it:
+		// 1. ctrl+c always quits, even locked.
+		// 2. touch the idle timer (skipped while already locked).
+		// 3. locked mode owns every other key.
+		// 4. the session-lock chord works everywhere — mid-search, in glassroot.
+		// 5. glassroot vetoes its restricted keys before anything below acts.
+		// 6. cross-mode bindings (profile lock/switch), skipped while typing.
+		// 7. the mode-specific handler.
+
 		// Global Emergency Exit: Ctrl+C should always quit (except in Locked Mode, handled below)
 		if key == "ctrl+c" {
 			m.Quitting = true
@@ -148,38 +157,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		// Bindings that reach across modes are skipped while a text field is
-		// collecting keystrokes, so a letter the user is typing isn't spent on
-		// an action instead. Everything above this still wins: ctrl+c, the
-		// locked-mode handoff, and the glassroot veto.
-		if !m.capturingText() {
-			// Both the lock and profile switching act on the *active* profile,
-			// so they belong to the grid. Offering the lock from the inventory
-			// would silently pin something other than the item under the cursor.
-			if m.mode == gridMode || m.mode == childMode {
-				if IsLock(m.Config.Keys, msg) {
-					cmd := m.toggleProfileLock()
-					return m, cmd
-				}
-
-				// Profile switching with configurable modifier + Number or ~ (Shift + `)
-				if ok, target := IsProfileSwitch(m.Config.Keys, msg, m.Config.NumbModifier); ok {
-					if target < len(m.profile.profiles) {
-						if updated, ok := m.switchToProfileIndex(target); ok {
-							m = updated
-							return m, nil
-						}
-					}
-					return m, nil
-				}
-				if IsProfilePrev(m.Config.Keys, msg) {
-					return m.handleProfileCycle(-1)
-				}
-				if IsProfileNext(m.Config.Keys, msg) {
-					return m.handleProfileCycle(1)
-				}
-			}
+		if next, cmd, handled := m.handleCrossModeBindings(msg); handled {
+			return next, cmd
 		}
+
 		switch m.mode {
 		case gridMode:
 			return m.updateGridMode(msg)
