@@ -40,8 +40,9 @@ func WatchConfigCmd(configDir string) tea.Cmd {
 					return nil
 				}
 
-				// Only care about Write and Create events
-				if event.Op&(fsnotify.Write|fsnotify.Create) == 0 {
+				// Remove/Rename catches a profile trashed out from under an
+				// active session — MoveToTrash renames it away.
+				if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Remove|fsnotify.Rename) == 0 {
 					continue
 				}
 
