@@ -126,22 +126,11 @@ func (m Model) renderCombinedFooter(helpText string) string {
 		help = strings.Join(styledLines, "\n")
 	}
 
-	netLabel := lipgloss.NewStyle().Render("NET: ")
-	netText := netLabel + m.net.traffic
-	statusText := fmt.Sprintf("STATUS: %s", m.net.online)
-	themeText := "THEME: "
-	themeName := m.styles.ThemeName.Render(m.Config.Theme)
-	if profile := lipgloss.ColorProfile(); profile != termenv.TrueColor {
-		themeName += m.styles.ThemeName.Render(" (" + core.ColorProfileName(profile) + ")")
-	}
-	separator := m.styles.Help.Render(" | ")
-
-	statusLine := netText + separator + statusText + separator + themeText + themeName
-	networkStatusBar := lipgloss.NewStyle().PaddingTop(1).Render(truncateText(statusLine, availWidth))
+	networkStatusBar := lipgloss.NewStyle().PaddingTop(1).Render(m.renderNetworkBar(availWidth))
 
 	// JoinVertical rectangularizes to the widest sibling and Place will not pad
 	// content wider than the box, so one unbounded line skews the whole frame.
-	profileBar := truncateText(m.renderProfileBar(), availWidth)
+	profileBar := lipgloss.NewStyle().PaddingTop(1).Render(m.renderProfileBar(availWidth))
 	pathBar := m.path.RenderPathBar(m.mode == pathMode, m.styles, availWidth)
 	childDirs := m.path.RenderChildDirs(m.mode, m.styles, availWidth)
 
@@ -149,9 +138,39 @@ func (m Model) renderCombinedFooter(helpText string) string {
 	if help != "" {
 		items = append(items, help)
 	}
-	items = append(items, networkStatusBar, profileBar, pathBar, childDirs)
+	items = append(items, networkStatusBar, profileBar)
+	if statusMsg := m.renderStatusMessage(availWidth); statusMsg != "" {
+		items = append(items, statusMsg)
+	}
+	items = append(items, pathBar, childDirs)
 
 	return lipgloss.JoinVertical(lipgloss.Left, items...)
+}
+
+// renderNetworkBar shows NET | STATUS | THEME. When it doesn't fit
+// availWidth, THEME drops first, then STATUS — NET (live throughput)
+// stays as long as anything does.
+func (m Model) renderNetworkBar(availWidth int) string {
+	netText := lipgloss.NewStyle().Render("NET: ") + m.net.traffic
+	statusText := fmt.Sprintf("STATUS: %s", m.net.online)
+	themeName := m.styles.ThemeName.Render(m.Config.Theme)
+	if profile := lipgloss.ColorProfile(); profile != termenv.TrueColor {
+		themeName += m.styles.ThemeName.Render(" (" + core.ColorProfileName(profile) + ")")
+	}
+	themeText := "THEME: " + themeName
+	sep := m.styles.Help.Render(" | ")
+
+	full := netText + sep + statusText + sep + themeText
+	if lipgloss.Width(full) <= availWidth {
+		return full
+	}
+
+	mid := netText + sep + statusText
+	if lipgloss.Width(mid) <= availWidth {
+		return mid
+	}
+
+	return truncateText(netText, availWidth)
 }
 
 // truncateText clips a string to a max visual width. ansi.Truncate measures

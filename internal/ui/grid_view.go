@@ -167,7 +167,10 @@ func (m Model) renderProfileCounter() string {
 	return m.styles.Title.Render(counter)
 }
 
-func (m Model) renderProfileBar() string {
+// renderProfileBar shows HOST | PROFILE | lock/glassroot badges. When it
+// doesn't fit availWidth, PROFILE drops first — HOST and the badges stay,
+// since those are what you'd check when something's gone sideways.
+func (m Model) renderProfileBar(availWidth int) string {
 	hostname, _ := os.Hostname()
 	currUser, _ := user.Current()
 	username := "unknown"
@@ -184,31 +187,44 @@ func (m Model) renderProfileBar() string {
 	}
 
 	osArch := fmt.Sprintf("(%s/%s)", runtime.GOOS, runtime.GOARCH)
+	sep := m.styles.Help.Render(" | ")
 
-	// Format: HOST: user@hostname (linux/amd64) |
-	hostLabel := "HOST: " + username + "@" + hostname + " " + osArch + m.styles.Help.Render(" | ")
+	hostSeg := "HOST: " + username + "@" + hostname + " " + osArch
+	profileSeg := lipgloss.NewStyle().Render("PROFILE: ") + m.profile.activeName()
 
-	profileLabel := lipgloss.NewStyle().Render("PROFILE: ")
-	segments := []string{hostLabel + profileLabel + m.profile.activeName() + m.styles.Help.Render(" | ")}
-
+	var tail string
 	if m.profile.pivotName != "" {
-		label := fmt.Sprintf("🔒 %s", m.profile.pivotName)
-		segments = append(segments, m.styles.LockBadge.Render(label))
+		tail += m.styles.LockBadge.Render(fmt.Sprintf("🔒 %s", m.profile.pivotName))
 	}
-
 	if m.GlassrootMode {
-		// Glassroot indicator next to lock/profile
-		glassIndicator := lipgloss.NewStyle().Foreground(lipgloss.Color("#A8E6CF")).Render("🧊 G-ROOT")
-		segments = append(segments, glassIndicator)
+		tail += lipgloss.NewStyle().Foreground(lipgloss.Color("#A8E6CF")).Render("🧊 G-ROOT")
 	}
 
-	if m.profile.statusMessage != "" {
-		style := m.styles.StatusNegative
-		if m.profile.statusPositive {
-			style = m.styles.StatusPositive
-		}
-		segments = append(segments, style.Render(m.profile.statusMessage))
+	full := hostSeg + sep + profileSeg
+	if tail != "" {
+		full += sep + tail
+	}
+	if lipgloss.Width(full) <= availWidth {
+		return full
 	}
 
-	return lipgloss.NewStyle().PaddingTop(1).Render(lipgloss.JoinHorizontal(lipgloss.Left, segments...))
+	slim := hostSeg
+	if tail != "" {
+		slim += sep + tail
+	}
+	return truncateText(slim, availWidth)
+}
+
+// renderStatusMessage is its own row rather than a profileBar segment — a
+// batch/tmux error is often the most important thing on screen, and
+// shouldn't compete for space with HOST/PROFILE/lock.
+func (m Model) renderStatusMessage(availWidth int) string {
+	if m.profile.statusMessage == "" {
+		return ""
+	}
+	style := m.styles.StatusNegative
+	if m.profile.statusPositive {
+		style = m.styles.StatusPositive
+	}
+	return truncateText(style.Render(m.profile.statusMessage), availWidth)
 }
