@@ -26,14 +26,62 @@ col = "A"
 row = 0
 items = [
   { name = "List", description = "Every session with windows and creation time. 'no server running' just means none yet.", command = "tmux ls 2>&1", auto_close_execution = false },
-  { name = "Attach (picker)", description = "Pick a session and jump in. Detach again with ctrl-b d.", command = "mapfile -t s < <(tmux ls -F '#{session_name}' 2>/dev/null); [ ${#s[@]} -eq 0 ] && echo no sessions - use New && exit 0; select n in \"${s[@]}\"; do [ -n \"$n\" ] && tmux attach -t \"$n\" && break; done", auto_close_execution = false },
-  { name = "New named session", description = "Name it after the task - future-you attaches by name.", command = "read -p 'Session name: ' n && tmux new -s \"${n:-work}\"", auto_close_execution = false }
+  { name = "Attach (picker)", description = "Pick a session and jump in. Detach again with ctrl-b d.", command = '''
+oldifs=$IFS; IFS='
+'
+set -- $(tmux ls -F '#{session_name}' 2>/dev/null)
+IFS=$oldifs
+if [ "$#" -eq 0 ]; then
+    echo no sessions - use New
+    exit 0
+fi
+while :; do
+    i=1
+    for s; do echo "$i) $s"; i=$((i + 1)); done
+    printf '#? '
+    read pick
+    case $pick in
+        ''|*[!0-9]*) n="" ;;
+        *) if [ "$pick" -ge 1 ] && [ "$pick" -lt "$i" ]; then eval "n=\${$pick}"; else n=""; fi ;;
+    esac
+    [ -n "$n" ] && tmux attach -t "$n" && break
+done
+''', auto_close_execution = false },
+  { name = "New named session", description = "Name it after the task - future-you attaches by name.", command = "printf 'Session name: '; read n && tmux new -s \"${n:-work}\"", auto_close_execution = false }
 ]
 
 [[commands]]
 name = "❌ Kill Session"
 description = "End a session and everything running in it — pick from the list, confirm first."
-command = "mapfile -t s < <(tmux ls -F '#{session_name}' 2>/dev/null); [ ${#s[@]} -eq 0 ] && echo no sessions && exit 0; select n in \"${s[@]}\"; do [ -n \"$n\" ] && read -p \"Kill '$n' and all its processes? [y/N]: \" ok && [ \"$ok\" = y ] && tmux kill-session -t \"$n\" && echo killed || echo kept; break; done"
+command = '''
+oldifs=$IFS; IFS='
+'
+set -- $(tmux ls -F '#{session_name}' 2>/dev/null)
+IFS=$oldifs
+if [ "$#" -eq 0 ]; then
+    echo no sessions
+    exit 0
+fi
+i=1
+for s; do echo "$i) $s"; i=$((i + 1)); done
+printf '#? '
+read pick
+case $pick in
+    ''|*[!0-9]*) n="" ;;
+    *) if [ "$pick" -ge 1 ] && [ "$pick" -lt "$i" ]; then eval "n=\${$pick}"; else n=""; fi ;;
+esac
+if [ -n "$n" ]; then
+    printf "Kill '%s' and all its processes? [y/N]: " "$n"
+    read ok
+    if [ "$ok" = y ]; then
+        tmux kill-session -t "$n" && echo killed || echo kept
+    else
+        echo kept
+    fi
+else
+    echo kept
+fi
+'''
 col = "A"
 row = 1
 auto_close_execution = false

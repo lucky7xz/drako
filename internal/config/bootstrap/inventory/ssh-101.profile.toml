@@ -82,7 +82,7 @@ else echo "❓ No ufw/firewalld found — allow TCP port 22 with your firewall's
 fi
 """, description = "Open port 22 for everyone. Do this BEFORE enabling the firewall on a remote machine — the order is the whole game: allow first, enable second, or you saw off the branch you're sitting on.", auto_close_execution = false },
     { name = "Allow From One IP", command = """
-read -p 'Trusted IP (e.g. your office/VPN address): ' ip
+printf 'Trusted IP (e.g. your office/VPN address): '; read ip
 if command -v ufw >/dev/null; then sudo ufw allow from "$ip" to any port 22 proto tcp
 elif command -v firewall-cmd >/dev/null; then sudo firewall-cmd --permanent --add-rich-rule="rule family=ipv4 source address=$ip service name=ssh accept" && sudo firewall-cmd --reload
 else echo "❓ No ufw/firewalld found — restrict port 22 with your firewall's own tool."
@@ -91,7 +91,7 @@ fi
     { name = "🚨 Enable Firewall", command = """
 echo "⚠️  Once enabled, everything not explicitly allowed is blocked."
 echo "    On a REMOTE machine, run 'Allow SSH (22)' first — otherwise this is a self-lockout."
-read -p "Enable the firewall now? [y/N]: " ok
+printf "Enable the firewall now? [y/N]: "; read ok
 [ "$ok" = y ] || { echo cancelled; exit 0; }
 if command -v ufw >/dev/null; then sudo ufw enable
 elif command -v firewall-cmd >/dev/null; then sudo systemctl enable --now firewalld && sudo firewall-cmd --state
@@ -151,10 +151,10 @@ description = "Ways in. Interactive logins for any server, plus the two client-s
 col = "B"
 row = 0
 items = [
-    { name = "Standard Login", command = "read -p 'user@host: ' target; ssh \"$target\"", description = "The basic connection. First contact with a new server asks you to trust its fingerprint — that yes is remembered in known_hosts, and SSH will scream later if the server's identity ever changes.", auto_close_execution = false },
-    { name = "Custom Port Login", command = "read -p 'user@host: ' target; read -p 'Port: ' port; ssh -p \"$port\" \"$target\"", description = "For servers that moved off port 22. If you connect to this box often, stop typing the port every time — put it in a Host Aliases block instead.", auto_close_execution = false },
-    { name = "Debug Connection", command = "read -p 'user@host: ' target; ssh -v \"$target\"", description = "Verbose mode narrates the whole handshake: which keys it offered, which auth methods the server accepted, where it gave up. When a login fails mysteriously, the answer is almost always in this output.", auto_close_execution = false },
-    { name = "Run Remote Cmd", command = "read -p 'Target (user@host): ' t; read -p 'Command: ' c; ssh \"$t\" \"$c\"", description = "Log in, run one command, leave. This is the primitive that scripts and CI are built on — anything you can type in a remote shell, you can fire from here in one shot.", auto_close_execution = false },
+    { name = "Standard Login", command = "printf 'user@host: '; read target; ssh \"$target\"", description = "The basic connection. First contact with a new server asks you to trust its fingerprint — that yes is remembered in known_hosts, and SSH will scream later if the server's identity ever changes.", auto_close_execution = false },
+    { name = "Custom Port Login", command = "printf 'user@host: '; read target; printf 'Port: '; read port; ssh -p \"$port\" \"$target\"", description = "For servers that moved off port 22. If you connect to this box often, stop typing the port every time — put it in a Host Aliases block instead.", auto_close_execution = false },
+    { name = "Debug Connection", command = "printf 'user@host: '; read target; ssh -v \"$target\"", description = "Verbose mode narrates the whole handshake: which keys it offered, which auth methods the server accepted, where it gave up. When a login fails mysteriously, the answer is almost always in this output.", auto_close_execution = false },
+    { name = "Run Remote Cmd", command = "printf 'Target (user@host): '; read t; printf 'Command: '; read c; ssh \"$t\" \"$c\"", description = "Log in, run one command, leave. This is the primitive that scripts and CI are built on — anything you can type in a remote shell, you can fire from here in one shot.", auto_close_execution = false },
     { name = "Host Aliases", command = """
 mkdir -p ~/.ssh && chmod 700 ~/.ssh
 if [ ! -f ~/.ssh/config ]; then
@@ -175,7 +175,7 @@ fi
 ${EDITOR:-nano} ~/.ssh/config
 """, description = "Turn 'ssh -p 2222 bob@203.0.113.7' into 'ssh myserver'. Host aliases live in ~/.ssh/config — one block per server, and every tool that speaks SSH (scp, rsync, git) understands them too. The single biggest quality-of-life upgrade in SSH.", auto_close_execution = false },
     { name = "List My Hosts", command = "grep -E '^Host ' ~/.ssh/config 2>/dev/null || echo 'No aliases yet — press Host Aliases to create your first.'", description = "Every alias in your address book, at a glance. These names work in ssh, scp, rsync and git remotes alike.", auto_close_execution = false },
-    { name = "Fix Changed Host Key", command = "read -p 'Host (name or IP) to forget: ' h; ssh-keygen -R \"$h\"", description = "Cures 'REMOTE HOST IDENTIFICATION HAS CHANGED'. That warning means the server's fingerprint no longer matches your known_hosts memory — normal after a reinstall, suspicious otherwise. If you didn't expect it, investigate before you forget-and-trust.", auto_close_execution = false }
+    { name = "Fix Changed Host Key", command = "printf 'Host (name or IP) to forget: '; read h; ssh-keygen -R \"$h\"", description = "Cures 'REMOTE HOST IDENTIFICATION HAS CHANGED'. That warning means the server's fingerprint no longer matches your known_hosts memory — normal after a reinstall, suspicious otherwise. If you didn't expect it, investigate before you forget-and-trust.", auto_close_execution = false }
 ]
 
 [[commands]]
@@ -198,16 +198,16 @@ description = "The passwordless-login ritual, in order: copy your key to the ser
 col = "B"
 row = 2
 items = [
-    { name = "Copy ID (Default)", command = "read -p 'user@host: ' target; ssh-copy-id \"$target\"", description = "Uploads your default public key into the server's authorized_keys — the one password login you make so you never need another. From then on, the key does the talking.", auto_close_execution = false },
-    { name = "Copy Specific ID", command = "read -p 'user@host: ' target; read -p 'Key path (e.g. ~/.ssh/id_ed25519.pub): ' key; ssh-copy-id -i \"$key\" \"$target\"", description = "Same ritual with a chosen key — for when you keep separate identities per client, project, or paranoia level.", auto_close_execution = false },
-    { name = "Test Key Login", command = "read -p 'user@host: ' target; ssh -o PasswordAuthentication=no \"$target\"", description = "The proof. Forces key-only auth for one connection: if you land in a shell, your key works; if you're refused, do NOT harden yet. This test passing is the entry ticket to the 🚨 items below.", auto_close_execution = false },
+    { name = "Copy ID (Default)", command = "printf 'user@host: '; read target; ssh-copy-id \"$target\"", description = "Uploads your default public key into the server's authorized_keys — the one password login you make so you never need another. From then on, the key does the talking.", auto_close_execution = false },
+    { name = "Copy Specific ID", command = "printf 'user@host: '; read target; printf 'Key path (e.g. ~/.ssh/id_ed25519.pub): '; read key; ssh-copy-id -i \"$key\" \"$target\"", description = "Same ritual with a chosen key — for when you keep separate identities per client, project, or paranoia level.", auto_close_execution = false },
+    { name = "Test Key Login", command = "printf 'user@host: '; read target; ssh -o PasswordAuthentication=no \"$target\"", description = "The proof. Forces key-only auth for one connection: if you land in a shell, your key works; if you're refused, do NOT harden yet. This test passing is the entry ticket to the 🚨 items below.", auto_close_execution = false },
     { name = "🚨 Disable Password Auth", command = """
 echo "Current effective setting:"
 sudo sshd -T 2>/dev/null | grep -i '^passwordauthentication' || { echo "Could not query sshd — is the server installed?"; exit 1; }
 echo ""
 echo "⚠️  Only proceed if 'Test Key Login' JUST worked from the machine you connect from."
 echo "    With passwords off and a broken key, there is no way back in."
-read -p "Set PasswordAuthentication no? [y/N]: " ok
+printf "Set PasswordAuthentication no? [y/N]: "; read ok
 [ "$ok" = y ] || { echo cancelled; exit 0; }
 sudo sed -i.bak -E 's/^[#[:space:]]*PasswordAuthentication[[:space:]].*/PasswordAuthentication no/' /etc/ssh/sshd_config
 sudo grep -q '^PasswordAuthentication no' /etc/ssh/sshd_config || echo 'PasswordAuthentication no' | sudo tee -a /etc/ssh/sshd_config >/dev/null
@@ -224,7 +224,7 @@ echo "Current effective setting:"
 sudo sshd -T 2>/dev/null | grep -i '^permitrootlogin' || { echo "Could not query sshd — is the server installed?"; exit 1; }
 echo ""
 echo "⚠️  Make sure a normal user with sudo works BEFORE locking root out of SSH."
-read -p "Set PermitRootLogin no? [y/N]: " ok
+printf "Set PermitRootLogin no? [y/N]: "; read ok
 [ "$ok" = y ] || { echo cancelled; exit 0; }
 sudo sed -i.bak -E 's/^[#[:space:]]*PermitRootLogin[[:space:]].*/PermitRootLogin no/' /etc/ssh/sshd_config
 sudo grep -q '^PermitRootLogin no' /etc/ssh/sshd_config || echo 'PermitRootLogin no' | sudo tee -a /etc/ssh/sshd_config >/dev/null
@@ -249,16 +249,16 @@ description = "Files over SSH. scp for quick single-file drops, rsync for anythi
 col = "C"
 row = 0
 items = [
-    { name = "Upload File (scp)", command = "read -p 'Local file: ' l; read -p 'Remote (user@host:/path): ' r; scp \"$l\" \"$r\"", description = "Send one file UP. scp is the no-ceremony option: fine for a config file or a tarball, wasteful for anything you'll transfer twice — that's rsync territory.", auto_close_execution = false },
-    { name = "Download File (scp)", command = "read -p 'Remote (user@host:/path/file): ' r; read -p 'Local destination: ' l; scp \"$r\" \"$l\"", description = "Pull one file DOWN. Same command as upload with the arguments swapped — in scp and rsync alike, the LAST argument is always the destination.", auto_close_execution = false },
-    { name = "Dry-Run Sync", command = "read -p 'Source: ' s; read -p 'Destination: ' d; rsync -avhn \"$s\" \"$d\" | head -30; echo '--- dry run only, nothing copied ---'", description = "See exactly what a sync WOULD transfer — nothing is written. Trailing slash on the source means 'copy the contents'; no slash means 'copy the folder itself'. Make this your reflex before every real sync.", auto_close_execution = false },
-    { name = "Sync Up (push)", command = "read -p 'Local source: ' s; read -p 'Remote (user@host:/path): ' d; rsync -avh --info=progress2 \"$s\" \"$d\"", description = "Local → server. Archive mode (-a) preserves permissions, times and links; interrupted transfers resume on rerun because rsync only sends what's missing. Additive: nothing on the far side gets deleted.", auto_close_execution = false },
-    { name = "Sync Down (pull)", command = "read -p 'Remote source (user@host:/path): ' s; read -p 'Local destination: ' d; rsync -avh --info=progress2 \"$s\" \"$d\"", description = "Server → local. Identical to push — the direction of the arguments is the entire difference.", auto_close_execution = false },
+    { name = "Upload File (scp)", command = "printf 'Local file: '; read l; printf 'Remote (user@host:/path): '; read r; scp \"$l\" \"$r\"", description = "Send one file UP. scp is the no-ceremony option: fine for a config file or a tarball, wasteful for anything you'll transfer twice — that's rsync territory.", auto_close_execution = false },
+    { name = "Download File (scp)", command = "printf 'Remote (user@host:/path/file): '; read r; printf 'Local destination: '; read l; scp \"$r\" \"$l\"", description = "Pull one file DOWN. Same command as upload with the arguments swapped — in scp and rsync alike, the LAST argument is always the destination.", auto_close_execution = false },
+    { name = "Dry-Run Sync", command = "printf 'Source: '; read s; printf 'Destination: '; read d; rsync -avhn \"$s\" \"$d\" | head -30; echo '--- dry run only, nothing copied ---'", description = "See exactly what a sync WOULD transfer — nothing is written. Trailing slash on the source means 'copy the contents'; no slash means 'copy the folder itself'. Make this your reflex before every real sync.", auto_close_execution = false },
+    { name = "Sync Up (push)", command = "printf 'Local source: '; read s; printf 'Remote (user@host:/path): '; read d; rsync -avh --info=progress2 \"$s\" \"$d\"", description = "Local → server. Archive mode (-a) preserves permissions, times and links; interrupted transfers resume on rerun because rsync only sends what's missing. Additive: nothing on the far side gets deleted.", auto_close_execution = false },
+    { name = "Sync Down (pull)", command = "printf 'Remote source (user@host:/path): '; read s; printf 'Local destination: '; read d; rsync -avh --info=progress2 \"$s\" \"$d\"", description = "Server → local. Identical to push — the direction of the arguments is the entire difference.", auto_close_execution = false },
     { name = "🚨 Mirror (--delete)", command = """
-read -p 'Source: ' s; read -p 'Destination: ' d
+printf 'Source: '; read s; printf 'Destination: '; read d
 echo '--- plan (deletions marked with "deleting") ---'
 rsync -avhn --delete "$s" "$d" | head -40
-read -p 'Execute this mirror, including deletions? [y/N]: ' ok
+printf 'Execute this mirror, including deletions? [y/N]: '; read ok
 [ "$ok" = y ] && rsync -avh --info=progress2 --delete "$s" "$d" || echo cancelled
 """, description = "Make the destination EXACTLY match the source — files that exist only on the destination are DELETED. This item refuses to run blind: it forces the dry-run, shows you the kill list, and asks. Point it the wrong way and it will faithfully mirror your mistake.", auto_close_execution = false }
 ]
@@ -270,22 +270,22 @@ col = "C"
 row = 1
 items = [
     { name = "Local Forward (-L)", command = """
-read -p 'Server (user@host): ' t
-read -p 'Remote port to reach (e.g. 8080): ' rp
-read -p 'Local port to open (e.g. 8080): ' lp
+printf 'Server (user@host): '; read t
+printf 'Remote port to reach (e.g. 8080): '; read rp
+printf 'Local port to open (e.g. 8080): '; read lp
 echo "→ While this runs: http://localhost:$lp is the server's localhost:$rp. Ctrl+C ends the tunnel."
 ssh -N -L "$lp:localhost:$rp" "$t"
 """, description = "Bring a remote thing to you. The classic: a dashboard or database on the server listens on localhost only — this makes it appear on YOUR localhost, through the tunnel. -N means 'no shell, just carry traffic'.", auto_close_execution = false },
     { name = "Remote Forward (-R)", command = """
-read -p 'Server (user@host): ' t
-read -p 'Local port to share (e.g. 3000): ' lp
-read -p 'Port to open on the server (e.g. 9090): ' rp
+printf 'Server (user@host): '; read t
+printf 'Local port to share (e.g. 3000): '; read lp
+printf 'Port to open on the server (e.g. 9090): '; read rp
 echo "→ While this runs: the server's localhost:$rp is your localhost:$lp. Ctrl+C ends it."
 ssh -N -R "$rp:localhost:$lp" "$t"
 """, description = "Show a local thing to the far side — your laptop's dev server, reachable from the server (and, if sshd sets GatewayPorts yes, from beyond it). The mirror image of -L: same tunnel, opposite direction.", auto_close_execution = false },
     { name = "SOCKS Proxy (-D)", command = """
-read -p 'Server (user@host): ' t
-read -p 'Local SOCKS port (e.g. 1080): ' lp
+printf 'Server (user@host): '; read t
+printf 'Local SOCKS port (e.g. 1080): '; read lp
 echo "→ While this runs: point your browser's SOCKS5 proxy at localhost:$lp and you browse AS the server."
 ssh -N -D "$lp" "$t"
 """, description = "Borrow the server's viewpoint. One flag turns SSH into a SOCKS5 proxy: set your browser to localhost:port and all its traffic exits from the server — a poor man's VPN for one application at a time.", auto_close_execution = false },
