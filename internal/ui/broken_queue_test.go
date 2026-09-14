@@ -117,6 +117,24 @@ func TestBrokenQueueAllAcknowledgedKeepsReloadedConfig(t *testing.T) {
 	}
 }
 
+// A profile that was fixed and later breaks again must be shown again,
+// not silently skipped as an already-seen duplicate.
+func TestApplyBundleClearsAcknowledgedOnceFixed(t *testing.T) {
+	m := queueModel()
+	m.profile.acknowledged["/tmp/alpha.profile.toml"] = true
+
+	base := config.Config{X: 1, Y: 1}
+	base.ApplyDefaults()
+	m.applyBundle(config.ConfigBundle{Base: base, Config: base}) // Broken is empty: alpha is fixed
+
+	m.profile.pendingErrors = []config.ProfileParseError{brokenErr("alpha")}
+	m = m.presentNextBrokenProfile()
+
+	if m.activeDetail == nil || !strings.Contains(m.activeDetail.Title, "alpha") {
+		t.Fatalf("re-broken alpha should be shown again, got %+v", m.activeDetail)
+	}
+}
+
 func TestApplyBundleAdoptsBundleState(t *testing.T) {
 	base := config.Config{X: 1, Y: 1}
 	base.ApplyDefaults()

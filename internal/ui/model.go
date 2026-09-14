@@ -173,6 +173,22 @@ func (m *Model) applyBundle(bundle config.ConfigBundle) {
 	m.profile.configDir = bundle.ConfigDir
 	m.profile.pivotName = bundle.LockedName
 	m.profile.locked = strings.TrimSpace(bundle.LockedName) != ""
+	m.pruneAcknowledged(bundle.Broken)
+}
+
+// pruneAcknowledged forgets an acknowledgment once its file is no longer
+// reported broken, so a later re-break is shown again instead of being
+// mistaken for the same still-open error.
+func (m *Model) pruneAcknowledged(broken []config.ProfileParseError) {
+	stillBroken := make(map[string]bool, len(broken))
+	for _, e := range broken {
+		stillBroken[e.Path] = true
+	}
+	for path := range m.profile.acknowledged {
+		if !stillBroken[path] {
+			delete(m.profile.acknowledged, path)
+		}
+	}
 }
 
 // presentNextBrokenProfile pops the next pending broken profile error and configures infoMode to display it.
