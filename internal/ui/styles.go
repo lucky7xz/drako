@@ -149,10 +149,11 @@ func BuildStyles(cfg config.Config) Styles {
 		Bold(true).
 		Padding(0, 1)
 
-	// Warning is the one role that is yellow in every shipped theme, so a
-	// locked cell reads as "held back" rather than as another accent.
-	s.LockedCell = s.Cell.Foreground(lipgloss.Color(ui.Warning))
-	s.LockedSelectedCell = s.SelectedCell.Foreground(lipgloss.Color(ui.Warning))
+	// LockedFG is a darkened shade of Accent (not the unrelated Warning
+	// role), so a locked cell always reads as a dimmed cursor color instead
+	// of risking a clash with it (e.g. yellow Warning next to a red Accent).
+	s.LockedCell = s.Cell.Foreground(lipgloss.Color(ui.LockedFG))
+	s.LockedSelectedCell = s.SelectedCell.Foreground(lipgloss.Color(ui.LockedFG))
 
 	// Border-color-only variants of Cell: subtler than SelectedCell's tinted
 	// text, since these mark "in progress"/"just confirmed", not "here now".

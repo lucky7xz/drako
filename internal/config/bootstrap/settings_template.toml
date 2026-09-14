@@ -11,6 +11,7 @@ theme = "dracula"
 #theme = "dracula2"
 #theme = "everforest"
 #theme = "orasaka"
+#theme = "viper"
 
 # ┌─ Auto Lock Session ──────────────────────────────────────────────────┐
 # │ When enabled, drako will automatically lock after a period of inactivity.

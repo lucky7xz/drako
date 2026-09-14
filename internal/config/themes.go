@@ -2,8 +2,10 @@ package config
 
 import (
 	"embed"
+	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"sync"
 
 	"github.com/BurntSushi/toml"
@@ -116,6 +118,7 @@ type UIColors struct {
 	TitleFG      string
 	ListHeaderFG string
 	CursorFG     string
+	LockedFG     string
 
 	ButtonFG    string
 	ButtonBG    string
@@ -151,6 +154,7 @@ func MapThemeToUI(t DracoThemeConfig) UIColors {
 		TitleFG:      t.Primary,
 		ListHeaderFG: t.Secondary,
 		CursorFG:     t.Accent,
+		LockedFG:     darkenAccent(t.Accent),
 
 		ButtonFG:    t.Foreground,
 		ButtonBG:    t.Comment,
@@ -161,6 +165,32 @@ func MapThemeToUI(t DracoThemeConfig) UIColors {
 		DropdownFG:     t.Foreground,
 		DropdownBG:     "#1a1a1a",
 	}
+}
+
+// lockedShadeFactor scales each RGB channel of Accent down for LockedFG, so
+// a locked cell always reads as a dimmed version of the cursor color rather
+// than an unrelated one (e.g. Warning, which can clash with Accent).
+const lockedShadeFactor = 0.55
+
+// darkenAccent scales #RRGGBB down by lockedShadeFactor, channel by channel.
+// A malformed hex (e.g. from a hand-edited themes.toml) is returned
+// unchanged rather than erroring, matching mergeThemes' tolerance for bad
+// user theme data.
+func darkenAccent(hex string) string {
+	if len(hex) != 7 || hex[0] != '#' {
+		return hex
+	}
+	r, errR := strconv.ParseUint(hex[1:3], 16, 8)
+	g, errG := strconv.ParseUint(hex[3:5], 16, 8)
+	b, errB := strconv.ParseUint(hex[5:7], 16, 8)
+	if errR != nil || errG != nil || errB != nil {
+		return hex
+	}
+	return fmt.Sprintf("#%02x%02x%02x",
+		uint8(float64(r)*lockedShadeFactor),
+		uint8(float64(g)*lockedShadeFactor),
+		uint8(float64(b)*lockedShadeFactor),
+	)
 }
 
 // GetTheme returns the color palette for a given theme name.

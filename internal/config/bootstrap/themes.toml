@@ -74,3 +74,15 @@ Warning    = "#f9e2af" # Pale Gold
 Error      = "#f38ba8" # Rose Red
 Info       = "#89dceb" # Sky Cyan
 Accent     = "#f5c2e7" # Light Pink
+
+[viper]
+Primary    = "#FFE000" # Venom Yellow
+Secondary  = "#8B0000" # Dried Blood
+Background = "#0A0A0A" # Black Scale
+Foreground = "#F5F5F5" # Bone White
+Comment    = "#4D4D4D" # Ash Gray
+Success    = "#4CAF50" # Antivenom Green
+Warning    = "#FFB300" # Amber
+Error      = "#E4002B" # Fang Red
+Info       = "#C0C0C0" # Steel
+Accent     = "#FFE000" # Venom Yellow

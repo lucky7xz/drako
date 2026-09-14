@@ -18,7 +18,7 @@ func TestDraculaFoundation(t *testing.T) {
 // TestEmbeddedThemesLoad: the themes shipped in the binary load alongside it.
 func TestEmbeddedThemesLoad(t *testing.T) {
 	themes := buildThemes(t.TempDir())
-	for _, name := range []string{"nord", "jade", "everforest"} {
+	for _, name := range []string{"nord", "jade", "everforest", "viper"} {
 		if _, ok := themes[name]; !ok {
 			t.Errorf("embedded theme %q should be loaded", name)
 		}
@@ -62,6 +62,20 @@ func TestMalformedUserThemesIgnored(t *testing.T) {
 	}
 	if _, ok := themes["nord"]; !ok {
 		t.Error("a malformed user file must not wipe embedded themes")
+	}
+}
+
+func TestDarkenAccent(t *testing.T) {
+	// #ff2e63 * 0.55 per channel: 0xff*0.55=140(0x8c), 0x2e*0.55=25(0x19), 0x63*0.55=54(0x36)
+	if got, want := darkenAccent("#ff2e63"), "#8c1936"; got != want {
+		t.Errorf("darkenAccent(#ff2e63) = %s, want %s", got, want)
+	}
+
+	if darkenAccent("not-a-color") != "not-a-color" {
+		t.Error("a malformed hex should be returned unchanged, not panic or error")
+	}
+	if darkenAccent("#zzzzzz") != "#zzzzzz" {
+		t.Error("a non-hex-digit value should be returned unchanged")
 	}
 }
 
