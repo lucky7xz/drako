@@ -204,10 +204,15 @@ func (m Model) presentNextBrokenProfile() Model {
 			m.applyConfig(rescueCfg)
 		}
 
-		// Safe reset to Grid Mode
-		m.mode = gridMode
-		m.activeDetail = nil
 		m.profile.errorQueueActive = false
+		if staleOnly == 0 {
+			// Only reset here when the queue is genuinely done. If it only
+			// emptied by discarding already-shown duplicates (a second reload
+			// racing the one that just presented them), leave the screen
+			// alone instead of tearing down what that call just put up.
+			m.mode = gridMode
+			m.activeDetail = nil
+		}
 		return m
 	}
 
