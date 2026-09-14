@@ -20,22 +20,22 @@ func hexChannels(t *testing.T, hex string) (r, g, b uint64) {
 	return r, g, b
 }
 
-// LockedFG must always be a darker shade of Accent (the cursor color), never
-// an unrelated color — otherwise a locked cell can clash with the cursor
-// (e.g. a flat yellow Warning next to a red Accent).
+func luminance(r, g, b uint64) float64 {
+	return 0.299*float64(r) + 0.587*float64(g) + 0.114*float64(b)
+}
+
+// LockedFG must always be darker than Accent (the cursor color), never an
+// unrelated color — otherwise a locked cell can clash with the cursor.
 func TestLockedFGIsADarkerShadeOfAccent(t *testing.T) {
-	for _, name := range []string{"dracula", "jade", "nord", "everforest", "orasaka", "dracula2"} {
+	for _, name := range []string{"dracula", "jade", "nord", "everforest", "orasaka", "dracula2", "viper"} {
 		theme := config.GetTheme(name)
 		ui := config.MapThemeToUI(theme)
 
 		ar, ag, ab := hexChannels(t, ui.CursorFG)
 		lr, lg, lb := hexChannels(t, ui.LockedFG)
 
-		if lr > ar || lg > ag || lb > ab {
+		if luminance(lr, lg, lb) >= luminance(ar, ag, ab) {
 			t.Errorf("%s: LockedFG %s is not darker than Accent %s", name, ui.LockedFG, ui.CursorFG)
-		}
-		if lr == ar && lg == ag && lb == ab {
-			t.Errorf("%s: LockedFG %s equals Accent %s, want strictly darker", name, ui.LockedFG, ui.CursorFG)
 		}
 	}
 }

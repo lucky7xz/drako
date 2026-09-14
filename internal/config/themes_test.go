@@ -66,16 +66,14 @@ func TestMalformedUserThemesIgnored(t *testing.T) {
 }
 
 func TestDarkenAccent(t *testing.T) {
-	// #ff2e63 * 0.55 per channel: 0xff*0.55=140(0x8c), 0x2e*0.55=25(0x19), 0x63*0.55=54(0x36)
-	if got, want := darkenAccent("#ff2e63"), "#8c1936"; got != want {
-		t.Errorf("darkenAccent(#ff2e63) = %s, want %s", got, want)
+	if got, want := darkenAccent("#ff2e63", "#0d0221"), "#79153e"; got != want {
+		t.Errorf("darkenAccent(#ff2e63, #0d0221) = %s, want %s", got, want)
 	}
-
-	if darkenAccent("not-a-color") != "not-a-color" {
-		t.Error("a malformed hex should be returned unchanged, not panic or error")
+	if darkenAccent("not-a-color", "#000000") != "not-a-color" {
+		t.Error("a malformed accent hex should be returned unchanged")
 	}
-	if darkenAccent("#zzzzzz") != "#zzzzzz" {
-		t.Error("a non-hex-digit value should be returned unchanged")
+	if darkenAccent("#ff2e63", "#zzzzzz") != "#ff2e63" {
+		t.Error("a malformed background hex should return accent unchanged")
 	}
 }
 

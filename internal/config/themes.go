@@ -154,7 +154,7 @@ func MapThemeToUI(t DracoThemeConfig) UIColors {
 		TitleFG:      t.Primary,
 		ListHeaderFG: t.Secondary,
 		CursorFG:     t.Accent,
-		LockedFG:     darkenAccent(t.Accent),
+		LockedFG:     darkenAccent(t.Accent, t.Background),
 
 		ButtonFG:    t.Foreground,
 		ButtonBG:    t.Comment,
@@ -167,30 +167,35 @@ func MapThemeToUI(t DracoThemeConfig) UIColors {
 	}
 }
 
-// lockedShadeFactor scales each RGB channel of Accent down for LockedFG, so
-// a locked cell always reads as a dimmed version of the cursor color rather
-// than an unrelated one (e.g. Warning, which can clash with Accent).
-const lockedShadeFactor = 0.55
+// lockedAccentWeight blends Accent toward Background instead of toward
+// black, so a dark shade doesn't shift hue (e.g. red toward orange).
+const lockedAccentWeight = 0.45
 
-// darkenAccent scales #RRGGBB down by lockedShadeFactor, channel by channel.
-// A malformed hex (e.g. from a hand-edited themes.toml) is returned
-// unchanged rather than erroring, matching mergeThemes' tolerance for bad
-// user theme data.
-func darkenAccent(hex string) string {
+// darkenAccent blends accent toward background at lockedAccentWeight.
+func darkenAccent(accent, background string) string {
+	ar, ag, ab, errA := hexRGB(accent)
+	br, bg, bb, errB := hexRGB(background)
+	if errA != nil || errB != nil {
+		return accent
+	}
+	mix := func(a, b uint64) uint8 {
+		return uint8(float64(a)*lockedAccentWeight + float64(b)*(1-lockedAccentWeight))
+	}
+	return fmt.Sprintf("#%02x%02x%02x", mix(ar, br), mix(ag, bg), mix(ab, bb))
+}
+
+// hexRGB parses a "#RRGGBB" string into its three channels.
+func hexRGB(hex string) (r, g, b uint64, err error) {
 	if len(hex) != 7 || hex[0] != '#' {
-		return hex
+		return 0, 0, 0, fmt.Errorf("not a #RRGGBB color: %q", hex)
 	}
 	r, errR := strconv.ParseUint(hex[1:3], 16, 8)
 	g, errG := strconv.ParseUint(hex[3:5], 16, 8)
 	b, errB := strconv.ParseUint(hex[5:7], 16, 8)
 	if errR != nil || errG != nil || errB != nil {
-		return hex
+		return 0, 0, 0, fmt.Errorf("not a #RRGGBB color: %q", hex)
 	}
-	return fmt.Sprintf("#%02x%02x%02x",
-		uint8(float64(r)*lockedShadeFactor),
-		uint8(float64(g)*lockedShadeFactor),
-		uint8(float64(b)*lockedShadeFactor),
-	)
+	return r, g, b, nil
 }
 
 // GetTheme returns the color palette for a given theme name.
