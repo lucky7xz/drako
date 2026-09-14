@@ -5,20 +5,34 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/BurntSushi/toml"
 )
 
+// decodeForTest gives tests a real toml.MetaData instead of a zero-value one.
+func decodeForTest(t *testing.T, raw string) (ProfileFile, toml.MetaData) {
+	t.Helper()
+	var pf ProfileFile
+	meta, err := toml.Decode(raw, &pf)
+	if err != nil {
+		t.Fatalf("test fixture failed to decode: %v", err)
+	}
+	return pf, meta
+}
+
 func TestValidateProfileFile_Valid(t *testing.T) {
-	pf := ProfileFile{X: 3, Y: 3, Commands: []Command{{Name: "a"}}}
-	if ok, problems := ValidateProfileFile(pf, nil); !ok {
+	raw := "x = 3\ny = 3\n\n[[commands]]\nname = \"a\"\n"
+	pf, meta := decodeForTest(t, raw)
+	if ok, problems := ValidateProfileFile(pf, []byte(raw), meta); !ok {
 		t.Fatalf("valid profile rejected: %v", problems)
 	}
 }
 
 func TestValidateProfileFile_OutOfRangeReportsLine(t *testing.T) {
-	raw := []byte("x = 12\ny = 3\n\n[[commands]]\nname = \"a\"\n")
-	pf := ProfileFile{X: 12, Y: 3, Commands: []Command{{Name: "a"}}}
+	raw := "x = 12\ny = 3\n\n[[commands]]\nname = \"a\"\n"
+	pf, meta := decodeForTest(t, raw)
 
-	ok, problems := ValidateProfileFile(pf, raw)
+	ok, problems := ValidateProfileFile(pf, []byte(raw), meta)
 	if ok {
 		t.Fatal("x = 12 should be rejected")
 	}
@@ -32,13 +46,52 @@ func TestValidateProfileFile_OutOfRangeReportsLine(t *testing.T) {
 }
 
 func TestValidateProfileFile_NoCommands(t *testing.T) {
-	pf := ProfileFile{X: 3, Y: 3}
-	ok, problems := ValidateProfileFile(pf, nil)
+	raw := "x = 3\ny = 3\n"
+	pf, meta := decodeForTest(t, raw)
+	ok, problems := ValidateProfileFile(pf, []byte(raw), meta)
 	if ok {
 		t.Fatal("a profile with no commands should be rejected")
 	}
 	if !strings.Contains(strings.Join(problems, "; "), "command") {
 		t.Errorf("expected a command problem, got %v", problems)
+	}
+}
+
+func TestValidateProfileFile_MissingKeyReportsMissing(t *testing.T) {
+	// y is absent entirely, not just out of range — the message should say
+	// so instead of reporting the Go zero-value as if it were written.
+	raw := "x = 3\n\n[[commands]]\nname = \"a\"\n"
+	pf, meta := decodeForTest(t, raw)
+
+	ok, problems := ValidateProfileFile(pf, []byte(raw), meta)
+	if ok {
+		t.Fatal("a profile missing y should be rejected")
+	}
+	msg := strings.Join(problems, "; ")
+	if !strings.Contains(msg, "y is missing") {
+		t.Errorf("expected a 'y is missing' problem, got %q", msg)
+	}
+	if strings.Contains(msg, "y = 0") {
+		t.Errorf("should not fabricate 'y = 0' for an absent key, got %q", msg)
+	}
+}
+
+func TestValidateProfileFile_UnrecognizedKeyReported(t *testing.T) {
+	// A typo'd key (y -> ssy) leaves y looking "missing" AND leaves ssy
+	// sitting in the file unused — both should be named.
+	raw := "x = 3\nssy = 3\n\n[[commands]]\nname = \"a\"\n"
+	pf, meta := decodeForTest(t, raw)
+
+	ok, problems := ValidateProfileFile(pf, []byte(raw), meta)
+	if ok {
+		t.Fatal("a profile with an unrecognized key should be rejected")
+	}
+	msg := strings.Join(problems, "; ")
+	if !strings.Contains(msg, "unrecognized key(s): ssy") {
+		t.Errorf("expected ssy to be named as unrecognized, got %q", msg)
+	}
+	if !strings.Contains(msg, "y is missing") {
+		t.Errorf("expected y to still be reported missing, got %q", msg)
 	}
 }
 

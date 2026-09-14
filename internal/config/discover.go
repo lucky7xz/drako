@@ -31,35 +31,54 @@ func CheckProfileFile(path string) error {
 		return fmt.Errorf("could not read file: %w", err)
 	}
 	var pf ProfileFile
-	if _, err := toml.Decode(string(data), &pf); err != nil {
+	meta, err := toml.Decode(string(data), &pf)
+	if err != nil {
 		return fmt.Errorf("invalid TOML: %w", err)
 	}
-	if ok, problems := ValidateProfileFile(pf, data); !ok {
+	if ok, problems := ValidateProfileFile(pf, data, meta); !ok {
 		return fmt.Errorf("%s", strings.Join(problems, "; "))
 	}
 	return nil
 }
 
-// ValidateProfileFile checks a profile has at least one command and x/y in 1-9.
-func ValidateProfileFile(pf ProfileFile, raw []byte) (bool, []string) {
+// ValidateProfileFile checks a profile has at least one command, x/y in 1-9,
+// and no unrecognized top-level keys (meta names the typo, e.g. "ssy").
+func ValidateProfileFile(pf ProfileFile, raw []byte, meta toml.MetaData) (bool, []string) {
 	var problems []string
 	if len(pf.Commands) == 0 {
 		problems = append(problems, "needs at least one command")
 	}
 	problems = append(problems, validateGridDim("x", pf.X, raw)...)
 	problems = append(problems, validateGridDim("y", pf.Y, raw)...)
+	if unknown := undecodedTopLevelKeys(meta); len(unknown) > 0 {
+		problems = append(problems, fmt.Sprintf("unrecognized key(s): %s (check for a typo)", strings.Join(unknown, ", ")))
+	}
 	return len(problems) == 0, problems
 }
 
+// undecodedTopLevelKeys returns top-level keys that matched no field at all
+// — a longer path (e.g. "commands.5.foo") means the top level DID match.
+func undecodedTopLevelKeys(meta toml.MetaData) []string {
+	var keys []string
+	for _, k := range meta.Undecoded() {
+		if len(k) == 1 {
+			keys = append(keys, k[0])
+		}
+	}
+	return keys
+}
+
+// validateGridDim distinguishes "key absent" from "present but out of
+// range" instead of reporting the zero-default as if it were typed.
 func validateGridDim(key string, val int, raw []byte) []string {
 	if val >= 1 && val <= 9 {
 		return nil
 	}
-	msg := fmt.Sprintf("%s = %d is invalid (must be 1-9)", key, val)
-	if line := findKeyLine(raw, key); line > 0 {
-		msg += fmt.Sprintf(" (line %d)", line)
+	line := findKeyLine(raw, key)
+	if line == 0 {
+		return []string{fmt.Sprintf("%s is missing (must be 1-9)", key)}
 	}
-	return []string{msg}
+	return []string{fmt.Sprintf("%s = %d is invalid (must be 1-9) (line %d)", key, val, line)}
 }
 
 // findKeyLine returns the 1-based line of a `key =` / `key=` assignment, or 0.
@@ -105,13 +124,14 @@ func DiscoverProfilesWithErrors(configDir string) ([]ProfileInfo, []ProfileParse
 		}
 
 		var profileFile ProfileFile
-		if _, err := toml.Decode(string(raw), &profileFile); err != nil {
+		meta, err := toml.Decode(string(raw), &profileFile)
+		if err != nil {
 			log.Printf("Failed to parse profile %s: %v", entry.Name(), err)
 			broken = append(broken, ProfileParseError{Name: profileName, Path: fullPath, Err: err.Error()})
 			continue
 		}
 
-		if ok, problems := ValidateProfileFile(profileFile, raw); !ok {
+		if ok, problems := ValidateProfileFile(profileFile, raw, meta); !ok {
 			broken = append(broken, ProfileParseError{
 				Name: profileName,
 				Path: fullPath,

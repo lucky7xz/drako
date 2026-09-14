@@ -1,0 +1,350 @@
+# dR4ko — Distrobox
+# Terminal-native distrobox management — no separate GUI app needed. Linux-only; macOS/windows variants just say so.
+
+x = 3
+y = 3
+
+header_art = """
+██████╗ ██╗███████╗████████╗██████╗  ██████╗
+██╔══██╗██║██╔════╝╚══██╔══╝██╔══██╗██╔═══██╗
+██║  ██║██║███████╗   ██║   ██████╔╝██║   ██║
+██║  ██║██║╚════██║   ██║   ██╔══██╗██║   ██║ box
+██████╔╝██║███████║   ██║   ██║  ██║╚██████╔╝
+╚═════╝ ╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝
+"""
+
+#==========================================
+# ┌─ Column A: Working in a box ───────────┐
+# └────────────────────────────────────────┘
+[[commands]]
+name = "🚪 Enter"
+description = "Drops you inside an existing box — your terminal becomes that box's terminal, home directory shared the whole time. Pick from whatever you've already created."
+command = { linux_generic = """
+if ! command -v distrobox >/dev/null 2>&1; then
+    echo "❌ distrobox is not installed. Settings ⋮ → Install first."
+    exit 1
+fi
+names=$(distrobox list --no-color 2>/dev/null | awk -F'|' 'NR>1 {gsub(/^[ \t]+|[ \t]+$/, "", $2); if ($2 != "") print $2}')
+if [ -z "$names" ]; then
+    echo "📦 No boxes yet — create one first (Create ⋮)."
+    exit 1
+fi
+echo "📦 Pick a box:"
+i=0
+printf '%s\n' "$names" | while IFS= read -r n; do
+    i=$((i + 1))
+    printf "  %d) %s\n" "$i" "$n"
+done
+printf "  Choice: "
+read choice
+case "$choice" in ''|*[!0-9]*) echo "Cancelled."; exit 1 ;; esac
+name=$(printf '%s\n' "$names" | sed -n "${choice}p")
+if [ -z "$name" ]; then
+    echo "❌ No such box."
+    exit 1
+fi
+distrobox enter "$name"
+""", macos = "echo '🚫 distrobox is Linux-only — no macOS support.'", windows = "Write-Host '🚫 distrobox is Linux-only — try WSL2 with a Linux distro instead.'" }
+col = "A"
+row = 0
+auto_close_execution = false
+
+[[commands]]
+name = "🛑 Stop"
+description = "Stops a running box without deleting it — everything inside is exactly as you left it next time you enter. Nothing to worry about here."
+command = { linux_generic = """
+if ! command -v distrobox >/dev/null 2>&1; then
+    echo "❌ distrobox is not installed. Settings ⋮ → Install first."
+    exit 1
+fi
+names=$(distrobox list --no-color 2>/dev/null | awk -F'|' 'NR>1 {gsub(/^[ \t]+|[ \t]+$/, "", $2); if ($2 != "") print $2}')
+if [ -z "$names" ]; then
+    echo "📦 No boxes yet — create one first (Create ⋮)."
+    exit 1
+fi
+echo "📦 Pick a box:"
+i=0
+printf '%s\n' "$names" | while IFS= read -r n; do
+    i=$((i + 1))
+    printf "  %d) %s\n" "$i" "$n"
+done
+printf "  Choice: "
+read choice
+case "$choice" in ''|*[!0-9]*) echo "Cancelled."; exit 1 ;; esac
+name=$(printf '%s\n' "$names" | sed -n "${choice}p")
+if [ -z "$name" ]; then
+    echo "❌ No such box."
+    exit 1
+fi
+distrobox stop "$name" --yes
+""", macos = "echo '🚫 distrobox is Linux-only.'", windows = "Write-Host '🚫 distrobox is Linux-only.'" }
+col = "A"
+row = 1
+auto_close_execution = false
+
+[[commands]]
+name = "🧪 Ephemeral"
+description = "A box that exists only for as long as you're inside it — the moment you exit, it's gone, no trace left. Perfect for testing something risky without committing to it. (This is the same shape of box THE FORGE spins up for an agent to work in.)"
+command = { linux_generic = """
+echo "Base image — 1) ubuntu  2) fedora  3) arch  4) custom"
+printf "Choice [1]: "; read c
+case "${c:-1}" in
+    1) img=docker.io/library/ubuntu:24.04 ;;
+    2) img=registry.fedoraproject.org/fedora:latest ;;
+    3) img=docker.io/library/archlinux:latest ;;
+    4) printf "Image: "; read img ;;
+    *) echo "Cancelled."; exit 1 ;;
+esac
+[ -z "$img" ] && { echo "Cancelled."; exit 1; }
+distrobox-ephemeral --image "$img"
+""", macos = "echo '🚫 distrobox is Linux-only.'", windows = "Write-Host '🚫 distrobox is Linux-only.'" }
+col = "A"
+row = 2
+auto_close_execution = false
+
+#==========================================
+# ┌─ Column B: Box lifecycle ──────────────┐
+# └────────────────────────────────────────┘
+[[commands]]
+name = "✨ Create ⋮ "
+description = "Builds a brand new box from a base image. Pick a common distro or type your own image reference — the box is yours to fill however you like."
+col = "B"
+row = 0
+items = [
+    { name = "🐧 Ubuntu", description = "The friendliest default — huge package availability, the safest bet if you're not sure what you need.", command = { linux_generic = """
+printf "Box name [ubuntu]: "; read n; n=${n:-ubuntu}
+distrobox create --name "$n" --image docker.io/library/ubuntu:24.04 --yes
+""", macos = "echo '🚫 distrobox is Linux-only.'", windows = "Write-Host '🚫 distrobox is Linux-only.'" }, auto_close_execution = false },
+    { name = "🧢 Fedora", description = "Matches a Fedora Atomic/Silverblue host closely — a good pick if you want the box to feel like an extension of the system underneath it.", command = { linux_generic = """
+printf "Box name [fedora]: "; read n; n=${n:-fedora}
+distrobox create --name "$n" --image registry.fedoraproject.org/fedora:latest --yes
+""", macos = "echo '🚫 distrobox is Linux-only.'", windows = "Write-Host '🚫 distrobox is Linux-only.'" }, auto_close_execution = false },
+    { name = "🔷 Arch", description = "Rolling release, bleeding-edge packages, the AUR. For when you want the newest version of everything, right now.", command = { linux_generic = """
+printf "Box name [arch]: "; read n; n=${n:-arch}
+distrobox create --name "$n" --image docker.io/library/archlinux:latest --yes
+""", macos = "echo '🚫 distrobox is Linux-only.'", windows = "Write-Host '🚫 distrobox is Linux-only.'" }, auto_close_execution = false },
+    { name = "🎨 Custom image", description = "Any OCI image works — point it at whatever registry reference you need: a specific version, a niche distro, a personal image.", command = { linux_generic = """
+printf "Box name: "; read n
+[ -z "$n" ] && { echo "Cancelled — a name is required."; exit 1; }
+printf "Image (e.g. debian:12, quay.io/toolbx/arch-toolbox:latest): "; read img
+[ -z "$img" ] && { echo "Cancelled — an image is required."; exit 1; }
+distrobox create --name "$n" --image "$img" --yes
+""", macos = "echo '🚫 distrobox is Linux-only.'", windows = "Write-Host '🚫 distrobox is Linux-only.'" }, auto_close_execution = false }
+]
+
+[[commands]]
+name = "🚨 Delete"
+description = "Permanently removes a box and everything installed inside it — the base image on your host is untouched, but the box itself is gone for good. Asks you to type the name back before it does anything."
+command = { linux_generic = """
+if ! command -v distrobox >/dev/null 2>&1; then
+    echo "❌ distrobox is not installed. Settings ⋮ → Install first."
+    exit 1
+fi
+names=$(distrobox list --no-color 2>/dev/null | awk -F'|' 'NR>1 {gsub(/^[ \t]+|[ \t]+$/, "", $2); if ($2 != "") print $2}')
+if [ -z "$names" ]; then
+    echo "📦 No boxes yet — create one first (Create ⋮)."
+    exit 1
+fi
+echo "📦 Pick a box:"
+i=0
+printf '%s\n' "$names" | while IFS= read -r n; do
+    i=$((i + 1))
+    printf "  %d) %s\n" "$i" "$n"
+done
+printf "  Choice: "
+read choice
+case "$choice" in ''|*[!0-9]*) echo "Cancelled."; exit 1 ;; esac
+name=$(printf '%s\n' "$names" | sed -n "${choice}p")
+if [ -z "$name" ]; then
+    echo "❌ No such box."
+    exit 1
+fi
+echo "🚨 This deletes '$name' permanently. Everything inside it is lost."
+printf "Type the box name to confirm: "
+read confirm
+if [ "$confirm" != "$name" ]; then
+    echo "Cancelled — names didn't match."
+    exit 1
+fi
+distrobox rm "$name" --force
+""", macos = "echo '🚫 distrobox is Linux-only.'", windows = "Write-Host '🚫 distrobox is Linux-only.'" }
+col = "B"
+row = 1
+auto_close_execution = false
+
+[[commands]]
+name = "🔗 Export ⋮ "
+description = "Makes something inside a box show up on the host — an app in your launcher, or a binary on your host PATH. The box does the work; the host just gets a shortcut to it."
+col = "B"
+row = 2
+items = [
+    { name = "📱 App", description = "Exports a .desktop app from inside a box so it shows up in your host's app launcher like anything installed natively.", command = { linux_generic = """
+if ! command -v distrobox >/dev/null 2>&1; then
+    echo "❌ distrobox is not installed. Settings ⋮ → Install first."
+    exit 1
+fi
+names=$(distrobox list --no-color 2>/dev/null | awk -F'|' 'NR>1 {gsub(/^[ \t]+|[ \t]+$/, "", $2); if ($2 != "") print $2}')
+if [ -z "$names" ]; then
+    echo "📦 No boxes yet — create one first (Create ⋮)."
+    exit 1
+fi
+echo "📦 Pick a box:"
+i=0
+printf '%s\n' "$names" | while IFS= read -r n; do
+    i=$((i + 1))
+    printf "  %d) %s\n" "$i" "$n"
+done
+printf "  Choice: "
+read choice
+case "$choice" in ''|*[!0-9]*) echo "Cancelled."; exit 1 ;; esac
+name=$(printf '%s\n' "$names" | sed -n "${choice}p")
+if [ -z "$name" ]; then
+    echo "❌ No such box."
+    exit 1
+fi
+printf "App name inside the box (e.g. firefox): "; read app
+[ -z "$app" ] && { echo "Cancelled."; exit 1; }
+distrobox enter "$name" -- distrobox-export --app "$app"
+""", macos = "echo '🚫 distrobox is Linux-only.'", windows = "Write-Host '🚫 distrobox is Linux-only.'" }, auto_close_execution = false },
+    { name = "🧩 Binary", description = "Exports a single binary from inside a box onto your host PATH — the box's tool, callable from anywhere on the host.", command = { linux_generic = """
+if ! command -v distrobox >/dev/null 2>&1; then
+    echo "❌ distrobox is not installed. Settings ⋮ → Install first."
+    exit 1
+fi
+names=$(distrobox list --no-color 2>/dev/null | awk -F'|' 'NR>1 {gsub(/^[ \t]+|[ \t]+$/, "", $2); if ($2 != "") print $2}')
+if [ -z "$names" ]; then
+    echo "📦 No boxes yet — create one first (Create ⋮)."
+    exit 1
+fi
+echo "📦 Pick a box:"
+i=0
+printf '%s\n' "$names" | while IFS= read -r n; do
+    i=$((i + 1))
+    printf "  %d) %s\n" "$i" "$n"
+done
+printf "  Choice: "
+read choice
+case "$choice" in ''|*[!0-9]*) echo "Cancelled."; exit 1 ;; esac
+name=$(printf '%s\n' "$names" | sed -n "${choice}p")
+if [ -z "$name" ]; then
+    echo "❌ No such box."
+    exit 1
+fi
+printf "Binary path inside the box (e.g. /usr/bin/mytool): "; read bin
+[ -z "$bin" ] && { echo "Cancelled."; exit 1; }
+distrobox enter "$name" -- distrobox-export --bin "$bin"
+""", macos = "echo '🚫 distrobox is Linux-only.'", windows = "Write-Host '🚫 distrobox is Linux-only.'" }, auto_close_execution = false }
+]
+
+#==========================================
+# ┌─ Column C: Info & maintenance ─────────┐
+# └────────────────────────────────────────┘
+[[commands]]
+name = "🧾 List"
+description = "Every box you've created, at a glance — name, status, and the image it's built from. Read-only, nothing here changes anything."
+command = { linux_generic = """
+if ! command -v distrobox >/dev/null 2>&1; then
+    echo "❌ distrobox is not installed. Settings ⋮ → Install first."
+    exit 1
+fi
+distrobox list
+""", macos = "echo '🚫 distrobox is Linux-only.'", windows = "Write-Host '🚫 distrobox is Linux-only.'" }
+col = "C"
+row = 0
+auto_close_execution = false
+
+[[commands]]
+name = "🚀 Upgrade"
+description = "Runs the box's own package-manager update for you, without needing to enter it first. Good habit for any box you keep around a while — don't let it go stale."
+command = { linux_generic = """
+if ! command -v distrobox >/dev/null 2>&1; then
+    echo "❌ distrobox is not installed. Settings ⋮ → Install first."
+    exit 1
+fi
+names=$(distrobox list --no-color 2>/dev/null | awk -F'|' 'NR>1 {gsub(/^[ \t]+|[ \t]+$/, "", $2); if ($2 != "") print $2}')
+if [ -z "$names" ]; then
+    echo "📦 No boxes yet — create one first (Create ⋮)."
+    exit 1
+fi
+echo "📦 Pick a box:"
+i=0
+printf '%s\n' "$names" | while IFS= read -r n; do
+    i=$((i + 1))
+    printf "  %d) %s\n" "$i" "$n"
+done
+printf "  Choice: "
+read choice
+case "$choice" in ''|*[!0-9]*) echo "Cancelled."; exit 1 ;; esac
+name=$(printf '%s\n' "$names" | sed -n "${choice}p")
+if [ -z "$name" ]; then
+    echo "❌ No such box."
+    exit 1
+fi
+distrobox upgrade "$name"
+""", macos = "echo '🚫 distrobox is Linux-only.'", windows = "Write-Host '🚫 distrobox is Linux-only.'" }
+col = "C"
+row = 1
+auto_close_execution = false
+
+[[commands]]
+name = "🔧 Settings ⋮ "
+description = "Install, remove, or check on distrobox itself — the machinery behind every other cell in this deck."
+col = "C"
+row = 2
+items = [
+    { name = "💻 Status", description = "Checks whether distrobox and a container backend (podman or docker) are actually present, and what versions.", command = { linux_generic = """
+if command -v distrobox >/dev/null 2>&1; then
+    echo "✅ distrobox: $(distrobox version)"
+else
+    echo "❌ distrobox: not installed"
+fi
+if command -v podman >/dev/null 2>&1; then
+    echo "✅ podman: $(podman --version)"
+elif command -v docker >/dev/null 2>&1; then
+    echo "✅ docker: $(docker --version)"
+else
+    echo "❌ no container backend found (need podman or docker)"
+fi
+""", macos = "echo '🚫 distrobox is Linux-only.'", windows = "Write-Host '🚫 distrobox is Linux-only.'" }, auto_close_execution = false },
+    { name = "🧰 Install", description = "Installs distrobox plus podman (the backend it needs) if either is missing. Safe to run again later — it only adds what's not already there.", command = { linux_immutable = "brew install distrobox podman", linux_debian = "sudo apt update && sudo apt install -y distrobox podman", linux_arch = "sudo pacman -S --needed --noconfirm distrobox podman", linux_fedora = "sudo dnf install -y distrobox podman", linux_suse = "sudo zypper install -y distrobox podman", linux_void = "sudo xbps-install -Sy distrobox podman", linux_generic = """
+if command -v apt-get >/dev/null 2>&1; then
+    sudo apt-get update && sudo apt-get install -y distrobox podman
+elif command -v dnf >/dev/null 2>&1; then
+    sudo dnf install -y distrobox podman
+elif command -v pacman >/dev/null 2>&1; then
+    sudo pacman -S --needed --noconfirm distrobox podman
+elif command -v zypper >/dev/null 2>&1; then
+    sudo zypper install -y distrobox podman
+elif command -v xbps-install >/dev/null 2>&1; then
+    sudo xbps-install -Sy distrobox podman
+elif command -v apk >/dev/null 2>&1; then
+    sudo apk add distrobox podman
+else
+    echo "❓ No known package manager. Install by hand: https://distrobox.it/#installation"
+    exit 1
+fi
+""", macos = "echo '🚫 distrobox is Linux-only — no macOS support.'", windows = "Write-Host '🚫 distrobox is Linux-only — use WSL2 with a Linux distro instead.'" }, auto_close_execution = false },
+    { name = "🚨 Uninstall", description = "Removes distrobox and podman from your system. Existing boxes and their container images are untouched by this — they just become unreachable until you reinstall.", command = { linux_immutable = "brew uninstall distrobox podman", linux_debian = "sudo apt remove -y distrobox podman", linux_arch = "sudo pacman -R --noconfirm distrobox podman", linux_fedora = "sudo dnf remove -y distrobox podman", linux_suse = "sudo zypper remove -y distrobox podman", linux_void = "sudo xbps-remove -y distrobox podman", linux_generic = """
+echo "🚨 This removes distrobox and podman. Existing boxes become unreachable until you reinstall."
+printf "Type CONFIRM to proceed: "
+read c
+[ "$c" != "CONFIRM" ] && { echo "Cancelled."; exit 1; }
+if command -v apt-get >/dev/null 2>&1; then
+    sudo apt-get remove -y distrobox podman
+elif command -v dnf >/dev/null 2>&1; then
+    sudo dnf remove -y distrobox podman
+elif command -v pacman >/dev/null 2>&1; then
+    sudo pacman -R --noconfirm distrobox podman
+elif command -v zypper >/dev/null 2>&1; then
+    sudo zypper remove -y distrobox podman
+elif command -v xbps-remove >/dev/null 2>&1; then
+    sudo xbps-remove -y distrobox podman
+elif command -v apk >/dev/null 2>&1; then
+    sudo apk del distrobox podman
+else
+    echo "❓ No known package manager. Remove by hand."
+    exit 1
+fi
+""", macos = "echo '🚫 Nothing to uninstall — distrobox never installs on macOS.'", windows = "Write-Host '🚫 Nothing to uninstall on Windows.'" }, auto_close_execution = false },
+    { name = "📚 Docs", description = "Opens distrobox's own documentation site.", command = { linux_generic = "drako open https://distrobox.it", macos = "drako open https://distrobox.it", windows = "drako open https://distrobox.it" }, auto_close_execution = true }
+]
