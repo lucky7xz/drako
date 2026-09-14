@@ -349,7 +349,7 @@ func (s Styles) renderHeaderArt(spinnerView string) string {
 // whiteAccents lists the header-art glyphs rendered in white instead of
 // the theme's Primary color, longest pattern first so a multi-rune match
 // (e.g. "╱╲") is tried before any of its runes could match individually.
-var whiteAccents = []string{"啸龙志", "╱╲", "✘", "◄", "►", "/", "\\"}
+var whiteAccents = []string{"啸龙志", "╱╲", "✘", "◄", "►", "/", "\\", "z", ":", " ━━ ", "."}
 
 // styleLineSegment renders segment with whiteAccents in white and
 // everything else in primaryStyle.
