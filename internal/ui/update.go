@@ -46,7 +46,20 @@ func lockCheckTick() tea.Cmd {
 	})
 }
 
+// Update handles a message, then gives any queued broken/dropped-profile
+// notice a chance to surface — the single point where a protected mode
+// (locked, or mid-capturing text) ending reconnects with data that arrived
+// while it was up. See presentDeferredIfSafe.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	next, cmd := m.handleMsg(msg)
+	nm, ok := next.(Model)
+	if !ok {
+		return next, cmd
+	}
+	return nm.presentDeferredIfSafe(), cmd
+}
+
+func (m Model) handleMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.termWidth = msg.Width
@@ -62,19 +75,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.GlassrootMode && glassrootRejectsBundle(bundle) {
 			return m.failGlassroot()
 		}
-		m.applyBundle(bundle)
-		if len(bundle.Broken) > 0 {
-			m.profile.pendingErrors = append(m.profile.pendingErrors, bundle.Broken...)
-			m.profile.errorQueueActive = true
-			m = m.presentNextBrokenProfile()
-			return m, nil
-		}
-		if bundle.DroppedProfile != "" {
-			m = m.presentDroppedProfileNote(bundle.DroppedProfile)
-			return m, nil
-		}
-		m.mode = gridMode
-		return m, nil
+		return m.applyReloadedBundle(bundle), nil
 
 	case ConfigChangedMsg:
 		// Config file changed on disk, reload everything
@@ -89,14 +90,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.GlassrootMode && glassrootRejectsBundle(bundle) {
 			return m.failGlassroot()
 		}
-		m.applyBundle(bundle)
-		if len(bundle.Broken) > 0 {
-			m.profile.pendingErrors = append(m.profile.pendingErrors, bundle.Broken...)
-			m.profile.errorQueueActive = true
-			m = m.presentNextBrokenProfile()
-		} else if bundle.DroppedProfile != "" {
-			m = m.presentDroppedProfileNote(bundle.DroppedProfile)
-		}
+		m = m.applyReloadedBundle(bundle)
 		// Restart the watcher for the next change
 		configDir, _ := paths.ConfigDir()
 		return m, WatchConfigCmd(configDir)
@@ -407,7 +401,9 @@ func (m Model) updateInfoMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m Model) afterEdit(msg editorFinishedMsg) (tea.Model, tea.Cmd) {
 	if msg.err != nil {
 		m.inventory.status = "Edit failed: " + msg.err.Error()
-		m.mode = inventoryMode
+		if !m.protectsMode() {
+			m.mode = inventoryMode
+		}
 		return m, nil
 	}
 
@@ -415,7 +411,9 @@ func (m Model) afterEdit(msg editorFinishedMsg) (tea.Model, tea.Cmd) {
 	bundle, err := config.ReloadConfig(m.profile.sessionProfile)
 	if err != nil {
 		m.inventory.status = "Reload failed: " + err.Error()
-		m.mode = inventoryMode
+		if !m.protectsMode() {
+			m.mode = inventoryMode
+		}
 		return m, nil
 	}
 	m.applyBundle(bundle)
@@ -443,7 +441,9 @@ func (m Model) afterEdit(msg editorFinishedMsg) (tea.Model, tea.Cmd) {
 	} else {
 		m.inventory.status, m.inventory.statusOK = "✓ Saved: "+name, true
 	}
-	m.mode = inventoryMode
+	if !m.protectsMode() {
+		m.mode = inventoryMode
+	}
 	return m, nil
 }
 

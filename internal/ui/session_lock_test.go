@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"errors"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -122,6 +123,119 @@ func TestSessionLock_ReturnsToTheModeItLockedFrom(t *testing.T) {
 	}
 	if got := m.exitLockedMode().mode; got != inventoryMode {
 		t.Errorf("unlocking returned to %v, want the inventory it locked from", got)
+	}
+}
+
+// A background reload finding a broken profile must not kick the lock
+// screen away — it queues the error and waits for a real unlock instead.
+func TestApplyReloadedBundle_BrokenProfileStaysLockedUntilUnlock(t *testing.T) {
+	m := lockTestModel(t)
+	m.mode = lockedMode
+	m.profile.acknowledged = map[string]bool{}
+
+	broken := config.ProfileParseError{Name: "work", Path: "/tmp/work.profile.toml", Err: "boom"}
+	m = m.applyReloadedBundle(config.ConfigBundle{Broken: []config.ProfileParseError{broken}})
+
+	if m.mode != lockedMode {
+		t.Fatalf("a broken-profile reload must not leave lockedMode, got %v", m.mode)
+	}
+	if len(m.profile.pendingErrors) != 1 {
+		t.Fatalf("the error should still be queued, got %d pending", len(m.profile.pendingErrors))
+	}
+
+	m = pumpUnlock(t, m)
+	if m.mode != infoMode || m.activeDetail == nil {
+		t.Fatalf("unlocking should present the queued error, mode=%v detail=%v", m.mode, m.activeDetail)
+	}
+}
+
+// Same deferral for the single dropped-profile note.
+func TestApplyReloadedBundle_DroppedProfileStaysLockedUntilUnlock(t *testing.T) {
+	m := lockTestModel(t)
+	m.mode = lockedMode
+
+	m = m.applyReloadedBundle(config.ConfigBundle{DroppedProfile: "work"})
+
+	if m.mode != lockedMode {
+		t.Fatalf("a dropped-profile reload must not leave lockedMode, got %v", m.mode)
+	}
+	if m.profile.pendingDroppedProfile != "work" {
+		t.Fatalf("dropped profile should be deferred, got %q", m.profile.pendingDroppedProfile)
+	}
+
+	m = pumpUnlock(t, m)
+	if m.mode != infoMode || m.activeDetail == nil {
+		t.Fatalf("unlocking should present the deferred note, mode=%v detail=%v", m.mode, m.activeDetail)
+	}
+}
+
+// pumpUnlock drives a full alternating pump sequence through Update(), the
+// same path a real unlock takes (so presentDeferredIfSafe runs too).
+func pumpUnlock(t *testing.T, m Model) Model {
+	t.Helper()
+	if m.lock.pumpGoal <= 0 {
+		m.lock.pumpGoal = defaultLockPumpGoal
+	}
+	for i := 0; i < m.lock.pumpGoal; i++ {
+		key := "h"
+		if i%2 == 1 {
+			key = "l"
+		}
+		m = update(t, m, keyRunes(key))
+	}
+	return m
+}
+
+// Even a clean reload (nothing broken or dropped) must not reset the mode
+// to gridMode while locked.
+func TestApplyReloadedBundle_CleanReloadStaysLocked(t *testing.T) {
+	m := lockTestModel(t)
+	m.mode = lockedMode
+
+	m = m.applyReloadedBundle(config.ConfigBundle{})
+	if m.mode != lockedMode {
+		t.Fatalf("a clean reload must not leave lockedMode, got %v", m.mode)
+	}
+}
+
+// capturingText (an inventory delete-confirmation, here) is the second
+// protected mode — a background reload must defer to it too, with no
+// explicit drain wiring anywhere near the confirmation's own esc/enter keys.
+func TestApplyReloadedBundle_DefersWhileCapturingText(t *testing.T) {
+	m := lockTestModel(t)
+	m.mode = inventoryMode
+	m.inventory.pending = &pendingDelete{rel: "x.profile.toml", name: "x"}
+	m.profile.acknowledged = map[string]bool{}
+
+	if !m.capturingText() {
+		t.Fatal("fixture should be capturing text")
+	}
+
+	broken := config.ProfileParseError{Name: "work", Path: "/tmp/work.profile.toml", Err: "boom"}
+	m = m.applyReloadedBundle(config.ConfigBundle{Broken: []config.ProfileParseError{broken}})
+	if m.mode != inventoryMode || m.inventory.pending == nil {
+		t.Fatalf("a broken-profile reload must not interrupt the delete prompt, mode=%v pending=%v", m.mode, m.inventory.pending)
+	}
+
+	// Esc cancels the confirmation — an ordinary keypress, no knowledge of
+	// the deferred error anywhere near this code path.
+	m = update(t, m, tea.KeyMsg{Type: tea.KeyEsc})
+	if m.mode != infoMode || m.activeDetail == nil {
+		t.Fatalf("closing the prompt should present the deferred error, mode=%v detail=%v", m.mode, m.activeDetail)
+	}
+}
+
+// The same race that breaks the lock screen can hit afterEdit: a queued
+// lockCheckMsg resolving while $EDITOR was suspended, landing right before
+// editorFinishedMsg. afterEdit must not bounce lockedMode to inventoryMode.
+func TestAfterEditWhileLocked_StaysLocked(t *testing.T) {
+	m := lockTestModel(t)
+	m.mode = lockedMode
+
+	next, _ := m.afterEdit(editorFinishedMsg{err: errors.New("editor failed to launch")})
+	got := next.(Model)
+	if got.mode != lockedMode {
+		t.Fatalf("afterEdit must not leave lockedMode, got %v", got.mode)
 	}
 }
 

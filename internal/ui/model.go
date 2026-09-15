@@ -80,6 +80,9 @@ type profileState struct {
 	pendingErrors      []config.ProfileParseError
 	errorQueueActive   bool
 	acknowledged       map[string]bool
+	// pendingDroppedProfile defers presentDroppedProfileNote's mode change
+	// while locked, same idea as pendingErrors but for a single string.
+	pendingDroppedProfile string
 	// sessionProfile is the profile the user explicitly switched to this
 	// session; config reloads re-select it (unless a pivot lock wins).
 	sessionProfile string
@@ -191,8 +194,58 @@ func (m *Model) pruneAcknowledged(broken []config.ProfileParseError) {
 	}
 }
 
+// protectsMode reports whether the current mode must not be silently
+// changed by a background event: the security lock, or a field mid-
+// capturing typed characters (capturingText).
+func (m Model) protectsMode() bool {
+	return m.mode == lockedMode || m.capturingText()
+}
+
+// applyReloadedBundle applies a reload and shows any broken/dropped-profile
+// notice. presentNextBrokenProfile/presentDroppedProfileNote defer instead
+// of presenting while protectsMode() is true.
+func (m Model) applyReloadedBundle(bundle config.ConfigBundle) Model {
+	m.applyBundle(bundle)
+	if len(bundle.Broken) > 0 {
+		m.profile.pendingErrors = append(m.profile.pendingErrors, bundle.Broken...)
+		m.profile.errorQueueActive = true
+		return m.presentNextBrokenProfile()
+	}
+	if bundle.DroppedProfile != "" {
+		return m.presentDroppedProfileNote(bundle.DroppedProfile)
+	}
+	if !m.protectsMode() {
+		m.mode = gridMode
+	}
+	return m
+}
+
+// presentDeferredIfSafe shows the oldest queued broken/dropped-profile
+// notice the moment nothing is protecting the current mode from it —
+// the single point where "new data arrived" and "it's safe to show it"
+// reconnect, run after every message regardless of what caused a
+// protected mode to end.
+func (m Model) presentDeferredIfSafe() Model {
+	if m.protectsMode() {
+		return m
+	}
+	if len(m.profile.pendingErrors) > 0 {
+		return m.presentNextBrokenProfile()
+	}
+	if m.profile.pendingDroppedProfile != "" {
+		name := m.profile.pendingDroppedProfile
+		m.profile.pendingDroppedProfile = ""
+		return m.presentDroppedProfileNote(name)
+	}
+	return m
+}
+
 // presentNextBrokenProfile pops the next pending broken profile error and configures infoMode to display it.
+// Deferred (queue left untouched) while protectsMode() is true.
 func (m Model) presentNextBrokenProfile() Model {
+	if m.protectsMode() {
+		return m
+	}
 	// Filter out already acknowledged errors
 	staleOnly := 0
 	for len(m.profile.pendingErrors) > 0 {
@@ -285,6 +338,10 @@ func (m Model) presentNextBrokenProfile() Model {
 // broken-profile error). Dismissed by any key, returning to the grid (the rescue
 // grid).
 func (m Model) presentDroppedProfileNote(name string) Model {
+	if m.protectsMode() {
+		m.profile.pendingDroppedProfile = name
+		return m
+	}
 	m.previousMode = gridMode
 	m.profile.errorQueueActive = false
 	m.activeDetail = &DetailState{
@@ -528,6 +585,9 @@ func (m Model) enterLockedMode() Model {
 	return m
 }
 
+// exitLockedMode restores the mode locked from. Anything that piled up
+// while locked (pendingErrors/pendingDroppedProfile) surfaces afterward via
+// presentDeferredIfSafe, run by Update() after every message.
 func (m Model) exitLockedMode() Model {
 	if m.mode == lockedMode {
 		m.mode = m.lock.modeBefore
