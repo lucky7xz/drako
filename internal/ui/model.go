@@ -221,14 +221,10 @@ func (m Model) applyReloadedBundle(bundle config.ConfigBundle) Model {
 }
 
 // presentDeferredIfSafe shows the oldest queued broken/dropped-profile
-// notice the moment nothing is protecting the current mode from it —
-// the single point where "new data arrived" and "it's safe to show it"
-// reconnect, run after every message regardless of what caused a
-// protected mode to end.
+// notice, run after every message regardless of what caused a protected
+// mode to end. presentNextBrokenProfile/presentDroppedProfileNote already
+// no-op while protectsMode() is true, so this just needs to try them.
 func (m Model) presentDeferredIfSafe() Model {
-	if m.protectsMode() {
-		return m
-	}
 	if len(m.profile.pendingErrors) > 0 {
 		return m.presentNextBrokenProfile()
 	}
