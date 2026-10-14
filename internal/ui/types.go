@@ -32,8 +32,8 @@ type (
 	profileStatusClearMsg struct {
 		id int
 	}
-	navTimeoutMsg      struct{}
-	rowFlashTimeoutMsg struct{}
+	navTimeoutMsg      struct{ seq int }
+	rowFlashTimeoutMsg struct{ seq int }
 	lockCheckMsg       struct{}
 )
 

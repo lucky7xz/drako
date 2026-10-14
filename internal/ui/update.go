@@ -207,18 +207,15 @@ func (m Model) handleMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, networkTick()
 
 	case navTimeoutMsg:
-		if m.gridNav.timer != nil {
-			m.gridNav.timer.Stop()
+		if msg.seq == m.gridNav.navSeq {
+			m.gridNav.navPending = false
 		}
-		m.gridNav.timer = nil
 		return m, nil
 
 	case rowFlashTimeoutMsg:
-		if m.gridNav.flashTimer != nil {
-			m.gridNav.flashTimer.Stop()
+		if msg.seq == m.gridNav.flashSeq {
+			m.gridNav.flashActive = false
 		}
-		m.gridNav.flashTimer = nil
-		m.gridNav.flashActive = false
 		return m, nil
 
 	case profileStatusClearMsg:
@@ -230,7 +227,9 @@ func (m Model) handleMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case leaderTimeoutMsg:
-		m.disarmLeader()
+		if msg.seq == m.leader.seq {
+			m.disarmLeader()
+		}
 		return m, nil
 
 	case lockCheckMsg:

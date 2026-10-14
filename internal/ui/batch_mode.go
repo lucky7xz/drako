@@ -155,15 +155,7 @@ func (m Model) updateBatchMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.quickNav(num - 1)
 	}
 	// Any non-numeric key ends a quick-nav sequence in progress.
-	if m.gridNav.timer != nil {
-		m.gridNav.timer.Stop()
-		m.gridNav.timer = nil
-	}
-	if m.gridNav.flashTimer != nil {
-		m.gridNav.flashTimer.Stop()
-		m.gridNav.flashTimer = nil
-		m.gridNav.flashActive = false
-	}
+	m.gridNav.cancel()
 
 	switch {
 	case IsCancel(m.Config.Keys, msg):

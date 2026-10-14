@@ -69,7 +69,7 @@ func (m Model) renderGrid(budgetLines int) string {
 			switch {
 			case inGridOrBatch && r == m.gridNav.cursorRow && c == m.gridNav.cursorCol:
 				style = m.styles.SelectedCell
-			case inGridOrBatch && m.gridNav.timer != nil && c == m.gridNav.cursorCol:
+			case inGridOrBatch && m.gridNav.navPending && c == m.gridNav.cursorCol:
 				style = m.styles.ColumnPendingCell
 			default:
 				style = m.styles.Cell

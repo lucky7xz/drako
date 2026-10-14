@@ -35,10 +35,8 @@ func TestQuickNav_Characterization(t *testing.T) {
 		if m.gridNav.cursorCol != 2 || m.gridNav.cursorRow != 0 {
 			t.Errorf("cursor = (%d,%d), want (0,2)", m.gridNav.cursorRow, m.gridNav.cursorCol)
 		}
-		if m.gridNav.timer == nil {
-			t.Error("expected quicknav timer to be armed")
-		} else {
-			m.gridNav.timer.Stop()
+		if !m.gridNav.navPending {
+			t.Error("expected quicknav to await the row digit")
 		}
 		if cmd == nil {
 			t.Error("expected a timeout command")
@@ -49,9 +47,6 @@ func TestQuickNav_Characterization(t *testing.T) {
 		m := quickNavModel()
 		tm, _ := m.updateGridMode(keyRune("9")) // clamps to col 2
 		m = tm.(Model)
-		if m.gridNav.timer != nil {
-			m.gridNav.timer.Stop()
-		}
 		if m.gridNav.cursorCol != 2 {
 			t.Errorf("cursorCol = %d, want 2 (clamped)", m.gridNav.cursorCol)
 		}
@@ -66,8 +61,8 @@ func TestQuickNav_Characterization(t *testing.T) {
 		if m.gridNav.cursorRow != 1 || m.gridNav.cursorCol != 2 {
 			t.Errorf("cursor = (%d,%d), want (1,2)", m.gridNav.cursorRow, m.gridNav.cursorCol)
 		}
-		if m.gridNav.timer != nil {
-			t.Error("expected quicknav timer cleared after second press")
+		if m.gridNav.navPending {
+			t.Error("expected quicknav sequence ended after second press")
 		}
 	})
 

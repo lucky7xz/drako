@@ -17,10 +17,10 @@ const leaderWindow = 500 * time.Millisecond // same feel as quick-nav
 
 type leaderState struct {
 	pending bool
-	timer   *time.Timer
+	seq     int // tags each arming's timeout; a stale one is ignored
 }
 
-type leaderTimeoutMsg struct{}
+type leaderTimeoutMsg struct{ seq int }
 
 // IsLeader reports whether the key is the configured leader.
 func IsLeader(c config.InputConfig, msg tea.KeyMsg) bool {
@@ -30,20 +30,15 @@ func IsLeader(c config.InputConfig, msg tea.KeyMsg) bool {
 // armLeader starts a sequence: mark pending and schedule the timeout.
 func (m Model) armLeader() (tea.Model, tea.Cmd) {
 	m.leader.pending = true
-	m.leader.timer = time.NewTimer(leaderWindow)
-	timer := m.leader.timer
-	return m, func() tea.Msg {
-		<-timer.C
-		return leaderTimeoutMsg{}
-	}
+	m.leader.seq++
+	seq := m.leader.seq
+	return m, tea.Tick(leaderWindow, func(time.Time) tea.Msg {
+		return leaderTimeoutMsg{seq: seq}
+	})
 }
 
 // disarmLeader ends a sequence (continuation seen, or cancelled).
 func (m *Model) disarmLeader() {
-	if m.leader.timer != nil {
-		m.leader.timer.Stop()
-		m.leader.timer = nil
-	}
 	m.leader.pending = false
 }
 

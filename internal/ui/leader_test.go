@@ -97,7 +97,7 @@ func TestLeaderTimeoutDisarms(t *testing.T) {
 	m := switchTestModel(t)
 	m = press(t, m, keyRunes("m"))
 
-	next, _ := m.Update(leaderTimeoutMsg{})
+	next, _ := m.Update(leaderTimeoutMsg{seq: m.leader.seq})
 	m = next.(Model)
 	if m.leader.pending {
 		t.Error("timeout must disarm the sequence")

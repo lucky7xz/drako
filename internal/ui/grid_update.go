@@ -27,15 +27,7 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	// Any non-numeric key cancels a navigation sequence in progress.
-	if m.gridNav.timer != nil {
-		m.gridNav.timer.Stop()
-		m.gridNav.timer = nil
-	}
-	if m.gridNav.flashTimer != nil {
-		m.gridNav.flashTimer.Stop()
-		m.gridNav.flashTimer = nil
-		m.gridNav.flashActive = false
-	}
+	m.gridNav.cancel()
 
 	switch {
 	case IsQuit(m.Config.Keys, msg):
@@ -134,32 +126,24 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 // "locked in" confirmation. The timer expiry (navTimeoutMsg) and the flash
 // expiry (rowFlashTimeoutMsg) end their respective states elsewhere.
 func (m Model) quickNav(targetIndex int) (tea.Model, tea.Cmd) {
-	if m.gridNav.timer != nil {
+	if m.gridNav.navPending {
 		// Second press: choose a row within the already-selected column.
-		m.gridNav.timer.Stop()
-		m.gridNav.timer = nil
+		m.gridNav.navPending = false
 		lastRow := core.FindLastPopulatedRow(m.gridNav.grid, m.gridNav.cursorCol)
 		m.gridNav.cursorRow = min(targetIndex, lastRow)
 
-		if m.gridNav.flashTimer != nil {
-			m.gridNav.flashTimer.Stop()
-		}
 		m.gridNav.flashActive = true
-		m.gridNav.flashTimer = time.NewTimer(280 * time.Millisecond)
-		return m, func() tea.Msg {
-			<-m.gridNav.flashTimer.C
-			return rowFlashTimeoutMsg{}
-		}
+		m.gridNav.flashSeq++
+		seq := m.gridNav.flashSeq
+		return m, tea.Tick(280*time.Millisecond, func(time.Time) tea.Msg {
+			return rowFlashTimeoutMsg{seq: seq}
+		})
 	}
 
 	// First press: choose a column, parking on its first populated row. A
 	// fresh sequence starting mid-flash shouldn't leave the old row's flash
 	// showing alongside the new column highlight.
-	if m.gridNav.flashTimer != nil {
-		m.gridNav.flashTimer.Stop()
-		m.gridNav.flashTimer = nil
-		m.gridNav.flashActive = false
-	}
+	m.gridNav.flashActive = false
 
 	targetCol := min(targetIndex, core.FindLastPopulatedCol(m.gridNav.grid))
 	if targetCol < 0 {
@@ -167,11 +151,12 @@ func (m Model) quickNav(targetIndex int) (tea.Model, tea.Cmd) {
 	}
 	m.gridNav.cursorCol = targetCol
 	m.gridNav.cursorRow = core.FindFirstPopulatedRow(m.gridNav.grid, targetCol)
-	m.gridNav.timer = time.NewTimer(500 * time.Millisecond)
-	return m, func() tea.Msg {
-		<-m.gridNav.timer.C
-		return navTimeoutMsg{}
-	}
+	m.gridNav.navPending = true
+	m.gridNav.navSeq++
+	seq := m.gridNav.navSeq
+	return m, tea.Tick(500*time.Millisecond, func(time.Time) tea.Msg {
+		return navTimeoutMsg{seq: seq}
+	})
 }
 
 func (g *gridNav) moveCursor(rowDir, colDir int) {

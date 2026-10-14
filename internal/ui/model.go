@@ -22,19 +22,25 @@ const (
 )
 
 // gridNav is the command grid plus the cursor moving over it, including the
-// quicknav two-step (column-then-row) jump timer.
+// quicknav two-step (column-then-row) jump window.
 type gridNav struct {
 	grid      [][]string
 	cursorRow int
 	cursorCol int
-	timer     *time.Timer
 
-	// flashTimer/flashActive briefly highlight the row the cursor just
-	// landed on after the second quicknav digit completes the jump — a
-	// "locked in" confirmation, separate from the column-pending window
-	// above. The flashed row is always cursorRow, so no extra field for it.
-	flashTimer  *time.Timer
+	// navPending: a column was picked and the row digit is awaited.
+	// flashActive: the row just landed on is highlighted (always cursorRow).
+	// Each seq tags its tea.Tick so a timeout from an older arming is ignored.
+	navPending  bool
+	navSeq      int
 	flashActive bool
+	flashSeq    int
+}
+
+// cancel ends a quicknav sequence and any flash in progress.
+func (g *gridNav) cancel() {
+	g.navPending = false
+	g.flashActive = false
 }
 
 // dropdownState is an open dropdown: the grid cell that owns it, its items,
