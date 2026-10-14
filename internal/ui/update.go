@@ -410,11 +410,11 @@ func (m Model) afterEdit(msg editorFinishedMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	}
+	if m.GlassrootMode && glassrootRejectsBundle(bundle) {
+		return m.failGlassroot()
+	}
 	m.applyBundle(bundle)
 	if len(bundle.Broken) > 0 {
-		if m.GlassrootMode {
-			return m.failGlassroot()
-		}
 		m.profile.pendingErrors = append(m.profile.pendingErrors, bundle.Broken...)
 		m.profile.errorQueueActive = true
 		return m.presentNextBrokenProfile(), nil

@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"log"
+	"maps"
 	"os"
 	"strings"
 	"time"
@@ -89,6 +90,7 @@ type profileState struct {
 	// pendingDroppedProfile defers presentDroppedProfileNote's mode change
 	// while locked, same idea as pendingErrors but for a single string.
 	pendingDroppedProfile string
+	droppedNoted          string // dropped profile already explained; quiet until that changes
 	// sessionProfile is the profile the user explicitly switched to this
 	// session; config reloads re-select it (unless a pivot lock wins).
 	sessionProfile string
@@ -183,6 +185,12 @@ func (m *Model) applyBundle(bundle config.ConfigBundle) {
 	m.profile.configDir = bundle.ConfigDir
 	m.profile.pivotName = bundle.LockedName
 	m.profile.locked = strings.TrimSpace(bundle.LockedName) != ""
+	if bundle.DroppedProfile == m.profile.sessionProfile {
+		m.profile.sessionProfile = "" // the deck switched to is gone; stop requesting it
+	}
+	if bundle.DroppedProfile != m.profile.droppedNoted {
+		m.profile.droppedNoted = "" // resolved, or a different drop: that one is news
+	}
 	m.pruneAcknowledged(bundle.Broken)
 }
 
@@ -218,7 +226,8 @@ func (m Model) applyReloadedBundle(bundle config.ConfigBundle) Model {
 		m.profile.errorQueueActive = true
 		return m.presentNextBrokenProfile()
 	}
-	if bundle.DroppedProfile != "" {
+	m.profile.pendingErrors, m.profile.errorQueueActive = nil, false // nothing is broken any more
+	if bundle.DroppedProfile != "" && bundle.DroppedProfile != m.profile.droppedNoted {
 		return m.presentDroppedProfileNote(bundle.DroppedProfile)
 	}
 	if !m.protectsMode() {
@@ -231,7 +240,10 @@ func (m Model) applyReloadedBundle(bundle config.ConfigBundle) Model {
 // a queue already on screen waits for the user's keypress (updateInfoMode).
 func (m Model) presentDeferredIfSafe() Model {
 	showingQueue := m.profile.errorQueueActive && m.mode == infoMode
-	if len(m.profile.pendingErrors) > 0 && !showingQueue {
+	if showingQueue {
+		return m
+	}
+	if len(m.profile.pendingErrors) > 0 {
 		return m.presentNextBrokenProfile()
 	}
 	if m.profile.pendingDroppedProfile != "" {
@@ -346,18 +358,27 @@ func (m Model) presentDroppedProfileNote(name string) Model {
 	}
 	m.previousMode = gridMode
 	m.profile.errorQueueActive = false
+	m.profile.droppedNoted = name
+	desc := "This profile is no longer available — it was deleted or moved to " +
+		"the inventory. drako has dropped into Rescue Mode (any lock on it has been " +
+		"cleared).\n\n" +
+		"To get back to work:\n" +
+		"• Inventory (i): equip a profile.\n" +
+		"• Cycle (o / p): jump to a still-equipped profile.\n" +
+		"• Exit Rescue Mode: the top-left button of the grid.\n\n" +
+		"Press any key to dismiss."
+	if len(m.profile.profiles) > 0 {
+		desc = "This profile is no longer available — it was deleted or moved to " +
+			"the inventory. drako switched to " + m.ActiveProfileName() + " (any lock " +
+			"on it has been cleared).\n\n" +
+			"Inventory (i) can equip it again.\n\n" +
+			"Press any key to dismiss."
+	}
 	m.activeDetail = &DetailState{
-		Title:    "Profile no longer available",
-		KeyLabel: "Profile",
-		Value:    name,
-		Description: "This profile is no longer available — it was deleted or moved to " +
-			"the inventory. drako has dropped into Rescue Mode (any lock on it has been " +
-			"cleared).\n\n" +
-			"To get back to work:\n" +
-			"• Inventory (i): equip a profile.\n" +
-			"• Cycle (o / p): jump to a still-equipped profile.\n" +
-			"• Exit Rescue Mode: the top-left button of the grid.\n\n" +
-			"Press any key to dismiss.",
+		Title:       "Profile no longer available",
+		KeyLabel:    "Profile",
+		Value:       name,
+		Description: desc,
 		Meta: []DetailMeta{
 			{Label: "CWD", Value: m.profile.configDir},
 		},
@@ -405,14 +426,16 @@ func (m Model) ActiveProfileName() string {
 // profile, or the command you ran switched one. Following the name lands you on
 // the cell you actually ran, wherever it moved to.
 type Session struct {
-	Cell    string
-	Profile string
+	Cell         string
+	Profile      string
+	acknowledged map[string]bool // broken-profile errors already shown
+	droppedNoted string          // dropped profile already explained
 }
 
 // Session snapshots the position for Restore to re-establish once the config
 // has been re-read.
 func (m Model) Session() Session {
-	s := Session{Profile: m.ActiveProfileName()}
+	s := Session{Profile: m.ActiveProfileName(), acknowledged: maps.Clone(m.profile.acknowledged), droppedNoted: m.profile.droppedNoted}
 
 	row, col := m.gridNav.cursorRow, m.gridNav.cursorCol
 	if row >= 0 && row < len(m.gridNav.grid) && col >= 0 && col < len(m.gridNav.grid[row]) {
@@ -428,8 +451,8 @@ func (m Model) Session() Session {
 // The profile goes first. Switching one replaces the grid, so a cursor set
 // before the switch would index into a grid that no longer exists.
 //
-// Restore never touches Quitting or ExitCode. It must be called *after* the
-// host's glassroot gate, so that a session glassroot decided to end cannot be
+// Restore never touches Quitting or ExitCode. InitialModel calls it *after* the
+// glassroot gate, so that a session glassroot decided to end cannot be
 // revived by a carried value.
 //
 // A carried profile outranks the pivot lock, which is the one behaviour this
@@ -468,7 +491,9 @@ func (m *Model) Restore(s Session) {
 	}
 }
 
-func InitialModel(glassrootMode bool) Model {
+// InitialModel builds one lap's model from the config on disk, then applies what
+// the previous lap carried over (the zero Session on the first lap).
+func InitialModel(glassrootMode bool, carried Session) Model {
 	path, err := os.Getwd()
 	if err != nil {
 		path = "could not get path"
@@ -510,11 +535,20 @@ func InitialModel(glassrootMode bool) Model {
 		GlassrootMode: glassrootMode,
 	}
 	m.applyBundle(bundle)
+	for path := range carried.acknowledged {
+		m.profile.acknowledged[path] = true
+	}
+	m.pruneAcknowledged(bundle.Broken) // an error dismissed last lap stays dismissed while still broken
+	if bundle.DroppedProfile == carried.droppedNoted {
+		m.profile.droppedNoted = carried.droppedNoted
+	}
+	m.Restore(carried)
+
 	if len(bundle.Broken) > 0 {
 		m.profile.pendingErrors = append(m.profile.pendingErrors, bundle.Broken...)
 		m.profile.errorQueueActive = true
 		m = m.presentNextBrokenProfile()
-	} else if bundle.DroppedProfile != "" {
+	} else if bundle.DroppedProfile != "" && bundle.DroppedProfile != m.profile.droppedNoted {
 		// Relaunched after the active profile was deleted out from under us:
 		// explain the rescue drop instead of showing a bare rescue grid.
 		m = m.presentDroppedProfileNote(bundle.DroppedProfile)

@@ -200,3 +200,44 @@ func TestBrokenQueueWaitsForKeypress(t *testing.T) {
 		t.Errorf("gamma should still be pending, %d left", len(m.profile.pendingErrors))
 	}
 }
+
+// A clean reload under the error popup (the file got fixed) ends the queue;
+// the next ordinary popup must not be mistaken for it and exit into rescue.
+func TestCleanReloadEndsTheErrorQueue(t *testing.T) {
+	cfg := config.Config{X: 1, Y: 1, Commands: []config.Command{{Name: "hi", Command: "echo hi", Col: "a"}}}
+	cfg.ApplyDefaults()
+	m := queueModel(brokenErr("alpha"))
+	m.Config, m.gridNav.grid = cfg, config.BuildGrid(cfg)
+	m = m.presentNextBrokenProfile()
+
+	m = m.applyReloadedBundle(config.ConfigBundle{Config: cfg})
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("e")}) // explain "hi"
+	next, _ = next.(Model).Update(tea.KeyMsg{Type: tea.KeyEnter})           // close it
+	m = next.(Model)
+
+	if m.mode != gridMode || m.Config.Commands[0].Name != "hi" {
+		t.Errorf("closing an explain popup after the fix landed in mode %v on %q", m.mode, m.Config.Commands[0].Name)
+	}
+}
+
+// A dropped-profile note deferred under the lock waits its turn: it must not
+// replace a broken-profile popup the user hasn't dismissed yet.
+func TestDeferredDroppedNoteWaitsForTheQueue(t *testing.T) {
+	m := queueModel(brokenErr("alpha"), brokenErr("beta"))
+	m.profile.pendingDroppedProfile = "work"
+	m = m.presentNextBrokenProfile()
+
+	next, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40}) // any background message
+	m = next.(Model)
+	if m.activeDetail == nil || !strings.Contains(m.activeDetail.Title, "alpha") || !m.profile.errorQueueActive {
+		t.Fatalf("the queue was interrupted: showing %q, queue active %v", m.activeDetail.Title, m.profile.errorQueueActive)
+	}
+
+	for range 2 { // dismiss alpha, then beta
+		next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		m = next.(Model)
+	}
+	if m.activeDetail == nil || m.activeDetail.Title != "Profile no longer available" {
+		t.Errorf("after the queue the deferred note should show, got %+v", m.activeDetail)
+	}
+}

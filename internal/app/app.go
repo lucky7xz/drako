@@ -107,14 +107,11 @@ func Run() int {
 		// We initialize with the *current* directory which might have changed
 		// from manual Chdir or from internal logic
 
-		initial := ui.InitialModel(glassrootMode)
+		initial := ui.InitialModel(glassrootMode, session)
 		if initial.Quitting {
 			// e.g. glassroot with a broken profile: fail before the TUI starts
 			return initial.ExitCode
 		}
-		// Strictly below that gate: a session glassroot has decided to end must
-		// not be revivable by a value carried from the previous lap.
-		initial.Restore(session)
 
 		program := tea.NewProgram(initial)
 		current.Store(program)
