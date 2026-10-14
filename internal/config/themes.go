@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"strconv"
-	"sync"
 
 	"github.com/BurntSushi/toml"
 	"github.com/lucky7xz/drako/internal/paths"
@@ -41,22 +40,6 @@ var dracula = DracoThemeConfig{
 	Error:      "#ff2e63",
 	Info:       "#00f5d4",
 	Accent:     "#ff2e63",
-}
-
-var (
-	loadedThemes map[string]DracoThemeConfig
-	themesOnce   sync.Once
-)
-
-// loadThemes runs once, on first GetTheme. It never panics: a missing or
-// malformed overlay is logged and skipped.
-func loadThemes() {
-	configDir, err := paths.ConfigDir()
-	if err != nil {
-		log.Printf("themes: no config dir, using built-in themes only: %v", err)
-		configDir = ""
-	}
-	loadedThemes = buildThemes(configDir)
 }
 
 // buildThemes layers themes, later layers overriding by name: the dracula
@@ -197,11 +180,15 @@ func hexRGB(hex string) (r, g, b uint64, err error) {
 	return r, g, b, nil
 }
 
-// GetTheme returns the color palette for a given theme name.
-// If the theme is not found, it defaults to "dracula".
+// GetTheme returns the named palette, or dracula. The layers are read on every
+// call, so an edited themes.toml applies on the next reload.
 func GetTheme(name string) DracoThemeConfig {
-	themesOnce.Do(loadThemes)
-	if theme, ok := loadedThemes[name]; ok {
+	configDir, err := paths.ConfigDir()
+	if err != nil {
+		log.Printf("themes: no config dir, using built-in themes only: %v", err)
+		configDir = ""
+	}
+	if theme, ok := buildThemes(configDir)[name]; ok {
 		return theme
 	}
 	return dracula
