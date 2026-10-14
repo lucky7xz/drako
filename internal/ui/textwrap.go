@@ -84,3 +84,54 @@ func WrapText(text string, width int) []string {
 	}
 	return result
 }
+
+// WrapScript wraps a command for display without reflowing it: indentation
+// and inner spacing survive, and only the space a line breaks at is dropped.
+func WrapScript(text string, width int) []string {
+	var result []string
+	for _, line := range strings.Split(text, "\n") {
+		result = append(result, wrapScriptLine(line, width)...)
+	}
+	return result
+}
+
+func wrapScriptLine(line string, width int) []string {
+	if width <= 0 || lipgloss.Width(line) <= width {
+		return []string{line}
+	}
+	var lines []string
+	cur := ""
+	for _, tok := range splitSpaceRuns(line) {
+		if lipgloss.Width(cur)+lipgloss.Width(tok) <= width {
+			cur += tok
+			continue
+		}
+		if cur != "" {
+			lines = append(lines, cur)
+		}
+		cur = ""
+		if strings.TrimSpace(tok) == "" {
+			continue
+		}
+		chunks := WrapWord(tok, width)
+		lines = append(lines, chunks[:len(chunks)-1]...)
+		cur = chunks[len(chunks)-1]
+	}
+	if cur != "" {
+		lines = append(lines, cur)
+	}
+	return lines
+}
+
+// splitSpaceRuns cuts s into alternating runs of spaces and non-spaces.
+func splitSpaceRuns(s string) []string {
+	var toks []string
+	start := 0
+	for i := 1; i <= len(s); i++ {
+		if i == len(s) || (s[i] == ' ') != (s[i-1] == ' ') {
+			toks = append(toks, s[start:i])
+			start = i
+		}
+	}
+	return toks
+}

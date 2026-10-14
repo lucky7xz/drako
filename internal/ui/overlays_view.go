@@ -365,7 +365,7 @@ func (m Model) infoScrollMetrics() (valueLines []string, viewportH, maxOffset in
 		return nil, 0, 0
 	}
 	ww := m.infoWrapWidth()
-	valueLines = WrapText(m.activeDetail.Value, ww)
+	valueLines = WrapScript(m.activeDetail.Value, ww)
 
 	// Count the pinned (non-script) rows exactly as viewInfoMode lays them out,
 	// so the viewport clamp matches what actually reaches the screen.

@@ -24,7 +24,7 @@ func (m Model) renderGrid(budgetLines int) string {
 
 	// Calculate the padding needed for the largest row number. Row labels
 	// are 1-based, so the last row is labeled totalRows, not totalRows-1.
-	maxRowNumWidth := len(fmt.Sprintf("%d", totalRows))
+	maxRowNumWidth := rowLabelWidth(totalRows)
 
 	widthBudget := m.termWidth - appStyle.GetHorizontalMargins() - (maxRowNumWidth + 1)
 	totalCellWidth := fitFootprint(cellFootprint(m.gridNav.grid), widthBudget, totalCols)

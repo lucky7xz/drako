@@ -187,6 +187,11 @@ func (m Model) renderFooter() string {
 	return m.styles.Footer.Render("[ github.com/lucky7xz | {chronyx}.xyz ]")
 }
 
+// rowLabelWidth is the digit width of the grid's 1-based row labels.
+func rowLabelWidth(totalRows int) int {
+	return len(fmt.Sprintf("%d", totalRows))
+}
+
 // belowMinimum reports whether the terminal cannot fit even the minimum
 // grid window (2x2, capped by the grid's own size), plus the required
 // dimensions for the overlay. It uses the same measured quantities as
@@ -202,7 +207,7 @@ func (m Model) belowMinimum() (bool, int, int) {
 	minCols := min(2, totalCols)
 
 	rowHeight := lipgloss.Height(m.styles.Cell.Render("x"))
-	maxRowNumWidth := len(fmt.Sprintf("%d", max(totalRows-1, 0)))
+	maxRowNumWidth := rowLabelWidth(totalRows)
 
 	// Chrome floor: hidden header/counter/footer still cost one line each,
 	// plus the column-header line; scroll markers only when the axis scrolls.

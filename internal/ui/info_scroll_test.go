@@ -154,3 +154,25 @@ func TestScrollbarColumn_ThumbPosition(t *testing.T) {
 		t.Errorf("thumb length = %d, want within [1,18]", thumbLen)
 	}
 }
+
+// The explain popup shows the command as it will run: indentation and
+// repeated spaces are part of the script, not prose to reflow.
+func TestInfoScrollMetrics_KeepsScriptWhitespace(t *testing.T) {
+	script := "if true; then\n    printf '%s    %s\\n' a b\nfi"
+	m := Model{
+		mode: infoMode, termWidth: 100, termHeight: 60,
+		activeDetail: &DetailState{Title: "T", KeyLabel: "Command", Value: script},
+	}
+	lines, _, _ := m.infoScrollMetrics()
+	if got := strings.Join(lines, "\n"); got != script {
+		t.Errorf("popup shows\n%s\nwant\n%s", got, script)
+	}
+}
+
+func TestWrapScript_BreaksLongLinesAtSpaces(t *testing.T) {
+	got := WrapScript("  echo aaaa bbbb", 11)
+	want := []string{"  echo aaaa", "bbbb"}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Errorf("WrapScript = %q, want %q", got, want)
+	}
+}
