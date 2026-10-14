@@ -35,7 +35,17 @@ No install — drako served over SSH ([Wish](https://github.com/charmbracelet/wi
 
 > Requires Go **1.24+** —  A `curl | sh` installer is on the roadmap.
 >
-> **No Go toolchain?** Prebuilt static binaries for Linux, macOS and FreeBSD are on the [Releases](https://github.com/lucky7xz/drako/releases) page — see [Compatibility](#-compatibility) for what runs where.
+> **No Go toolchain?** Prebuilt static binaries for Linux, macOS and FreeBSD are on the [Releases](https://github.com/lucky7xz/drako/releases) page — see [Compatibility](#-compatibility) for what runs where. Linux packages are there too:
+>
+> | Distro | Install the downloaded package |
+> | --- | --- |
+> | Debian, Ubuntu | `sudo apt install ./drako_*.deb` |
+> | Fedora, RHEL | `sudo dnf install ./drako_*.rpm` |
+> | openSUSE | `sudo zypper install ./drako_*.rpm` |
+> | Arch | `sudo pacman -U ./drako_*.pkg.tar.zst` |
+> | Alpine | as root: `apk add --allow-untrusted ./drako_*.apk` |
+>
+> Releases after v0.4.1 are attested: `gh attestation verify <file> -R lucky7xz/drako` confirms a download was built by this repo's release workflow.
 
 ```bash
 go install github.com/lucky7xz/drako@latest
@@ -104,7 +114,7 @@ The variant key is what [the Weaver](#-cross-platform-decks-the-weaver) resolves
 | Bazzite, Silverblue, Kinoite, Bluefin, Aurora | ✅ | `linux_immutable` → `linux_fedora` | ostree-detected |
 | SteamOS / Steam Deck | ✅ | `linux_immutable` → `linux_arch` | read-only root, no ostree |
 | Alpine | ✅ | `linux_generic` | ⚠️ no bash by default — see below |
-| NixOS | ✅ | `linux_generic` | no patchelf needed — static binary |
+| NixOS | ✅ | `linux_nixos` | no patchelf needed — static binary |
 | Gentoo, Slackware, anything else | ✅ | `linux_generic` | |
 
 ### What you need installed

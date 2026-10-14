@@ -9,7 +9,8 @@ project_name: drako
 
 before:
   hooks:
-    - go mod tidy
+    # Check, don't fix: a release builds exactly the go.mod that was tagged.
+    - go mod tidy -diff
     # Collect the licences of every module linked into the binary. Generated
     # here so it can never drift from go.mod.
     - sh scripts/third-party-notices.sh
@@ -20,6 +21,9 @@ builds:
     binary: drako
     env:
       - CGO_ENABLED=0          # pure Go -> static binaries, run anywhere
+    flags:
+      - -trimpath              # no build-machine paths: reproducible binaries
+    mod_timestamp: "{{ .CommitTimestamp }}"
     ldflags:
       - -s -w                  # strip debug info for smaller binaries
       - -X github.com/lucky7xz/drako/internal/config.version={{ .Tag }}
@@ -68,27 +72,48 @@ changelog:
   sort: asc
   filters:
     exclude:
-      - '^docs:'
-      - '^test:'
+      - '^docs(\(.+\))?:'
+      - '^test(\(.+\))?:'
+  groups:
+    - title: Features
+      regexp: '^feat(\(.+\))?!?:'
+      order: 0
+    - title: Fixes
+      regexp: '^fix(\(.+\))?!?:'
+      order: 1
+    - title: Other
+      order: 999
 
-# Linux packages (.deb / .rpm) — built into the release, no external repo needed.
+# Linux packages — built into the release, no external repo needed.
 nfpms:
   - id: packages
     package_name: drako
     file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     vendor: "Lucky7xz"
     homepage: "https://github.com/lucky7xz/drako"
-    maintainer: "Lucky7xz <lucky7xz@github.com>"
+    maintainer: &maintainer "Lucky7xz <lucky7xz@github.com>"
     description: "TUI-Deck launcher for terminal discipline."
     license: "AGPL-3.0"
     formats:
       - deb
       - rpm
+      - apk                    # Alpine
+      - archlinux              # Arch: pacman -U
     dependencies:
-      - git
       # The default shell for unconfigured cells is `bash -lc`
       # (core.fallbackShell), so without it an installed drako runs nothing.
       - bash
+    # The rest only unlock features (README, "What you need installed").
+    recommends:
+      - git                    # summoning profiles, git cells
+    suggests:
+      - tmux                   # batch mode
+      - wl-clipboard
+      - xclip
+      - xsel
+      - xdg-utils
+    archlinux:
+      packager: *maintainer
     contents:
       - src: LICENCE
         dst: /usr/share/doc/drako/LICENCE
