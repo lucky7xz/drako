@@ -65,16 +65,45 @@ func TestMalformedUserThemesIgnored(t *testing.T) {
 	}
 }
 
-func TestDarkenAccent(t *testing.T) {
-	if got, want := darkenAccent("#ff2e63", "#0d0221"), "#79153e"; got != want {
-		t.Errorf("darkenAccent(#ff2e63, #0d0221) = %s, want %s", got, want)
+func TestMix(t *testing.T) {
+	if got, want := mix("#ff2e63", "#0d0221", lockedAccentWeight), "#79153e"; got != want {
+		t.Errorf("mix(#ff2e63, #0d0221) = %s, want %s", got, want)
 	}
-	if darkenAccent("not-a-color", "#000000") != "not-a-color" {
-		t.Error("a malformed accent hex should be returned unchanged")
+	if mix("not-a-color", "#000000", 0.5) != "not-a-color" {
+		t.Error("a malformed first hex should be returned unchanged")
 	}
-	if darkenAccent("#ff2e63", "#zzzzzz") != "#ff2e63" {
-		t.Error("a malformed background hex should return accent unchanged")
+	if mix("#ff2e63", "#zzzzzz", 0.5) != "#ff2e63" {
+		t.Error("a malformed second hex should return the first unchanged")
 	}
+}
+
+// The quicknav pending column echoes the cursor, quieter: every channel sits
+// between the plain border and the cursor's, and it matches neither.
+func TestPendingBorderSitsBetweenPlainAndCursor(t *testing.T) {
+	for name, theme := range buildThemes(t.TempDir()) {
+		ui := MapThemeToUI(theme)
+		plain, pending, cursor := rgb(t, ui.GridBorder), rgb(t, ui.GridPendingBorder), rgb(t, ui.GridSelBorder)
+		if pending == plain || pending == cursor {
+			t.Errorf("%s: pending %s must differ from plain %s and cursor %s",
+				name, ui.GridPendingBorder, ui.GridBorder, ui.GridSelBorder)
+		}
+		for i := range pending {
+			if pending[i] < min(plain[i], cursor[i]) || pending[i] > max(plain[i], cursor[i]) {
+				t.Errorf("%s: pending %s is not between plain %s and cursor %s",
+					name, ui.GridPendingBorder, ui.GridBorder, ui.GridSelBorder)
+				break
+			}
+		}
+	}
+}
+
+func rgb(t *testing.T, hex string) [3]uint64 {
+	t.Helper()
+	r, g, b, err := hexRGB(hex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return [3]uint64{r, g, b}
 }
 
 func writeUserThemes(t *testing.T, dir, content string) {

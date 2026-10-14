@@ -139,7 +139,7 @@ func MapThemeToUI(t DracoThemeConfig) UIColors {
 		GridBorder:        t.Comment,
 		GridSelBorder:     t.Accent,
 		GridSelText:       t.Accent,
-		GridPendingBorder: t.Secondary,
+		GridPendingBorder: mix(t.Accent, t.Comment, 0.5), // the cursor's, half strength
 
 		Path:          t.Primary,
 		PathSelected:  t.Accent,
@@ -154,7 +154,7 @@ func MapThemeToUI(t DracoThemeConfig) UIColors {
 		TitleFG:      t.Primary,
 		ListHeaderFG: t.Secondary,
 		CursorFG:     t.Accent,
-		LockedFG:     darkenAccent(t.Accent, t.Background),
+		LockedFG:     mix(t.Accent, t.Background, lockedAccentWeight),
 
 		ButtonFG:    t.Foreground,
 		ButtonBG:    t.Comment,
@@ -171,17 +171,18 @@ func MapThemeToUI(t DracoThemeConfig) UIColors {
 // black, so a dark shade doesn't shift hue (e.g. red toward orange).
 const lockedAccentWeight = 0.45
 
-// darkenAccent blends accent toward background at lockedAccentWeight.
-func darkenAccent(accent, background string) string {
-	ar, ag, ab, errA := hexRGB(accent)
-	br, bg, bb, errB := hexRGB(background)
+// mix blends a toward b, keeping weight of a; it returns a unchanged when
+// either isn't #RRGGBB.
+func mix(a, b string, weight float64) string {
+	ar, ag, ab, errA := hexRGB(a)
+	br, bg, bb, errB := hexRGB(b)
 	if errA != nil || errB != nil {
-		return accent
+		return a
 	}
-	mix := func(a, b uint64) uint8 {
-		return uint8(float64(a)*lockedAccentWeight + float64(b)*(1-lockedAccentWeight))
+	ch := func(x, y uint64) uint8 {
+		return uint8(float64(x)*weight + float64(y)*(1-weight))
 	}
-	return fmt.Sprintf("#%02x%02x%02x", mix(ar, br), mix(ag, bg), mix(ab, bb))
+	return fmt.Sprintf("#%02x%02x%02x", ch(ar, br), ch(ag, bg), ch(ab, bb))
 }
 
 // hexRGB parses a "#RRGGBB" string into its three channels.
