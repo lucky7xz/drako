@@ -1,8 +1,10 @@
 package config
 
 import (
+	"maps"
 	"os"
 	"runtime"
+	"slices"
 	"strings"
 )
 
@@ -72,17 +74,27 @@ func detectLinuxDistro() string {
 	if err != nil {
 		return "linux_generic"
 	}
-	content := strings.ToLower(string(data))
+	return distroFromOSRelease(string(data))
+}
 
-	// Check against our map
-	for key, keywords := range DistroKeywords {
-		for _, kw := range keywords {
-			if strings.Contains(content, kw) {
-				return key
+// distroFromOSRelease matches ID, then each ID_LIKE entry, by prefix in a fixed
+// family order: a URL or name that holds another family's keyword never decides.
+func distroFromOSRelease(data string) string {
+	fields := map[string]string{}
+	for _, line := range strings.Split(data, "\n") {
+		if k, v, ok := strings.Cut(strings.TrimSpace(line), "="); ok {
+			fields[k] = strings.ToLower(strings.Trim(v, `"'`))
+		}
+	}
+	families := slices.Sorted(maps.Keys(DistroKeywords))
+	for _, id := range append([]string{fields["ID"]}, strings.Fields(fields["ID_LIKE"])...) {
+		for _, key := range families {
+			for _, kw := range DistroKeywords[key] {
+				if id != "" && strings.HasPrefix(id, kw) {
+					return key
+				}
 			}
 		}
 	}
-
-	// No specific distro matched
 	return "linux_generic"
 }

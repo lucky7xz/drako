@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 )
 
 // CommandItem represents a single item in a command dropdown
@@ -120,8 +121,9 @@ type ConfigBundle struct {
 // configured") and a note naming the available variants is appended to the
 // description.
 
-// runtimeTargetsFn resolves the platform keys; a var so tests can pin them.
-var runtimeTargetsFn = detectRuntimeTargets
+// runtimeTargetsFn resolves the platform keys, once per process (the host cannot
+// change under us); a var so tests can pin them.
+var runtimeTargetsFn = sync.OnceValue(detectRuntimeTargets)
 
 // resolveCommandField turns a decoded TOML command value into a string.
 func resolveCommandField(v any) (cmd string, note string, err error) {
