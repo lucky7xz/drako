@@ -246,3 +246,29 @@ func TestSessionLock_BareLetterStillTogglesTheProfileLock(t *testing.T) {
 		t.Fatal("bare r is the profile lock, not the session lock")
 	}
 }
+
+// A reload while locked replaces the grid; unlocking must not return to a
+// dropdown still listing the old folder's items.
+func TestUnlockAfterReloadLeavesTheStaleDropdown(t *testing.T) {
+	folder := func(item, cmd string) config.Config {
+		cfg := config.Config{X: 1, Y: 1, Commands: []config.Command{
+			{Name: "tools", Col: "a", Items: []config.CommandItem{{Name: item, Command: cmd}}},
+		}}
+		cfg.ApplyDefaults()
+		return cfg
+	}
+	old := folder("status", "git status")
+	m := Model{Config: old, styles: BuildStyles(old), mode: gridMode, gridNav: gridNav{grid: config.BuildGrid(old)}}
+	m = update(t, m, tea.KeyMsg{Type: tea.KeyEnter}) // open "tools"
+	if m.mode != dropdownMode {
+		t.Fatalf("setup: mode = %v, want dropdownMode", m.mode)
+	}
+	m = m.enterLockedMode()
+
+	m = m.applyReloadedBundle(config.ConfigBundle{Config: folder("wipe", "rm -rf ./build")})
+	m = pumpUnlock(t, m)
+
+	if m.mode == dropdownMode {
+		t.Errorf("unlock reopened a dropdown listing %q from the replaced config", m.dropdown.items[0].Name)
+	}
+}

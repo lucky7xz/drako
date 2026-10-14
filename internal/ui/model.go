@@ -182,6 +182,9 @@ func (m *Model) applyBundle(bundle config.ConfigBundle) {
 	}
 	m.applyConfig(bundle.Config)
 	m.batch = batchState{} // marks name cells of the grid being replaced
+	if showsGridCells(m.lock.modeBefore) {
+		m.lock.modeBefore = gridMode // and so would the mode unlocking returns to
+	}
 	m.profile.configDir = bundle.ConfigDir
 	m.profile.pivotName = bundle.LockedName
 	m.profile.locked = strings.TrimSpace(bundle.LockedName) != ""
@@ -230,10 +233,16 @@ func (m Model) applyReloadedBundle(bundle config.ConfigBundle) Model {
 	if bundle.DroppedProfile != "" && bundle.DroppedProfile != m.profile.droppedNoted {
 		return m.presentDroppedProfileNote(bundle.DroppedProfile)
 	}
-	if !m.protectsMode() {
+	if showsGridCells(m.mode) {
 		m.mode = gridMode
 	}
 	return m
+}
+
+// showsGridCells reports whether mode displays cells of the grid, which a reload
+// replaces; inventory, path and the lock screen stay put.
+func showsGridCells(mode navMode) bool {
+	return mode == dropdownMode || mode == batchMode || mode == infoMode
 }
 
 // presentDeferredIfSafe shows the oldest queued notice after every message;
