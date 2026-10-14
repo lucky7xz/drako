@@ -38,11 +38,15 @@ func (m Model) renderGrid(budgetLines int) string {
 	// reserve 1: the marker line under the grid while scrolling
 	rowWin := window(m.gridNav.cursorRow, totalRows, visibleCount(rowBudget, rowHeight, totalRows, 1))
 
+	inGridOrBatch := m.mode == gridMode || m.mode == batchMode
+
 	// --- Build Header ---
 	var headerParts []string
 	for c := colWin.start; c < colWin.end; c++ {
 		headerLabel := fmt.Sprintf("[%s]", columnToLetter(c))
-		styledLabel := m.styles.Title.Render(headerLabel)
+		if inGridOrBatch && m.gridNav.navPending && c == m.gridNav.cursorCol {
+			headerLabel = m.styles.PickedLabel.Render(headerLabel)
+		}
 
 		// Let lipgloss handle the centering of the styled text.
 		headerContentWidth := totalCellWidth - 2 // for ┌ and ┐
@@ -50,7 +54,7 @@ func (m Model) renderGrid(budgetLines int) string {
 			Width(headerContentWidth).
 			Align(lipgloss.Center)
 
-		headerContent := headerCellStyle.Render(styledLabel)
+		headerContent := headerCellStyle.Render(headerLabel)
 		headerWithLines := strings.ReplaceAll(headerContent, " ", "─")
 
 		headerPart := fmt.Sprintf("┌%s┐", headerWithLines)
@@ -64,15 +68,9 @@ func (m Model) renderGrid(budgetLines int) string {
 	for r := rowWin.start; r < rowWin.end; r++ {
 		var renderedCells []string
 		for c := colWin.start; c < colWin.end; c++ {
-			inGridOrBatch := m.mode == gridMode || m.mode == batchMode
-			var style lipgloss.Style
-			switch {
-			case inGridOrBatch && r == m.gridNav.cursorRow && c == m.gridNav.cursorCol:
+			style := m.styles.Cell
+			if inGridOrBatch && r == m.gridNav.cursorRow && c == m.gridNav.cursorCol {
 				style = m.styles.SelectedCell
-			case inGridOrBatch && m.gridNav.navPending && c == m.gridNav.cursorCol:
-				style = m.styles.ColumnPendingCell
-			default:
-				style = m.styles.Cell
 			}
 
 			cellName := m.gridNav.grid[r][c]
@@ -89,8 +87,8 @@ func (m Model) renderGrid(budgetLines int) string {
 		row := lipgloss.JoinHorizontal(lipgloss.Top, renderedCells...)
 
 		rowNum := fmt.Sprintf("%*d❭", maxRowNumWidth, r+1)
-		if (m.mode == gridMode || m.mode == batchMode) && m.gridNav.flashActive && r == m.gridNav.cursorRow {
-			rowNum = m.styles.FlashedRowLabel.Render(rowNum)
+		if inGridOrBatch && m.gridNav.flashActive && r == m.gridNav.cursorRow {
+			rowNum = m.styles.PickedLabel.Render(rowNum)
 		}
 		// Split the row into lines and place the label on the vertical
 		// middle line (row above/below get the blank prefix instead), so a

@@ -1,8 +1,10 @@
 package ui
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/lucky7xz/drako/internal/config"
 )
 
@@ -76,4 +78,40 @@ func TestQuickNav_Characterization(t *testing.T) {
 			t.Errorf("cursor = (%d,%d), want (2,0)", m.gridNav.cursorRow, m.gridNav.cursorCol)
 		}
 	})
+}
+
+// Each digit lights its own label, the column letter and then the row number,
+// and nothing else on the grid changes.
+func TestQuickNavLightsOnlyTheLabel(t *testing.T) {
+	forceTrueColor(t)
+	for name, mode := range map[string]navMode{"grid": gridMode, "batch": batchMode} {
+		t.Run(name, func(t *testing.T) {
+			m := makeScrollTestModel(3, 3, 120, 60)
+			m.mode = mode
+
+			tm, _ := m.quickNav(1) // column B
+			m = tm.(Model)
+			rest := m
+			rest.gridNav.navPending = false
+			assertOnlyLit(t, m.renderGrid(40), rest.renderGrid(40), m.styles.PickedLabel, "[B]")
+
+			tm, _ = m.quickNav(2) // row 3
+			m = tm.(Model)
+			rest = m
+			rest.gridNav.flashActive = false
+			assertOnlyLit(t, m.renderGrid(40), rest.renderGrid(40), m.styles.PickedLabel, "3❭")
+		})
+	}
+}
+
+// assertOnlyLit checks that got is rest with exactly one label lit.
+func assertOnlyLit(t *testing.T, got, rest string, lit lipgloss.Style, label string) {
+	t.Helper()
+	on := lit.Render(label)
+	if on == label || !strings.Contains(got, on) {
+		t.Fatalf("%s is not lit:\n%s", label, got)
+	}
+	if strings.Replace(got, on, label, 1) != rest {
+		t.Errorf("lighting %s changed more than the label:\n%s", label, got)
+	}
 }

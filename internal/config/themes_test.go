@@ -77,35 +77,6 @@ func TestMix(t *testing.T) {
 	}
 }
 
-// The quicknav pending column echoes the cursor, quieter: every channel sits
-// between the plain border and the cursor's, and it matches neither.
-func TestPendingBorderSitsBetweenPlainAndCursor(t *testing.T) {
-	for name, theme := range buildThemes(t.TempDir()) {
-		ui := MapThemeToUI(theme)
-		plain, pending, cursor := rgb(t, ui.GridBorder), rgb(t, ui.GridPendingBorder), rgb(t, ui.GridSelBorder)
-		if pending == plain || pending == cursor {
-			t.Errorf("%s: pending %s must differ from plain %s and cursor %s",
-				name, ui.GridPendingBorder, ui.GridBorder, ui.GridSelBorder)
-		}
-		for i := range pending {
-			if pending[i] < min(plain[i], cursor[i]) || pending[i] > max(plain[i], cursor[i]) {
-				t.Errorf("%s: pending %s is not between plain %s and cursor %s",
-					name, ui.GridPendingBorder, ui.GridBorder, ui.GridSelBorder)
-				break
-			}
-		}
-	}
-}
-
-func rgb(t *testing.T, hex string) [3]uint64 {
-	t.Helper()
-	r, g, b, err := hexRGB(hex)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return [3]uint64{r, g, b}
-}
-
 func writeUserThemes(t *testing.T, dir, content string) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(dir, "themes.toml"), []byte(content), 0o644); err != nil {

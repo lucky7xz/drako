@@ -61,26 +61,11 @@ func TestBuildStylesMapsThemeRolesToStyles(t *testing.T) {
 		// Locked cells derive from Accent (the cursor color), not Warning.
 		{"LockedCell", s.LockedCell.GetForeground(), ui.LockedFG},
 		{"LockedSelectedCell", s.LockedSelectedCell.GetForeground(), ui.LockedFG},
-		{"FlashedRowLabel", s.FlashedRowLabel.GetForeground(), ui.GridSelText},
+		{"PickedLabel", s.PickedLabel.GetForeground(), ui.GridSelText},
 	}
 	for _, c := range cases {
 		if c.got != lipgloss.Color(c.want) {
 			t.Errorf("%s foreground = %v, want %s", c.name, c.got, c.want)
-		}
-	}
-
-	// ColumnPendingCell tints only the border, not the text, so it's
-	// asserted separately from the foreground-based cases above.
-	borderCases := []struct {
-		name string
-		got  lipgloss.TerminalColor
-		want string
-	}{
-		{"ColumnPendingCell", s.ColumnPendingCell.GetBorderTopForeground(), ui.GridPendingBorder},
-	}
-	for _, c := range borderCases {
-		if c.got != lipgloss.Color(c.want) {
-			t.Errorf("%s border = %v, want %s", c.name, c.got, c.want)
 		}
 	}
 }
