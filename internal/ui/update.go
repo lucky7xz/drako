@@ -499,12 +499,8 @@ func (m Model) capturingText() bool {
 }
 
 func (m Model) switchToProfileIndex(target int) (Model, bool) {
-	if len(m.profile.profiles) == 0 {
+	if target < 0 || target >= len(m.profile.profiles) {
 		return m, false
-	}
-	total := len(m.profile.profiles)
-	if target < 0 || target >= total {
-		target = ((target % total) + total) % total
 	}
 
 	selected := m.profile.profiles[target]

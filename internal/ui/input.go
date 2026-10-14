@@ -95,13 +95,9 @@ func IsProfileNext(c config.InputConfig, msg tea.KeyMsg) bool {
 // IsProfileSwitch checks if the key is a profile switch command (Modifier + 1-9).
 // Returns true and the 0-based index if matched.
 func IsProfileSwitch(c config.InputConfig, msg tea.KeyMsg, modifier string) (bool, int) {
-	key := msg.String()
-	prefix := modifier + "+"
-	if strings.HasPrefix(key, prefix) && len(key) > len(prefix) {
-		numberChar := key[len(key)-1]
-		if numberChar >= '1' && numberChar <= '9' {
-			return true, int(numberChar - '1')
-		}
+	digit, ok := strings.CutPrefix(msg.String(), modifier+"+")
+	if ok && len(digit) == 1 && digit[0] >= '1' && digit[0] <= '9' {
+		return true, int(digit[0] - '1')
 	}
 	return false, -1
 }

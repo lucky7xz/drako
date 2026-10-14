@@ -27,10 +27,8 @@ func (m Model) handleCrossModeBindings(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 
 	// Profile switching with configurable modifier + Number or ~ (Shift + `)
 	if ok, target := IsProfileSwitch(m.Config.Keys, msg, m.Config.NumbModifier); ok {
-		if target < len(m.profile.profiles) {
-			if updated, ok := m.switchToProfileIndex(target); ok {
-				return updated, nil, true
-			}
+		if updated, ok := m.switchToProfileIndex(target); ok {
+			return updated, nil, true
 		}
 		return m, nil, true
 	}

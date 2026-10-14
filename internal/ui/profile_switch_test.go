@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/config"
 )
 
@@ -47,5 +48,18 @@ func TestActiveProfileName_NoProfiles(t *testing.T) {
 	var m Model
 	if got := m.ActiveProfileName(); got != "" {
 		t.Errorf("ActiveProfileName with no profiles = %q, want empty", got)
+	}
+}
+
+// leader+digit past the last profile is a no-op, like modifier+digit;
+// switchToProfileIndex's wraparound is for cycling only.
+func TestLeaderDigitPastLastProfileIsNoop(t *testing.T) {
+	m := switchTestModel(t)
+	m.profile.activeIndex = 1
+
+	next, _ := m.handleLeaderContinuation(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("3")})
+
+	if got := next.(Model).ActiveProfileName(); got != "beta" {
+		t.Errorf("leader+3 with 2 profiles switched to %q, want to stay on beta", got)
 	}
 }
