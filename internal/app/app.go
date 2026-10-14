@@ -6,10 +6,10 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync/atomic"
-	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/cli"
@@ -207,8 +207,7 @@ func runBatch(state ui.Model) {
 		}
 		cmds = append(cmds, multiplex.Command{
 			Name:     name,
-			Script:   command,
-			Shell:    state.Config.DefaultShell,
+			Argv:     core.ShellArgv(state.Config.DefaultShell, command),
 			KeepOpen: autoClosePtr != nil && !*autoClosePtr,
 			Env:      cellEnv,
 			Isolate:  isolate,
@@ -218,23 +217,6 @@ func runBatch(state ui.Model) {
 		return
 	}
 
-	scriptDir, err := os.MkdirTemp("", "drako-batch-*")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "batch launch failed: %v\n", err)
-		return
-	}
-
-	session := fmt.Sprintf("drako-%d", time.Now().Unix())
-	// The layout chosen in the dialog, or the default when a cell was skipped
-	// above and the vector no longer matches.
-	tabs := state.SelectedTabs
-	if len(cmds) != len(state.SelectedBatch) {
-		tabs = multiplex.Distribute(len(cmds), multiplex.MinTabs(len(cmds)))
-	}
-	for _, c := range cmds {
-		core.LogExecution(c.Name, "batch: "+c.Script)
-	}
-
 	backend, err := multiplex.Resolve(state.Config.BatchForceTmux, multiplex.OSEnv())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -242,8 +224,24 @@ func runBatch(state ui.Model) {
 		return
 	}
 
-	env := core.CommandEnv(os.Environ(), state.Config.EnvWhitelist, state.ActiveProfileName())
-	if err := multiplex.Launch(backend, session, cmds, tabs, scriptDir, env); err != nil {
+	scriptDir, err := os.MkdirTemp("", "drako-batch-*")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "batch launch failed: %v\n", err)
+		return
+	}
+	// The temp dir's random suffix keeps two batches started together apart.
+	session := "drako-" + strings.TrimPrefix(filepath.Base(scriptDir), "drako-batch-")
+	// The layout chosen in the dialog, or the default when a cell was skipped
+	// above and the vector no longer matches.
+	tabs := state.SelectedTabs
+	if len(cmds) != len(state.SelectedBatch) {
+		tabs = multiplex.Distribute(len(cmds), multiplex.MinTabs(len(cmds)))
+	}
+	for _, c := range cmds {
+		core.LogExecution(c.Name, "batch: "+strings.Join(c.Argv, " "))
+	}
+
+	if err := multiplex.Launch(backend, session, cmds, tabs, scriptDir); err != nil {
 		fmt.Fprintf(os.Stderr, "batch launch failed: %v\n", err)
 		core.Pause("\nPress any key to return to the application.")
 		return

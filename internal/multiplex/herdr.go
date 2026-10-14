@@ -9,16 +9,11 @@ import (
 	"time"
 )
 
-// A pane's shell is still starting when the pane appears, and a shell that is
-// not yet reading discards what was typed at it. How long that takes depends on
-// what the login profile does — a quiet one is instant, one that prints a MOTD
-// is not — so a send is confirmed and repeated rather than assumed.
-//
-// A landed send is visible almost at once, since exec replaces the shell in
-// place; the window only costs time when the send was lost. Short window, more
-// attempts, so a slow-starting shell recovers sooner.
+// A pane's shell is still in its login profile when the pane appears, and may
+// drop or queue what is typed at it; waitForShell gets past that.
 const (
 	herdrSendAttempts = 5
+	herdrProbeTimeout = "1000" // ms herdr pane wait-output gives each probe
 	herdrConfirmFor   = time.Second
 	herdrConfirmEvery = 50 * time.Millisecond
 )
@@ -40,10 +35,8 @@ func NewHerdr() *Herdr { return &Herdr{} }
 
 func (h *Herdr) Name() string { return herdrMux }
 
-// session and env go unused: herdr has no named sessions to target, and a
-// cell's environment is already baked into its script rather than passed to the
-// multiplexer.
-func (h *Herdr) Launch(session string, cmds []Command, tabs []int, paths, env []string) (bool, error) {
+// session goes unused: herdr has no named sessions to target.
+func (h *Herdr) Launch(session string, cmds []Command, tabs []int, paths []string) (bool, error) {
 	cell := 0
 	for t, panes := range tabs {
 		// The batch is worth looking at, but only once: the rest of the tabs
@@ -77,48 +70,65 @@ func (h *Herdr) Launch(session string, cmds []Command, tabs []int, paths, env []
 	return false, nil
 }
 
-// runCell starts one cell in its pane and confirms it actually started.
-//
-// exec replaces the pane's shell, so the pane's process becomes the script and
-// the pane closes when the cell finishes — as it does under tmux, and as
-// auto_close_execution promises. It also gives us the acknowledgement: once the
-// cell is running, the script is the pane's foreground process. Until it is,
-// the send may have been typed at a shell that was not yet listening.
+// runCell starts one cell in its pane. exec replaces the shell, so the pane
+// closes when the cell does; it is sent once, as a resend would reach the cell.
 func runCell(id, path string) error {
+	if err := waitForShell(id); err != nil {
+		return fmt.Errorf("%s did not start in pane %s: %w", path, id, err)
+	}
+	// Typed at the login shell, so the path is quoted; sh also reads a noexec mount.
+	if _, err := herdrExec([]string{"herdr", "pane", "run", id, "exec sh " + posixSingleQuote(path)}); err != nil {
+		return err
+	}
+	started, err := confirmCell(id, path)
+	if err != nil {
+		return err
+	}
+	if !started {
+		return fmt.Errorf("%s did not start in pane %s", path, id)
+	}
+	return nil
+}
+
+// waitForShell types a harmless probe until the shell runs one: a dropped probe
+// is resent, a queued one runs later. Its output differs from its echoed text.
+func waitForShell(id string) error {
+	probe := fmt.Sprintf(`printf 'DRAKO-%%s\n' '%s'`, id)
 	for range herdrSendAttempts {
-		if _, err := herdrExec([]string{"herdr", "pane", "run", id, "exec", path}); err != nil {
+		if _, err := herdrExec([]string{"herdr", "pane", "run", id, probe}); err != nil {
 			return err
 		}
-		started, err := confirmCell(id, path)
-		if err != nil {
-			return err
-		}
-		if started {
+		wait := []string{"herdr", "pane", "wait-output", "--match", "DRAKO-" + id, "--timeout", herdrProbeTimeout, id}
+		if _, err := herdrExec(wait); err == nil {
 			return nil
 		}
 	}
-	return fmt.Errorf("%s did not start in pane %s", path, id)
+	return fmt.Errorf("its shell never read input")
 }
 
 // confirmCell waits for path to become the pane's foreground process. A pane
-// that has gone counts as started: the cell ran and finished quickly enough to
-// close it.
+// herdr reports gone counts as started: the cell ran and closed it.
 func confirmCell(id, path string) (bool, error) {
+	var lastErr error
 	for waited := time.Duration(0); waited < herdrConfirmFor; waited += herdrConfirmEvery {
 		out, err := herdrExec([]string{"herdr", "pane", "process-info", "--pane", id})
-		if err != nil {
+		switch {
+		case err != nil && strings.Contains(err.Error(), "pane_not_found"):
 			return true, nil
-		}
-		running, err := foregroundHas(out, path)
-		if err != nil {
-			return false, err
-		}
-		if running {
-			return true, nil
+		case err != nil:
+			lastErr = err // a failed call proves nothing; keep looking
+		default:
+			running, err := foregroundHas(out, path)
+			if err != nil {
+				return false, err
+			}
+			if running {
+				return true, nil
+			}
 		}
 		herdrSleep(herdrConfirmEvery)
 	}
-	return false, nil
+	return false, lastErr
 }
 
 // foregroundHas reports whether path is among the pane's foreground processes.

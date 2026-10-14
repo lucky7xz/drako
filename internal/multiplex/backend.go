@@ -21,7 +21,7 @@ type Backend interface {
 	// Launch runs paths[i] for cmds[i], grouped into tabs. It reports whether
 	// it handed the terminal over: an attached session has already ended when
 	// Launch returns, a detached one is still spawning.
-	Launch(session string, cmds []Command, tabs []int, paths, env []string) (attached bool, err error)
+	Launch(session string, cmds []Command, tabs []int, paths []string) (attached bool, err error)
 }
 
 // Launch writes one script per cell into scriptDir, then hands the paths to b.
@@ -29,7 +29,7 @@ type Backend interface {
 // sensitivity as history.log — and are removed once an attached session ends.
 // A detached launch leaves them for the OS tmp reaper rather than racing the
 // panes that are still starting.
-func Launch(b Backend, session string, cmds []Command, tabs []int, scriptDir string, env []string) error {
+func Launch(b Backend, session string, cmds []Command, tabs []int, scriptDir string) error {
 	if len(cmds) == 0 {
 		return fmt.Errorf("nothing to launch")
 	}
@@ -47,12 +47,14 @@ func Launch(b Backend, session string, cmds []Command, tabs []int, scriptDir str
 	for i, c := range cmds {
 		paths[i] = filepath.Join(scriptDir, scriptName(i, c))
 		if err := os.WriteFile(paths[i], []byte(buildScript(c)), 0o700); err != nil {
+			os.RemoveAll(scriptDir)
 			return fmt.Errorf("could not write %s: %w", paths[i], err)
 		}
 	}
 
-	attached, err := b.Launch(session, cmds, tabs, paths, env)
+	attached, err := b.Launch(session, cmds, tabs, paths)
 	if err != nil {
+		os.RemoveAll(scriptDir) // a cell that already started keeps its script open
 		return fmt.Errorf("%s: %w", b.Name(), err)
 	}
 	if attached {

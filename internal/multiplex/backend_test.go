@@ -15,7 +15,6 @@ type fakeBackend struct {
 	cmds    []Command
 	tabs    []int
 	paths   []string
-	env     []string
 	calls   int
 	attach  bool
 	err     error
@@ -23,8 +22,8 @@ type fakeBackend struct {
 
 func (f *fakeBackend) Name() string { return "fake" }
 
-func (f *fakeBackend) Launch(session string, cmds []Command, tabs []int, paths, env []string) (bool, error) {
-	f.session, f.cmds, f.tabs, f.paths, f.env = session, cmds, tabs, paths, env
+func (f *fakeBackend) Launch(session string, cmds []Command, tabs []int, paths []string) (bool, error) {
+	f.session, f.cmds, f.tabs, f.paths = session, cmds, tabs, paths
 	f.calls++
 	return f.attach, f.err
 }
@@ -33,7 +32,7 @@ func TestLaunch_WritesAScriptPerCellAndHandsOverThePaths(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "batch")
 	f := &fakeBackend{}
 
-	if err := Launch(f, "drako-t", cells(3), []int{2, 1}, dir, []string{"A=1"}); err != nil {
+	if err := Launch(f, "drako-t", cells(3), []int{2, 1}, dir); err != nil {
 		t.Fatal(err)
 	}
 	if f.calls != 1 {
@@ -62,7 +61,7 @@ func TestLaunch_WritesAScriptPerCellAndHandsOverThePaths(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if want := cells(3)[i].Script; !strings.Contains(string(body), want) {
+		if want := cells(3)[i].Argv[2]; !strings.Contains(string(body), want) {
 			t.Errorf("script %d does not run %q:\n%s", i, want, body)
 		}
 	}
@@ -72,7 +71,7 @@ func TestLaunch_WritesAScriptPerCellAndHandsOverThePaths(t *testing.T) {
 // detached one is still spawning panes that hold them open.
 func TestLaunch_RemovesScriptsOnlyAfterAnAttachedSession(t *testing.T) {
 	attached := filepath.Join(t.TempDir(), "batch")
-	if err := Launch(&fakeBackend{attach: true}, "s", cells(1), []int{1}, attached, nil); err != nil {
+	if err := Launch(&fakeBackend{attach: true}, "s", cells(1), []int{1}, attached); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(attached); !os.IsNotExist(err) {
@@ -80,7 +79,7 @@ func TestLaunch_RemovesScriptsOnlyAfterAnAttachedSession(t *testing.T) {
 	}
 
 	detached := filepath.Join(t.TempDir(), "batch")
-	if err := Launch(&fakeBackend{attach: false}, "s", cells(1), []int{1}, detached, nil); err != nil {
+	if err := Launch(&fakeBackend{attach: false}, "s", cells(1), []int{1}, detached); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(detached); err != nil {
@@ -101,7 +100,7 @@ func TestLaunch_RejectsABatchTheBackendCouldNotRun(t *testing.T) {
 	}
 	for _, c := range cases {
 		f := &fakeBackend{}
-		if err := Launch(f, "s", c.cmds, c.tabs, dir, nil); err == nil {
+		if err := Launch(f, "s", c.cmds, c.tabs, dir); err == nil {
 			t.Errorf("%s: want an error", c.name)
 		}
 		if f.calls != 0 {
@@ -113,8 +112,20 @@ func TestLaunch_RejectsABatchTheBackendCouldNotRun(t *testing.T) {
 func TestLaunch_ReportsWhatTheBackendFailedOn(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "batch")
 	boom := errors.New("no such pane")
-	err := Launch(&fakeBackend{err: boom}, "s", cells(1), []int{1}, dir, nil)
+	err := Launch(&fakeBackend{err: boom}, "s", cells(1), []int{1}, dir)
 	if !errors.Is(err, boom) {
 		t.Errorf("err = %v, want it to wrap the backend's own error", err)
+	}
+}
+
+// A launch that failed may have written scripts holding command text (and, when
+// isolated, whitelisted env values); they must not be left in the temp dir.
+func TestLaunch_RemovesTheScriptsWhenTheBackendFails(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "batch")
+	if err := Launch(&fakeBackend{err: errors.New("attach failed")}, "s", cells(2), []int{2}, dir); err == nil {
+		t.Fatal("the backend error must surface")
+	}
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		t.Errorf("scripts left behind after a failed launch (%v)", err)
 	}
 }

@@ -12,9 +12,8 @@ func cells(n int) []Command {
 	out := make([]Command, n)
 	for i := range out {
 		out[i] = Command{
-			Name:   fmt.Sprintf("cell %d", i+1),
-			Script: fmt.Sprintf("echo %d", i+1),
-			Shell:  "bash",
+			Name: fmt.Sprintf("cell %d", i+1),
+			Argv: []string{"bash", "-lc", fmt.Sprintf("echo %d", i+1)},
 		}
 	}
 	return out
@@ -38,15 +37,31 @@ func planFor(t *testing.T, cmds []Command, tabs []int, inside bool) Session {
 	return s
 }
 
-// stepVerbs extracts the tmux subcommand of every step for shape assertions.
-func stepVerbs(s Session) []string {
-	verbs := make([]string, len(s.Steps))
-	for i, step := range s.Steps {
-		if len(step) < 2 || step[0] != "tmux" {
-			verbs[i] = "INVALID:" + strings.Join(step, " ")
+// subcommands splits one tmux call into its ";"-chained commands, verb first.
+func subcommands(step []string) [][]string {
+	var out [][]string
+	cur := []string{}
+	for _, a := range step[1:] {
+		if a == ";" {
+			out, cur = append(out, cur), []string{}
 			continue
 		}
-		verbs[i] = step[1]
+		cur = append(cur, a)
+	}
+	return append(out, cur)
+}
+
+// stepVerbs lists every tmux command the plan runs, in order, for shape assertions.
+func stepVerbs(s Session) []string {
+	var verbs []string
+	for _, step := range s.Steps {
+		if len(step) < 2 || step[0] != "tmux" {
+			verbs = append(verbs, "INVALID:"+strings.Join(step, " "))
+			continue
+		}
+		for _, sub := range subcommands(step) {
+			verbs = append(verbs, sub[0])
+		}
 	}
 	return verbs
 }
@@ -81,8 +96,8 @@ func TestPlan_OneTabOfFourPanes(t *testing.T) {
 	s := planFor(t, cells(4), []int{4}, false)
 	wantVerbs(t, s, "new-session", "split-window", "split-window", "split-window",
 		"select-layout", "attach-session")
-	last := s.Steps[4]
-	if last[len(last)-1] != "tiled" {
+	tab := subcommands(s.Steps[0])
+	if last := tab[len(tab)-1]; last[len(last)-1] != "tiled" {
 		t.Errorf("a multi-pane tab must be arranged tiled, got %v", last)
 	}
 }
@@ -94,8 +109,8 @@ func TestPlan_TwoTabsFromFiveCells(t *testing.T) {
 	wantVerbs(t, s, "new-session", "split-window", "split-window", "split-window",
 		"select-layout", "new-window", "attach-session")
 	// A one-pane tab needs no layout step.
-	if strings.Contains(strings.Join(s.Steps[5], " "), "tiled") {
-		t.Errorf("a single-pane tab must not be arranged: %v", s.Steps[5])
+	if strings.Contains(strings.Join(s.Steps[1], " "), "tiled") {
+		t.Errorf("a single-pane tab must not be arranged: %v", s.Steps[1])
 	}
 }
 
@@ -106,8 +121,8 @@ func TestPlan_TabsAreNamedAfterTheirCells(t *testing.T) {
 	if first := strings.Join(s.Steps[0], " "); !strings.Contains(first, "cell 1·cell 2·cell 3·cell 4") {
 		t.Errorf("the first tab must be named after its four cells: %v", s.Steps[0])
 	}
-	if second := strings.Join(s.Steps[5], " "); !strings.Contains(second, "cell 5") {
-		t.Errorf("the second tab must be named after its cell: %v", s.Steps[5])
+	if second := strings.Join(s.Steps[1], " "); !strings.Contains(second, "cell 5") {
+		t.Errorf("the second tab must be named after its cell: %v", s.Steps[1])
 	}
 }
 
@@ -153,5 +168,31 @@ func TestPlan_RejectsATabVectorThatMissesCells(t *testing.T) {
 func TestPlan_RejectsAScriptPerCellMismatch(t *testing.T) {
 	if _, err := Plan("s", cells(3), []int{3}, []string{"/tmp/x/a.sh"}, false); err == nil {
 		t.Error("three cells with one script must be rejected")
+	}
+}
+
+// Panes run `sh <path>` as separate arguments, no shell line: an odd TMPDIR
+// stays inert, and a noexec mount is fine because sh only reads the script.
+func TestPlan_PanesRunTheScriptThroughShWithoutAShellLine(t *testing.T) {
+	paths := scriptPaths(cells(3), "/tmp/my tmp;$(x)")
+	s, err := Plan("drako-1", cells(3), []int{2, 1}, paths, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var runs [][]string
+	for _, step := range s.Steps {
+		for _, sub := range subcommands(step) {
+			if v := sub[0]; v == "new-session" || v == "new-window" || v == "split-window" {
+				runs = append(runs, sub[len(sub)-2:])
+			}
+		}
+	}
+	if len(runs) != 3 {
+		t.Fatalf("got %d pane-creating steps, want 3: %v", len(runs), s.Steps)
+	}
+	for i, r := range runs {
+		if !slices.Equal(r, []string{"sh", paths[i]}) {
+			t.Errorf("pane %d runs %q, want [sh %s]", i, r, paths[i])
+		}
 	}
 }

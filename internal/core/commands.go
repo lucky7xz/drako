@@ -99,24 +99,31 @@ func (s Selection) Name(cfg config.Config) string {
 
 // buildShellCmd constructs an *exec.Cmd for the given shell. Pure function: no execution.
 func buildShellCmd(shell_config, commandStr string) *exec.Cmd {
-	switch shell_config {
+	argv := ShellArgv(shell_config, commandStr)
+	return exec.Command(argv[0], argv[1:]...)
+}
+
+// ShellArgv is the command line that runs commandStr under the configured shell,
+// for single runs and batch cells alike; unknown names get the platform default.
+func ShellArgv(shell, commandStr string) []string {
+	switch shell {
 	case "bash":
-		return exec.Command("bash", "-lc", commandStr)
+		return []string{"bash", "-lc", commandStr}
 	case "sh":
-		return exec.Command("sh", "-c", commandStr)
+		return []string{"sh", "-c", commandStr}
 	case "zsh":
-		return exec.Command("zsh", "-lc", commandStr)
+		return []string{"zsh", "-lc", commandStr}
 	case "fish":
-		return exec.Command("fish", "-c", commandStr)
+		return []string{"fish", "-c", commandStr}
 	case "pwsh":
-		return exec.Command("pwsh", "-NoLogo", "-NoProfile", "-Command", commandStr)
+		return []string{"pwsh", "-NoLogo", "-NoProfile", "-Command", commandStr}
 	// powershell.exe 5.1 ships with Windows; pwsh (7+) must be installed.
 	case "powershell", "powershell.exe":
-		return exec.Command("powershell", "-NoLogo", "-NoProfile", "-Command", commandStr)
+		return []string{"powershell", "-NoLogo", "-NoProfile", "-Command", commandStr}
 	case "cmd", "cmd.exe":
-		return exec.Command("cmd", "/C", commandStr)
+		return []string{"cmd", "/C", commandStr}
 	default:
-		return buildShellCmd(fallbackShell(runtime.GOOS), commandStr)
+		return ShellArgv(fallbackShell(runtime.GOOS), commandStr)
 	}
 }
 

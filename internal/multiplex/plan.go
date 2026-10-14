@@ -2,6 +2,7 @@ package multiplex
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -10,10 +11,9 @@ const MaxCommands = 9
 
 // Command is one grid cell to launch.
 type Command struct {
-	Name     string // cell name — becomes the window name and script name
-	Script   string // the resolved command string, verbatim from the profile
-	Shell    string // the profile's shell, invoked like single-run (-lc)
-	KeepOpen bool   // auto_close_execution = false: pause before the pane closes
+	Name     string   // cell name — becomes the window name and script name
+	Argv     []string // the command line, as a single run would use it (core.ShellArgv)
+	KeepOpen bool     // auto_close_execution = false: pause before the pane closes
 
 	// Env entries applied to this cell's command. Isolate replaces the
 	// inherited environment with exactly Env (env -i); otherwise Env is
@@ -52,24 +52,25 @@ func Plan(session string, cmds []Command, tabs []int, paths []string, insideTmux
 		target = []string{"-t", session}
 	}
 
+	// A tab is one tmux call, its commands joined by ";": tmux runs them without
+	// interleaving input, so a window switch mid-setup cannot redirect the splits.
 	cell := 0
 	for t, panes := range tabs {
 		group := cmds[cell : cell+panes]
-		switch {
-		case !insideTmux && t == 0:
-			s.Steps = append(s.Steps, []string{"tmux", "new-session", "-d", "-s", session, "-n", tabLabel(group), paths[cell]})
-		default:
-			step := append([]string{"tmux", "new-window"}, target...)
-			s.Steps = append(s.Steps, append(step, "-n", tabLabel(group), paths[cell]))
+		var step []string
+		if !insideTmux && t == 0 {
+			step = []string{"tmux", "new-session", "-d", "-s", session}
+		} else {
+			step = append([]string{"tmux", "new-window"}, target...)
 		}
+		step = append(append(step, "-n", tabLabel(group)), runScript(paths[cell])...)
 		for i := 1; i < panes; i++ {
-			step := append([]string{"tmux", "split-window"}, target...)
-			s.Steps = append(s.Steps, append(step, paths[cell+i]))
+			step = append(append(append(step, ";", "split-window"), target...), runScript(paths[cell+i])...)
 		}
 		if panes > 1 {
-			step := append([]string{"tmux", "select-layout"}, target...)
-			s.Steps = append(s.Steps, append(step, "tiled"))
+			step = append(append(append(step, ";", "select-layout"), target...), "tiled")
 		}
+		s.Steps = append(s.Steps, step)
 		cell += panes
 	}
 
@@ -134,7 +135,9 @@ func buildScript(c Command) string {
 			fmt.Fprintf(&b, "export %s\n", a)
 		}
 	}
-	fmt.Fprintf(&b, "%s%s -lc %s\n", prefix, shellBinary(c.Shell), posixSingleQuote(c.Script))
+	if n := len(c.Argv); n > 0 { // the shell and its flags are fixed words; the command is quoted
+		fmt.Fprintf(&b, "%s%s %s\n", prefix, strings.Join(c.Argv[:n-1], " "), posixSingleQuote(c.Argv[n-1]))
+	}
 	if c.KeepOpen {
 		b.WriteString("status=$?\n")
 		b.WriteString(`printf '\n--- Command Finished (exit %s) ---\nPress Enter to close.' "$status"` + "\n")
@@ -144,27 +147,26 @@ func buildScript(c Command) string {
 }
 
 // envAssignments renders env entries as shell-safe `K='v'` pairs, dropping
-// anything without a '='.
+// anything without a '='. A whitelist can pass any name, so odd ones are quoted.
 func envAssignments(env []string) []string {
 	out := make([]string, 0, len(env))
 	for _, e := range env {
 		if k, v, ok := strings.Cut(e, "="); ok {
+			if !shellIdentifier.MatchString(k) {
+				k = posixSingleQuote(k)
+			}
 			out = append(out, k+"="+posixSingleQuote(v))
 		}
 	}
 	return out
 }
 
-// shellBinary maps a configured shell to the binary invoked with -lc,
-// mirroring core's buildShellCmd cases (tmux implies a unix host, so the
-// Windows shells are not mapped; unknown values fall back to bash).
-func shellBinary(shell string) string {
-	switch shell {
-	case "bash", "sh", "zsh", "fish":
-		return shell
-	default:
-		return "bash"
-	}
+var shellIdentifier = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+
+// runScript is a pane's command as separate arguments, which tmux runs without a
+// shell: the path is never parsed, and sh reads a script on a noexec mount.
+func runScript(path string) []string {
+	return []string{"sh", path}
 }
 
 // posixSingleQuote wraps s in single quotes, escaping any it already contains
