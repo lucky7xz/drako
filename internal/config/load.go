@@ -12,29 +12,20 @@ import (
 )
 
 // loadBaseConfig reads config.toml into the base Config. Every failure path
-// lands on the rescue config: a missing file writes a fresh rescue config to
-// disk (best effort), while read and syntax errors keep the broken file and
+// lands on the rescue config: a missing file gets the settings template written
+// (best effort), while read and syntax errors keep the broken file and
 // report it as a ProfileParseError. Env vars in the file are expanded before
 // decoding, and commands are always empty — those come from profile overlays.
 func loadBaseConfig(configDir string) (Config, []ProfileParseError) {
 	configPath := paths.ConfigFile(configDir)
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		// Bootstrap failed to produce a config file; write a rescue
-		// config so the next run starts from something valid.
-		base := RescueConfig()
-		writeRescue := func() error {
-			f, err := os.Create(configPath)
-			if err != nil {
-				return err
-			}
-			defer f.Close()
-			return toml.NewEncoder(f).Encode(base)
+		// Bootstrap failed to produce a config file; run on rescue and write the
+		// settings template so the next run starts from something valid.
+		if _, err := WriteSettingsTemplate(configDir); err != nil {
+			log.Printf("warning: could not write config.toml: %v", err)
 		}
-		if err := writeRescue(); err != nil {
-			log.Printf("warning: could not write rescue config: %v", err)
-		}
-		return base, nil
+		return RescueConfig(), nil
 	}
 
 	log.Printf("Loading config from: %s", configPath)
@@ -144,7 +135,7 @@ func loadConfig(profileOverride *string, sessionProfile string) (ConfigBundle, e
 		envProfile = os.Getenv("DRAKO_PROFILE")
 	}
 
-	req := resolveRequested(profileOverride, pf.Locked, envProfile, base.Profile, profiles)
+	req := resolveRequested(profileOverride, pf.Locked, envProfile, base.Profile, profiles, profileErrors)
 
 	pivotStillValid := requestedPivot != ""
 	useFactoryDefaults := false

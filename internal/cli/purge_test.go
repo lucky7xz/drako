@@ -39,9 +39,9 @@ func TestPurgeConfig_TargetConfig(t *testing.T) {
 		t.Fatalf("PurgeConfig failed: %v", err)
 	}
 
-	// Check config.toml is gone (moved to trash)
-	if _, err := os.Stat(configFile); !os.IsNotExist(err) {
-		t.Error("config.toml should have been moved to trash")
+	// The old config.toml went to trash; a fresh one from the template replaced it.
+	if b, err := os.ReadFile(configFile); err != nil || string(b) == "theme = 'dracula'" {
+		t.Errorf("config.toml should be a fresh template, got %q (%v)", b, err)
 	}
 
 	// Check profile file still exists

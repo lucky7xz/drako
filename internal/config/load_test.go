@@ -319,3 +319,56 @@ func TestLoadConfig_MissingRequestedProfileKeepsEquippedDecks(t *testing.T) {
 		t.Error("reloading with the same session profile is stuck in rescue")
 	}
 }
+
+// A typo in the locked deck makes it broken, not gone: the lock must survive
+// on disk so that fixing the typo brings the session back to it.
+func TestReloadConfig_BrokenLockedProfileKeepsTheLock(t *testing.T) {
+	dir := loadTestDir(t, "work", "alpha")
+	if err := WritePivotLocked(dir, "work"); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "work.profile.toml")
+	good, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("x = [oops\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	broken, err := ReloadConfig("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pf, _ := ReadPivotProfile(dir); pf.Locked != "work" {
+		t.Errorf("a syntax error cleared the lock on disk (locked = %q)", pf.Locked)
+	}
+	if broken.DroppedProfile != "" {
+		t.Errorf("a broken deck is reported as Broken, not dropped (DroppedProfile = %q)", broken.DroppedProfile)
+	}
+
+	if err := os.WriteFile(path, good, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	fixed, err := ReloadConfig("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fixed.LockedName != "work" || fixed.Profiles[fixed.ActiveIndex].Name != "work" {
+		t.Errorf("after the fix: locked %q, active %q; want the lock back on work", fixed.LockedName, fixed.Profiles[fixed.ActiveIndex].Name)
+	}
+}
+
+// When bootstrap could not produce config.toml, the file written in its place
+// must be settings a user would recognise, not the runtime rescue grid.
+func TestLoadBaseConfig_MissingFileGetsSettingsNotRuntimeState(t *testing.T) {
+	dir := t.TempDir()
+	loadBaseConfig(dir)
+	b, err := os.ReadFile(filepath.Join(dir, "config.toml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(b), "[[commands]]") {
+		t.Errorf("config.toml holds the rescue grid's commands:\n%.300s", b)
+	}
+}

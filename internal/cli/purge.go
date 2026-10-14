@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profiles"
 )
@@ -27,6 +28,23 @@ type PurgeOptions struct {
 	TargetProfiles    []string // Delete/Move specific profiles (e.g. "git", "core")
 	TargetConfig      bool     // Reset config.toml
 	TargetLogs        bool     // Purge logs (history.log and drako.log)
+}
+
+// resetCore writes a fresh config.toml and restores the core deck if it is gone.
+// It must not leave config.toml missing: that is a first run, restoring every deck.
+func resetCore(configDir string) []error {
+	var failed []error
+	if _, err := config.WriteSettingsTemplate(configDir); err != nil {
+		failed = append(failed, fmt.Errorf("could not write a fresh %s: %w", paths.ConfigFileName, err))
+	} else {
+		fmt.Printf("  ✓ Wrote a fresh %s\n", paths.ConfigFileName)
+	}
+	if restored, err := config.RestoreCoreProfile(configDir); err != nil {
+		failed = append(failed, fmt.Errorf("could not restore core.profile.toml: %w", err))
+	} else if restored {
+		fmt.Println("  ✓ Restored core.profile.toml")
+	}
+	return failed
 }
 
 // PurgeConfig executes the purge operation based on the options.
@@ -53,6 +71,7 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 			failed = append(failed, fmt.Errorf("could not move %s to trash: %w", paths.ConfigFileName, err))
 		} else {
 			fmt.Printf("  ✓ Moved %s to trash\n", paths.ConfigFileName)
+			failed = append(failed, resetCore(configDir)...)
 		}
 	}
 

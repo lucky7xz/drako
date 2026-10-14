@@ -46,6 +46,22 @@ func knownVariantKeys() []string {
 	return keys
 }
 
+// loaderFindings reports what the profile loader itself rejects, so check never
+// passes a deck the TUI would show as broken.
+func loaderFindings(src []byte) []Finding {
+	var pf ProfileFile
+	meta, err := toml.Decode(string(src), &pf)
+	if err != nil {
+		return []Finding{errorf("%v", err)}
+	}
+	_, problems := ValidateProfileFile(pf, src, meta)
+	var fs []Finding
+	for _, p := range problems {
+		fs = append(fs, errorf("%s", p))
+	}
+	return fs
+}
+
 // CheckProfile lints raw profile TOML. It never touches the filesystem and
 // is independent of the platform it runs on.
 func CheckProfile(src []byte) []Finding {
@@ -65,6 +81,7 @@ func CheckProfile(src []byte) []Finding {
 	if len(cmds) == 0 {
 		return append(fs, errorf("no [[commands]] found"))
 	}
+	fs = append(fs, loaderFindings(src)...)
 
 	seenNames := map[string]bool{}
 	seenCells := map[string]string{} // cell -> first claimant

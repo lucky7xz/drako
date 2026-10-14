@@ -34,18 +34,11 @@ func RestoreBootstrap(dstRoot string) ([]string, error) {
 	}
 
 	// 1. config.toml (from the settings template).
-	settings, err := bootstrapFS.ReadFile("bootstrap/settings_template.toml")
-	if err != nil {
-		log.Printf("bootstrap warning: settings_template.toml not found: %v", err)
-	} else {
-		targetConfig := paths.ConfigFile(dstRoot)
-		if _, err := os.Stat(targetConfig); os.IsNotExist(err) {
-			if err := os.WriteFile(targetConfig, settings, 0o644); err != nil {
-				return restored, err
-			}
-			restored = append(restored, paths.ConfigFileName)
-			log.Printf("bootstrap: generated config.toml")
-		}
+	if wrote, err := WriteSettingsTemplate(dstRoot); err != nil {
+		return restored, err
+	} else if wrote {
+		restored = append(restored, paths.ConfigFileName)
+		log.Printf("bootstrap: generated config.toml")
 	}
 
 	// 2. core.profile.toml (the default deck).
@@ -61,7 +54,7 @@ func RestoreBootstrap(dstRoot string) ([]string, error) {
 		log.Printf("bootstrap: no embedded assets found")
 		return restored, nil
 	}
-	err = fs.WalkDir(bootstrapFS, "bootstrap", func(path string, d fs.DirEntry, err error) error {
+	err := fs.WalkDir(bootstrapFS, "bootstrap", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -114,6 +107,20 @@ func RestoreBootstrap(dstRoot string) ([]string, error) {
 		return nil
 	})
 	return restored, err
+}
+
+// WriteSettingsTemplate writes config.toml from the settings template when it
+// is missing, and reports whether it wrote one.
+func WriteSettingsTemplate(dstRoot string) (bool, error) {
+	settings, err := bootstrapFS.ReadFile("bootstrap/settings_template.toml")
+	if err != nil {
+		return false, err
+	}
+	target := paths.ConfigFile(dstRoot)
+	if _, err := os.Stat(target); !os.IsNotExist(err) {
+		return false, err
+	}
+	return true, os.WriteFile(target, settings, 0o644)
 }
 
 // RestoreCoreProfile writes the embedded default deck as core.profile.toml

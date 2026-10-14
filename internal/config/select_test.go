@@ -90,7 +90,7 @@ func TestResolveRequested(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := resolveRequested(tt.override, tt.pivot, tt.env, tt.cfg, tt.available)
+			got := resolveRequested(tt.override, tt.pivot, tt.env, tt.cfg, tt.available, nil)
 			if got != tt.want {
 				t.Errorf("resolveRequested = %+v, want %+v", got, tt.want)
 			}
@@ -202,5 +202,15 @@ func TestSelectProfile(t *testing.T) {
 				t.Errorf("selectProfile(%q) = (%d, %v), want (%d, %v)", tt.requested, idx, found, tt.wantIdx, tt.wantFound)
 			}
 		})
+	}
+}
+
+// Two decks whose names differ only in case are two decks on a case-sensitive
+// filesystem; ordering must not drop one of them.
+func TestReorderByPivot_KeepsCaseVariants(t *testing.T) {
+	in := []ProfileInfo{{Name: "Git"}, {Name: "alpha"}, {Name: "git"}}
+	got := reorderByPivot(in, []string{"alpha"})
+	if len(got) != len(in) {
+		t.Fatalf("got %d profiles, want %d: %v", len(got), len(in), got)
 	}
 }

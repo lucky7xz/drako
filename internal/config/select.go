@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"log"
+	"slices"
 	"sort"
 	"strings"
 
@@ -19,27 +20,17 @@ func reorderByPivot(profiles []ProfileInfo, order []string) []ProfileInfo {
 	if len(order) == 0 {
 		return profiles
 	}
-	remaining := map[string]ProfileInfo{}
-	for _, p := range profiles {
-		remaining[profilepkg.NormalizeName(p.Name)] = p
-	}
+	rest := slices.Clone(profiles) // a list, not a map: Git and git are two decks
 	var ordered []ProfileInfo
 	for _, n := range order {
 		norm := profilepkg.NormalizeName(n)
-		if info, ok := remaining[norm]; ok {
-			ordered = append(ordered, info)
-			delete(remaining, norm)
+		if i := slices.IndexFunc(rest, func(p ProfileInfo) bool { return profilepkg.NormalizeName(p.Name) == norm }); i >= 0 {
+			ordered = append(ordered, rest[i])
+			rest = slices.Delete(rest, i, i+1)
 		}
 	}
-	if len(remaining) > 0 {
-		var rest []ProfileInfo
-		for _, v := range remaining {
-			rest = append(rest, v)
-		}
-		sort.Slice(rest, func(i, j int) bool { return rest[i].Name < rest[j].Name })
-		ordered = append(ordered, rest...)
-	}
-	return ordered
+	sort.Slice(rest, func(i, j int) bool { return rest[i].Name < rest[j].Name })
+	return append(ordered, rest...)
 }
 
 type profileRequest struct {
@@ -54,7 +45,7 @@ type profileRequest struct {
 // A source naming an unequipped profile is skipped rather than honoured and
 // then failed — falling through is what a precedence list is for. A non-nil
 // override is used verbatim.
-func resolveRequested(override *string, pivotLocked, envProfile, cfgProfile string, available []ProfileInfo) profileRequest {
+func resolveRequested(override *string, pivotLocked, envProfile, cfgProfile string, available []ProfileInfo, broken []ProfileParseError) profileRequest {
 	if override != nil {
 		return profileRequest{Name: *override}
 	}
@@ -62,6 +53,14 @@ func resolveRequested(override *string, pivotLocked, envProfile, cfgProfile stri
 	equipped := func(name string) bool {
 		_, ok := selectProfile(available, name)
 		return ok
+	}
+	unparsable := func(name string) bool {
+		for _, b := range broken {
+			if profilepkg.NormalizeName(b.Name) == profilepkg.NormalizeName(name) {
+				return true
+			}
+		}
+		return false
 	}
 
 	req := profileRequest{}
@@ -80,6 +79,9 @@ func resolveRequested(override *string, pivotLocked, envProfile, cfgProfile stri
 			req.Name = src.name
 			req.FromPivot = src.pivot
 			return req
+		}
+		if unparsable(src.name) {
+			continue // still equipped, reported as broken; a lock on it waits for the fix
 		}
 		if req.Dropped == "" {
 			req.Dropped = src.name
