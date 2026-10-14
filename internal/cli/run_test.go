@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -50,11 +51,12 @@ func TestResolveRunTargets(t *testing.T) {
 		{"WORK:a0", "Deploy", "make deploy", "work"},
 	}
 	for _, tt := range tests {
-		name, cmd, p, err := resolveRun(runBundle(), tt.ref)
+		target, _, err := resolveRun(runBundle(), tt.ref)
 		if err != nil {
 			t.Errorf("%s: unexpected error %v", tt.ref, err)
 			continue
 		}
+		name, cmd, p := target.name(), target.command(), target.p
 		if name != tt.wantName || cmd != tt.wantCmd || p.Name != tt.wantProfile {
 			t.Errorf("%s = (%q, %q, %s), want (%q, %q, %s)",
 				tt.ref, name, cmd, p.Name, tt.wantName, tt.wantCmd, tt.wantProfile)
@@ -81,7 +83,7 @@ func TestResolveRunRefusals(t *testing.T) {
 		{"", "bad cell address"},
 	}
 	for _, tt := range tests {
-		_, _, _, err := resolveRun(runBundle(), tt.ref)
+		_, _, err := resolveRun(runBundle(), tt.ref)
 		if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
 			t.Errorf("%q: err = %v, want it to contain %q", tt.ref, err, tt.wantErr)
 		}
@@ -91,9 +93,39 @@ func TestResolveRunRefusals(t *testing.T) {
 func TestResolveRunDangerBeatsEmptyCommand(t *testing.T) {
 	b := runBundle()
 	b.Profiles[0].Profile.Commands[1].Command = ""
-	_, _, _, err := resolveRun(b, "A1")
+	_, _, err := resolveRun(b, "A1")
 	if err == nil || !strings.Contains(err.Error(), "marked danger") {
 		t.Errorf("danger must be reported first, got %v", err)
+	}
+}
+
+func TestResolveRunMatchesTheGrid(t *testing.T) {
+	b := runBundle()
+	core := &b.Profiles[0].Profile
+	core.Commands = append(core.Commands,
+		config.Command{Name: "Shadow", Command: "echo shadow", Col: "a", Row: 0},
+		config.Command{Name: "Last", Command: "echo last", Col: "c", Row: -1},
+	)
+	for ref, want := range map[string]string{"A0": "Shadow", "c-1": "Last"} {
+		target, _, err := resolveRun(b, ref)
+		if err != nil || target.name() != want {
+			t.Errorf("%s = (%q, %v), want %q: the cell the grid shows", ref, target.name(), err, want)
+		}
+	}
+}
+
+func TestResolveRunRefusesInvalidGrid(t *testing.T) {
+	b := runBundle()
+	work := &b.Profiles[1].Profile
+	work.Commands = append(work.Commands, config.Command{Name: "Off grid", Command: "true", Col: "c", Row: 0})
+	if _, _, err := resolveRun(b, "work:A0"); err == nil || !strings.Contains(err.Error(), "invalid grid") {
+		t.Errorf("work:A0 err = %v, want an invalid-grid refusal", err)
+	}
+	// Broken profile 0 still sits at ActiveIndex 0 while the TUI shows rescue.
+	b.Profiles[0], b.Profiles[1] = b.Profiles[1], b.Profiles[0]
+	b.ActiveIndex = 0
+	if _, _, err := resolveRun(b, "A0"); err == nil || !strings.Contains(err.Error(), "invalid grid") {
+		t.Errorf("bare A0 err = %v, want an invalid-grid refusal", err)
 	}
 }
 
@@ -212,8 +244,25 @@ func TestRunUsage(t *testing.T) {
 		{"drako", "run"},
 		{"drako", "run", "solo:A0", "solo:A2"},
 	} {
-		if code := HandleRunCommand(args); code != 125 {
-			t.Errorf("%v exit = %d, want 125", args, code)
+		var code int
+		stderr := captureStderr(t, func() { code = HandleRunCommand(args) })
+		if code != 125 || !strings.HasPrefix(stderr, "drako run: ") {
+			t.Errorf("%v = (%d, %q), want 125 and a drako run: line", args, code, stderr)
 		}
 	}
+}
+
+func captureStderr(t *testing.T, f func()) string {
+	t.Helper()
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	orig := os.Stderr
+	os.Stderr = w
+	f()
+	os.Stderr = orig
+	w.Close()
+	b, _ := io.ReadAll(r)
+	return string(b)
 }

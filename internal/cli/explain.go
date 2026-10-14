@@ -50,51 +50,83 @@ func HandleExplainCommand(args []string) int {
 	return code
 }
 
+// cellTarget is what a [profile:]<addr>[.item] reference points at.
+type cellTarget struct {
+	p      config.ProfileInfo
+	cmd    *config.Command
+	item   *config.CommandItem // nil unless the reference names an item
+	addr   string              // the cell's address, or the item's
+	danger bool                // a danger folder covers its items
+}
+
+func (t cellTarget) name() string {
+	if t.item != nil {
+		return t.item.Name
+	}
+	return t.cmd.Name
+}
+
+func (t cellTarget) command() string {
+	if t.item != nil {
+		return t.item.Command
+	}
+	return t.cmd.Command
+}
+
+// lookupCell resolves a reference against the equipped profiles; explain and
+// run both go through it so they agree on what an address means.
+func lookupCell(bundle config.ConfigBundle, ref string) (cellTarget, error) {
+	profileName, addr, itemIdx, err := parseCellRef(ref)
+	if err != nil {
+		return cellTarget{}, err
+	}
+	p, err := pickProfile(bundle, profileName)
+	if err != nil {
+		return cellTarget{}, err
+	}
+	cmd := config.FindCell(p.Profile.Commands, addr)
+	if cmd == nil {
+		return cellTarget{}, fmt.Errorf("no cell %s in profile %s", addr, p.Name)
+	}
+
+	t := cellTarget{p: p, cmd: cmd, addr: addr, danger: cmd.Danger}
+	if itemIdx > 0 {
+		if itemIdx > len(cmd.Items) {
+			return cellTarget{}, fmt.Errorf("no item %d in cell %s (%d items)", itemIdx, addr, len(cmd.Items))
+		}
+		t.item = &cmd.Items[itemIdx-1]
+		t.addr = cmd.ItemAddress(itemIdx)
+		t.danger = t.danger || t.item.Danger
+	}
+	return t, nil
+}
+
 // explainCell resolves one [profile:]address reference against the equipped
 // profiles and writes its key-value block.
 func explainCell(out io.Writer, bundle config.ConfigBundle, ref string) error {
-	profileName, addr, itemIdx, err := parseCellRef(ref)
+	t, err := lookupCell(bundle, ref)
 	if err != nil {
 		return err
-	}
-
-	p, err := pickProfile(bundle, profileName)
-	if err != nil {
-		return err
-	}
-
-	cmd := config.FindCell(p.Profile.Commands, addr)
-	if cmd == nil {
-		return fmt.Errorf("no cell %s in profile %s", addr, p.Name)
 	}
 
 	kv := func(key, value string) { fmt.Fprintf(out, "%-12s %s\n", key+":", value) }
+	kv("profile", t.p.Name)
+	kv("cell", t.addr)
+	kv("name", t.name())
 
-	if itemIdx > 0 {
-		if len(cmd.Items) == 0 {
-			return fmt.Errorf("cell %s (%s) has no items", addr, cmd.Name)
-		}
-		if itemIdx > len(cmd.Items) {
-			return fmt.Errorf("no item %d in cell %s (%d items)", itemIdx, addr, len(cmd.Items))
-		}
-		item := cmd.Items[itemIdx-1]
-		kv("profile", p.Name)
-		kv("cell", cmd.ItemAddress(itemIdx))
-		kv("name", item.Name)
+	if item := t.item; item != nil {
 		kv("command", commandOrNone(item.Command))
 		if item.Description != "" {
 			kv("description", item.Description)
 		}
 		kv("auto_close", autoCloseValue(item.AutoCloseExecution))
-		if item.Danger || cmd.Danger {
+		if t.danger {
 			kv("danger", "true")
 		}
 		return nil
 	}
 
-	kv("profile", p.Name)
-	kv("cell", addr)
-	kv("name", cmd.Name)
+	cmd := t.cmd
 	// A pure folder (items, no own command) has nothing to run directly.
 	runnable := cmd.Command != "" || len(cmd.Items) == 0
 	if runnable {
@@ -106,13 +138,13 @@ func explainCell(out io.Writer, bundle config.ConfigBundle, ref string) error {
 	if runnable {
 		kv("auto_close", autoCloseValue(cmd.AutoCloseExecution))
 	}
-	if cmd.Danger {
+	if t.danger {
 		kv("danger", "true")
 	}
 	if len(cmd.Items) > 0 {
 		fmt.Fprintln(out, "items:")
 		for k, item := range cmd.Items {
-			line := fmt.Sprintf("  %s.%-3d %s", addr, k+1, item.Name)
+			line := fmt.Sprintf("  %-*s %s", len(t.addr)+4, cmd.ItemAddress(k+1), item.Name)
 			if item.Command != "" {
 				// Summary line only — `explain A1.2` shows the full command.
 				line += " — " + oneLine(item.Command, lsDescriptionWidth)
@@ -201,7 +233,15 @@ func parseCellRef(ref string) (profile, addr string, item int, err error) {
 	if !('a' <= col && col <= 'z' || 'A' <= col && col <= 'Z') {
 		return bad()
 	}
-	for i := 1; i < len(cell); i++ {
+	// row = -1 (last row) is addressed as written, e.g. A-1.
+	rowStart := 1
+	if cell[1] == '-' {
+		rowStart = 2
+	}
+	if rowStart == len(cell) {
+		return bad()
+	}
+	for i := rowStart; i < len(cell); i++ {
 		if cell[i] < '0' || cell[i] > '9' {
 			return bad()
 		}

@@ -172,6 +172,8 @@ func TestParseCellRef(t *testing.T) {
 		{":A0", "", "A0", 0, false},
 		{"Work:B2", "Work", "B2", 0, false},
 		{"a1.10", "", "A1", 10, false},
+		{"a-1", "", "A-1", 0, false},
+		{"work:C-1.2", "work", "C-1", 2, false},
 		{"A", "", "", 0, true},
 		{"1A", "", "", 0, true},
 		{"A1.0", "", "", 0, true},
@@ -180,6 +182,8 @@ func TestParseCellRef(t *testing.T) {
 		{"", "", "", 0, true},
 		{"AA1", "", "", 0, true},
 		{"A1.x", "", "", 0, true},
+		{"A-", "", "", 0, true},
+		{"A--1", "", "", 0, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.ref, func(t *testing.T) {

@@ -20,7 +20,7 @@ const exitRunFailed = 125
 func HandleRunCommand(args []string) int {
 	refs := args[2:]
 	if len(refs) != 1 {
-		fmt.Fprint(os.Stderr, "Usage: drako run [profile:]<addr>\n"+
+		fmt.Fprint(os.Stderr, "drako run: usage: drako run [profile:]<addr>\n"+
 			"One cell per run. drako ls lists addresses; drako explain shows a cell.\n")
 		return exitRunFailed
 	}
@@ -32,17 +32,13 @@ func HandleRunCommand(args []string) int {
 		return exitRunFailed
 	}
 
-	name, commandStr, p, err := resolveRun(bundle, refs[0])
+	t, cfg, err := resolveRun(bundle, refs[0])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "drako run: %v\n", err)
 		return exitRunFailed
 	}
 
-	// The same effective config the TUI runs this profile with: shell, env.
-	effective := config.ApplyProfileOverlay(bundle.Base, p.Profile)
-	effective.ApplyDefaults()
-
-	code, err := core.RunForExit(effective, name, commandStr, p.Name)
+	code, err := core.RunForExit(cfg, t.name(), t.command(), t.p.Name)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "drako run: %v\n", err)
 		return exitRunFailed
@@ -50,40 +46,27 @@ func HandleRunCommand(args []string) int {
 	return code
 }
 
-// resolveRun turns a [profile:]<addr>[.item] reference into the name and
-// command to run, refusing anything that isn't a single runnable, safe target.
-func resolveRun(bundle config.ConfigBundle, ref string) (name, commandStr string, p config.ProfileInfo, err error) {
-	profileName, addr, itemIdx, err := parseCellRef(ref)
-	if err != nil {
-		return "", "", p, err
-	}
-	if p, err = pickProfile(bundle, profileName); err != nil {
-		return "", "", p, err
-	}
-	cmd := config.FindCell(p.Profile.Commands, addr)
-	if cmd == nil {
-		return "", "", p, fmt.Errorf("no cell %s in profile %s", addr, p.Name)
+// resolveRun resolves a reference to its target and the config the TUI would
+// run it with, refusing anything that isn't a single runnable, safe target.
+func resolveRun(bundle config.ConfigBundle, ref string) (t cellTarget, cfg config.Config, err error) {
+	if t, err = lookupCell(bundle, ref); err != nil {
+		return t, cfg, err
 	}
 
-	name, commandStr, danger := cmd.Name, cmd.Command, cmd.Danger
-	switch {
-	case itemIdx > 0:
-		if itemIdx > len(cmd.Items) {
-			return "", "", p, fmt.Errorf("no item %d in cell %s (%d items)", itemIdx, addr, len(cmd.Items))
-		}
-		item := cmd.Items[itemIdx-1]
-		name, commandStr = item.Name, item.Command
-		danger = danger || item.Danger
-		addr = cmd.ItemAddress(itemIdx)
-	case commandStr == "" && len(cmd.Items) > 0:
-		return "", "", p, fmt.Errorf("cell %s is a folder; address one of its items (e.g. %s.1)", addr, addr)
+	cfg = config.ApplyProfileOverlay(bundle.Base, t.p.Profile)
+	cfg.ApplyDefaults()
+	if err := config.ValidateConfig(cfg); err != nil {
+		return t, cfg, fmt.Errorf("profile %s has an invalid grid: %v", t.p.Name, err)
 	}
 
-	if danger {
-		return "", "", p, fmt.Errorf("%s (%s) is marked danger; run it from the drako grid", addr, name)
+	if t.item == nil && t.cmd.Command == "" && len(t.cmd.Items) > 0 {
+		return t, cfg, fmt.Errorf("cell %s is a folder; address one of its items (e.g. %s.1)", t.addr, t.addr)
 	}
-	if commandStr == "" {
-		return "", "", p, fmt.Errorf("%s (%s) has no command for this platform", addr, name)
+	if t.danger {
+		return t, cfg, fmt.Errorf("%s (%s) is marked danger; run it from the drako grid", t.addr, t.name())
 	}
-	return name, commandStr, p, nil
+	if t.command() == "" {
+		return t, cfg, fmt.Errorf("%s (%s) has no command for this platform", t.addr, t.name())
+	}
+	return t, cfg, nil
 }
