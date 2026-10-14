@@ -17,6 +17,7 @@ var DistroKeywords = map[string][]string{
 	"linux_debian": {"debian", "ubuntu", "pop", "mint", "kali", "mx", "zorin", "elementary", "neon"},
 	"linux_suse":   {"suse", "opensuse", "sles"},
 	"linux_void":   {"void"},
+	"linux_nixos":  {"nixos"},
 }
 
 // ImmutableKey is tried ahead of the base distro on image-managed systems.

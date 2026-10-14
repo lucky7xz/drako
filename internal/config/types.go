@@ -108,7 +108,7 @@ type ConfigBundle struct {
 //   command = { linux_debian = "apt ...", linux_arch = "pacman ...", macos = "brew ..." }
 //
 // Keys come from a closed vocabulary (linux_debian, linux_arch, linux_fedora,
-// linux_suse, linux_void, linux_immutable, linux_generic, macos,
+// linux_suse, linux_void, linux_nixos, linux_immutable, linux_generic, macos,
 // windows). Keys are tried most specific first, then linux_generic: on an
 // image-managed host that is linux_immutable, then the base distro, so only
 // cells that install something need the immutable variant. No match: the

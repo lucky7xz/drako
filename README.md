@@ -275,7 +275,7 @@ col = "a"
 row = 0
 ```
 
-- **Recognized keys:** `linux_debian`, `linux_arch`, `linux_fedora`, `linux_suse`, `linux_void`, `linux_immutable`, `linux_generic` (fallback for any Linux), `macos`, `windows`.
+- **Recognized keys:** `linux_debian`, `linux_arch`, `linux_fedora`, `linux_suse`, `linux_void`, `linux_nixos`, `linux_immutable`, `linux_generic` (fallback for any Linux), `macos`, `windows`.
 - On Linux, the distro is detected from `/etc/os-release` — so e.g. Pop!\_OS resolves to `linux_debian`. The keyword-to-key mapping lives in [`internal/config/platform.go`](internal/config/platform.go) (`DistroKeywords`); adding a distro is a one-line change there.
 - **Immutable systems** — Bazzite, Silverblue, SteamOS and friends — are found by probing for `/run/ostree-booted` or `steamos-readonly`, *after* the base distro. `linux_immutable` is tried first and the base key second, so only cells that install something need it: on those machines the distro's package manager isn't how software arrives, so write `brew` there and leave `rpm-ostree` and `pacman` alone.
 - Dropdown items (`items = [...]`) accept variant tables too — every entry in a command folder resolves independently.
