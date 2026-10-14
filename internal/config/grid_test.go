@@ -68,12 +68,12 @@ func TestCellAddresses(t *testing.T) {
 	}
 
 	cmds := []Command{
-		{Name: "first", Col: "a", Row: 0},
-		{Name: "shadowed", Col: "A", Row: 0},
+		{Name: "shadowed", Col: "a", Row: 0},
+		{Name: "last", Col: "A", Row: 0},
 		{Name: "other", Col: "b", Row: 1},
 	}
-	if got := FindCell(cmds, "a0"); got == nil || got.Name != "first" {
-		t.Errorf("FindCell(a0) = %+v, want the first claimant", got)
+	if got := FindCell(cmds, "a0"); got == nil || got.Name != "last" {
+		t.Errorf("FindCell(a0) = %+v, want the last claimant, as on the grid", got)
 	}
 	if got := FindCell(cmds, "B1"); got == nil || got.Name != "other" {
 		t.Errorf("FindCell(B1) = %+v, want other", got)

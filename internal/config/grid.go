@@ -37,9 +37,10 @@ func (c Command) ItemAddress(n int) string {
 	return fmt.Sprintf("%s.%d", c.Address(), n)
 }
 
-// FindCell returns the first command at addr, ignoring case, or nil.
+// FindCell returns the command at addr, ignoring case, or nil. Like BuildGrid,
+// the last command placed at an address is the one that counts.
 func FindCell(cmds []Command, addr string) *Command {
-	for i := range cmds {
+	for i := len(cmds) - 1; i >= 0; i-- {
 		if strings.EqualFold(cmds[i].Address(), addr) {
 			return &cmds[i]
 		}
