@@ -132,8 +132,15 @@ func tryPowerShellClipboard(s string) bool {
 		return false
 	}
 
-	// Try PowerShell with Set-Clipboard
-	cmd := exec.Command("powershell.exe", "-NoLogo", "-NoProfile", "-Command", fmt.Sprintf("Set-Clipboard -Value \"%s\"", s))
+	cmd := exec.Command("powershell.exe", powerShellClipboardArgs(s)...)
 	err := cmd.Run()
 	return err == nil
+}
+
+// powerShellClipboardArgs passes s as base64 inside a single-quoted literal,
+// so PowerShell never parses the copied text ($(...), quotes, backticks).
+func powerShellClipboardArgs(s string) []string {
+	enc := base64.StdEncoding.EncodeToString([]byte(s))
+	script := fmt.Sprintf("Set-Clipboard -Value ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('%s')))", enc)
+	return []string{"-NoLogo", "-NoProfile", "-NonInteractive", "-Command", script}
 }
