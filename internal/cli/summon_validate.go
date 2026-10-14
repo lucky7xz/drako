@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/BurntSushi/toml"
@@ -56,17 +57,18 @@ const (
 	profileMaxSize  = 2 * 1024 * 1024 // 2MB - reject if larger
 )
 
-// validateProfileFile checks if a file is a valid drako profile
-func validateProfileFile(path string) error {
+// validateProfileFile checks that a file is a valid drako profile and returns it decoded.
+func validateProfileFile(path string) (config.ProfileFile, error) {
+	var profile config.ProfileFile
 	// Check file size
 	info, err := os.Stat(path)
 	if err != nil {
-		return fmt.Errorf("failed to stat file: %w", err)
+		return profile, fmt.Errorf("failed to stat file: %w", err)
 	}
 
 	size := info.Size()
 	if size > profileMaxSize {
-		return fmt.Errorf("file too large (%d bytes, max %d bytes). This is not a valid profile", size, profileMaxSize)
+		return profile, fmt.Errorf("file too large (%d bytes, max %d bytes). This is not a valid profile", size, profileMaxSize)
 	}
 
 	if size > profileWarnSize {
@@ -76,26 +78,29 @@ func validateProfileFile(path string) error {
 	// Read and parse as TOML
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return fmt.Errorf("failed to read file: %w", err)
+		return profile, fmt.Errorf("failed to read file: %w", err)
 	}
 
 	// Try to parse as ProfileFile (what drako expects)
-	var profile config.ProfileFile
 	meta, err := toml.Decode(string(data), &profile)
 	if err != nil {
-		return fmt.Errorf("invalid TOML format: %w", err)
+		return profile, fmt.Errorf("invalid TOML format: %w", err)
 	}
 
 	// Check if it has at least one profile-related field
 	if ok, problems := config.ValidateProfileFile(profile, data, meta); !ok {
-		return fmt.Errorf("invalid profile: %s", strings.Join(problems, "; "))
+		return profile, fmt.Errorf("invalid profile: %s", strings.Join(problems, "; "))
 	}
 
-	return nil
+	return profile, nil
 }
 
 // validateFilename checks if the filename is a valid profile name
 func validateFilename(filename string) error {
+	// A plain name: separators of any OS would let it land outside the inventory.
+	if strings.ContainsAny(filename, `/\`) || !filepath.IsLocal(filename) {
+		return fmt.Errorf("filename must be a plain file name (got: %s)", filename)
+	}
 	if !strings.HasSuffix(filename, ".profile.toml") {
 		return fmt.Errorf("filename must end with .profile.toml (got: %s)", filename)
 	}

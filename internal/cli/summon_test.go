@@ -214,3 +214,114 @@ func TestSummon_Git_EquippedCollision_Real(t *testing.T) {
 		}
 	}
 }
+
+const validDeck = "x = 1\ny = 1\n[[commands]]\nname = \"T\"\ncommand = \"true\"\ncol = \"a\"\nrow = 0\n"
+
+// repoCloner fakes a clone by running build against the checkout directory.
+type repoCloner struct{ build func(dir string) error }
+
+func (c repoCloner) CloneRepo(url, destDir string) error {
+	if err := os.MkdirAll(destDir, 0o755); err != nil {
+		return err
+	}
+	return c.build(destDir)
+}
+func (repoCloner) CheckGitAvailable() error { return nil }
+
+// yesToAll answers every prompt with yes and records it.
+type yesToAll struct{ prompts []string }
+
+func (u *yesToAll) Confirm(prompt string) bool {
+	u.prompts = append(u.prompts, prompt)
+	return true
+}
+
+func gitSummoner(t *testing.T, build func(dir string) error) (*Summoner, *yesToAll) {
+	t.Helper()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir()) // anything written here went to the wrong config dir
+	ui := &yesToAll{}
+	return &Summoner{ConfigDir: t.TempDir(), Downloader: &MockDownloader{}, Cloner: repoCloner{build}, UI: ui}, ui
+}
+
+func TestSummonGitSkipsSymlinkedProfiles(t *testing.T) {
+	outside := filepath.Join(t.TempDir(), "secret.profile.toml")
+	if err := os.WriteFile(outside, []byte(validDeck), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	s, _ := gitSummoner(t, func(dir string) error {
+		if err := os.WriteFile(filepath.Join(dir, "real.profile.toml"), []byte(validDeck), 0o644); err != nil {
+			return err
+		}
+		return os.Symlink(outside, filepath.Join(dir, "evil.profile.toml"))
+	})
+	if err := s.Summon("git@host:repo.git"); err != nil {
+		t.Fatalf("Summon: %v", err)
+	}
+	inv := filepath.Join(s.ConfigDir, "inventory")
+	if _, err := os.Stat(filepath.Join(inv, "real.profile.toml")); err != nil {
+		t.Errorf("regular profile not summoned: %v", err)
+	}
+	if _, err := os.Lstat(filepath.Join(inv, "evil.profile.toml")); err == nil {
+		t.Error("a symlinked profile was followed out of the repo")
+	}
+}
+
+func TestSummonGitAssetsSkipSymlinks(t *testing.T) {
+	secret := filepath.Join(t.TempDir(), "id_ed25519")
+	if err := os.WriteFile(secret, []byte("PRIVATE"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	s, _ := gitSummoner(t, func(dir string) error {
+		deck := "assets = [\"data\"]\n" + validDeck
+		if err := os.WriteFile(filepath.Join(dir, "deck.profile.toml"), []byte(deck), 0o644); err != nil {
+			return err
+		}
+		if err := os.MkdirAll(filepath.Join(dir, "data"), 0o755); err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(dir, "data", "ok.txt"), []byte("ok"), 0o644); err != nil {
+			return err
+		}
+		return os.Symlink(secret, filepath.Join(dir, "data", "leak"))
+	})
+	if err := s.Summon("git@host:repo.git"); err != nil {
+		t.Fatalf("Summon: %v", err)
+	}
+	assets := filepath.Join(s.ConfigDir, "assets", "deck", "data")
+	if _, err := os.Stat(filepath.Join(assets, "ok.txt")); err != nil {
+		t.Errorf("regular asset not copied into the summoner's config dir: %v", err)
+	}
+	if _, err := os.Lstat(filepath.Join(assets, "leak")); err == nil {
+		t.Error("a symlinked asset was followed out of the repo")
+	}
+}
+
+func TestSummonGitUsesSummonerConfigDirAndUI(t *testing.T) {
+	s, ui := gitSummoner(t, func(dir string) error {
+		if err := os.WriteFile(filepath.Join(dir, "deck.profile.toml"), []byte(validDeck), 0o644); err != nil {
+			return err
+		}
+		return os.WriteFile(filepath.Join(dir, "team.spec.toml"), []byte("profiles = [\"deck\"]\n"), 0o644)
+	})
+	if err := s.Summon("git@host:repo.git"); err != nil {
+		t.Fatalf("Summon: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(s.ConfigDir, "specs", "team.spec.toml")); err != nil {
+		t.Errorf("spec not in the summoner's config dir: %v", err)
+	}
+	if got := strings.Join(ui.prompts, " | "); !strings.Contains(got, "deck.profile.toml") || !strings.Contains(got, "team.spec.toml") {
+		t.Errorf("per-file prompts bypassed the summoner's UI; it saw: %s", got)
+	}
+}
+
+func TestSummonPathsRejectBackslashTraversal(t *testing.T) {
+	if _, ok := cleanAssetRel(`..\..\x.profile.toml`); ok {
+		t.Error(`cleanAssetRel accepted ..\..\x.profile.toml`)
+	}
+	if err := validateFilename(`..\..\work.profile.toml`); err == nil {
+		t.Error(`validateFilename accepted ..\..\work.profile.toml`)
+	}
+	if !isGitURL("ssh://git@host/user/repo") {
+		t.Error("ssh:// URL not treated as git")
+	}
+}

@@ -103,6 +103,9 @@ func (s *Summoner) Summon(sourceURL string) error {
 	if filename == "" || !strings.HasSuffix(filename, ".profile.toml") {
 		filename = "personal.profile.toml"
 	}
+	if err := validateFilename(filename); err != nil {
+		return err
+	}
 
 	// Safety: Check Equipped Collision
 	if err := s.checkEquippedCollision(filename); err != nil {
@@ -129,7 +132,7 @@ func (s *Summoner) Summon(sourceURL string) error {
 		return fmt.Errorf("operation cancelled by user")
 	}
 
-	return s.summonFromHTTP(sourceURL, inventoryDir)
+	return s.summonFromHTTP(sourceURL, filename, inventoryDir)
 }
 
 // checkEquippedCollision ensures we don't summon a profile that conflicts with an actively equipped one (in root)
@@ -163,10 +166,12 @@ func (s *Summoner) summonFromGit(repoURL, inventoryDir string) error {
 		return err
 	}
 
-	// Verify the pinned commit before any file is even looked at. Git's
-	// content addressing means one matching commit hash covers the whole
-	// tree — every profile, spec and asset in it.
+	// Check out and verify the pinned commit before any file is looked at. Git's
+	// content addressing means one matching hash covers every file in the tree.
 	if s.Rev != "" {
+		if err := gitCheckoutFn(tempDir, s.Rev); err != nil {
+			return err
+		}
 		head, err := gitHeadFn(tempDir)
 		if err != nil {
 			return err
@@ -211,8 +216,7 @@ func (s *Summoner) summonFromGit(repoURL, inventoryDir string) error {
 
 	// 2. Process Spec Files
 	if len(specFiles) > 0 {
-		configDir, _ := paths.ConfigDir()
-		specsDir := paths.SpecsDir(configDir)
+		specsDir := paths.SpecsDir(s.ConfigDir)
 		if err := os.MkdirAll(specsDir, 0o755); err != nil {
 			fmt.Printf("⚠️  Failed to create specs directory: %v\n", err)
 		} else {
@@ -250,7 +254,8 @@ func findRepoFiles(tempDir string) (profileFiles, specFiles []string, err error)
 		if err != nil {
 			return err
 		}
-		if info.IsDir() {
+		// Regular files only: a symlink could point outside the repo or at a device.
+		if !info.Mode().IsRegular() {
 			return nil
 		}
 		if strings.HasSuffix(path, ".profile.toml") {
@@ -300,17 +305,12 @@ func (s *Summoner) summonRepoProfile(srcPath, tempDir, inventoryDir string) (sum
 
 	// Validate file content before copying
 	fmt.Printf("\nValidating %s...\n", dstName)
-	if err := validateProfileFile(srcPath); err != nil {
+	profile, err := validateProfileFile(srcPath)
+	if err != nil {
 		fmt.Printf("⚠️  Skipping %s: %v\n", dstName, err)
 		return outcomeSkipped, nil
 	}
-
-	// Parse overlay to detect assets
-	assets, perr := readAssetsFromProfile(srcPath)
-	if perr != nil {
-		fmt.Printf("⚠️  Warning: could not read assets from %s: %v (continuing)\n", dstName, perr)
-		assets = nil
-	}
+	assets := profileAssets(profile)
 
 	// Get file info for size display
 	info, _ := os.Stat(srcPath)
@@ -328,7 +328,7 @@ func (s *Summoner) summonRepoProfile(srcPath, tempDir, inventoryDir string) (sum
 		printAssetsPlan(tempDir, filepath.Dir(srcPath), assets, profileName)
 	}
 
-	if !ConfirmAction(fmt.Sprintf("Summon %s?", dstName)) {
+	if !s.UI.Confirm(fmt.Sprintf("Summon %s?", dstName)) {
 		fmt.Printf("⊘ Cancelled: %s\n", dstName)
 		return outcomeCancelled, nil
 	}
@@ -340,7 +340,7 @@ func (s *Summoner) summonRepoProfile(srcPath, tempDir, inventoryDir string) (sum
 
 	// Handle assets (git-only feature)
 	if len(assets) > 0 {
-		aCopied, aSkipped, aMissing, aBytes := copyAssetsList(tempDir, filepath.Dir(srcPath), assets, profileName)
+		aCopied, aSkipped, aMissing, aBytes := copyAssetsList(s.ConfigDir, tempDir, filepath.Dir(srcPath), assets, profileName)
 		fmt.Printf("  Assets: copied=%d, skipped=%d, missing=%d, total=%.1f MB\n",
 			aCopied, aSkipped, aMissing, float64(aBytes)/(1024*1024))
 		log.Printf("Assets for %s: copied=%d, skipped=%d, missing=%d, bytes=%d", dstName, aCopied, aSkipped, aMissing, aBytes)
@@ -404,7 +404,7 @@ func (s *Summoner) summonRepoSpec(srcPath, specsDir string) summonOutcome {
 		fmt.Printf("  ⚠️  Warning: Will overwrite existing file\n")
 	}
 
-	if !ConfirmAction(fmt.Sprintf("Summon spec %s?", dstName)) {
+	if !s.UI.Confirm(fmt.Sprintf("Summon spec %s?", dstName)) {
 		fmt.Printf("⊘ Cancelled: %s\n", dstName)
 		return outcomeCancelled
 	}
@@ -418,19 +418,8 @@ func (s *Summoner) summonRepoSpec(srcPath, specsDir string) summonOutcome {
 }
 
 // summonFromHTTP downloads a single profile file from an HTTP/HTTPS URL,
-// validates it, and moves it into the inventory.
-func (s *Summoner) summonFromHTTP(sourceURL, inventoryDir string) error {
-	// Extract filename from URL or use default
-	filename := extractFilenameFromURL(sourceURL)
-	if filename == "" || !strings.HasSuffix(filename, ".profile.toml") {
-		filename = "personal.profile.toml"
-	}
-
-	// Validate filename before proceeding
-	if err := validateFilename(filename); err != nil {
-		return err
-	}
-
+// validates it, and moves it into the inventory as filename.
+func (s *Summoner) summonFromHTTP(sourceURL, filename, inventoryDir string) error {
 	dstPath := filepath.Join(inventoryDir, filename)
 
 	// Download to a temp path so validation happens before anything lands in
@@ -459,7 +448,7 @@ func (s *Summoner) summonFromHTTP(sourceURL, inventoryDir string) error {
 
 	// Validate the downloaded file
 	fmt.Printf("Validating profile...\n")
-	if err := validateProfileFile(tempPath); err != nil {
+	if _, err := validateProfileFile(tempPath); err != nil {
 		return fmt.Errorf("validation failed: %w", err)
 	}
 

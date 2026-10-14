@@ -110,15 +110,7 @@ func HandleSummonCommand(args []string) int {
 		return 1
 	}
 
-	// Setup logging for CLI command
-	logPath := paths.LogFile(configDir)
-	logFile, err := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: could not open log file: %v\n", err)
-	} else {
-		defer logFile.Close()
-		log.SetOutput(logFile)
-	}
+	quietLogs()
 
 	sourceURL, sha, rev, err := parseSummonArgs(args[2:])
 	if err != nil {

@@ -88,7 +88,7 @@ func TestValidateProfileFile(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			path := writeTemp(t, "x.profile.toml", tt.content)
-			err := validateProfileFile(path)
+			_, err := validateProfileFile(path)
 			if tt.wantErr == "" {
 				if err != nil {
 					t.Fatalf("want valid, got %v", err)
@@ -107,7 +107,7 @@ func TestValidateProfileFile_TooLarge(t *testing.T) {
 	if err := os.WriteFile(path, bytes.Repeat([]byte("# pad\n"), (profileMaxSize/6)+2), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	err := validateProfileFile(path)
+	_, err := validateProfileFile(path)
 	if err == nil || !strings.Contains(err.Error(), "too large") {
 		t.Fatalf("oversized profile must be rejected, got %v", err)
 	}

@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/BurntSushi/toml"
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/paths"
 )
@@ -25,44 +24,26 @@ const (
 	assetMaxFileCount  = 500              // safety cap
 )
 
-// readAssetsFromProfile parses a profile file and returns declared assets (relative paths)
-func readAssetsFromProfile(profilePath string) ([]string, error) {
-	data, err := os.ReadFile(profilePath)
-	if err != nil {
-		return nil, err
-	}
-	var profile config.ProfileFile
-	if _, err := toml.Decode(string(data), &profile); err != nil {
-		return nil, err
-	}
+// profileAssets returns the profile's declared assets (relative paths).
+func profileAssets(profile config.ProfileFile) []string {
 	if profile.Assets == nil {
-		return nil, nil
+		return nil
 	}
 	var out []string
 	for _, raw := range *profile.Assets {
-		s := strings.TrimSpace(raw)
-		if s == "" {
-			continue
+		if s := strings.TrimSpace(raw); s != "" {
+			out = append(out, s)
 		}
-		// Clean path to normalize separators and remove leading "./"
-		s = filepath.Clean(s)
-		s = strings.TrimPrefix(s, "./")
-		out = append(out, s)
 	}
-	return out, nil
+	return out
 }
 
-// copyAssetsList copies a list of assets (files or directories) from the cloned repo to configDir.
+// copyAssetsList copies a list of assets (files or directories) from the cloned repo into configDir's assets.
 // - repoRoot: tempDir where repo was cloned
 // - profileDir: directory of the profile file (assets are relative to this)
 // - profileName: name of the profile (used for subfolder isolation)
 // Returns counts of copied/skipped/missing and total bytes copied.
-func copyAssetsList(repoRoot, profileDir string, assets []string, profileName string) (int, int, int, int64) {
-	configDir, err := paths.ConfigDir()
-	if err != nil {
-		log.Printf("assets: could not resolve config dir: %v", err)
-		return 0, 0, len(assets), 0
-	}
+func copyAssetsList(configDir, repoRoot, profileDir string, assets []string, profileName string) (int, int, int, int64) {
 	var copied, skipped, missing int
 	var totalBytes int64
 	var fileCount int
@@ -164,7 +145,7 @@ func planAssetsList(repoRoot, profileDir string, assets []string) []assetPlanIte
 				if err != nil {
 					return nil
 				}
-				if d.IsDir() {
+				if !d.Type().IsRegular() {
 					return nil
 				}
 				fi, e := d.Info()
@@ -203,16 +184,11 @@ func cleanAssetRel(rel string) (string, bool) {
 	if rel == "" {
 		return "", false
 	}
-	if filepath.IsAbs(rel) {
+	// Backslashes too: they separate paths on Windows.
+	if strings.Contains(rel, `\`) || !filepath.IsLocal(rel) {
 		return "", false
 	}
-	clean := filepath.Clean(rel)
-	clean = strings.TrimPrefix(clean, "./")
-	// Reject parent traversal
-	if clean == ".." || strings.HasPrefix(clean, "../") || strings.Contains(clean, "/../") {
-		return "", false
-	}
-	return clean, true
+	return filepath.Clean(rel), true
 }
 
 // copyDirWithLimits recursively copies files from srcDir to dstDir with size/count limits
@@ -226,6 +202,11 @@ func copyDirWithLimits(srcDir, dstDir string, fileCount *int, totalBytes *int64)
 			return err
 		}
 		if d.IsDir() {
+			return nil
+		}
+		// Regular files only: a symlink could point outside the repo or at a device.
+		if !d.Type().IsRegular() {
+			skipped++
 			return nil
 		}
 		info, serr := d.Info()

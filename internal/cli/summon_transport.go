@@ -22,8 +22,8 @@ func isGitURL(urlStr string) bool {
 	if strings.HasPrefix(urlStr, "git@") {
 		return true
 	}
-	// Git protocol: git://github.com/user/repo.git
-	if strings.HasPrefix(urlStr, "git://") {
+	// Git and SSH protocols: git://host/user/repo, ssh://git@host/user/repo
+	if strings.HasPrefix(urlStr, "git://") || strings.HasPrefix(urlStr, "ssh://") {
 		return true
 	}
 	// URLs ending with .git are repositories
@@ -78,6 +78,17 @@ func gitHead(dir string) (string, error) {
 		return "", fmt.Errorf("could not resolve the cloned HEAD commit: %w", err)
 	}
 	return strings.TrimSpace(string(out)), nil
+}
+
+// gitCheckoutFn checks out a commit in a clone; a package var so tests can stub it.
+var gitCheckoutFn = gitCheckout
+
+func gitCheckout(dir, rev string) error {
+	out, err := exec.Command("git", "-C", dir, "-c", "advice.detachedHead=false", "checkout", "-q", "--detach", rev).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("pinned commit %s is not in the repository: %w\n%s", rev, err, strings.TrimSpace(string(out)))
+	}
+	return nil
 }
 
 // GitCloner implements RepoCloner using exec.Command

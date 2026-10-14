@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -126,8 +127,9 @@ func (mkdirCloner) CheckGitAvailable() error            { return nil }
 // Git pin: verified against the cloned HEAD before any file is examined.
 func TestSummonGitRevPin(t *testing.T) {
 	pinned := strings.Repeat("3", 40)
-	origGitHead := gitHeadFn
-	defer func() { gitHeadFn = origGitHead }()
+	origGitHead, origCheckout := gitHeadFn, gitCheckoutFn
+	defer func() { gitHeadFn, gitCheckoutFn = origGitHead, origCheckout }()
+	gitCheckoutFn = func(dir, rev string) error { return nil }
 
 	newSummoner := func(dir string) *Summoner {
 		return &Summoner{ConfigDir: dir, Downloader: &MockDownloader{}, Cloner: mkdirCloner{}, UI: &MockUI{}, Rev: pinned}
@@ -164,5 +166,39 @@ func TestSummonPinFlagMismatch(t *testing.T) {
 	s.SHA256, s.Rev = "", strings.Repeat("b", 40)
 	if err := s.Summon("https://x/p.profile.toml"); err == nil || !strings.Contains(err.Error(), "--sha256") {
 		t.Errorf("rev on http URL: err = %v, want guidance towards --sha256", err)
+	}
+}
+
+// A pin names a commit, not a branch tip: it must still summon after the
+// author pushes again.
+func TestSummonGitRevChecksOutThePinnedCommit(t *testing.T) {
+	src := filepath.Join(t.TempDir(), "src.git")
+	git := func(args ...string) string {
+		t.Helper()
+		out, err := exec.Command("git", append([]string{"-C", src, "-c", "user.name=t", "-c", "user.email=t@t"}, args...)...).CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+		return strings.TrimSpace(string(out))
+	}
+	if err := os.MkdirAll(src, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	git("init", "-q")
+	deck := filepath.Join(src, "deck.profile.toml")
+	os.WriteFile(deck, []byte(validDeck), 0o644)
+	git("add", ".")
+	git("commit", "-qm", "v1")
+	pinned := git("rev-parse", "HEAD")
+	os.WriteFile(deck, []byte(validDeck+"# v2\n"), 0o644)
+	git("commit", "-qam", "v2")
+
+	s := &Summoner{ConfigDir: t.TempDir(), Downloader: &MockDownloader{}, Cloner: &GitCloner{}, UI: &yesToAll{}, Rev: pinned}
+	if err := s.Summon(src); err != nil {
+		t.Fatalf("Summon pinned to the older commit: %v", err)
+	}
+	got, _ := os.ReadFile(filepath.Join(s.ConfigDir, "inventory", "deck.profile.toml"))
+	if strings.Contains(string(got), "v2") {
+		t.Error("summoned the branch tip instead of the pinned commit")
 	}
 }
