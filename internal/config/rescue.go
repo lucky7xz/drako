@@ -1,11 +1,20 @@
 package config
 
 import (
-	"fmt"
 	"runtime"
+	"strings"
 
 	"github.com/lucky7xz/drako/internal/paths"
 )
+
+// shellQuote keeps s one argument for the rescue shell, spaces and quotes
+// included (macOS config lives under "Application Support").
+func shellQuote(shell, s string) string {
+	if shell == "powershell" {
+		return "'" + strings.ReplaceAll(s, "'", "''") + "'"
+	}
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
+}
 
 // RescueConfig returns a minimal "Safe Mode" configuration.
 // It provides tools to help the user fix a broken configuration.
@@ -23,8 +32,8 @@ func RescueConfig() Config {
 	configDir, _ := paths.ConfigDir()
 	configPath := paths.ConfigFile(configDir)
 
-	editCmd := fmt.Sprintf("drako open %s", configPath)
-	openDirCmd := fmt.Sprintf("drako open %s", configDir)
+	editCmd := "drako open " + shellQuote(defaultShell, configPath)
+	openDirCmd := "drako open " + shellQuote(defaultShell, configDir)
 
 	return Config{
 		X:                  3,
