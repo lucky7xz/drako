@@ -12,16 +12,13 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/core"
-	"github.com/lucky7xz/drako/internal/paths"
 )
 
 func (m Model) Init() tea.Cmd {
-	configDir, _ := paths.ConfigDir()
 	return tea.Batch(
 		tea.EnterAltScreen,
 		checkNetworkStatusCmd(),
 		m.spinner.tick(),
-		WatchConfigCmd(configDir),
 		lockCheckTick(),
 	)
 }
@@ -82,18 +79,13 @@ func (m Model) handleMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 		log.Printf("Config file change detected: %s", msg.Path)
 		bundle, err := config.ReloadConfig(m.profile.sessionProfile)
 		if err != nil {
-			// Keep watching: the environment may recover before the next change.
 			log.Printf("config reload failed: %v", err)
-			configDir, _ := paths.ConfigDir()
-			return m, tea.Batch(m.setProfileStatus("Config reload failed", false), WatchConfigCmd(configDir))
+			return m, m.setProfileStatus("Config reload failed", false)
 		}
 		if m.GlassrootMode && glassrootRejectsBundle(bundle) {
 			return m.failGlassroot()
 		}
-		m = m.applyReloadedBundle(bundle)
-		// Restart the watcher for the next change
-		configDir, _ := paths.ConfigDir()
-		return m, WatchConfigCmd(configDir)
+		return m.applyReloadedBundle(bundle), nil
 
 	case inventoryErrorMsg:
 		m.inventory.err = msg.err

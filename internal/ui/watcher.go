@@ -4,71 +4,66 @@ import (
 	"log"
 	"path/filepath"
 	"strings"
+	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/fsnotify/fsnotify"
 )
+
+// settleDelay lets a burst of writes (an editor's truncate, then write) finish
+// before reloading, so the reload never reads a half-written profile.
+const settleDelay = 150 * time.Millisecond
 
 // ConfigChangedMsg signals that a config file has changed
 type ConfigChangedMsg struct {
 	Path string
 }
 
-// WatchConfigCmd returns a command that continuously watches for config changes
-func WatchConfigCmd(configDir string) tea.Cmd {
-	return func() tea.Msg {
-		watcher, err := fsnotify.NewWatcher()
-		if err != nil {
-			log.Printf("Failed to create file watcher: %v", err)
-			return nil
-		}
+// WatchConfig reports .toml changes in configDir to notify until stop is called.
+// One watcher serves every lap, so none leak and no change lands in a gap.
+func WatchConfig(configDir string, notify func(ConfigChangedMsg)) (stop func(), err error) {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return nil, err
+	}
+	if err := watcher.Add(configDir); err != nil {
+		watcher.Close()
+		return nil, err
+	}
+	log.Printf("Watching for config changes in: %s", configDir)
 
-		if err := watcher.Add(configDir); err != nil {
-			log.Printf("Failed to watch config directory: %v", err)
-			watcher.Close()
-			return nil
-		}
-
-		log.Printf("Watching for config changes in: %s", configDir)
-
-		// Block and wait for the next relevant event
+	go func() {
+		var settled <-chan time.Time
+		var last string
 		for {
 			select {
 			case event, ok := <-watcher.Events:
 				if !ok {
-					watcher.Close()
-					return nil
+					return
 				}
-
-				// Remove/Rename catches a profile trashed out from under an
-				// active session — MoveToTrash renames it away.
-				if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Remove|fsnotify.Rename) == 0 {
-					continue
+				if isConfigChange(event, configDir) {
+					last = event.Name
+					settled = time.After(settleDelay) // restart the quiet period
 				}
-
-				filename := filepath.Base(event.Name)
-
-				// Must be a .toml file
-				if !strings.HasSuffix(filename, ".toml") {
-					continue
-				}
-
-				// Must be in the root config dir (not subdirs)
-				if filepath.Dir(event.Name) != configDir {
-					continue
-				}
-
-				log.Printf("Detected change in: %s", filename)
-				watcher.Close()
-				return ConfigChangedMsg{Path: event.Name}
-
+			case <-settled:
+				settled = nil
+				log.Printf("Detected change in: %s", filepath.Base(last))
+				notify(ConfigChangedMsg{Path: last})
 			case err, ok := <-watcher.Errors:
 				if !ok {
-					watcher.Close()
-					return nil
+					return
 				}
 				log.Printf("File watcher error: %v", err)
 			}
 		}
+	}()
+	return func() { watcher.Close() }, nil
+}
+
+// isConfigChange: a .toml directly in configDir changed. Remove/Rename catch a
+// profile trashed out from under an active session (MoveToTrash renames it).
+func isConfigChange(event fsnotify.Event, configDir string) bool {
+	if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Remove|fsnotify.Rename) == 0 {
+		return false
 	}
+	return strings.HasSuffix(event.Name, ".toml") && filepath.Dir(event.Name) == configDir
 }

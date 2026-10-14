@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -87,6 +88,18 @@ func Run() int {
 	// The zero value restores nothing, which is what the first lap wants.
 	var session ui.Session
 
+	// One watcher for the process; between laps InitialModel re-reads the config.
+	var current atomic.Pointer[tea.Program]
+	if stop, err := ui.WatchConfig(configDir, func(msg ui.ConfigChangedMsg) {
+		if p := current.Load(); p != nil {
+			p.Send(msg) // a no-op once that lap's program has quit
+		}
+	}); err != nil {
+		log.Printf("Failed to watch config directory: %v", err)
+	} else {
+		defer stop()
+	}
+
 	// Start of TUI Loop
 	for {
 
@@ -104,8 +117,9 @@ func Run() int {
 		initial.Restore(session)
 
 		program := tea.NewProgram(initial)
-
+		current.Store(program)
 		result, err := program.Run()
+		current.Store(nil)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Alas, there's been an error: %v\n", err)
 			return 1
