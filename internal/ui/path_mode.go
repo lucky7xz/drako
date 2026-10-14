@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -155,22 +156,23 @@ func (pm *PathModel) clearSearch() {
 	pm.ListChildDirs()
 }
 
-// editFilter applies one search keystroke — backspace or a single rune — to
-// the active filter and refreshes the listing. Other keys are ignored.
-func (pm *PathModel) editFilter(key string) {
-	if key == "backspace" {
-		if len(pm.Filter) > 0 {
-			pm.Filter = pm.Filter[:len(pm.Filter)-1]
-			pm.ListChildDirs()
-			pm.SelectedChildIndex = 0
+// editFilter applies one search key event to the active filter: backspace,
+// or typed/pasted runes (a fast burst arrives as one event). Others are ignored.
+func (pm *PathModel) editFilter(msg tea.KeyMsg) {
+	switch {
+	case msg.Type == tea.KeyBackspace:
+		if len(pm.Filter) == 0 {
+			return
 		}
+		_, size := utf8.DecodeLastRuneInString(pm.Filter)
+		pm.Filter = pm.Filter[:len(pm.Filter)-size]
+	case (msg.Type == tea.KeyRunes || msg.Type == tea.KeySpace) && !msg.Alt:
+		pm.Filter += string(msg.Runes)
+	default:
 		return
 	}
-	if len(key) == 1 {
-		pm.Filter += key
-		pm.ListChildDirs()
-		pm.SelectedChildIndex = 0
-	}
+	pm.ListChildDirs()
+	pm.SelectedChildIndex = 0
 }
 
 // selectedChild is the highlighted child's full path. A filter or the hidden
@@ -231,7 +233,7 @@ func (pm *PathModel) UpdatePathMode(msg tea.KeyMsg, cfg config.Config) navMode {
 			// Consume Enter to leave search; the next Enter navigates.
 			pm.Searching = false
 		default:
-			pm.editFilter(key)
+			pm.editFilter(msg)
 		}
 		// While searching, limit navigation to arrow keys to avoid conflict with typing
 		switch msg.Type {
@@ -294,7 +296,7 @@ func (pm *PathModel) UpdateChildMode(msg tea.KeyMsg, cfg config.Config) navMode 
 				return pm.descendMode()
 			}
 		default:
-			pm.editFilter(key)
+			pm.editFilter(msg)
 		}
 		// Allow navigation while searching, but STRICTLY limit to arrow keys
 		switch msg.Type {

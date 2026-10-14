@@ -513,3 +513,24 @@ func TestPathWindow_EmptyAndSingle(t *testing.T) {
 		t.Errorf("single = (%d,%d), want (0,1)", s, e)
 	}
 }
+
+// Directory names aren't ASCII-only, so neither is the filter; backspace
+// removes a whole character, and a burst of keys arrives as one event.
+func TestPathSearch_NonASCII(t *testing.T) {
+	pm := pathTestModel(t)
+	pm.Searching = true
+	for _, k := range []string{"a", "Ü", "я"} {
+		pm.editFilter(keyRune(k))
+	}
+	if pm.Filter != "aÜя" {
+		t.Fatalf("Filter = %q, want %q", pm.Filter, "aÜя")
+	}
+	pm.editFilter(tea.KeyMsg{Type: tea.KeyBackspace})
+	if pm.Filter != "aÜ" {
+		t.Errorf("after backspace Filter = %q, want %q", pm.Filter, "aÜ")
+	}
+	pm.editFilter(keyRune("pl"))
+	if pm.Filter != "aÜpl" {
+		t.Errorf("after burst Filter = %q, want %q", pm.Filter, "aÜpl")
+	}
+}
