@@ -203,16 +203,14 @@ func (inv inventoryModel) trashTarget(configDir string) (rel, name string, ok bo
 	return rel, name, true
 }
 
-// ApplyInventoryChangesCmd reconciles the on-disk profiles to match the
-// arranged visible list, then persists that order.
+// ApplyInventoryChangesCmd reconciles disk to the visible list and saves its
+// order. The list is copied now; keys keep editing State while the Cmd runs.
 func ApplyInventoryChangesCmd(configDir string, m inventoryModel) tea.Cmd {
+	desired := make([]string, 0, len(m.State.Visible))
+	for _, v := range m.State.Visible {
+		desired = append(desired, strings.TrimSuffix(v, profiles.ProfileSuffix))
+	}
 	return func() tea.Msg {
-		currentVisible, _ := m.State.GetList(core.ListVisible)
-		desired := make([]string, 0, len(*currentVisible))
-		for _, v := range *currentVisible {
-			desired = append(desired, strings.TrimSuffix(v, profiles.ProfileSuffix))
-		}
-
 		// Equip/stash files to match the arrangement (core stays protected).
 		if _, err := profiles.Reconcile(configDir, desired); err != nil {
 			return inventoryErrorMsg{err: fmt.Errorf("apply inventory changes failed: %w", err)}
