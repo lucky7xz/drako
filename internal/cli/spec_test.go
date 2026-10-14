@@ -87,3 +87,15 @@ func TestSpecHandlers_ExitCodes(t *testing.T) {
 		})
 	}
 }
+
+func TestStripRejectsArguments(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", tmp)
+	writeProfile(t, filepath.Join(tmp, "drako"), "alpha")
+	if code := HandleStripCommand([]string{"drako", "strip", "alpha"}); code != 1 {
+		t.Errorf("strip alpha exit = %d, want 1", code)
+	}
+	if _, err := os.Stat(filepath.Join(tmp, "drako", "alpha.profile.toml")); err != nil {
+		t.Error("strip with an argument stripped profiles anyway")
+	}
+}

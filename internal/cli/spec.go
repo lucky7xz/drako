@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -143,9 +144,9 @@ func HandleStashCommand(args []string) int {
 }
 
 func HandleStripCommand(args []string) int {
-	if len(args) < 2 {
+	if len(args) != 2 {
 		fmt.Fprintf(os.Stderr, "Usage: drako strip\n")
-		fmt.Fprintf(os.Stderr, "  Moves ALL profiles to inventory.\n")
+		fmt.Fprintf(os.Stderr, "  Moves ALL equipped profiles to inventory; it takes no arguments.\n")
 		return 1
 	}
 
@@ -221,19 +222,19 @@ func StashSpec(configDir string, targetProfiles []string) error {
 		return err
 	}
 
+	var failed []error
 	for _, e := range visEntries {
 		if !targetSet[e.Norm] {
 			continue
 		}
-		unlockIfLocked(configDir, e.Name)
-
 		if err := profiles.Move(configDir, e.File, profiles.Equipped, profiles.Inventory); err != nil {
-			log.Printf("Warning: skipped stashing %s: %v", e.Name, err)
-		} else {
-			fmt.Printf("  - Stashed: %s\n", e.Name)
+			failed = append(failed, fmt.Errorf("could not stash %s: %w", e.Name, err))
+			continue
 		}
+		fmt.Printf("  - Stashed: %s\n", e.Name)
+		unlockIfLocked(configDir, e.Name)
 	}
-	return nil
+	return errors.Join(failed...)
 }
 
 // ApplySpec equips targetProfiles and stashes the rest. allowOverCap lifts the
@@ -246,10 +247,8 @@ func ApplySpec(configDir string, targetProfiles []string, allowOverCap bool) err
 	if allowOverCap {
 		reconcile = profiles.ReconcileOverCap
 	}
+	// res holds the moves made before any failure; their locks still need releasing.
 	res, err := reconcile(configDir, targetProfiles)
-	if err != nil {
-		return err
-	}
 	for _, n := range res.Equipped {
 		fmt.Printf("  + Equipped: %s\n", n)
 	}
@@ -259,7 +258,9 @@ func ApplySpec(configDir string, targetProfiles []string, allowOverCap bool) err
 		// locked profile equipped must leave the lock alone.
 		unlockIfLocked(configDir, n)
 	}
-
+	if err != nil {
+		return err
+	}
 	return config.WritePivotEquippedOrder(configDir, targetProfiles)
 }
 

@@ -1,8 +1,10 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -42,7 +44,12 @@ func checkTargets(args []string) ([]string, error) {
 		if err != nil {
 			return nil, fmt.Errorf("could not get config dir: %v", err)
 		}
-		args = []string{configDir, paths.InventoryDir(configDir)}
+		// A default dir that doesn't exist yet has nothing to check.
+		for _, d := range []string{configDir, paths.InventoryDir(configDir)} {
+			if _, err := os.Stat(d); !errors.Is(err, fs.ErrNotExist) {
+				args = append(args, d)
+			}
+		}
 	}
 
 	var files []string

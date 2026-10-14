@@ -91,3 +91,13 @@ func TestRunChecksAllClean(t *testing.T) {
 		t.Errorf("clean run should not mention errors. Got:\n%s", got)
 	}
 }
+
+func TestCheckTargetsWithoutInventory(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", tmp)
+	writeProfile(t, filepath.Join(tmp, "drako"), "alpha")
+	files, err := checkTargets(nil)
+	if err != nil || len(files) != 1 {
+		t.Errorf("checkTargets = (%v, %v), want the one equipped profile", files, err)
+	}
+}

@@ -113,3 +113,35 @@ func TestLockReleasedWhenProfileLeavesEquipped(t *testing.T) {
 		}
 	})
 }
+
+// A move that fails halfway must still release the lock of a profile that
+// already left, and must be reported.
+func TestApplySpecPartialFailureReleasesLock(t *testing.T) {
+	cfg := t.TempDir()
+	for _, n := range []string{"git", "work", "zeta"} {
+		writeProfile(t, cfg, n)
+	}
+	writeProfile(t, filepath.Join(cfg, "inventory"), "zeta") // stashing zeta will clash
+	lock(t, cfg, "work")
+
+	if err := ApplySpec(cfg, []string{"git"}, false); err == nil {
+		t.Error("ApplySpec hid the failed move")
+	}
+	if got := lockedName(t, cfg); got != "" {
+		t.Errorf("lock = %q, want it released: work was stashed before the failure", got)
+	}
+}
+
+func TestStashSpecFailedMoveKeepsLockAndFails(t *testing.T) {
+	cfg := t.TempDir()
+	writeProfile(t, cfg, "work")
+	writeProfile(t, filepath.Join(cfg, "inventory"), "work") // the move will clash
+	lock(t, cfg, "work")
+
+	if err := StashSpec(cfg, []string{"work"}); err == nil {
+		t.Error("StashSpec reported success for a move that failed")
+	}
+	if got := lockedName(t, cfg); got != "work" {
+		t.Errorf("lock = %q, want work: the profile is still equipped", got)
+	}
+}
