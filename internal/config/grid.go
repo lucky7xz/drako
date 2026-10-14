@@ -26,6 +26,27 @@ func letterToColumn(s string) (int, error) {
 	return int(char - 'a'), nil
 }
 
+// Address is the cell's address for drako ls, explain and run: column and row
+// as the deck writes them, e.g. "A0".
+func (c Command) Address() string {
+	return fmt.Sprintf("%s%d", strings.ToUpper(c.Col), c.Row)
+}
+
+// ItemAddress addresses item n (1-based) of the cell's dropdown, e.g. "C2.6".
+func (c Command) ItemAddress(n int) string {
+	return fmt.Sprintf("%s.%d", c.Address(), n)
+}
+
+// FindCell returns the first command at addr, ignoring case, or nil.
+func FindCell(cmds []Command, addr string) *Command {
+	for i := range cmds {
+		if strings.EqualFold(cmds[i].Address(), addr) {
+			return &cmds[i]
+		}
+	}
+	return nil
+}
+
 // resolveCell resolves a command's grid position against the grid dimensions.
 // A row or column of -1 (column 'z') means "last" and is resolved here to
 // Y-1 / X-1. It errors only on an unparseable column letter; bounds-checking

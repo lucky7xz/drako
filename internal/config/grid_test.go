@@ -57,3 +57,28 @@ func TestBuildGridSkipsInvalidCell(t *testing.T) {
 		t.Errorf("invalid cell should be skipped, got %q", grid[0][1])
 	}
 }
+
+func TestCellAddresses(t *testing.T) {
+	c := Command{Name: "x", Col: "c", Row: 2}
+	if got := c.Address(); got != "C2" {
+		t.Errorf("Address = %q, want C2", got)
+	}
+	if got := c.ItemAddress(6); got != "C2.6" {
+		t.Errorf("ItemAddress(6) = %q, want C2.6", got)
+	}
+
+	cmds := []Command{
+		{Name: "first", Col: "a", Row: 0},
+		{Name: "shadowed", Col: "A", Row: 0},
+		{Name: "other", Col: "b", Row: 1},
+	}
+	if got := FindCell(cmds, "a0"); got == nil || got.Name != "first" {
+		t.Errorf("FindCell(a0) = %+v, want the first claimant", got)
+	}
+	if got := FindCell(cmds, "B1"); got == nil || got.Name != "other" {
+		t.Errorf("FindCell(B1) = %+v, want other", got)
+	}
+	if got := FindCell(cmds, "C9"); got != nil {
+		t.Errorf("FindCell(C9) = %+v, want nil", got)
+	}
+}

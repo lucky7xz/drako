@@ -75,7 +75,7 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 					cmdStr = "Error: no command. ( This might be a folder of commands!)"
 				}
 
-				m.activeDetail = newCommandDetail(selectedChoice, cmdStr, cmd.Description, cmd.AutoCloseExecution, cmd.DebugExecution, m.path.CurrentPath)
+				m.activeDetail = newCommandDetail(selectedChoice, m.runAddress(selectedChoice, 0), cmdStr, cmd.Description, cmd.AutoCloseExecution, m.path.CurrentPath)
 				m.mode = infoMode
 				return m, nil
 			}

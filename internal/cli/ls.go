@@ -70,11 +70,6 @@ func HandleLsCommand(args []string) int {
 	return 0
 }
 
-// cellAddress renders a command's grid coordinate, e.g. "A0".
-func cellAddress(c config.Command) string {
-	return strings.ToUpper(c.Col) + fmt.Sprintf("%d", c.Row)
-}
-
 // deckOrder sorts commands by column letter, then row.
 func deckOrder(cmds []config.Command) []config.Command {
 	sorted := config.CopyCommands(cmds)
@@ -123,10 +118,9 @@ func renderLs(out io.Writer, bundle config.ConfigBundle, width int) {
 		type rawRow struct{ addr, name, desc string }
 		raws := make([]rawRow, 0, len(cmds))
 		for _, c := range cmds {
-			addr := cellAddress(c)
-			raws = append(raws, rawRow{addr, c.Name, c.Description})
+			raws = append(raws, rawRow{c.Address(), c.Name, c.Description})
 			for k, item := range c.Items {
-				raws = append(raws, rawRow{fmt.Sprintf("%s.%d", addr, k+1), "  " + item.Name, item.Description})
+				raws = append(raws, rawRow{c.ItemAddress(k + 1), "  " + item.Name, item.Description})
 			}
 		}
 

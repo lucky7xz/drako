@@ -11,10 +11,8 @@ import (
 	"github.com/lucky7xz/drako/internal/config"
 )
 
-// RunForExit is RunCommand for the shell: it runs commandStr through the
-// configured shell and returns the child's exit code, with no TUI pauses.
-// name labels the run in history.log. A command that ran and failed is
-// (code, nil); an error means it never started.
+// RunForExit is RunCommand without the TUI: it returns the command's exit
+// code, and an error only when the command never started.
 func RunForExit(cfg config.Config, name, commandStr, activeProfile string) (int, error) {
 	if strings.TrimSpace(commandStr) == "" {
 		return 0, fmt.Errorf("%q has no command for this platform", name)

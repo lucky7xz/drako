@@ -324,7 +324,7 @@ func (m Model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				cmdStr = "Error: no command configured"
 			}
 
-			m.activeDetail = newCommandDetail(title, cmdStr, item.Description, item.AutoCloseExecution, item.DebugExecution, m.path.CurrentPath)
+			m.activeDetail = newCommandDetail(title, m.runAddress(parent, m.dropdown.selectedIdx+1), cmdStr, item.Description, item.AutoCloseExecution, m.path.CurrentPath)
 			m.mode = infoMode
 			return m, nil
 		}

@@ -1,41 +1,51 @@
 package ui
 
-import "fmt"
+import (
+	"fmt"
 
-// resolveExecMeta turns a command's optional execution flags into the
-// display values used by the info popup. A nil AutoCloseExecution defaults
-// to true; a nil DebugExecution defaults to live (non-debug).
-func resolveExecMeta(autoCloseExec, debugExec *bool) (execMode string, autoClose bool) {
-	autoClose = true
-	if autoCloseExec != nil {
-		autoClose = *autoCloseExec
-	}
-	debug := false
-	if debugExec != nil {
-		debug = *debugExec
-	}
-	execMode = "live"
-	if debug {
-		execMode = "debug"
-	}
-	return execMode, autoClose
-}
+	"github.com/lucky7xz/drako/internal/config"
+)
 
-// newCommandDetail assembles the info-popup content for a command. The
-// caller supplies the already-resolved value string (so each call site can
-// keep its own "empty command" message) plus the optional execution flags
-// and current working directory.
-func newCommandDetail(title, value, description string, autoCloseExec, debugExec *bool, cwd string) *DetailState {
-	execMode, autoClose := resolveExecMeta(autoCloseExec, debugExec)
+// newCommandDetail builds the info popup for a command. value arrives resolved,
+// so callers keep their own empty-command text; an empty address is left out.
+func newCommandDetail(title, address, value, description string, autoCloseExec *bool, cwd string) *DetailState {
+	autoClose := autoCloseExec == nil || *autoCloseExec // unset means close
+	var meta []DetailMeta
+	if address != "" {
+		meta = append(meta, DetailMeta{Label: "Address", Value: address})
+	}
+	meta = append(meta,
+		DetailMeta{Label: "Auto-close", Value: fmt.Sprintf("%v", autoClose)},
+		DetailMeta{Label: "CWD", Value: cwd},
+	)
 	return &DetailState{
 		Title:       title,
 		KeyLabel:    "Command",
 		Value:       value,
 		Description: description,
-		Meta: []DetailMeta{
-			{Label: "Exec", Value: execMode},
-			{Label: "Auto-close", Value: fmt.Sprintf("%v", autoClose)},
-			{Label: "CWD", Value: cwd},
-		},
+		Meta:        meta,
 	}
+}
+
+// runAddress is what drako run takes for the named cell, or its item n if n > 0
+// ("core:A0"); "" when that wouldn't reach the cell on screen, as in rescue.
+func (m Model) runAddress(name string, n int) string {
+	if m.profile.activeIndex < 0 || m.profile.activeIndex >= len(m.profile.profiles) {
+		return ""
+	}
+	p := m.profile.profiles[m.profile.activeIndex]
+	for _, shown := range m.Config.Commands {
+		if shown.Name != name {
+			continue
+		}
+		own := config.FindCell(p.Profile.Commands, shown.Address())
+		if own == nil || own.Name != shown.Name || own.Command != shown.Command {
+			return ""
+		}
+		if n > 0 {
+			return p.Name + ":" + own.ItemAddress(n)
+		}
+		return p.Name + ":" + own.Address()
+	}
+	return ""
 }

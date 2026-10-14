@@ -51,9 +51,7 @@ func HandleExplainCommand(args []string) int {
 }
 
 // explainCell resolves one [profile:]address reference against the equipped
-// profiles and writes its key-value block. The address is matched against
-// cellAddress — the exact scheme drako ls prints — so the two commands can
-// never disagree about what "A0" means.
+// profiles and writes its key-value block.
 func explainCell(out io.Writer, bundle config.ConfigBundle, ref string) error {
 	profileName, addr, itemIdx, err := parseCellRef(ref)
 	if err != nil {
@@ -65,7 +63,7 @@ func explainCell(out io.Writer, bundle config.ConfigBundle, ref string) error {
 		return err
 	}
 
-	cmd := findCell(p.Profile.Commands, addr)
+	cmd := config.FindCell(p.Profile.Commands, addr)
 	if cmd == nil {
 		return fmt.Errorf("no cell %s in profile %s", addr, p.Name)
 	}
@@ -81,7 +79,7 @@ func explainCell(out io.Writer, bundle config.ConfigBundle, ref string) error {
 		}
 		item := cmd.Items[itemIdx-1]
 		kv("profile", p.Name)
-		kv("cell", fmt.Sprintf("%s.%d", addr, itemIdx))
+		kv("cell", cmd.ItemAddress(itemIdx))
 		kv("name", item.Name)
 		kv("command", commandOrNone(item.Command))
 		if item.Description != "" {
@@ -120,16 +118,6 @@ func explainCell(out io.Writer, bundle config.ConfigBundle, ref string) error {
 				line += " — " + oneLine(item.Command, lsDescriptionWidth)
 			}
 			fmt.Fprintln(out, line)
-		}
-	}
-	return nil
-}
-
-// findCell returns the command at addr (the drako ls scheme), or nil.
-func findCell(cmds []config.Command, addr string) *config.Command {
-	for i := range cmds {
-		if strings.EqualFold(cellAddress(cmds[i]), addr) {
-			return &cmds[i]
 		}
 	}
 	return nil

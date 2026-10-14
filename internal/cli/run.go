@@ -15,9 +15,8 @@ import (
 // command's codes the way timeout(1) and env(1) do it.
 const exitRunFailed = 125
 
-// HandleRunCommand processes 'drako run [profile:]<addr>'. It returns the
-// child's exit code when the command ran; drako's own failures (bad address,
-// danger cell, nothing to run) are exitRunFailed with a message on stderr.
+// HandleRunCommand processes 'drako run [profile:]<addr>': the command's exit
+// code when it ran, exitRunFailed with a message on stderr when drako refused.
 func HandleRunCommand(args []string) int {
 	refs := args[2:]
 	if len(refs) != 1 {
@@ -61,7 +60,7 @@ func resolveRun(bundle config.ConfigBundle, ref string) (name, commandStr string
 	if p, err = pickProfile(bundle, profileName); err != nil {
 		return "", "", p, err
 	}
-	cmd := findCell(p.Profile.Commands, addr)
+	cmd := config.FindCell(p.Profile.Commands, addr)
 	if cmd == nil {
 		return "", "", p, fmt.Errorf("no cell %s in profile %s", addr, p.Name)
 	}
@@ -75,7 +74,7 @@ func resolveRun(bundle config.ConfigBundle, ref string) (name, commandStr string
 		item := cmd.Items[itemIdx-1]
 		name, commandStr = item.Name, item.Command
 		danger = danger || item.Danger
-		addr = fmt.Sprintf("%s.%d", addr, itemIdx)
+		addr = cmd.ItemAddress(itemIdx)
 	case commandStr == "" && len(cmd.Items) > 0:
 		return "", "", p, fmt.Errorf("cell %s is a folder; address one of its items (e.g. %s.1)", addr, addr)
 	}
