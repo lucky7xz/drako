@@ -714,3 +714,33 @@ func TestSpecsPopup_NeverWiderThanTheTerminal(t *testing.T) {
 		}
 	}
 }
+
+// Keeping the locked deck must not move it: equipped order is what the
+// profile digits follow, and stash only asked to take decks away.
+func TestSpecsOverlay_LockedDeckKeepsItsSlot(t *testing.T) {
+	t.Run("stash of other decks", func(t *testing.T) {
+		m, _ := specsInventoryModel(t, []string{"a", "b", "lk", "c"}, nil, map[string]string{
+			"s": specList("a"),
+		})
+		m.profile.pivotName = "lk"
+		m = send(t, m, keyType(tea.KeyTab))
+		m = selectRow(t, m, specStash, "s")
+
+		if got := names(m.inventory.State.Visible); got != "b lk c" {
+			t.Errorf("Visible = %q, want %q", got, "b lk c")
+		}
+	})
+
+	t.Run("stash naming the locked deck", func(t *testing.T) {
+		m, _ := specsInventoryModel(t, []string{"b", "lk", "a"}, nil, map[string]string{
+			"s": specList("a", "lk"),
+		})
+		m.profile.pivotName = "lk"
+		m = send(t, m, keyType(tea.KeyTab))
+		m = selectRow(t, m, specStash, "s")
+
+		if got := names(m.inventory.State.Visible); got != "b lk" {
+			t.Errorf("Visible = %q, want %q", got, "b lk")
+		}
+	})
+}

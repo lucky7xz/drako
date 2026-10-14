@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -206,7 +207,7 @@ func (m Model) buildSpecPlans() []specPlan {
 	// to call a helper is one a fourth verb can quietly break.
 	if locked := m.lockedFile(); locked != "" {
 		for i := range plans {
-			plans[i].desired = withLocked(locked, plans[i].desired)
+			plans[i].desired = withLocked(locked, plans[i].desired, state.Visible)
 		}
 	}
 	return plans
@@ -225,16 +226,22 @@ func resolveSpec(want []string, byName map[string]string) (files, missing []stri
 	return files, missing
 }
 
-// withLocked puts the locked deck at the head of an arrangement, without
-// duplicating it if the plan already asked for it.
-func withLocked(locked string, files []string) []string {
-	out := []string{locked}
-	for _, f := range files {
-		if f != locked {
-			out = append(out, f)
+// withLocked keeps the locked deck in an arrangement without moving it: where the
+// plan has it, else after the decks that precede it in visible.
+func withLocked(locked string, files, visible []string) []string {
+	if slices.Contains(files, locked) {
+		return files
+	}
+	at := 0
+	for _, f := range visible {
+		if f == locked {
+			break
+		}
+		if slices.Contains(files, f) {
+			at++
 		}
 	}
-	return out
+	return slices.Insert(slices.Clone(files), at, locked)
 }
 
 // subtract returns the files in from that are not in remove.

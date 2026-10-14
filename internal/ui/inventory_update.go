@@ -337,6 +337,10 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Lift and Place
 	case IsConfirm(m.Config.Keys, msg):
 		if inv.focusedList == focusApply {
+			if inv.State.HeldItem != nil {
+				inv.status = "Place the held item before applying"
+				return m, nil
+			}
 			return m, ApplyInventoryChangesCmd(m.profile.configDir, m.inventory)
 		}
 		if inv.focusedList == focusRescue {

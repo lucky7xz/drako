@@ -423,10 +423,12 @@ func (m Model) afterEdit(msg editorFinishedMsg) (tea.Model, tea.Cmd) {
 	// Rebuild the inventory (validity may have changed), keep the cursor.
 	prev := m.inventory
 	m.inventory = InitInventoryModel(m.profile.configDir)
-	m.inventory.focusedList = prev.focusedList
-	m.inventory.cursor = prev.cursor
-	if listPtr, err := m.inventory.State.GetList(prev.focusedList); err == nil && m.inventory.cursor >= len(*listPtr) {
-		m.inventory.cursor = max(len(*listPtr)-1, 0)
+	if m.inventory.err == nil { // a failed rebuild has no State; the view shows err
+		m.inventory.focusedList = prev.focusedList
+		m.inventory.cursor = prev.cursor
+		if listPtr, err := m.inventory.State.GetList(prev.focusedList); err == nil && m.inventory.cursor >= len(*listPtr) {
+			m.inventory.cursor = max(len(*listPtr)-1, 0)
+		}
 	}
 
 	name := filepath.Base(msg.path)
