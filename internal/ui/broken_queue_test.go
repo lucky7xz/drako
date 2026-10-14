@@ -178,3 +178,25 @@ func TestApplyBundleClampsBadActiveIndex(t *testing.T) {
 		t.Errorf("out-of-range index must clamp to 0, got %d", m.profile.activeIndex)
 	}
 }
+
+// Background messages (resize, ticks) must not advance a queue that is
+// already on screen; only the user's keypress does.
+func TestBrokenQueueWaitsForKeypress(t *testing.T) {
+	m := queueModel(brokenErr("alpha"), brokenErr("beta"), brokenErr("gamma"))
+	m = m.presentNextBrokenProfile()
+
+	next, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m = next.(Model)
+	if !strings.Contains(m.activeDetail.Title, "alpha") {
+		t.Fatalf("resize advanced the queue: showing %q", m.activeDetail.Title)
+	}
+
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(Model)
+	if !strings.Contains(m.activeDetail.Title, "beta") {
+		t.Fatalf("one keypress should show beta, showing %q", m.activeDetail.Title)
+	}
+	if len(m.profile.pendingErrors) != 1 {
+		t.Errorf("gamma should still be pending, %d left", len(m.profile.pendingErrors))
+	}
+}

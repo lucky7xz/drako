@@ -173,6 +173,7 @@ func (m *Model) applyBundle(bundle config.ConfigBundle) {
 		m.profile.activeIndex = bundle.ActiveIndex
 	}
 	m.applyConfig(bundle.Config)
+	m.batch = batchState{} // marks name cells of the grid being replaced
 	m.profile.configDir = bundle.ConfigDir
 	m.profile.pivotName = bundle.LockedName
 	m.profile.locked = strings.TrimSpace(bundle.LockedName) != ""
@@ -220,12 +221,11 @@ func (m Model) applyReloadedBundle(bundle config.ConfigBundle) Model {
 	return m
 }
 
-// presentDeferredIfSafe shows the oldest queued broken/dropped-profile
-// notice, run after every message regardless of what caused a protected
-// mode to end. presentNextBrokenProfile/presentDroppedProfileNote already
-// no-op while protectsMode() is true, so this just needs to try them.
+// presentDeferredIfSafe shows the oldest queued notice after every message;
+// a queue already on screen waits for the user's keypress (updateInfoMode).
 func (m Model) presentDeferredIfSafe() Model {
-	if len(m.profile.pendingErrors) > 0 {
+	showingQueue := m.profile.errorQueueActive && m.mode == infoMode
+	if len(m.profile.pendingErrors) > 0 && !showingQueue {
 		return m.presentNextBrokenProfile()
 	}
 	if m.profile.pendingDroppedProfile != "" {

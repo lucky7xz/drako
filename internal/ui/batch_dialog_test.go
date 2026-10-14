@@ -275,3 +275,21 @@ func TestDialog_BoxWidthDoesNotMoveWithTheLayout(t *testing.T) {
 		}
 	}
 }
+
+// A reload drops the user back to the grid; the layout dialog and its marks
+// must go with it, or Enter runs the cursor cell under a stale dialog.
+func TestReloadClosesLayoutDialog(t *testing.T) {
+	m := dialogModel(t, 3)
+	if !m.batch.choosing() {
+		t.Fatal("setup: layout dialog should be open")
+	}
+
+	m = m.applyReloadedBundle(config.ConfigBundle{Config: m.Config})
+
+	if m.mode != gridMode {
+		t.Fatalf("mode = %v, want gridMode", m.mode)
+	}
+	if m.batch.choosing() || len(m.batch.marked) > 0 {
+		t.Errorf("batch survived the reload: %+v", m.batch)
+	}
+}
