@@ -129,16 +129,17 @@ func Run() int {
 			continue
 		}
 
-		if state.Selected != "" {
+		if state.Selected.Cell != "" {
 			// Internal "drako …" cells are dispatched here, at the layer that
 			// may wire cli and core together; everything else runs via core.
+			name := state.Selected.Name(state.Config)
 			switch {
-			case strings.HasPrefix(state.Selected, "drako purge"):
-				if runInternalPurge(state.Selected) {
+			case strings.HasPrefix(name, "drako purge"):
+				if runInternalPurge(name) {
 					return 0 // successful purge ends the session
 				}
-			case strings.HasPrefix(state.Selected, "drako open"):
-				cli.HandleOpenCommand(state.Selected)
+			case strings.HasPrefix(name, "drako open"):
+				cli.HandleOpenCommand(name)
 			default:
 				core.RunCommand(state.Config, state.Selected, state.ActiveProfileName())
 			}
@@ -175,8 +176,9 @@ func runBatch(state ui.Model) {
 	cellEnv, isolate := core.BatchEnv(os.Environ(), state.Config.EnvWhitelist, state.ActiveProfileName())
 
 	var cmds []multiplex.Command
-	for _, name := range state.SelectedBatch {
-		parent, item, found := core.FindCommandByName(state.Config, name)
+	for _, sel := range state.SelectedBatch {
+		name := sel.Name(state.Config)
+		parent, item, found := sel.Resolve(state.Config)
 		if !found {
 			log.Printf("batch: skipping %q (not found)", name)
 			continue

@@ -8,35 +8,38 @@ import (
 	"github.com/lucky7xz/drako/internal/config"
 )
 
-func TestFindCommandByName(t *testing.T) {
+func TestSelectionResolve(t *testing.T) {
 	cfg := config.Config{
 		Commands: []config.Command{
 			{Name: "A", Command: "echo A"},
-			{Name: "B", Items: []config.CommandItem{{Name: "B1", Command: "echo B1"}}},
+			{Name: "B", Items: []config.CommandItem{{Name: "Same", Command: "echo B1"}}},
+			{Name: "C", Items: []config.CommandItem{{Name: "Same", Command: "echo C1"}}},
+			{Name: "Same", Command: "echo cell"},
 		},
 	}
 	tests := []struct {
-		name     string
-		in       string
-		wantOk   bool
-		wantTop  bool
-		wantItem bool
+		name string
+		sel  Selection
+		want string // the resolved command, "" for no match
 	}{
-		{"top-level hit", "A", true, true, false},
-		{"nested item hit", "B1", true, true, true},
-		{"miss", "X", false, false, false},
+		{"cell", Selection{Cell: "A"}, "echo A"},
+		{"item in its own folder", Selection{Cell: "C", Item: 1}, "echo C1"},
+		{"cell sharing an item's name", Selection{Cell: "Same"}, "echo cell"},
+		{"item past the folder's end", Selection{Cell: "B", Item: 2}, ""},
+		{"no such cell", Selection{Cell: "X"}, ""},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			p, it, ok := FindCommandByName(cfg, tc.in)
-			if ok != tc.wantOk {
-				t.Fatalf("ok=%v, want %v", ok, tc.wantOk)
+			cell, item, ok := tc.sel.Resolve(cfg)
+			got := ""
+			if ok {
+				got = cell.Command
+				if item != nil {
+					got = item.Command
+				}
 			}
-			if p != nil != tc.wantTop {
-				t.Fatalf("top-level presence=%v, want %v", p != nil, tc.wantTop)
-			}
-			if it != nil != tc.wantItem {
-				t.Fatalf("item presence=%v, want %v", it != nil, tc.wantItem)
+			if got != tc.want {
+				t.Errorf("Resolve(%+v) = %q, want %q", tc.sel, got, tc.want)
 			}
 		})
 	}
@@ -100,7 +103,7 @@ func TestRunCommand_ConfigMatchButEmptyCommand(t *testing.T) {
 	cfg := config.Config{
 		Commands: []config.Command{{Name: "test", Command: ""}},
 	}
-	RunCommand(cfg, "test", "")
+	RunCommand(cfg, Selection{Cell: "test"}, "")
 
 	// Should pause but not execute anything
 	if !paused {
@@ -127,7 +130,7 @@ func TestRunCommand_PathFallback(t *testing.T) {
 	}
 
 	cfg := config.Config{} // No matching configured command
-	RunCommand(cfg, "echo", "")
+	RunCommand(cfg, Selection{Cell: "echo"}, "")
 
 	if len(gotArgs) == 0 || gotArgs[0] != "/bin/echo" {
 		t.Fatalf("expected to build cmd with looked-up path, got %v", gotArgs)

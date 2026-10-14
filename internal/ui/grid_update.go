@@ -112,7 +112,7 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				}
 			}
 			// Single command, execute normally
-			m.Selected = selectedChoice
+			m.Selected = core.Selection{Cell: selectedChoice}
 			return m, tea.Quit
 		}
 	}

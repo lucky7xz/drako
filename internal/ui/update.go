@@ -249,6 +249,15 @@ func (m Model) handleMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// dropdownCell is the name of the folder cell the open dropdown belongs to.
+func (m Model) dropdownCell() string {
+	r, c := m.dropdown.row, m.dropdown.col
+	if r < 0 || c < 0 || r >= len(m.gridNav.grid) || c >= len(m.gridNav.grid[r]) {
+		return ""
+	}
+	return m.gridNav.grid[r][c]
+}
+
 func (m Model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 
@@ -307,10 +316,7 @@ func (m Model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case IsExplain(m.Config.Keys, msg):
 		if m.dropdown.selectedIdx >= 0 && m.dropdown.selectedIdx < len(m.dropdown.items) {
 			item := m.dropdown.items[m.dropdown.selectedIdx]
-			parent := ""
-			if m.dropdown.row >= 0 && m.dropdown.col >= 0 && m.dropdown.row < len(m.gridNav.grid) && m.dropdown.col < len(m.gridNav.grid[0]) {
-				parent = m.gridNav.grid[m.dropdown.row][m.dropdown.col]
-			}
+			parent := m.dropdownCell()
 			m.previousMode = m.mode
 
 			title := item.Name
@@ -331,10 +337,7 @@ func (m Model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case IsConfirm(m.Config.Keys, msg):
 		// Execute the selected dropdown item
 		if m.dropdown.selectedIdx >= 0 && m.dropdown.selectedIdx < len(m.dropdown.items) {
-			selectedItem := m.dropdown.items[m.dropdown.selectedIdx]
-			m.Selected = selectedItem.Name
-			// Store the command to execute
-			// We need to create a temporary command entry for execution
+			m.Selected = core.Selection{Cell: m.dropdownCell(), Item: m.dropdown.selectedIdx + 1}
 			return m, tea.Quit
 		}
 	}

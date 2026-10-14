@@ -35,7 +35,7 @@ func planTestConfig() config.Config {
 }
 
 func TestBuildExecPlan_TopLevelCommand(t *testing.T) {
-	plan := buildExecPlan(planTestConfig(), "hello", noLookPath)
+	plan := buildExecPlan(planTestConfig(), Selection{Cell: "hello"}, noLookPath)
 	if plan.kind != planShell {
 		t.Fatalf("kind = %v, want planShell", plan.kind)
 	}
@@ -48,14 +48,14 @@ func TestBuildExecPlan_TopLevelCommand(t *testing.T) {
 }
 
 func TestBuildExecPlan_FlagOverrides(t *testing.T) {
-	plan := buildExecPlan(planTestConfig(), "careful", noLookPath)
+	plan := buildExecPlan(planTestConfig(), Selection{Cell: "careful"}, noLookPath)
 	if plan.autoClose || !plan.debug {
 		t.Errorf("overrides: autoClose=%v debug=%v, want false/true", plan.autoClose, plan.debug)
 	}
 }
 
 func TestBuildExecPlan_DropdownItem(t *testing.T) {
-	plan := buildExecPlan(planTestConfig(), "child", noLookPath)
+	plan := buildExecPlan(planTestConfig(), Selection{Cell: "folder", Item: 1}, noLookPath)
 	if plan.kind != planShell || plan.commandStr != "ls -la" {
 		t.Fatalf("plan = %+v, want ls -la via shell", plan)
 	}
@@ -65,10 +65,10 @@ func TestBuildExecPlan_DropdownItem(t *testing.T) {
 }
 
 func TestBuildExecPlan_ConfiguredButEmpty(t *testing.T) {
-	for _, name := range []string{"empty-cell", "bare-child"} {
-		plan := buildExecPlan(planTestConfig(), name, noLookPath)
+	for _, sel := range []Selection{{Cell: "empty-cell"}, {Cell: "folder", Item: 2}} {
+		plan := buildExecPlan(planTestConfig(), sel, noLookPath)
 		if plan.kind != planNoCommand {
-			t.Errorf("%s: kind = %v, want planNoCommand (never fall through to PATH)", name, plan.kind)
+			t.Errorf("%+v: kind = %v, want planNoCommand (never fall through to PATH)", sel, plan.kind)
 		}
 	}
 }
@@ -80,7 +80,7 @@ func TestBuildExecPlan_PathFallback(t *testing.T) {
 		}
 		return "", errors.New("not found")
 	}
-	plan := buildExecPlan(planTestConfig(), "htop", lookPath)
+	plan := buildExecPlan(planTestConfig(), Selection{Cell: "htop"}, lookPath)
 	if plan.kind != planDirect || plan.path != "/usr/bin/htop" {
 		t.Fatalf("plan = %+v, want direct /usr/bin/htop", plan)
 	}
@@ -110,7 +110,17 @@ func TestAssembleCmd_DirectPlanCarriesEnv(t *testing.T) {
 }
 
 func TestBuildExecPlan_NotFound(t *testing.T) {
-	plan := buildExecPlan(planTestConfig(), "ghost", noLookPath)
+	plan := buildExecPlan(planTestConfig(), Selection{Cell: "ghost"}, noLookPath)
+	if plan.kind != planNotFound {
+		t.Fatalf("kind = %v, want planNotFound", plan.kind)
+	}
+}
+
+// An item index past the folder's end matches nothing, and must not try the
+// folder's name as a binary on PATH.
+func TestBuildExecPlan_StaleItemSkipsPath(t *testing.T) {
+	anything := func(string) (string, error) { return "/usr/bin/folder", nil }
+	plan := buildExecPlan(planTestConfig(), Selection{Cell: "folder", Item: 9}, anything)
 	if plan.kind != planNotFound {
 		t.Fatalf("kind = %v, want planNotFound", plan.kind)
 	}

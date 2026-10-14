@@ -33,18 +33,16 @@ type execPlan struct {
 	debug      bool
 }
 
-// buildExecPlan resolves selected against the config: a top-level command or
-// dropdown item runs via the shell with its own flag overrides; a matched cell
-// without a command string is a dead end by design; anything unmatched falls
-// back to a PATH lookup (injected so the resolution stays testable).
-func buildExecPlan(cfg config.Config, selected string, lookPath func(string) (string, error)) execPlan {
+// buildExecPlan resolves sel: a cell or item runs via the shell with its own flags,
+// one without a command is a dead end, and an unmatched bare cell name tries PATH.
+func buildExecPlan(cfg config.Config, sel Selection, lookPath func(string) (string, error)) execPlan {
 	plan := execPlan{
 		kind:      planNotFound,
 		shell:     cfg.DefaultShell,
 		autoClose: true,
 	}
 
-	parentCmd, itemCfg, found := FindCommandByName(cfg, selected)
+	parentCmd, itemCfg, found := sel.Resolve(cfg)
 	if found {
 		commandStr := parentCmd.Command
 		autoClosePtr := parentCmd.AutoCloseExecution
@@ -65,7 +63,10 @@ func buildExecPlan(cfg config.Config, selected string, lookPath func(string) (st
 		return plan
 	}
 
-	if path, err := lookPath(selected); err == nil {
+	if sel.Item != 0 {
+		return plan // a stale item must never run its folder's name as a binary
+	}
+	if path, err := lookPath(sel.Cell); err == nil {
 		plan.kind = planDirect
 		plan.path = path
 		return plan

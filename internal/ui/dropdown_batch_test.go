@@ -1,12 +1,14 @@
 package ui
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/core"
 )
 
 // dropdownTestModel: one folder cell open in dropdown mode — two runnable
@@ -143,8 +145,8 @@ func TestDropdownLaunchCollectsSelectionOrder(t *testing.T) {
 	// Enter opens the layout dialog; a second Enter accepts it and launches.
 	m, _ = pressDropdown(t, m, tea.KeyMsg{Type: tea.KeyEnter})
 	m, cmd := pressDropdown(t, m, tea.KeyMsg{Type: tea.KeyEnter})
-	want := []string{"second", "first"}
-	if len(m.SelectedBatch) != 2 || m.SelectedBatch[0] != want[0] || m.SelectedBatch[1] != want[1] {
+	want := []core.Selection{{Cell: "folder", Item: 2}, {Cell: "folder", Item: 1}}
+	if !slices.Equal(m.SelectedBatch, want) {
 		t.Fatalf("SelectedBatch = %v, want %v (selection order)", m.SelectedBatch, want)
 	}
 	if cmd == nil {
@@ -162,7 +164,7 @@ func TestDropdownLaunchWithNothingMarkedDoesNotRunItem(t *testing.T) {
 	m := markingModel(t)
 
 	m, _ = pressDropdown(t, m, tea.KeyMsg{Type: tea.KeyEnter})
-	if m.Selected != "" || len(m.SelectedBatch) != 0 {
+	if m.Selected != (core.Selection{}) || len(m.SelectedBatch) != 0 {
 		t.Fatal("enter with zero marks must neither launch nor run the selected item")
 	}
 	if m.profile.statusMessage == "" {

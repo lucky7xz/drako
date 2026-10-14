@@ -135,8 +135,8 @@ func (m Model) updateDropdownMarking(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) 
 // direct, non-empty command. Folder (dropdown) cells and platform-empty cells
 // stay out in v1.
 func (m Model) markable(name string) bool {
-	parent, item, found := core.FindCommandByName(m.Config, name)
-	return found && item == nil && parent.Command != ""
+	cell, _, found := core.Selection{Cell: name}.Resolve(m.Config)
+	return found && cell.Command != "" && len(cell.Items) == 0
 }
 
 // updateBatchMode: navigation as usual; Space toggles the cursor cell's mark,

@@ -1,12 +1,14 @@
 package ui
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/core"
 )
 
 // batchTestModel: 2x2 grid — "one" (a0) and "two" (b0) are runnable, "folder"
@@ -90,8 +92,8 @@ func TestBatchLaunchCollectsInSelectionOrder(t *testing.T) {
 	// Enter opens the layout dialog; a second Enter accepts it and launches.
 	m, _ = pressBatch(t, m, tea.KeyMsg{Type: tea.KeyEnter})
 	m, cmd := pressBatch(t, m, tea.KeyMsg{Type: tea.KeyEnter})
-	want := []string{"two", "one"}
-	if len(m.SelectedBatch) != 2 || m.SelectedBatch[0] != want[0] || m.SelectedBatch[1] != want[1] {
+	want := []core.Selection{{Cell: "two"}, {Cell: "one"}}
+	if !slices.Equal(m.SelectedBatch, want) {
 		t.Fatalf("SelectedBatch = %v, want %v", m.SelectedBatch, want)
 	}
 	if cmd == nil {

@@ -58,21 +58,38 @@ func Pause(msg string) {
 	pause(msg)
 }
 
-// FindCommandByName returns a pointer to the matching top-level command or a nested item.
-// If an item is returned, the parent command is also returned.
-func FindCommandByName(cfg config.Config, name string) (parent *config.Command, item *config.CommandItem, ok bool) {
+// Selection is what the user picked: the cell named Cell, or item Item (1-based)
+// of its dropdown. Item names alone can repeat across folders.
+type Selection struct {
+	Cell string
+	Item int // 0 selects the cell itself
+}
+
+// Resolve finds the cell among top-level commands (drako check keeps their
+// names unique) and, for Item > 0, the item inside it.
+func (s Selection) Resolve(cfg config.Config) (cell *config.Command, item *config.CommandItem, ok bool) {
 	for i := range cfg.Commands {
 		c := &cfg.Commands[i]
-		if c.Name == name {
+		if c.Name != s.Cell {
+			continue
+		}
+		switch {
+		case s.Item == 0:
 			return c, nil, true
+		case s.Item > 0 && s.Item <= len(c.Items):
+			return c, &c.Items[s.Item-1], true
 		}
-		for j := range c.Items {
-			if c.Items[j].Name == name {
-				return c, &c.Items[j], true
-			}
-		}
+		return nil, nil, false
 	}
 	return nil, nil, false
+}
+
+// Name is the picked entry's name as shown on screen: the item's, else the cell's.
+func (s Selection) Name(cfg config.Config) string {
+	if _, item, ok := s.Resolve(cfg); ok && item != nil {
+		return item.Name
+	}
+	return s.Cell
 }
 
 // - exec.Cmd is like subprocess, constructed with argv (no implicit shell).
@@ -112,10 +129,10 @@ func fallbackShell(goos string) string {
 }
 
 // RunCommand finds the selected command from the loaded config and executes
-// it. activeProfile is the name of the profile the selection came from; it is
-// exported to the child process as DRAKO_PROFILE.
-func RunCommand(cfg config.Config, selected, activeProfile string) {
-	plan := buildExecPlan(cfg, selected, lookPathFn)
+// it. activeProfile is exported to the child process as DRAKO_PROFILE.
+func RunCommand(cfg config.Config, sel Selection, activeProfile string) {
+	plan := buildExecPlan(cfg, sel, lookPathFn)
+	selected := sel.Name(cfg)
 
 	switch plan.kind {
 	case planNoCommand:
