@@ -3,6 +3,7 @@ package core
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -24,6 +25,21 @@ func TestRunForExitPropagatesExitCode(t *testing.T) {
 	runExitDir(t)
 	for cmd, want := range map[string]int{"true": 0, "exit 3": 3, "exit 255": 255, "false": 1} {
 		code, err := RunForExit(shCfg, "c", cmd, "core")
+		if err != nil || code != want {
+			t.Errorf("%q: got (%d, %v), want (%d, nil)", cmd, code, err, want)
+		}
+	}
+}
+
+// A command killed by a signal reports 128+N, as a shell would, rather than
+// Go's -1 (which os.Exit turns into 255).
+func TestRunForExitSignalIs128PlusN(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("no POSIX signals on Windows")
+	}
+	runExitDir(t)
+	for cmd, want := range map[string]int{"kill -9 $$": 137, "kill -TERM $$": 143} {
+		code, err := RunForExit(shCfg, "sig", cmd, "core")
 		if err != nil || code != want {
 			t.Errorf("%q: got (%d, %v), want (%d, nil)", cmd, code, err, want)
 		}

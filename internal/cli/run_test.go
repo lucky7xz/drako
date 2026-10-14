@@ -188,8 +188,8 @@ func TestRunRefusesDanger(t *testing.T) {
 		"solo:B0.2": "wipe.ran",  // danger item
 		"solo:B1.1": "child.ran", // item of a danger folder
 	} {
-		if code := HandleRunCommand([]string{"drako", "run", ref}); code != 1 {
-			t.Errorf("%s exit = %d, want 1", ref, code)
+		if code := HandleRunCommand([]string{"drako", "run", ref}); code != 125 {
+			t.Errorf("%s exit = %d, want 125", ref, code)
 		}
 		if ran(dir, sentinel) {
 			t.Errorf("%s ran despite danger", ref)
@@ -212,8 +212,8 @@ func TestRunUsage(t *testing.T) {
 		{"drako", "run"},
 		{"drako", "run", "solo:A0", "solo:A2"},
 	} {
-		if code := HandleRunCommand(args); code != 1 {
-			t.Errorf("%v exit = %d, want 1", args, code)
+		if code := HandleRunCommand(args); code != 125 {
+			t.Errorf("%v exit = %d, want 125", args, code)
 		}
 	}
 }

@@ -11,28 +11,32 @@ import (
 	"github.com/lucky7xz/drako/internal/core"
 )
 
+// exitRunFailed is drako run's own failure code, kept apart from the
+// command's codes the way timeout(1) and env(1) do it.
+const exitRunFailed = 125
+
 // HandleRunCommand processes 'drako run [profile:]<addr>'. It returns the
 // child's exit code when the command ran; drako's own failures (bad address,
-// danger cell, nothing to run) are exit 1 with a message on stderr.
+// danger cell, nothing to run) are exitRunFailed with a message on stderr.
 func HandleRunCommand(args []string) int {
 	refs := args[2:]
 	if len(refs) != 1 {
 		fmt.Fprint(os.Stderr, "Usage: drako run [profile:]<addr>\n"+
 			"One cell per run. drako ls lists addresses; drako explain shows a cell.\n")
-		return 1
+		return exitRunFailed
 	}
 
 	quietLogs()
 	bundle, err := config.LoadConfig(nil)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "drako: %v\n", err)
-		return 1
+		fmt.Fprintf(os.Stderr, "drako run: %v\n", err)
+		return exitRunFailed
 	}
 
 	name, commandStr, p, err := resolveRun(bundle, refs[0])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "drako run: %v\n", err)
-		return 1
+		return exitRunFailed
 	}
 
 	// The same effective config the TUI runs this profile with: shell, env.
@@ -42,7 +46,7 @@ func HandleRunCommand(args []string) int {
 	code, err := core.RunForExit(effective, name, commandStr, p.Name)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "drako run: %v\n", err)
-		return 1
+		return exitRunFailed
 	}
 	return code
 }

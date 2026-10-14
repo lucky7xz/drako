@@ -40,6 +40,8 @@ func HandleCLI(args []string) (handled bool, code int) {
 		return true, HandleExplainCommand(args)
 	case "run":
 		return true, HandleRunCommand(args)
+	case "agents":
+		return true, HandleAgentsCommand(args)
 	case "check", "--check":
 		return true, HandleCheckCommand(args)
 	case "check-terminal", "--check-terminal":
@@ -67,6 +69,7 @@ func PrintUsage() {
 		{"ls", "List equipped decks and their cell addresses"},
 		{"explain [profile:]<addr>", "Show one cell's command, description, flags"},
 		{"run [profile:]<addr>", "Run one cell; exits with its exit code"},
+		{"agents", "Brief an AI agent on driving drako (ls, explain, run)"},
 		{"check [path ...]", "Validate profile files for authoring errors"},
 		{"check-terminal", "Show the color profile drako will render with"},
 		{"summon <url>", "Summon profile(s) from a URL"},

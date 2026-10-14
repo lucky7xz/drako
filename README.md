@@ -161,6 +161,7 @@ Beyond the TUI, drako gives you CLI commands for managing decks at scale:
 | `drako ls`                  | Print every equipped deck as a table — pipe it, grep it, or feed it to an AI |
 | `drako explain [profile:]<addr>` | Zoom into one cell: name, actual command, description, auto_close (e.g. `A0`, `work:A1.2`) |
 | `drako run [profile:]<addr>` | Run one cell from the shell and exit with its exit code; `danger` cells refuse |
+| `drako agents`              | Print a brief that teaches an AI agent to drive the deck — `drako agents >> AGENTS.md` |
 | `drako summon <repo>`       | Pull a deck from any Git host into your inventory; pin with `--sha256`/`--rev` |
 | `drako check [path ...]`    | Lint profile files; exits 1 on errors — run it in your deck repo's CI        |
 | `drako spec <name>`         | Equip the profiles a spec lists; stash the rest (context switch)             |
@@ -326,7 +327,7 @@ drako explain work:B2       # equipped profile 'work'
 drako explain A1.2          # dropdown item 2 of cell A1
 ```
 
-`drako run` executes one cell by the same address and exits with its exit code, so scripts, cron and AI agents can drive a deck. Output and stdin pass straight through, and the run lands in `history.log` like any other.
+`drako run` executes one cell by the same address and exits with its exit code, so scripts, cron and AI agents can drive a deck. Output and stdin pass straight through, and the run lands in `history.log` like any other. When drako itself refuses or can't resolve the address, it exits `125` with a `drako run:` line on stderr — the way `timeout` and `env` keep their own failures apart from the command's. A command killed by a signal reports `128+N`, as a shell would.
 
 ```bash
 drako run A0                # run cell A0 of the active profile
@@ -334,6 +335,14 @@ drako run work:A1.2         # dropdown item 2 of A1 in profile 'work'
 ```
 
 A cell or item with `danger = true` never runs this way — only from the grid, where a person picks it. On a folder, it covers every item. The shipped decks mark these cells with 🚨 in the name too; the emoji is for your eyes, the flag is the rule. Mark anything that destroys data, can lock you out, or weakens security.
+
+`drako agents` prints a short brief for AI agents: the `ls` → `explain` → `run` loop, how addresses work, the danger rule, and the exit codes. Tell your agent to run it first, or keep it in the agent's instructions file:
+
+```bash
+drako agents >> AGENTS.md   # or CLAUDE.md, GEMINI.md, …
+```
+
+The brief is static — it reads no config — so it never goes stale in a file. The live map is always one `drako ls` away.
 
 ### 🪄 Summoning Profiles
 

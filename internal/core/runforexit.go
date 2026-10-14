@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 
 	"github.com/lucky7xz/drako/internal/config"
 )
@@ -29,6 +30,10 @@ func RunForExit(cfg config.Config, name, commandStr, activeProfile string) (int,
 	if err := cmd.Run(); err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
+			// Killed by a signal: report 128+N, as a shell would.
+			if ws, ok := exitErr.Sys().(syscall.WaitStatus); ok && ws.Signaled() {
+				return 128 + int(ws.Signal()), nil
+			}
 			return exitErr.ExitCode(), nil
 		}
 		return 0, fmt.Errorf("could not run %q: %w", name, err)
