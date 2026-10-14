@@ -107,7 +107,7 @@ func renderLs(out io.Writer, bundle config.ConfigBundle, width int) {
 		if i == bundle.ActiveIndex {
 			marker = " (active)"
 		}
-		fmt.Fprintf(out, "\n%s%s — %dx%d\n", p.Name, marker, p.Profile.X, p.Profile.Y)
+		fmt.Fprintf(out, "\n%s%s — %dx%d\n", safeText(p.Name), marker, p.Profile.X, p.Profile.Y)
 
 		cmds := deckOrder(p.Profile.Commands)
 		if len(cmds) == 0 {
@@ -118,9 +118,9 @@ func renderLs(out io.Writer, bundle config.ConfigBundle, width int) {
 		type rawRow struct{ addr, name, desc string }
 		raws := make([]rawRow, 0, len(cmds))
 		for _, c := range cmds {
-			raws = append(raws, rawRow{c.Address(), c.Name, c.Description})
+			raws = append(raws, rawRow{c.Address(), safeText(c.Name), safeText(c.Description)})
 			for k, item := range c.Items {
-				raws = append(raws, rawRow{c.ItemAddress(k + 1), "  " + item.Name, item.Description})
+				raws = append(raws, rawRow{c.ItemAddress(k + 1), "  " + safeText(item.Name), safeText(item.Description)})
 			}
 		}
 
@@ -159,7 +159,7 @@ func renderLs(out io.Writer, bundle config.ConfigBundle, width int) {
 	}
 
 	for _, b := range bundle.Broken {
-		line := fmt.Sprintf("⚠️  %s is broken and hidden: %s", b.Name, oneLine(b.Err, lsDescriptionWidth))
+		line := fmt.Sprintf("⚠️  %s is broken and hidden: %s", safeText(b.Name), oneLine(safeText(b.Err), lsDescriptionWidth))
 		fmt.Fprintf(out, "\n%s\n", ansi.Truncate(line, width, "…"))
 	}
 }

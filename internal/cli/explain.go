@@ -112,7 +112,7 @@ func explainCell(out io.Writer, bundle config.ConfigBundle, ref string) error {
 		return err
 	}
 
-	kv := func(key, value string) { fmt.Fprintf(out, "%-12s %s\n", key+":", value) }
+	kv := func(key, value string) { fmt.Fprintf(out, "%-12s %s\n", key+":", safeText(value)) }
 	kv("profile", t.p.Name)
 	kv("cell", t.addr)
 	kv("name", t.name())
@@ -147,10 +147,10 @@ func explainCell(out io.Writer, bundle config.ConfigBundle, ref string) error {
 	if len(cmd.Items) > 0 {
 		fmt.Fprintln(out, "items:")
 		for k, item := range cmd.Items {
-			line := fmt.Sprintf("  %-*s %s", len(t.addr)+4, cmd.ItemAddress(k+1), item.Name)
+			line := fmt.Sprintf("  %-*s %s", len(t.addr)+4, cmd.ItemAddress(k+1), safeText(item.Name))
 			if item.Command != "" {
 				// Summary line only — `explain A1.2` shows the full command.
-				line += " — " + oneLine(item.Command, lsDescriptionWidth)
+				line += " — " + oneLine(safeText(item.Command), lsDescriptionWidth)
 			}
 			fmt.Fprintln(out, line)
 		}

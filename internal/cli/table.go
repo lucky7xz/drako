@@ -4,9 +4,31 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"unicode"
 
 	"github.com/charmbracelet/x/ansi"
 )
+
+// safeText shows control characters as visible escapes (\x1b), so text from a
+// deck can't drive the terminal. Newlines and tabs pass through.
+func safeText(s string) string {
+	if !strings.ContainsFunc(s, isUnsafeRune) {
+		return s
+	}
+	var b strings.Builder
+	for _, r := range s {
+		if isUnsafeRune(r) {
+			fmt.Fprintf(&b, "\\x%02x", r)
+		} else {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
+func isUnsafeRune(r rune) bool {
+	return unicode.IsControl(r) && r != '\n' && r != '\t'
+}
 
 // table writes headers and rows as a box-drawing grid to out. Columns are
 // left-aligned and sized to the widest cell, measured in terminal CELLS
@@ -15,6 +37,7 @@ import (
 // shorter than the header are padded with blanks; cells beyond the header
 // count are ignored.
 func table(out io.Writer, headers []string, rows [][]string) {
+	rows = safeRows(rows)
 	// Column widths: start from the headers, then grow to the widest cell.
 	widths := make([]int, len(headers))
 	for i, h := range headers {
@@ -66,4 +89,15 @@ func table(out io.Writer, headers []string, rows [][]string) {
 		row(r)
 	}
 	bar("└", "┴", "┘")
+}
+
+func safeRows(rows [][]string) [][]string {
+	out := make([][]string, len(rows))
+	for i, r := range rows {
+		out[i] = make([]string, len(r))
+		for j, cell := range r {
+			out[i][j] = safeText(cell)
+		}
+	}
+	return out
 }

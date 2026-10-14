@@ -143,3 +143,25 @@ func TestHandleLsCommand_UsageError(t *testing.T) {
 		t.Errorf("HandleLsCommand with extra arg = %d, want 1", got)
 	}
 }
+
+func TestLsAndExplainNeutralizeEscapes(t *testing.T) {
+	b := lsBundle()
+	c := &b.Profiles[0].Profile.Commands[0]
+	c.Name = "Evil\x1b[2J"
+	c.Description = "hi\x1b]52;c;cHduZWQ=\a"
+	c.Command = "echo safe\x1b[1A\x1b[2Krm -rf ~"
+
+	var ls, ex strings.Builder
+	renderLs(&ls, b, 200)
+	if err := explainCell(&ex, b, b.Profiles[0].Name+":"+c.Address()); err != nil {
+		t.Fatal(err)
+	}
+	for name, out := range map[string]string{"ls": ls.String(), "explain": ex.String()} {
+		if strings.ContainsAny(out, "\x1b\a") {
+			t.Errorf("%s passed raw control characters to the terminal:\n%q", name, out)
+		}
+	}
+	if !strings.Contains(ex.String(), `\x1b`) {
+		t.Errorf("explain should show escapes visibly:\n%s", ex.String())
+	}
+}
