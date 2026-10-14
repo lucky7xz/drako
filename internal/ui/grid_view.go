@@ -152,8 +152,8 @@ func columnToLetter(col int) string {
 func (m Model) renderProfileCounter() string {
 	total := len(m.profile.profiles)
 	x := m.profile.activeIndex + 1
-	// No profiles on disk means the rescue grid: "< 0 / 0 >".
-	if m.profile.activeIndex < 0 || m.profile.activeIndex >= total {
+	// The rescue grid shows no deck: "< 0 / N >".
+	if m.profile.rescue || m.profile.activeIndex < 0 || m.profile.activeIndex >= total {
 		x = 0
 	}
 	// Flag both ends of the healthy range: past the cap, cycling still reaches

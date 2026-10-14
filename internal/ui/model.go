@@ -77,6 +77,7 @@ type profileState struct {
 	base               config.Config
 	profiles           []config.ProfileInfo
 	activeIndex        int
+	rescue             bool // the rescue grid is showing; activeIndex is the deck to go back to
 	configDir          string
 	pivotName          string
 	locked             bool
@@ -171,6 +172,14 @@ func (m *Model) applyConfig(cfg config.Config) {
 	}
 }
 
+// enterRescue swaps in the rescue grid without forgetting which deck it replaced.
+func (m *Model) enterRescue() {
+	cfg := config.RescueConfig()
+	cfg.ApplyDefaults()
+	m.applyConfig(cfg)
+	m.profile.rescue = true
+}
+
 func (m *Model) applyBundle(bundle config.ConfigBundle) {
 	m.profile.base = bundle.Base
 	profiles := bundle.Profiles
@@ -181,6 +190,7 @@ func (m *Model) applyBundle(bundle config.ConfigBundle) {
 		m.profile.activeIndex = bundle.ActiveIndex
 	}
 	m.applyConfig(bundle.Config)
+	m.profile.rescue = false
 	m.batch = batchState{} // marks name cells of the grid being replaced
 	if showsGridCells(m.lock.modeBefore) {
 		m.lock.modeBefore = gridMode // and so would the mode unlocking returns to
@@ -290,10 +300,7 @@ func (m Model) presentNextBrokenProfile() Model {
 		// and re-entering here would discard the config the caller just applied
 		// and trap the user in rescue.
 		if m.profile.errorQueueActive && staleOnly == 0 {
-			// Trigger Rescue Mode if we just finished processing a queue
-			rescueCfg := config.RescueConfig()
-			rescueCfg.ApplyDefaults()
-			m.applyConfig(rescueCfg)
+			m.enterRescue() // we just finished processing a queue
 		}
 
 		m.profile.errorQueueActive = false
@@ -400,7 +407,7 @@ func (m Model) presentDroppedProfileNote(name string) Model {
 // "Rescue" when there are no profiles or the name is blank (no profiles on
 // disk means the compiled-in rescue grid is what's showing).
 func (p profileState) activeName() string {
-	if len(p.profiles) == 0 {
+	if len(p.profiles) == 0 || p.rescue {
 		return "Rescue"
 	}
 	idx := p.activeIndex
@@ -418,7 +425,14 @@ func (p profileState) activeName() string {
 // no profiles are loaded. The app layer exports it to spawned commands as
 // DRAKO_PROFILE.
 func (m Model) ActiveProfileName() string {
-	p := m.profile
+	if m.profile.rescue {
+		return ""
+	}
+	return m.profile.deckName()
+}
+
+// deckName is the active deck's name, or the one rescue goes back to.
+func (p profileState) deckName() string {
 	if len(p.profiles) == 0 || p.activeIndex < 0 || p.activeIndex >= len(p.profiles) {
 		return ""
 	}
@@ -444,7 +458,7 @@ type Session struct {
 // Session snapshots the position for Restore to re-establish once the config
 // has been re-read.
 func (m Model) Session() Session {
-	s := Session{Profile: m.ActiveProfileName(), acknowledged: maps.Clone(m.profile.acknowledged), droppedNoted: m.profile.droppedNoted}
+	s := Session{Profile: m.profile.deckName(), acknowledged: maps.Clone(m.profile.acknowledged), droppedNoted: m.profile.droppedNoted}
 
 	row, col := m.gridNav.cursorRow, m.gridNav.cursorCol
 	if row >= 0 && row < len(m.gridNav.grid) && col >= 0 && col < len(m.gridNav.grid[row]) {
@@ -590,7 +604,10 @@ func (m *Model) toggleProfileLock() tea.Cmd {
 		return m.setProfileStatus("Pivot unavailable", false)
 	}
 
-	currentName := m.profile.activeName()
+	currentName := m.ActiveProfileName()
+	if currentName == "" {
+		return m.setProfileStatus("Nothing to pin in Rescue Mode", false)
+	}
 	normCurrent := profiles.NormalizeName(currentName)
 	normPivot := profiles.NormalizeName(m.profile.pivotName)
 

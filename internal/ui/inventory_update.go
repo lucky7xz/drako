@@ -345,9 +345,7 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		if inv.focusedList == focusRescue {
 			m.mode = gridMode
-			rescueCfg := config.RescueConfig()
-			rescueCfg.ApplyDefaults()
-			m.applyConfig(rescueCfg)
+			m.enterRescue()
 			return m, nil
 		}
 

@@ -509,6 +509,7 @@ func (m Model) switchToProfileIndex(target int) (Model, bool) {
 
 	updated := m
 	updated.profile.activeIndex = target
+	updated.profile.rescue = false
 	updated.profile.sessionProfile = selected.Name
 	updated.Config = config.ApplyProfileOverlay(m.profile.base, selected.Profile)
 	updated.applyConfig(updated.Config)
