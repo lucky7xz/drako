@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -14,6 +15,11 @@ import (
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profiles"
 )
+
+// ErrPurgeCancelled reports that the user declined or picked nothing.
+var ErrPurgeCancelled = errors.New("purge cancelled")
+
+var errNoPurgeTarget = errors.New("no target specified")
 
 // PurgeOptions defines the scope of the purge operation
 type PurgeOptions struct {
@@ -38,11 +44,13 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 		return fmt.Errorf("no target specified (use --target, --config, --logs, or --destroyeverything)")
 	}
 
+	var failed []error
+
 	// Case 1: Reset Core Config (config.toml)
 	if opts.TargetConfig {
 		log.Printf("Purging Core config (config.toml)")
 		if err := profiles.MoveToTrash(configDir, paths.ConfigFileName); err != nil {
-			log.Printf("Failed to purge config.toml: %v", err)
+			failed = append(failed, fmt.Errorf("could not move %s to trash: %w", paths.ConfigFileName, err))
 		} else {
 			fmt.Printf("  ✓ Moved %s to trash\n", paths.ConfigFileName)
 		}
@@ -55,9 +63,8 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 			name := filepath.Base(path)
 			// Permanent deletion as requested
 			if err := os.Remove(path); err != nil {
-				// Don't log normal "not found" errors to avoid clutter, unless debugging
 				if !os.IsNotExist(err) {
-					log.Printf("Failed to delete log %s: %v", name, err)
+					failed = append(failed, fmt.Errorf("could not delete %s: %w", name, err))
 				}
 			} else {
 				fmt.Printf("  💀 Deleted %s\n", name)
@@ -73,7 +80,7 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 			filename = filename + profiles.ProfileSuffix
 		}
 		if err := profiles.MoveToTrash(configDir, filename); err != nil {
-			log.Printf("Failed to purge %s: %v", target, err)
+			failed = append(failed, fmt.Errorf("could not move %s to trash: %w", filename, err))
 		} else {
 			fmt.Printf("  ✓ Moved %s to trash\n", filename)
 			// A purged profile is no longer equipped, so a lock still aimed at
@@ -83,7 +90,7 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 		}
 	}
 
-	return nil
+	return errors.Join(failed...)
 }
 
 // performFullNuke implements the "Destroy Everything" logic (Old --all)
@@ -105,74 +112,61 @@ func performFullNuke(configDir string) error {
 // HandlePurgeCommand processes the 'drako purge' command from args.
 // Returns the process exit code.
 func HandlePurgeCommand(args []string) int {
-	// Parse args starting from index 2 (skipping "drako" and "purge")
-	if err := ExecutePurge(args[2:]); err != nil {
+	err := ExecutePurge(args[2:])
+	switch {
+	case err == nil:
+		return 0
+	case errors.Is(err, ErrPurgeCancelled):
+		fmt.Println("Purge cancelled.")
+	default:
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		printPurgeUsage(os.Stderr)
-		return 1
+		if errors.Is(err, errNoPurgeTarget) {
+			printPurgeUsage(os.Stderr)
+		}
 	}
-	return 0
+	return 1
 }
 
-// ExecutePurge parses flags and executes the purge logic.
+// ExecutePurge parses flags and executes the purge logic: nil once the purge
+// ran, ErrPurgeCancelled when the user declined.
 // It is exported so internal commands can call it without spawning a subprocess.
 func ExecutePurge(args []string) error {
 	opts, interactive, err := ParsePurgeFlags(args)
 	if err != nil {
 		return err
 	}
+	configDir, err := paths.ConfigDir()
+	if err != nil {
+		return fmt.Errorf("could not get config dir: %w", err)
+	}
 
+	// Flag scopes get one confirmation; profiles picked with -i are confirmed one by one.
+	confirmMsg := purgeConfirmMessage(configDir, *opts)
 	if interactive {
-		configDir, err := paths.ConfigDir()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
-			return err
-		}
-		// Pass stdin/stdout for interactive mode
-		if err := runInteractivePurgeSelection(configDir, opts, os.Stdin, os.Stdout); err != nil {
+		if err := runInteractivePurgeSelection(configDir, opts, confirmReader, os.Stdout); err != nil {
 			return err
 		}
 	}
+	if !opts.DestroyEverything && !opts.TargetConfig && !opts.TargetLogs && len(opts.TargetProfiles) == 0 {
+		if interactive {
+			return ErrPurgeCancelled
+		}
+		return errNoPurgeTarget
+	}
 
-	// Logging setup
-	setupPurgeLogging(opts.DestroyEverything)
-
+	// A full nuke must not hold the log file open inside the dir it deletes.
+	if !opts.DestroyEverything {
+		quietLogs()
+	}
 	log.Printf("Purge command invoked: %+v", opts)
 
-	// Confirmations
-	confirmMsg := ""
-	configDir, _ := paths.ConfigDir() // Ignore error as we checked above or it will fail in PurgeConfig
-
-	if opts.DestroyEverything {
-		confirmMsg = fmt.Sprintf("💀 This will DESTROY EVERYTHING in %s.\n   NO UNDO. NO TRASH.\n   Are you absolutely sure?", configDir)
-	} else if opts.TargetConfig {
-		confirmMsg = "⚠️  This will reset your Core Configuration (config.toml). Proceed?"
-	} else if opts.TargetLogs {
-		confirmMsg = "💀 This will PERMANENTLY DELETE your log files (history.log, drako.log). Proceed?"
-	} else if len(opts.TargetProfiles) > 0 {
-		confirmMsg = fmt.Sprintf("⚠️  This will remove %d profile(s): %s. Proceed?", len(opts.TargetProfiles), strings.Join(opts.TargetProfiles, ", "))
-	} else {
-		// Strict Safety: If no target is specified, PurgeConfig will error.
-		// We catch this case below to provide a helpful usage message.
-	}
-
-	if !opts.DestroyEverything && !opts.TargetConfig && !opts.TargetLogs && len(opts.TargetProfiles) == 0 {
-		printPurgeUsage(os.Stderr)
-		return fmt.Errorf("no target specified")
-	}
-
-	// Interactive mode handles its own confirmations per item, unless it's a bulk action from flags.
-	// If flags were used, we confirm once here.
-	if !interactive {
-		if !ConfirmAction(confirmMsg) {
-			log.Printf("Purge cancelled by user")
-			return nil
-		}
+	if confirmMsg != "" && !ConfirmAction(confirmMsg) {
+		log.Printf("Purge cancelled by user")
+		return ErrPurgeCancelled
 	}
 
 	if err := PurgeConfig(configDir, *opts); err != nil {
 		log.Printf("Purge failed: %v", err)
-		fmt.Fprintf(os.Stderr, "Purge failed: %v\n", err)
 		return err
 	}
 
@@ -185,6 +179,27 @@ func ExecutePurge(args []string) error {
 	return nil
 }
 
+// purgeConfirmMessage names every scope the flags selected; "" when none did.
+func purgeConfirmMessage(configDir string, opts PurgeOptions) string {
+	if opts.DestroyEverything {
+		return fmt.Sprintf("💀 This will DESTROY EVERYTHING in %s.\n   NO UNDO. NO TRASH.\n   Are you absolutely sure?", configDir)
+	}
+	var lines []string
+	if opts.TargetConfig {
+		lines = append(lines, "⚠️  reset your Core Configuration (config.toml goes to trash)")
+	}
+	if opts.TargetLogs {
+		lines = append(lines, "💀 PERMANENTLY DELETE your log files (history.log, drako.log)")
+	}
+	if n := len(opts.TargetProfiles); n > 0 {
+		lines = append(lines, fmt.Sprintf("⚠️  move %d profile(s) to trash: %s", n, strings.Join(opts.TargetProfiles, ", ")))
+	}
+	if len(lines) == 0 {
+		return ""
+	}
+	return "This will:\n   " + strings.Join(lines, "\n   ") + "\nProceed?"
+}
+
 // printPurgeUsage writes usage to w — os.Stderr on error paths, so stdout
 // stays clean for pipes.
 func printPurgeUsage(w io.Writer) {
@@ -193,23 +208,6 @@ func printPurgeUsage(w io.Writer) {
 	fmt.Fprintln(w, "To purge Core config, use:           `drako purge --config`")
 	fmt.Fprintln(w, "To select interactively, use:        `drako purge --interactive`")
 	fmt.Fprintln(w, "Destroy ~/.config/drako directory:   `drako purge --destroyeverything`")
-}
-
-func setupPurgeLogging(destroyEverything bool) {
-	if !destroyEverything {
-		configDir, err := paths.ConfigDir()
-		if err != nil {
-			return
-		}
-		logPath := paths.LogFile(configDir)
-		logFile, err := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: could not open log file: %v\n", err)
-		} else {
-			// Note: We leave the log file open for the duration of the command.
-			log.SetOutput(logFile)
-		}
-	}
 }
 
 // IO Dependencies injected
@@ -299,6 +297,11 @@ func runInteractivePurgeSelection(configDir string, opts *PurgeOptions, input io
 			}
 			if start > end {
 				start, end = end, start // swap
+			}
+			// Clamp before expanding: a huge range must not allocate.
+			if start < 1 || end > len(validProfiles) {
+				fmt.Fprintf(output, "Warning: %s reaches outside 1-%d\n", part, len(validProfiles))
+				start, end = max(start, 1), min(end, len(validProfiles))
 			}
 			for i := start; i <= end; i++ {
 				selectedIndices = append(selectedIndices, i)

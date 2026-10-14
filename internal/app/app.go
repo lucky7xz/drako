@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -268,7 +269,11 @@ func runInternalPurge(command string) bool {
 	}
 
 	if err := cli.ExecutePurge(parts[2:]); err != nil {
-		fmt.Printf("\nInternal Purge Error: %v\n", err)
+		if errors.Is(err, cli.ErrPurgeCancelled) {
+			fmt.Printf("\nPurge cancelled.\n")
+		} else {
+			fmt.Printf("\nInternal Purge Error: %v\n", err)
+		}
 		core.Pause("\nPress any key...")
 		return false
 	}

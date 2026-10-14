@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"bufio"
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -344,5 +346,94 @@ func TestInteractivePurge_Range(t *testing.T) {
 func TestHandlePurgeCommand_BadFlag(t *testing.T) {
 	if got := HandlePurgeCommand([]string{"drako", "purge", "--nonsense"}); got != 1 {
 		t.Errorf("HandlePurgeCommand --nonsense = %d, want 1", got)
+	}
+}
+
+// purgeFixture is a config dir with config.toml, both logs and one profile.
+func purgeFixture(t *testing.T, input string) string {
+	t.Helper()
+	tmp := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", tmp)
+	dir := filepath.Join(tmp, "drako")
+	for _, f := range []string{"config.toml", "drako.log", "history.log", "alpha.profile.toml"} {
+		writeFile(t, filepath.Join(dir, f), "x")
+	}
+	orig := confirmReader
+	confirmReader = bufio.NewReader(strings.NewReader(input))
+	t.Cleanup(func() { confirmReader = orig })
+	return dir
+}
+
+func writeFile(t *testing.T, path, body string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestPurgeInteractiveStillConfirmsFlags(t *testing.T) {
+	dir := purgeFixture(t, "1\ny\nn\n") // pick alpha, yes, then decline the flag scope
+	if err := ExecutePurge([]string{"-i", "--logs"}); !errors.Is(err, ErrPurgeCancelled) {
+		t.Errorf("err = %v, want ErrPurgeCancelled", err)
+	}
+	for _, f := range []string{"drako.log", "alpha.profile.toml"} {
+		if _, err := os.Stat(filepath.Join(dir, f)); err != nil {
+			t.Errorf("%s removed despite the declined confirmation", f)
+		}
+	}
+}
+
+func TestPurgeDeclinedIsCancelled(t *testing.T) {
+	dir := purgeFixture(t, "n\n")
+	if err := ExecutePurge([]string{"--config"}); !errors.Is(err, ErrPurgeCancelled) {
+		t.Errorf("err = %v, want ErrPurgeCancelled", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "config.toml")); err != nil {
+		t.Error("config.toml moved despite the declined confirmation")
+	}
+	if code := HandlePurgeCommand([]string{"drako", "purge", "--config"}); code != 1 {
+		t.Errorf("declined purge exit = %d, want 1", code)
+	}
+}
+
+func TestPurgeConfirmNamesEveryScope(t *testing.T) {
+	msg := purgeConfirmMessage("/cfg", PurgeOptions{TargetConfig: true, TargetLogs: true, TargetProfiles: []string{"work"}})
+	for _, want := range []string{"config.toml", "log files", "work"} {
+		if !strings.Contains(msg, want) {
+			t.Errorf("prompt doesn't mention %q:\n%s", want, msg)
+		}
+	}
+}
+
+func TestPurgeReportsFailedMoves(t *testing.T) {
+	purgeFixture(t, "y\n")
+	err := ExecutePurge([]string{"--target", "nonexist"})
+	if err == nil || !strings.Contains(err.Error(), "nonexist.profile.toml") {
+		t.Errorf("err = %v, want the failed move named", err)
+	}
+}
+
+func TestPurgeUsagePrintedOnce(t *testing.T) {
+	purgeFixture(t, "")
+	stderr := captureStderr(t, func() { HandlePurgeCommand([]string{"drako", "purge"}) })
+	if n := strings.Count(stderr, "Purge Usage"); n != 1 {
+		t.Errorf("usage printed %d times:\n%s", n, stderr)
+	}
+}
+
+func TestInteractivePurgeClampsHugeRange(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "alpha.profile.toml"), "x")
+	opts := &PurgeOptions{}
+	var out strings.Builder
+	in := strings.NewReader("1-2000000000\ny\n")
+	if err := runInteractivePurgeSelection(dir, opts, in, &out); err != nil {
+		t.Fatal(err)
+	}
+	if len(opts.TargetProfiles) != 1 {
+		t.Errorf("targets = %v, want just alpha", opts.TargetProfiles)
 	}
 }
