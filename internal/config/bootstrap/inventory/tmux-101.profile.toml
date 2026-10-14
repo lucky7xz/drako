@@ -51,7 +51,8 @@ done
 ]
 
 [[commands]]
-name = "❌ Kill Session"
+name = "🚨 Kill Session"
+danger = true
 description = "End a session and everything running in it — pick from the list, confirm first."
 command = '''
 oldifs=$IFS; IFS='

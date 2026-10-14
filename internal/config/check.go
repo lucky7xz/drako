@@ -115,6 +115,7 @@ func CheckProfile(src []byte) []Finding {
 
 		items := rawTables(cmd["items"])
 		fs = append(fs, checkCommandValue(label, cmd["command"], len(items) > 0)...)
+		fs = append(fs, checkDanger(label, cmd)...)
 
 		if len(items) > 9 {
 			fs = append(fs, warnf("%s has %d items — dropdowns support at most 9", label, len(items)))
@@ -127,9 +128,23 @@ func CheckProfile(src []byte) []Finding {
 				fs = append(fs, warnf("%s has no name", ilabel))
 			}
 			fs = append(fs, checkCommandValue(ilabel, item["command"], false)...)
+			fs = append(fs, checkDanger(ilabel, item)...)
 		}
 	}
 	return fs
+}
+
+// checkDanger rejects a non-boolean danger: decoding would read it as false
+// and leave the cell unguarded without a word.
+func checkDanger(label string, m map[string]any) []Finding {
+	v, ok := m["danger"]
+	if !ok {
+		return nil
+	}
+	if _, isBool := v.(bool); !isBool {
+		return []Finding{errorf("%s: danger must be true or false, got %v", label, v)}
+	}
+	return nil
 }
 
 // checkCommandValue lints one raw `command` value: a string, a variant

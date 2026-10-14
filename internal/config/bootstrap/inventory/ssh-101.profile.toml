@@ -48,7 +48,7 @@ sudo systemctl enable "$u"
 u=sshd; systemctl cat sshd >/dev/null 2>&1 || u=ssh
 sudo systemctl restart "$u" && echo "Restarted. Existing sessions survive a restart — only new logins use the new config."
 """, description = "Apply config changes. Run Validate Config (📝 cell) FIRST — restarting into a broken sshd_config on a remote box is how lockouts happen.", auto_close_execution = false },
-    { name = "Stop Service", command = """
+    { name = "🚨 Stop Service", danger = true, command = """
 u=sshd; systemctl cat sshd >/dev/null 2>&1 || u=ssh
 sudo systemctl stop "$u"
 """, description = "Shut the door. Existing connections stay alive; new ones are refused. If you're connected over SSH right now, your session survives — but you won't get a second one.", auto_close_execution = false },
@@ -88,7 +88,7 @@ elif command -v firewall-cmd >/dev/null; then sudo firewall-cmd --permanent --ad
 else echo "❓ No ufw/firewalld found — restrict port 22 with your firewall's own tool."
 fi
 """, description = "Tighter: SSH answers only one address. Great when you always connect from the same place; painful the day your IP changes. Keep a second way in before you combine this with removing the general allow rule.", auto_close_execution = false },
-    { name = "🚨 Enable Firewall", command = """
+    { name = "🚨 Enable Firewall", danger = true, command = """
 echo "⚠️  Once enabled, everything not explicitly allowed is blocked."
 echo "    On a REMOTE machine, run 'Allow SSH (22)' first — otherwise this is a self-lockout."
 printf "Enable the firewall now? [y/N]: "; read ok
@@ -98,7 +98,7 @@ elif command -v firewall-cmd >/dev/null; then sudo systemctl enable --now firewa
 else echo "❓ No ufw/firewalld found — nothing to enable."
 fi
 """, description = "Turn the wall on. The confirm prompt exists because the classic mistake is enabling a default-deny firewall over the very SSH connection it's about to block.", auto_close_execution = false },
-    { name = "Disable Firewall", command = """
+    { name = "🚨 Disable Firewall", danger = true, command = """
 if command -v ufw >/dev/null; then sudo ufw disable
 elif command -v firewall-cmd >/dev/null; then sudo systemctl disable --now firewalld
 else echo "❓ No ufw/firewalld found — nothing to disable."
@@ -201,7 +201,7 @@ items = [
     { name = "Copy ID (Default)", command = "printf 'user@host: '; read target; ssh-copy-id \"$target\"", description = "Uploads your default public key into the server's authorized_keys — the one password login you make so you never need another. From then on, the key does the talking.", auto_close_execution = false },
     { name = "Copy Specific ID", command = "printf 'user@host: '; read target; printf 'Key path (e.g. ~/.ssh/id_ed25519.pub): '; read key; ssh-copy-id -i \"$key\" \"$target\"", description = "Same ritual with a chosen key — for when you keep separate identities per client, project, or paranoia level.", auto_close_execution = false },
     { name = "Test Key Login", command = "printf 'user@host: '; read target; ssh -o PasswordAuthentication=no \"$target\"", description = "The proof. Forces key-only auth for one connection: if you land in a shell, your key works; if you're refused, do NOT harden yet. This test passing is the entry ticket to the 🚨 items below.", auto_close_execution = false },
-    { name = "🚨 Disable Password Auth", command = """
+    { name = "🚨 Disable Password Auth", danger = true, command = """
 echo "Current effective setting:"
 sudo sshd -T 2>/dev/null | grep -i '^passwordauthentication' || { echo "Could not query sshd — is the server installed?"; exit 1; }
 echo ""
@@ -219,7 +219,7 @@ else
     sudo mv /etc/ssh/sshd_config.bak /etc/ssh/sshd_config
 fi
 """, description = "The big hardening switch: bots can guess passwords forever, they cannot guess your key. Guided and gated — shows the current setting, demands a confirm, keeps a .bak, validates with sshd -t, and rolls back if the config breaks.", auto_close_execution = false },
-    { name = "🚨 Disable Root Login", command = """
+    { name = "🚨 Disable Root Login", danger = true, command = """
 echo "Current effective setting:"
 sudo sshd -T 2>/dev/null | grep -i '^permitrootlogin' || { echo "Could not query sshd — is the server installed?"; exit 1; }
 echo ""
@@ -254,7 +254,7 @@ items = [
     { name = "Dry-Run Sync", command = "printf 'Source: '; read s; printf 'Destination: '; read d; rsync -avhn \"$s\" \"$d\" | head -30; echo '--- dry run only, nothing copied ---'", description = "See exactly what a sync WOULD transfer — nothing is written. Trailing slash on the source means 'copy the contents'; no slash means 'copy the folder itself'. Make this your reflex before every real sync.", auto_close_execution = false },
     { name = "Sync Up (push)", command = "printf 'Local source: '; read s; printf 'Remote (user@host:/path): '; read d; rsync -avh --info=progress2 \"$s\" \"$d\"", description = "Local → server. Archive mode (-a) preserves permissions, times and links; interrupted transfers resume on rerun because rsync only sends what's missing. Additive: nothing on the far side gets deleted.", auto_close_execution = false },
     { name = "Sync Down (pull)", command = "printf 'Remote source (user@host:/path): '; read s; printf 'Local destination: '; read d; rsync -avh --info=progress2 \"$s\" \"$d\"", description = "Server → local. Identical to push — the direction of the arguments is the entire difference.", auto_close_execution = false },
-    { name = "🚨 Mirror (--delete)", command = """
+    { name = "🚨 Mirror (--delete)", danger = true, command = """
 printf 'Source: '; read s; printf 'Destination: '; read d
 echo '--- plan (deletions marked with "deleting") ---'
 rsync -avhn --delete "$s" "$d" | head -40

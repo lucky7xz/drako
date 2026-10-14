@@ -65,13 +65,7 @@ func explainCell(out io.Writer, bundle config.ConfigBundle, ref string) error {
 		return err
 	}
 
-	var cmd *config.Command
-	for i := range p.Profile.Commands {
-		if strings.EqualFold(cellAddress(p.Profile.Commands[i]), addr) {
-			cmd = &p.Profile.Commands[i]
-			break
-		}
-	}
+	cmd := findCell(p.Profile.Commands, addr)
 	if cmd == nil {
 		return fmt.Errorf("no cell %s in profile %s", addr, p.Name)
 	}
@@ -94,6 +88,9 @@ func explainCell(out io.Writer, bundle config.ConfigBundle, ref string) error {
 			kv("description", item.Description)
 		}
 		kv("auto_close", autoCloseValue(item.AutoCloseExecution))
+		if item.Danger || cmd.Danger {
+			kv("danger", "true")
+		}
 		return nil
 	}
 
@@ -111,6 +108,9 @@ func explainCell(out io.Writer, bundle config.ConfigBundle, ref string) error {
 	if runnable {
 		kv("auto_close", autoCloseValue(cmd.AutoCloseExecution))
 	}
+	if cmd.Danger {
+		kv("danger", "true")
+	}
 	if len(cmd.Items) > 0 {
 		fmt.Fprintln(out, "items:")
 		for k, item := range cmd.Items {
@@ -120,6 +120,16 @@ func explainCell(out io.Writer, bundle config.ConfigBundle, ref string) error {
 				line += " — " + oneLine(item.Command, lsDescriptionWidth)
 			}
 			fmt.Fprintln(out, line)
+		}
+	}
+	return nil
+}
+
+// findCell returns the command at addr (the drako ls scheme), or nil.
+func findCell(cmds []config.Command, addr string) *config.Command {
+	for i := range cmds {
+		if strings.EqualFold(cellAddress(cmds[i]), addr) {
+			return &cmds[i]
 		}
 	}
 	return nil

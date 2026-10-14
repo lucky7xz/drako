@@ -395,7 +395,7 @@ items = [
     { name = "📜 Open Logs (Debug)", description = "The trail of what happened. Events, errors, state changes recorded. Read the logs when things break or when you want to see the machinery.", command = { linux_generic = "${EDITOR:-nano} ~/.config/drako/drako.log", macos = "${EDITOR:-nano} \"$HOME/Library/Application Support/drako/drako.log\"", windows = "drako open \"$env:APPDATA\\drako\\drako.log\"" } },
 
     #===========================================================================================================
-    { name = "🚨 Sudo Switch", description = "Some machines have no sudo and need none: containers and WSL where you are already root, Termux where $PREFIX is yours. This strips sudo from every deck in your config folder so those cells still run. It backs up what it touches first, and restoring a backup puts everything back exactly. It only touches a sudo that starts a command — never the word inside a description.", command = { linux_generic = '''
+    { name = "🚨 Sudo Switch", danger = true, description = "Some machines have no sudo and need none: containers and WSL where you are already root, Termux where $PREFIX is yours. This strips sudo from every deck in your config folder so those cells still run. It backs up what it touches first, and restoring a backup puts everything back exactly. It only touches a sudo that starts a command — never the word inside a description.", command = { linux_generic = '''
 CFG="${XDG_CONFIG_HOME:-$HOME/.config}/drako"
 # A sudo only counts when it starts a command: at the start of a line, after a
 # quote or a separator, or after if/elif/then/else. The keyword branch demands

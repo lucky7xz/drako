@@ -13,6 +13,8 @@ type CommandItem struct {
 	Description        string `toml:"description"`
 	AutoCloseExecution *bool  `toml:"auto_close_execution"`
 	DebugExecution     *bool  `toml:"debug_execution"`
+	// Danger keeps drako run from executing it; only the grid can.
+	Danger bool `toml:"danger"`
 }
 
 // Command represents a grid command
@@ -25,6 +27,8 @@ type Command struct {
 	AutoCloseExecution *bool         `toml:"auto_close_execution"`
 	DebugExecution     *bool         `toml:"debug_execution"`
 	Items              []CommandItem `toml:"items"`
+	// Danger keeps drako run from executing it; on a folder, every item too.
+	Danger bool `toml:"danger"`
 }
 
 // AppSettings represents the global configuration in config.toml
@@ -180,6 +184,10 @@ func tomlInt(m map[string]any, key string) int {
 	}
 	return 0
 }
+func tomlBool(m map[string]any, key string) bool {
+	b, _ := m[key].(bool)
+	return b
+}
 func tomlBoolPtr(m map[string]any, key string) *bool {
 	if b, ok := m[key].(bool); ok {
 		return &b
@@ -200,6 +208,7 @@ func (c *Command) UnmarshalTOML(v any) error {
 	c.Col = tomlStr(m, "col")
 	c.AutoCloseExecution = tomlBoolPtr(m, "auto_close_execution")
 	c.DebugExecution = tomlBoolPtr(m, "debug_execution")
+	c.Danger = tomlBool(m, "danger")
 
 	cmd, note, err := resolveCommandField(m["command"])
 	if err != nil {
@@ -228,6 +237,7 @@ func (c *Command) UnmarshalTOML(v any) error {
 			Description:        tomlStr(im, "description"),
 			AutoCloseExecution: tomlBoolPtr(im, "auto_close_execution"),
 			DebugExecution:     tomlBoolPtr(im, "debug_execution"),
+			Danger:             tomlBool(im, "danger"),
 		}
 		icmd, inote, err := resolveCommandField(im["command"])
 		if err != nil {

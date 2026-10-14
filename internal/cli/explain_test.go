@@ -200,3 +200,19 @@ func TestParseCellRef(t *testing.T) {
 		})
 	}
 }
+
+func TestExplainShowsDanger(t *testing.T) {
+	b := runBundle()
+	for ref, want := range map[string]bool{
+		"A0": false, "A1": true, "A2": false, "A2.1": false, "A2.2": true,
+		"B0": true, "B0.1": true, // a danger folder covers its items
+	} {
+		var sb strings.Builder
+		if err := explainCell(&sb, b, ref); err != nil {
+			t.Fatalf("%s: %v", ref, err)
+		}
+		if got := strings.Contains(sb.String(), "danger:      true"); got != want {
+			t.Errorf("%s: danger line shown = %v, want %v\n%s", ref, got, want, sb.String())
+		}
+	}
+}

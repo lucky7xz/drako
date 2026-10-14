@@ -38,6 +38,8 @@ func HandleCLI(args []string) (handled bool, code int) {
 		return true, HandleRestoreBootstrapCommand()
 	case "explain", "--explain":
 		return true, HandleExplainCommand(args)
+	case "run":
+		return true, HandleRunCommand(args)
 	case "check", "--check":
 		return true, HandleCheckCommand(args)
 	case "check-terminal", "--check-terminal":
@@ -64,6 +66,7 @@ func PrintUsage() {
 	table(os.Stdout, []string{"Command", "Description"}, [][]string{
 		{"ls", "List equipped decks and their cell addresses"},
 		{"explain [profile:]<addr>", "Show one cell's command, description, flags"},
+		{"run [profile:]<addr>", "Run one cell; exits with its exit code"},
 		{"check [path ...]", "Validate profile files for authoring errors"},
 		{"check-terminal", "Show the color profile drako will render with"},
 		{"summon <url>", "Summon profile(s) from a URL"},

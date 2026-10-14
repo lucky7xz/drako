@@ -134,6 +134,7 @@ distrobox create --name "$n" --image "$img" --yes
 
 [[commands]]
 name = "🚨 Delete"
+danger = true
 description = "Permanently removes a box and everything installed inside it — the base image on your host is untouched, but the box itself is gone for good. Asks you to type the name back before it does anything."
 command = { linux_generic = """
 if ! command -v distrobox >/dev/null 2>&1; then
@@ -324,7 +325,7 @@ else
     exit 1
 fi
 """, macos = "echo '🚫 distrobox is Linux-only — no macOS support.'", windows = "Write-Host '🚫 distrobox is Linux-only — use WSL2 with a Linux distro instead.'" }, auto_close_execution = false },
-    { name = "🚨 Uninstall", description = "Removes distrobox and podman from your system. Existing boxes and their container images are untouched by this — they just become unreachable until you reinstall.", command = { linux_immutable = "brew uninstall distrobox podman", linux_debian = "sudo apt remove -y distrobox podman", linux_arch = "sudo pacman -R --noconfirm distrobox podman", linux_fedora = "sudo dnf remove -y distrobox podman", linux_suse = "sudo zypper remove -y distrobox podman", linux_void = "sudo xbps-remove -y distrobox podman", linux_generic = """
+    { name = "🚨 Uninstall", danger = true, description = "Removes distrobox and podman from your system. Existing boxes and their container images are untouched by this — they just become unreachable until you reinstall.", command = { linux_immutable = "brew uninstall distrobox podman", linux_debian = "sudo apt remove -y distrobox podman", linux_arch = "sudo pacman -R --noconfirm distrobox podman", linux_fedora = "sudo dnf remove -y distrobox podman", linux_suse = "sudo zypper remove -y distrobox podman", linux_void = "sudo xbps-remove -y distrobox podman", linux_generic = """
 echo "🚨 This removes distrobox and podman. Existing boxes become unreachable until you reinstall."
 printf "Type CONFIRM to proceed: "
 read c

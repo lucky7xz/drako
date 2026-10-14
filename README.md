@@ -160,6 +160,7 @@ Beyond the TUI, drako gives you CLI commands for managing decks at scale:
 | --------------------------- | ---------------------------------------------------------------------------- |
 | `drako ls`                  | Print every equipped deck as a table — pipe it, grep it, or feed it to an AI |
 | `drako explain [profile:]<addr>` | Zoom into one cell: name, actual command, description, auto_close (e.g. `A0`, `work:A1.2`) |
+| `drako run [profile:]<addr>` | Run one cell from the shell and exit with its exit code; `danger` cells refuse |
 | `drako summon <repo>`       | Pull a deck from any Git host into your inventory; pin with `--sha256`/`--rev` |
 | `drako check [path ...]`    | Lint profile files; exits 1 on errors — run it in your deck repo's CI        |
 | `drako spec <name>`         | Equip the profiles a spec lists; stash the rest (context switch)             |
@@ -261,6 +262,13 @@ command = "bmon"
 col = "a"
 row = 1
 # auto-close true per default      # bmon is a TUI — close its window when it exits.
+
+[[commands]]
+name = "🚨 Wipe Scratch"
+command = "rm -rf ~/scratch"
+col = "a"
+row = 2
+danger = true                      # Only the grid runs it; drako run refuses.
 ```
 
 ## 🧶 Cross-Platform Decks (The Weaver)
@@ -317,6 +325,15 @@ drako explain A0            # active profile
 drako explain work:B2       # equipped profile 'work'
 drako explain A1.2          # dropdown item 2 of cell A1
 ```
+
+`drako run` executes one cell by the same address and exits with its exit code, so scripts, cron and AI agents can drive a deck. Output and stdin pass straight through, and the run lands in `history.log` like any other.
+
+```bash
+drako run A0                # run cell A0 of the active profile
+drako run work:A1.2         # dropdown item 2 of A1 in profile 'work'
+```
+
+A cell or item with `danger = true` never runs this way — only from the grid, where a person picks it. On a folder, it covers every item. The shipped decks mark these cells with 🚨 in the name too; the emoji is for your eyes, the flag is the rule. Mark anything that destroys data, can lock you out, or weakens security.
 
 ### 🪄 Summoning Profiles
 
@@ -378,6 +395,7 @@ It exits `1` when any error-level finding exists — wire it into your deck repo
     - **Review before running:** Always inspect the contents of a summoned profile (using `cat` or your editor) *before* you start using it.
     - **Only summon from trusted sources:** Treat a profile URL like you would a binary executable.
     - **Pin when you can:** If the author publishes a checksum or commit hash, pass `--sha256`/`--rev` so drako verifies the download before accepting it.
+- **Mark the dangerous cells:** `danger = true` keeps a cell out of `drako run`, so nothing unattended can trigger it. See [Listing Decks](#-listing-decks).
 - **Understand the Commands:** Some entries perform system changes (e.g., package updates, Docker operations). Press `e` in the TUI to read the command description.
 - **When Unsure:** Consult documentation or ask a trusted friend/colleague.
 
