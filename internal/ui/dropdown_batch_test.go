@@ -215,3 +215,21 @@ func TestDropdownPopupShowsMarksWhileMarking(t *testing.T) {
 		t.Errorf("plain dropdown must not show batch chrome:\n%s", plain)
 	}
 }
+
+// "Esc/q cancel": q ends the marking like esc and keeps the dropdown open.
+// It used to close the dropdown instead, leaving marks for the next folder.
+func TestDropdownQuitEndsMarking(t *testing.T) {
+	m := markingModel(t)
+	m, _ = pressDropdown(t, m, spaceKey) // mark "first"
+	m, _ = pressDropdown(t, m, keyRunes("q"))
+
+	if m.batch.dropdown || len(m.batch.marked) > 0 {
+		t.Errorf("q left the marking on: %+v", m.batch)
+	}
+	if m.mode != dropdownMode {
+		t.Errorf("q should only end the marking, mode = %v", m.mode)
+	}
+	if m, _ = pressDropdown(t, m, keyRunes("q")); m.mode != gridMode {
+		t.Errorf("a second q should close the dropdown, mode = %v", m.mode)
+	}
+}

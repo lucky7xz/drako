@@ -104,6 +104,12 @@ func (m Model) updateDropdownMarking(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) 
 		return next, cmd, true
 	}
 
+	if IsCancel(m.Config.Keys, msg) {
+		// End marking, keep the dropdown open; the next esc/q closes it.
+		m.batch = batchState{}
+		return m, nil, true
+	}
+
 	switch msg.String() {
 	case " ":
 		if m.dropdown.selectedIdx < 0 || m.dropdown.selectedIdx >= len(m.dropdown.items) {
@@ -122,11 +128,6 @@ func (m Model) updateDropdownMarking(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) 
 	case "enter":
 		next, cmd := m.beginLaunch()
 		return next, cmd, true
-
-	case "esc":
-		// End marking, keep the dropdown open; the next esc closes it.
-		m.batch = batchState{}
-		return m, nil, true
 	}
 	return m, nil, false
 }
