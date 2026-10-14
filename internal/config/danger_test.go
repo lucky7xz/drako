@@ -55,6 +55,27 @@ func TestDangerSurvivesOverlay(t *testing.T) {
 	}
 }
 
+func TestDangerNonBoolFailsClosed(t *testing.T) {
+	p := decodeProfile(t, `
+x = 1
+y = 2
+[[commands]]
+name = "typo"
+command = "true"
+col = "a"
+row = 0
+danger = "false"
+[[commands]]
+name = "folder"
+col = "a"
+row = 1
+items = [ { name = "item", command = "true", danger = 1 } ]
+`)
+	if !p.Commands[0].Danger || !p.Commands[1].Items[0].Danger {
+		t.Error("a non-bool danger must decode as true")
+	}
+}
+
 func TestCheckDangerMustBeBool(t *testing.T) {
 	src := `
 x = 1

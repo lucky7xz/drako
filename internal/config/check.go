@@ -134,8 +134,8 @@ func CheckProfile(src []byte) []Finding {
 	return fs
 }
 
-// checkDanger rejects a non-boolean danger: decoding would read it as false
-// and leave the cell unguarded without a word.
+// checkDanger rejects a non-boolean danger: decoding treats it as true, so a
+// danger = "false" typo silently guards the cell.
 func checkDanger(label string, m map[string]any) []Finding {
 	v, ok := m["danger"]
 	if !ok {

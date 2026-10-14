@@ -184,9 +184,15 @@ func tomlInt(m map[string]any, key string) int {
 	}
 	return 0
 }
-func tomlBool(m map[string]any, key string) bool {
-	b, _ := m[key].(bool)
-	return b
+
+// tomlDanger fails closed: a danger value that isn't a bool counts as true.
+func tomlDanger(m map[string]any) bool {
+	v, ok := m["danger"]
+	if !ok {
+		return false
+	}
+	b, isBool := v.(bool)
+	return !isBool || b
 }
 func tomlBoolPtr(m map[string]any, key string) *bool {
 	if b, ok := m[key].(bool); ok {
@@ -208,7 +214,7 @@ func (c *Command) UnmarshalTOML(v any) error {
 	c.Col = tomlStr(m, "col")
 	c.AutoCloseExecution = tomlBoolPtr(m, "auto_close_execution")
 	c.DebugExecution = tomlBoolPtr(m, "debug_execution")
-	c.Danger = tomlBool(m, "danger")
+	c.Danger = tomlDanger(m)
 
 	cmd, note, err := resolveCommandField(m["command"])
 	if err != nil {
@@ -237,7 +243,7 @@ func (c *Command) UnmarshalTOML(v any) error {
 			Description:        tomlStr(im, "description"),
 			AutoCloseExecution: tomlBoolPtr(im, "auto_close_execution"),
 			DebugExecution:     tomlBoolPtr(im, "debug_execution"),
-			Danger:             tomlBool(im, "danger"),
+			Danger:             tomlDanger(im),
 		}
 		icmd, inote, err := resolveCommandField(im["command"])
 		if err != nil {
