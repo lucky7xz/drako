@@ -48,6 +48,22 @@ func FindCell(cmds []Command, addr string) *Command {
 	return nil
 }
 
+// CoveredBy returns the command the grid shows on c's square instead of c, or
+// nil when c is visible. c must point into p.Commands.
+func CoveredBy(p ProfileFile, c *Command) *Command {
+	cfg := Config{X: p.X, Y: p.Y}
+	row, col, err := resolveCell(*c, cfg)
+	if err != nil {
+		return nil
+	}
+	for j := len(p.Commands) - 1; j >= 0 && &p.Commands[j] != c; j-- {
+		if r, cl, err := resolveCell(p.Commands[j], cfg); err == nil && r == row && cl == col {
+			return &p.Commands[j]
+		}
+	}
+	return nil
+}
+
 // resolveCell resolves a command's grid position against the grid dimensions.
 // A row or column of -1 (column 'z') means "last" and is resolved here to
 // Y-1 / X-1. It errors only on an unparseable column letter; bounds-checking

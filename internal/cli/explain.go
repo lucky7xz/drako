@@ -88,6 +88,9 @@ func lookupCell(bundle config.ConfigBundle, ref string) (cellTarget, error) {
 	if cmd == nil {
 		return cellTarget{}, fmt.Errorf("no cell %s in profile %s", addr, p.Name)
 	}
+	if over := config.CoveredBy(p.Profile, cmd); over != nil {
+		return cellTarget{}, fmt.Errorf("%s (%s) is hidden on the grid behind %s (%s)", addr, cmd.Name, over.Address(), over.Name)
+	}
 
 	t := cellTarget{p: p, cmd: cmd, addr: addr, danger: cmd.Danger}
 	if itemIdx > 0 {

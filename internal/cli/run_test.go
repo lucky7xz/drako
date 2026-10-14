@@ -266,3 +266,21 @@ func captureStderr(t *testing.T, f func()) string {
 	b, _ := io.ReadAll(r)
 	return string(b)
 }
+
+// A row = -1 cell and one at the matching row share a square; only the last
+// one placed is on the grid, whichever address names the other.
+func TestResolveRunRefusesCellsHiddenOnTheGrid(t *testing.T) {
+	b := runBundle()
+	work := &b.Profiles[1].Profile
+	work.Y = 2
+	work.Commands = append(work.Commands,
+		config.Command{Name: "Old", Command: "echo old", Col: "a", Row: 1},
+		config.Command{Name: "New", Command: "echo new", Col: "a", Row: -1},
+	)
+	if _, _, err := resolveRun(b, "work:A1"); err == nil || !strings.Contains(err.Error(), "hidden") {
+		t.Errorf("work:A1 err = %v, want it refused as hidden behind New", err)
+	}
+	if target, _, err := resolveRun(b, "work:A-1"); err != nil || target.name() != "New" {
+		t.Errorf("work:A-1 = (%q, %v), want New", target.name(), err)
+	}
+}
