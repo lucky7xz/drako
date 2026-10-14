@@ -298,12 +298,14 @@ func cwdFileArg(args []string) string {
 // writeCwdFile reports the directory drako is ending in. The shell owns the
 // file, so a failure is logged, not fatal.
 func writeCwdFile(path string) {
+	// Runs after the log file has closed, and a failure means the wrapper won't cd:
+	// tell the user on stderr.
 	cwd, err := os.Getwd()
 	if err != nil {
-		log.Printf("could not resolve the working directory for --cwd-file: %v", err)
+		fmt.Fprintf(os.Stderr, "drako: could not resolve the working directory for --cwd-file: %v\n", err)
 		return
 	}
 	if err := os.WriteFile(path, []byte(cwd), 0o600); err != nil {
-		log.Printf("could not write --cwd-file %s: %v", path, err)
+		fmt.Fprintf(os.Stderr, "drako: could not write --cwd-file %s: %v\n", path, err)
 	}
 }
