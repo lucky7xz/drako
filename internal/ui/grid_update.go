@@ -43,6 +43,7 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case IsPathGridMode(m.Config.Keys, msg):
 		m.mode = pathMode
+		m.path.clearSearch() // a filter left from the last visit would hide directories
 	// ====================
 
 	case IsUp(m.Config.Keys, msg):

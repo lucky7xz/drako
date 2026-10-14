@@ -255,12 +255,12 @@ func (pm *PathModel) UpdatePathMode(msg tea.KeyMsg, cfg config.Config) navMode {
 	case IsLeft(cfg.Keys, msg):
 		if pm.SelectedPathIndex > 0 {
 			pm.SelectedPathIndex--
-			pm.ListChildDirs()
+			pm.clearSearch() // relists; a filter belongs to the directory it was typed in
 		}
 	case IsRight(cfg.Keys, msg):
 		if pm.SelectedPathIndex < len(pm.PathComponents)-1 {
 			pm.SelectedPathIndex++
-			pm.ListChildDirs()
+			pm.clearSearch()
 		}
 	case IsDown(cfg.Keys, msg):
 		if len(pm.ChildDirs) > 0 {
@@ -468,8 +468,11 @@ func (pm *PathModel) RenderChildDirs(mode navMode, styles Styles, width int) str
 		content = lipgloss.JoinVertical(lipgloss.Left, content, truncateText(styles.Offline.Render(refusal), width))
 	}
 
-	if pm.Searching {
-		status := fmt.Sprintf("Search: %s_", pm.Filter)
+	if pm.Searching || pm.Filter != "" { // Enter ends the typing, not the filter
+		status := "Search: " + pm.Filter
+		if pm.Searching {
+			status += "_"
+		}
 		searchBar := truncateText(lipgloss.NewStyle().Foreground(lipgloss.Color("220")).Render(status), width)
 		return lipgloss.JoinVertical(lipgloss.Left, content, searchBar)
 	}

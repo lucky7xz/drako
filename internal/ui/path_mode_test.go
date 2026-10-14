@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/lucky7xz/drako/internal/config"
 )
 
@@ -532,5 +533,25 @@ func TestPathSearch_NonASCII(t *testing.T) {
 	pm.editFilter(keyRune("pl"))
 	if pm.Filter != "aÜpl" {
 		t.Errorf("after burst Filter = %q, want %q", pm.Filter, "aÜpl")
+	}
+}
+
+// Enter ends the typing but keeps the filter, so the filter must stay on
+// screen; and it belongs to one directory, so moving the breadcrumb drops it.
+func TestPathSearch_CommittedFilterIsVisibleAndScoped(t *testing.T) {
+	pm := pathTestModel(t)
+	cfg := config.Config{}
+	cfg.ApplyDefaults()
+	pm.UpdatePathMode(keyRune(cfg.Keys.PathSearch), cfg)
+	pm.UpdatePathMode(keyRune("al"), cfg)
+	pm.UpdatePathMode(tea.KeyMsg{Type: tea.KeyEnter}, cfg)
+
+	if out := ansi.Strip(pm.RenderChildDirs(pathMode, BuildStyles(cfg), 80)); !strings.Contains(out, "Search: al") || len(pm.ChildDirs) != 1 {
+		t.Errorf("filter %q narrows the list to %v but is not shown:\n%s", pm.Filter, pm.ChildDirs, out)
+	}
+
+	pm.UpdatePathMode(tea.KeyMsg{Type: tea.KeyLeft}, cfg) // list the parent instead
+	if pm.Filter != "" {
+		t.Errorf("filter %q carried over to another directory's listing", pm.Filter)
 	}
 }
