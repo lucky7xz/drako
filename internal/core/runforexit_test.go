@@ -5,7 +5,9 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 	"testing"
+	"time"
 
 	"github.com/lucky7xz/drako/internal/config"
 )
@@ -42,6 +44,42 @@ func TestRunForExitSignalIs128PlusN(t *testing.T) {
 		code, err := RunForExit(shCfg, "sig", cmd, "core")
 		if err != nil || code != want {
 			t.Errorf("%q: got (%d, %v), want (%d, nil)", cmd, code, err, want)
+		}
+	}
+}
+
+// Signals sent to drako while it waits: TERM reaches the command, INT is left
+// to the terminal, and drako stays to report the command's own exit code.
+func TestRunForExitRelaysSignals(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("no POSIX signals on Windows")
+	}
+	dir := t.TempDir()
+	started := filepath.Join(dir, "started")
+	tests := []struct {
+		sig  syscall.Signal
+		cmd  string
+		want int
+	}{
+		{syscall.SIGTERM, "touch " + started + "; exec sleep 5", 143},
+		{syscall.SIGINT, "touch " + started + "; sleep 1; exit 7", 7},
+	}
+	for _, tt := range tests {
+		runExitDir(t)
+		os.Remove(started)
+		go func() {
+			for i := 0; i < 200; i++ {
+				if _, err := os.Stat(started); err == nil {
+					self, _ := os.FindProcess(os.Getpid())
+					self.Signal(tt.sig)
+					return
+				}
+				time.Sleep(10 * time.Millisecond)
+			}
+		}()
+		code, err := RunForExit(shCfg, "sig", tt.cmd, "core")
+		if err != nil || code != tt.want {
+			t.Errorf("%v: got (%d, %v), want (%d, nil)", tt.sig, code, err, tt.want)
 		}
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strings"
 	"syscall"
 
@@ -25,7 +26,13 @@ func RunForExit(cfg config.Config, name, commandStr, activeProfile string) (int,
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	if err := cmd.Run(); err != nil {
+	if err := cmd.Start(); err != nil {
+		return 0, fmt.Errorf("could not run %q: %w", name, err)
+	}
+	stop := relaySignals(cmd.Process)
+	err := cmd.Wait()
+	stop()
+	if err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
 			// Killed by a signal: report 128+N, as a shell would.
@@ -37,4 +44,28 @@ func RunForExit(cfg config.Config, name, commandStr, activeProfile string) (int,
 		return 0, fmt.Errorf("could not run %q: %w", name, err)
 	}
 	return 0, nil
+}
+
+// relaySignals keeps drako alive until the command exits: Ctrl-C and Ctrl-\
+// already reach it through the terminal, TERM and HUP are passed on.
+func relaySignals(p *os.Process) (stop func()) {
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGHUP)
+	done := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case sig := <-sigs:
+				if sig == syscall.SIGTERM || sig == syscall.SIGHUP {
+					p.Signal(sig)
+				}
+			case <-done:
+				return
+			}
+		}
+	}()
+	return func() {
+		signal.Stop(sigs)
+		close(done)
+	}
 }
