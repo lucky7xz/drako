@@ -201,6 +201,7 @@ func runBatch(state ui.Model) {
 	scriptDir, err := os.MkdirTemp("", "drako-batch-*")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "batch launch failed: %v\n", err)
+		core.Pause("\nPress any key to return to drako.")
 		return
 	}
 	// The temp dir's random suffix keeps two batches started together apart.
