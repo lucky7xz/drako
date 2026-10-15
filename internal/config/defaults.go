@@ -5,7 +5,7 @@ import "strings"
 // ApplyDefaults fills in any missing fields with default values.
 // It ensures the configuration is valid and complete.
 func (c *Config) ApplyDefaults() {
-	defaults := RescueConfig()
+	defaults := factorySettings()
 
 	if strings.TrimSpace(c.NumbModifier) == "" {
 		c.NumbModifier = defaults.NumbModifier
