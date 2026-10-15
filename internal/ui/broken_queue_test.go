@@ -244,15 +244,21 @@ func TestDeferredDroppedNoteWaitsForTheQueue(t *testing.T) {
 	}
 }
 
-// pinnedWorkDeck bootstraps a config dir and pins a "work" deck in it.
-func pinnedWorkDeck(t *testing.T) (dir string) {
+// freshConfigDir bootstraps a config dir the way a first launch does.
+func freshConfigDir(t *testing.T) (dir string) {
 	t.Helper()
 	xdg := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", xdg)
 	if _, err := config.LoadConfig(nil); err != nil {
 		t.Fatal(err)
 	}
-	dir = filepath.Join(xdg, "drako")
+	return filepath.Join(xdg, "drako")
+}
+
+// pinnedWorkDeck bootstraps a config dir and pins a "work" deck in it.
+func pinnedWorkDeck(t *testing.T) (dir string) {
+	t.Helper()
+	dir = freshConfigDir(t)
 	deck := "x = 1\ny = 1\n[[commands]]\nname = \"hi\"\ncommand = \"echo hi\"\ncol = \"a\"\nrow = 0\n"
 	if err := os.WriteFile(filepath.Join(dir, "work.profile.toml"), []byte(deck), 0o644); err != nil {
 		t.Fatal(err)
@@ -263,15 +269,28 @@ func pinnedWorkDeck(t *testing.T) (dir string) {
 	return dir
 }
 
+// breakDeck writes a deck with a TOML syntax error.
+func breakDeck(t *testing.T, dir, name string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(dir, name+".profile.toml"), []byte("x = [\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
 // dropWorkAndBreakAnother deletes the pinned deck and adds a broken one.
 func dropWorkAndBreakAnother(t *testing.T, dir string) {
 	t.Helper()
 	if err := os.Remove(filepath.Join(dir, "work.profile.toml")); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "bad.profile.toml"), []byte("x = [\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	breakDeck(t, dir, "bad")
+}
+
+// ownPivotWrite is the reload the watcher reports for drako's own write:
+// clearing the dropped deck's lock in pivot.toml.
+func ownPivotWrite(m Model, dir string) Model {
+	next, _ := m.Update(ConfigChangedMsg{Path: filepath.Join(dir, "pivot.toml")})
+	return next.(Model)
 }
 
 func expectBrokenThenDropped(t *testing.T, m Model) {
@@ -282,7 +301,16 @@ func expectBrokenThenDropped(t *testing.T, m Model) {
 	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m = next.(Model)
 	if m.activeDetail == nil || m.activeDetail.Title != "Profile no longer available" {
-		t.Errorf("after the broken-deck notice, want the dropped-deck note, got %+v", m.activeDetail)
+		t.Fatalf("after the broken-deck notice, want the dropped-deck note, got %+v", m.activeDetail)
+	}
+	// Dismissing the queue entered Rescue, so there is no deck to name.
+	if !strings.Contains(m.activeDetail.Description, "Rescue Mode") {
+		t.Errorf("the note must say drako is in Rescue Mode, got %q", m.activeDetail.Description)
+	}
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(Model)
+	if m.mode != gridMode || m.profile.activeName() != "Rescue" {
+		t.Errorf("after both notes: mode = %v on %q, want the Rescue grid", m.mode, m.profile.activeName())
 	}
 }
 
@@ -293,11 +321,41 @@ func TestDroppedNoteFollowsBrokenNoticeOnReload(t *testing.T) {
 	m := InitialModel(false, Session{})
 	dropWorkAndBreakAnother(t, dir)
 	next, _ := m.Update(ConfigChangedMsg{Path: filepath.Join(dir, "bad.profile.toml")})
-	expectBrokenThenDropped(t, next.(Model))
+	expectBrokenThenDropped(t, ownPivotWrite(next.(Model), dir))
 }
 
+// The watcher starts after the first lap's InitialModel, so only later laps
+// see a reload for InitialModel's own pivot.toml write.
 func TestDroppedNoteFollowsBrokenNoticeOnNewLap(t *testing.T) {
-	dir := pinnedWorkDeck(t)
-	dropWorkAndBreakAnother(t, dir)
-	expectBrokenThenDropped(t, InitialModel(false, Session{}))
+	for _, lap := range []string{"first", "later"} {
+		t.Run(lap, func(t *testing.T) {
+			dir := pinnedWorkDeck(t)
+			dropWorkAndBreakAnother(t, dir)
+			m := InitialModel(false, Session{})
+			if lap == "later" {
+				m = ownPivotWrite(m, dir)
+			}
+			expectBrokenThenDropped(t, m)
+		})
+	}
+}
+
+// A deck that breaks while another's notice is up waits behind it.
+func TestReloadQueuesBehindTheNoticeOnScreen(t *testing.T) {
+	dir := freshConfigDir(t)
+	breakDeck(t, dir, "one")
+	m := InitialModel(false, Session{})
+	breakDeck(t, dir, "two")
+	next, _ := m.Update(ConfigChangedMsg{Path: filepath.Join(dir, "two.profile.toml")})
+	m = next.(Model)
+	for _, want := range []string{"one", "two"} {
+		if m.activeDetail == nil || !strings.Contains(m.activeDetail.Title, want) {
+			t.Fatalf("want %s's notice, got %+v", want, m.activeDetail)
+		}
+		next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		m = next.(Model)
+	}
+	if m.mode != gridMode || m.profile.activeName() != "Rescue" {
+		t.Errorf("after both notices: mode = %v on %q, want the Rescue grid", m.mode, m.profile.activeName())
+	}
 }

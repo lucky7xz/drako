@@ -222,6 +222,17 @@ func (m *Model) pruneAcknowledged(broken []config.ProfileParseError) {
 	}
 }
 
+// notShown is the part of broken whose notice hasn't been shown yet.
+func (p profileState) notShown(broken []config.ProfileParseError) []config.ProfileParseError {
+	var rest []config.ProfileParseError
+	for _, e := range broken {
+		if !p.acknowledged[e.Path] {
+			rest = append(rest, e)
+		}
+	}
+	return rest
+}
+
 // protectsMode reports whether the current mode must not be silently
 // changed by a background event: the security lock, or a field mid-
 // capturing typed characters (capturingText).
@@ -235,11 +246,17 @@ func (m Model) protectsMode() bool {
 func (m Model) applyReloadedBundle(bundle config.ConfigBundle) Model {
 	m.applyBundle(bundle)
 	if len(bundle.Broken) > 0 {
-		m.profile.pendingErrors = append(m.profile.pendingErrors, bundle.Broken...)
-		m.profile.errorQueueActive = true
 		if bundle.DroppedProfile != "" && bundle.DroppedProfile != m.profile.droppedNoted {
 			m.profile.pendingDroppedProfile = bundle.DroppedProfile // shown once the queue is dismissed
 		}
+		if m.showingQueue() {
+			// A notice waits for its key: a reload racing it (often drako's own
+			// pivot.toml write) only updates what is queued behind it.
+			m.profile.pendingErrors = m.profile.notShown(bundle.Broken)
+			return m
+		}
+		m.profile.pendingErrors = append(m.profile.pendingErrors, bundle.Broken...)
+		m.profile.errorQueueActive = true
 		return m.presentNextBrokenProfile()
 	}
 	m.profile.pendingErrors, m.profile.errorQueueActive = nil, false // nothing is broken any more
@@ -258,11 +275,15 @@ func showsGridCells(mode navMode) bool {
 	return mode == dropdownMode || mode == batchMode || mode == infoMode
 }
 
+// showingQueue: a broken-profile notice is on screen, waiting for its key.
+func (m Model) showingQueue() bool {
+	return m.profile.errorQueueActive && m.mode == infoMode
+}
+
 // presentDeferredIfSafe shows the oldest queued notice after every message;
 // a queue already on screen waits for the user's keypress (updateInfoMode).
 func (m Model) presentDeferredIfSafe() Model {
-	showingQueue := m.profile.errorQueueActive && m.mode == infoMode
-	if showingQueue {
+	if m.showingQueue() {
 		return m
 	}
 	if len(m.profile.pendingErrors) > 0 {
@@ -386,9 +407,9 @@ func (m Model) presentDroppedProfileNote(name string) Model {
 		"• Cycle (o / p): jump to a still-equipped profile.\n" +
 		"• Exit Rescue Mode: the top-left button of the grid.\n\n" +
 		"Press any key to dismiss."
-	if len(m.profile.profiles) > 0 {
+	if active := m.ActiveProfileName(); active != "" { // none in Rescue
 		desc = "This profile is no longer available — it was deleted or moved to " +
-			"the inventory. drako switched to " + m.ActiveProfileName() + " (any lock " +
+			"the inventory. drako switched to " + active + " (any lock " +
 			"on it has been cleared).\n\n" +
 			"Inventory (i) can equip it again.\n\n" +
 			"Press any key to dismiss."
