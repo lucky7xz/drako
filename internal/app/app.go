@@ -92,15 +92,7 @@ func Run() int {
 
 	// One watcher for the process; between laps InitialModel re-reads the config.
 	var current atomic.Pointer[tea.Program]
-	if stop, err := ui.WatchConfig(configDir, func(msg ui.ConfigChangedMsg) {
-		if p := current.Load(); p != nil {
-			p.Send(msg) // a no-op once that lap's program has quit
-		}
-	}); err != nil {
-		log.Printf("Failed to watch config directory: %v", err)
-	} else {
-		defer stop()
-	}
+	watching := false
 
 	// Start of TUI Loop
 	for {
@@ -113,6 +105,21 @@ func Run() int {
 		if initial.Quitting {
 			// e.g. glassroot with a broken profile: fail before the TUI starts
 			return initial.ExitCode
+		}
+
+		// Watch only after the first InitialModel: on a first launch it writes
+		// the bootstrap files, and drako's own writes are no reason to reload.
+		if !watching {
+			watching = true
+			if stop, err := ui.WatchConfig(configDir, func(msg ui.ConfigChangedMsg) {
+				if p := current.Load(); p != nil {
+					p.Send(msg) // a no-op once that lap's program has quit
+				}
+			}); err != nil {
+				log.Printf("Failed to watch config directory: %v", err)
+			} else {
+				defer stop()
+			}
 		}
 
 		program := tea.NewProgram(initial)
