@@ -78,6 +78,19 @@ func TestQuickNav_Characterization(t *testing.T) {
 			t.Errorf("cursor = (%d,%d), want (2,0)", m.gridNav.cursorRow, m.gridNav.cursorCol)
 		}
 	})
+
+	t.Run("an empty column keeps the cursor on the grid", func(t *testing.T) {
+		m := quickNavModel()
+		m.gridNav.grid[1][1] = "" // column 1 now has no cells
+		tm, _ := m.updateGridMode(keyRune("2"))
+		m = tm.(Model)
+		tm, _ = m.updateGridMode(keyRune("1"))
+		m = tm.(Model)
+		if m.gridNav.cursorRow != 0 || m.gridNav.cursorCol != 1 {
+			t.Errorf("cursor = (%d,%d), want (0,1)", m.gridNav.cursorRow, m.gridNav.cursorCol)
+		}
+		m.updateGridMode(keyRune("e")) // indexed the grid at row -1 and panicked
+	})
 }
 
 // Each digit lights its own label, the column letter and then the row number,

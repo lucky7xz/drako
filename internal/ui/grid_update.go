@@ -131,7 +131,7 @@ func (m Model) quickNav(targetIndex int) (tea.Model, tea.Cmd) {
 		// Second press: choose a row within the already-selected column.
 		m.gridNav.navPending = false
 		lastRow := core.FindLastPopulatedRow(m.gridNav.grid, m.gridNav.cursorCol)
-		m.gridNav.cursorRow = min(targetIndex, lastRow)
+		m.gridNav.cursorRow = max(0, min(targetIndex, lastRow)) // an empty column's last row is -1
 
 		m.gridNav.flashActive = true
 		m.gridNav.flashSeq++
