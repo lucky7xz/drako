@@ -13,6 +13,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/cli"
+	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/core"
 	"github.com/lucky7xz/drako/internal/multiplex"
 	"github.com/lucky7xz/drako/internal/paths"
@@ -185,31 +186,7 @@ func runBatch(state ui.Model) {
 		return
 	}
 
-	var cmds []multiplex.Command
-	for _, sel := range state.SelectedBatch {
-		name := sel.Name(state.Config)
-		parent, item, found := sel.Resolve(state.Config)
-		if !found {
-			log.Printf("batch: skipping %q (not found)", name)
-			continue
-		}
-		// A name resolves to either a grid cell or a dropdown item; both
-		// launch the same way, from their own command string and flags.
-		command, autoClosePtr := parent.Command, parent.AutoCloseExecution
-		if item != nil {
-			command, autoClosePtr = item.Command, item.AutoCloseExecution
-		}
-		if command == "" {
-			log.Printf("batch: skipping %q (no command)", name)
-			continue
-		}
-		cmds = append(cmds, multiplex.Command{
-			Name:     name,
-			Argv:     core.ShellArgv(state.Config.DefaultShell, command),
-			KeepOpen: autoClosePtr != nil && !*autoClosePtr,
-			Profile:  state.ActiveProfileName(),
-		})
-	}
+	cmds := batchCommands(state.Config, state.SelectedBatch, state.ActiveProfileName())
 	if len(cmds) == 0 {
 		return
 	}
@@ -250,6 +227,38 @@ func runBatch(state ui.Model) {
 	if attached && !tmux.Inside && exec.Command("tmux", "has-session", "-t", session).Run() == nil {
 		core.Pause(fmt.Sprintf("\nBatch session still running: tmux attach -t %s\nPress any key to return to drako.", session))
 	}
+}
+
+// batchCommands turns the marked entries into cells to launch; an entry that
+// no longer resolves, or has no command, is logged and left out.
+func batchCommands(cfg config.Config, sels []core.Selection, profile string) []multiplex.Command {
+	var cmds []multiplex.Command
+	for _, sel := range sels {
+		name := sel.Name(cfg)
+		parent, item, found := sel.Resolve(cfg)
+		if !found {
+			log.Printf("batch: skipping %q (not found)", name)
+			continue
+		}
+		// A name resolves to either a grid cell or a dropdown item; both
+		// launch the same way, from their own command string and flags.
+		command, autoClosePtr, debugPtr := parent.Command, parent.AutoCloseExecution, parent.DebugExecution
+		if item != nil {
+			command, autoClosePtr, debugPtr = item.Command, item.AutoCloseExecution, item.DebugExecution
+		}
+		if command == "" {
+			log.Printf("batch: skipping %q (no command)", name)
+			continue
+		}
+		cmds = append(cmds, multiplex.Command{
+			Name: name,
+			Argv: core.ShellArgv(cfg.DefaultShell, command),
+			// A debug run always pauses; a pane already shows the output, so it just stays.
+			KeepOpen: (autoClosePtr != nil && !*autoClosePtr) || (debugPtr != nil && *debugPtr),
+			Profile:  profile,
+		})
+	}
+	return cmds
 }
 
 // runInternalPurge runs a "drako purge …" cell in-process and reports whether

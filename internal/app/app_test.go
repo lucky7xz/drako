@@ -4,6 +4,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/core"
 )
 
 func TestCwdFileArg(t *testing.T) {
@@ -60,4 +63,29 @@ func TestWriteCwdFile(t *testing.T) {
 // a missing cd.
 func TestWriteCwdFile_UnwritablePathIsSurvivable(t *testing.T) {
 	writeCwdFile(filepath.Join(t.TempDir(), "no-such-dir", "cwd.out"))
+}
+
+// A batch pane stays open after success exactly when a single run would pause:
+// auto_close_execution = false or debug_execution = true, item flags for items.
+func TestBatchCommands_KeepOpen(t *testing.T) {
+	yes, no := true, false
+	cfg := config.Config{Commands: []config.Command{
+		{Name: "plain", Command: "ls"},
+		{Name: "stay", Command: "ls", AutoCloseExecution: &no},
+		{Name: "debug", Command: "ls", DebugExecution: &yes},
+		{Name: "folder", Command: "ls", DebugExecution: &yes, Items: []config.CommandItem{
+			{Name: "quiet", Command: "ls"},
+			{Name: "loud", Command: "ls", DebugExecution: &yes},
+		}},
+	}}
+	sels := []core.Selection{{Cell: "plain"}, {Cell: "stay"}, {Cell: "debug"}, {Cell: "folder", Item: 1}, {Cell: "folder", Item: 2}}
+	cmds := batchCommands(cfg, sels, "work")
+	if len(cmds) != len(sels) {
+		t.Fatalf("got %d cells for %d marks", len(cmds), len(sels))
+	}
+	for i, want := range []bool{false, true, true, false, true} {
+		if cmds[i].KeepOpen != want {
+			t.Errorf("%s: KeepOpen = %v, want %v", cmds[i].Name, cmds[i].KeepOpen, want)
+		}
+	}
 }

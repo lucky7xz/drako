@@ -12,7 +12,7 @@ const MaxCommands = 9
 type Command struct {
 	Name     string   // cell name — becomes the window name and script name
 	Argv     []string // the command line, as a single run would use it (core.ShellArgv)
-	KeepOpen bool     // auto_close_execution = false: pause before the pane closes
+	KeepOpen bool     // pause after success too (auto_close_execution = false, debug_execution)
 	Profile  string   // the active deck, exported as DRAKO_PROFILE like a single run
 }
 
@@ -136,11 +136,13 @@ func buildScript(c Command) string {
 	if n := len(c.Argv); n > 0 { // the shell and its flags are fixed words; the command is quoted
 		fmt.Fprintf(&b, "%s %s\n", strings.Join(c.Argv[:n-1], " "), posixSingleQuote(c.Argv[n-1]))
 	}
+	// Like a single run, a failed cell waits so its error stays readable.
+	b.WriteString("status=$?\n")
+	b.WriteString(`if [ "$status" -ne 0 ]; then printf '\n--- Command Failed (exit %s) ---\nPress Enter to close.' "$status"; read _` + "\n")
 	if c.KeepOpen {
-		b.WriteString("status=$?\n")
-		b.WriteString(`printf '\n--- Command Finished (exit %s) ---\nPress Enter to close.' "$status"` + "\n")
-		b.WriteString("read _\n")
+		b.WriteString(`else printf '\n--- Command Finished ---\nPress Enter to close.'; read _` + "\n")
 	}
+	b.WriteString("fi\n")
 	return b.String()
 }
 

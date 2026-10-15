@@ -24,14 +24,30 @@ func TestBuildScript_QuotesTheCommand(t *testing.T) {
 	}
 }
 
-func TestBuildScript_KeepOpenPausesBeforeThePaneCloses(t *testing.T) {
-	open := buildScript(Command{Name: "open", Argv: []string{"bash", "-lc", "ls"}, KeepOpen: true})
-	if !strings.Contains(open, "read ") {
-		t.Errorf("KeepOpen script must pause for Enter:\n%s", open)
-	}
-	closed := buildScript(Command{Name: "closed", Argv: []string{"bash", "-lc", "ls"}})
-	if strings.Contains(closed, "read ") {
-		t.Errorf("auto-close script must exit with its command:\n%s", closed)
+// Like a single run, a failed cell waits so its error stays readable; a
+// KeepOpen cell waits after success too.
+func TestBuildScript_PausesOnFailureOrKeepOpen(t *testing.T) {
+	for _, tc := range []struct {
+		command  string
+		keepOpen bool
+		want     string // "" when the pane closes without a word
+	}{
+		{"true", false, ""},
+		{"exit 3", false, "--- Command Failed (exit 3) ---\nPress Enter to close."},
+		{"true", true, "--- Command Finished ---\nPress Enter to close."},
+		{"exit 3", true, "--- Command Failed (exit 3) ---\nPress Enter to close."},
+	} {
+		c := Command{Name: "c", Argv: []string{"sh", "-c", tc.command}, KeepOpen: tc.keepOpen}
+		script := filepath.Join(t.TempDir(), "cell.sh")
+		if err := os.WriteFile(script, []byte(buildScript(c)), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		cmd := exec.Command("sh", script)
+		cmd.Stdin = strings.NewReader("\n")
+		out, _ := cmd.CombinedOutput()
+		if got := strings.TrimSpace(string(out)); got != tc.want {
+			t.Errorf("%q (keep open: %v) printed %q, want %q", tc.command, tc.keepOpen, got, tc.want)
+		}
 	}
 }
 

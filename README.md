@@ -244,8 +244,10 @@ To run batches through tmux even from inside herdr:
 batch_force_tmux = true
 ```
 
-Cells keep their own `auto_close_execution` setting on both, and a batch cell
-knows its deck through `DRAKO_PROFILE`, just like a single run.
+A pane waits for `Enter` before it closes when its cell fails, and after
+success too when the cell sets `auto_close_execution = false` or
+`debug_execution = true`. A batch cell knows its deck through `DRAKO_PROFILE`,
+just like a single run.
 
 ## 📇 Profile Creation Example
 
