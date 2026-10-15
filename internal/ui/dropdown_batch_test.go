@@ -106,11 +106,11 @@ func TestDropdownMarkToggle(t *testing.T) {
 	m := markingModel(t)
 
 	m, _ = pressDropdown(t, m, spaceKey)
-	if m.batch.mark("first") != 1 {
+	if m.batch.mark(core.Selection{Cell: "folder", Item: 1}) != 1 {
 		t.Fatal("space must mark the selected item")
 	}
 	m, _ = pressDropdown(t, m, spaceKey)
-	if m.batch.mark("first") != 0 {
+	if m.batch.mark(core.Selection{Cell: "folder", Item: 1}) != 0 {
 		t.Fatal("space again must unmark")
 	}
 }
@@ -120,7 +120,7 @@ func TestDropdownBareItemNotMarkable(t *testing.T) {
 	m.dropdown.selectedIdx = 2 // "bare"
 
 	m, _ = pressDropdown(t, m, spaceKey)
-	if m.batch.mark("bare") != 0 {
+	if m.batch.mark(core.Selection{Cell: "folder", Item: 3}) != 0 {
 		t.Fatal("items without a command must not be markable")
 	}
 }
@@ -131,6 +131,52 @@ func TestDropdownDigitsStillJumpWhileMarking(t *testing.T) {
 	m, _ = pressDropdown(t, m, keyRunes("2"))
 	if m.dropdown.selectedIdx != 1 {
 		t.Errorf("digits must keep jumping while marking, idx = %d", m.dropdown.selectedIdx)
+	}
+}
+
+// drako check keeps cell names unique, not item names, so a mark is the item's
+// position: two "Logs" in one folder are marked and launched apart.
+func TestDropdownMarksTellSameNamedItemsApart(t *testing.T) {
+	withBackend(t, true)
+	cfg := config.Config{X: 1, Y: 1, Commands: []config.Command{
+		{Name: "folder", Row: 0, Col: "a", Items: []config.CommandItem{
+			{Name: "Logs", Command: "journalctl"},
+			{Name: "Logs", Command: "dmesg"},
+		}},
+	}}
+	cfg.ApplyDefaults()
+	m := Model{Config: cfg, styles: BuildStyles(cfg), mode: dropdownMode,
+		gridNav: gridNav{grid: config.BuildGrid(cfg)}, dropdown: dropdownState{items: cfg.Commands[0].Items}}
+	m, _ = pressDropdown(t, m, keyRunes("m"))
+	m, _ = pressDropdown(t, m, keyRunes("b"))
+	m, _ = pressDropdown(t, m, keyRunes("2"))
+	m, _ = pressDropdown(t, m, spaceKey)
+
+	if out := ansi.Strip(m.renderDropdownPopup()); !strings.Contains(out, "1 ○ Logs") || !strings.Contains(out, "2 ① Logs") {
+		t.Errorf("only the second Logs may carry the mark:\n%s", out)
+	}
+	m, _ = pressDropdown(t, m, tea.KeyMsg{Type: tea.KeyEnter})
+	if want := []core.Selection{{Cell: "folder", Item: 2}}; !slices.Equal(m.SelectedBatch, want) {
+		t.Errorf("SelectedBatch = %v, want %v", m.SelectedBatch, want)
+	}
+}
+
+// Once the layout dialog is open it owns every key, the leader included: m, b
+// must not restart marking and throw the marks away.
+func TestDropdownLayoutDialogOwnsTheLeader(t *testing.T) {
+	m := markingModel(t)
+	m, _ = pressDropdown(t, m, spaceKey)
+	m, _ = pressDropdown(t, m, keyRunes("2"))
+	m, _ = pressDropdown(t, m, spaceKey)
+	m, _ = pressDropdown(t, m, tea.KeyMsg{Type: tea.KeyEnter})
+	if !m.batch.choosing() {
+		t.Fatal("two marks must open the layout dialog")
+	}
+	m, _ = pressDropdown(t, m, keyRunes("m"))
+	m, _ = pressDropdown(t, m, keyRunes("b"))
+	if !m.batch.choosing() || len(m.batch.marked) != 2 || m.leader.pending {
+		t.Errorf("dialog open %v, marks %v, leader pending %v; want the dialog untouched",
+			m.batch.choosing(), m.batch.marked, m.leader.pending)
 	}
 }
 
@@ -174,7 +220,7 @@ func TestDropdownLaunchWithNothingMarkedDoesNotRunItem(t *testing.T) {
 
 func TestDropdownEscExitsMarkingKeepsDropdown(t *testing.T) {
 	m := markingModel(t)
-	m.batch.marked = []string{"first"}
+	m.batch.marked = []core.Selection{{Cell: "folder", Item: 1}}
 
 	m, _ = pressDropdown(t, m, tea.KeyMsg{Type: tea.KeyEsc})
 	if m.batch.dropdown || len(m.batch.marked) != 0 {

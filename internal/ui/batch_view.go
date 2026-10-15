@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/core"
 	"github.com/lucky7xz/drako/internal/multiplex"
 )
 
@@ -62,21 +63,21 @@ func (m Model) layoutFieldWidth() int {
 // exceeds nine so every mark has one.
 var markGlyphs = []string{"①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨"}
 
-// markGlyph is the prefix for name: its position when marked, ○ when not.
-func (b batchState) markGlyph(name string) string {
-	if i := b.mark(name); i > 0 {
+// markGlyph is the prefix for sel: its position when marked, ○ when not.
+func (b batchState) markGlyph(sel core.Selection) string {
+	if i := b.mark(sel); i > 0 {
 		return markGlyphs[i-1] + " "
 	}
 	return "○ "
 }
 
 // itemMarkPrefix is batchCellPrefix's dropdown twin: mark glyphs for the
-// folder's items while a dropdown batch is active, nothing otherwise.
-func (m Model) itemMarkPrefix(item config.CommandItem) string {
+// folder's items (i is the item's index) while a dropdown batch is active.
+func (m Model) itemMarkPrefix(i int, item config.CommandItem) string {
 	if !m.batch.dropdown || item.Command == "" {
 		return ""
 	}
-	return m.batch.markGlyph(item.Name)
+	return m.batch.markGlyph(core.Selection{Cell: m.dropdownCell(), Item: i + 1})
 }
 
 // batchCellPrefix returns the mark prefix for a cell, and nothing for cells a
@@ -85,5 +86,5 @@ func (m Model) batchCellPrefix(name string) string {
 	if m.mode != batchMode || name == "" || !m.markable(name) {
 		return ""
 	}
-	return m.batch.markGlyph(name)
+	return m.batch.markGlyph(core.Selection{Cell: name})
 }

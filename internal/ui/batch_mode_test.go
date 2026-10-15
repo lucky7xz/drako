@@ -45,11 +45,11 @@ func TestBatchMarkToggle(t *testing.T) {
 	m := batchTestModel()
 
 	m, _ = pressBatch(t, m, spaceKey)
-	if m.batch.mark("one") != 1 {
+	if m.batch.mark(core.Selection{Cell: "one"}) != 1 {
 		t.Fatal("space must mark the cursor cell")
 	}
 	m, _ = pressBatch(t, m, spaceKey)
-	if m.batch.mark("one") != 0 {
+	if m.batch.mark(core.Selection{Cell: "one"}) != 0 {
 		t.Fatal("space again must unmark")
 	}
 }
@@ -59,7 +59,7 @@ func TestBatchFolderCellNotMarkable(t *testing.T) {
 	m.gridNav.cursorRow, m.gridNav.cursorCol = 1, 0 // "folder"
 
 	m, _ = pressBatch(t, m, spaceKey)
-	if m.batch.mark("folder") != 0 {
+	if m.batch.mark(core.Selection{Cell: "folder"}) != 0 {
 		t.Fatal("cells without a direct command must not be markable")
 	}
 	if m.profile.statusMessage == "" {
@@ -69,10 +69,10 @@ func TestBatchFolderCellNotMarkable(t *testing.T) {
 
 func TestBatchCapAtNine(t *testing.T) {
 	m := batchTestModel()
-	m.batch.marked = []string{"c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8", "c9"}
+	m.batch.marked = cellMarks("c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8", "c9")
 
 	m, _ = pressBatch(t, m, spaceKey)
-	if m.batch.mark("one") != 0 {
+	if m.batch.mark(core.Selection{Cell: "one"}) != 0 {
 		t.Fatal("the tenth mark must be refused")
 	}
 	if !strings.Contains(m.profile.statusMessage, "9") {
@@ -121,7 +121,7 @@ func TestBatchLaunchWithNothingMarked(t *testing.T) {
 
 func TestBatchEscCancelsAndClears(t *testing.T) {
 	m := batchTestModel()
-	m.batch.marked = []string{"one"}
+	m.batch.marked = cellMarks("one")
 
 	m, _ = pressBatch(t, m, tea.KeyMsg{Type: tea.KeyEsc})
 	if m.mode != gridMode {
@@ -136,7 +136,7 @@ func TestBatchEscCancelsAndClears(t *testing.T) {
 // everywhere else in the TUI.
 func TestBatchQCancelsAndClears(t *testing.T) {
 	m := batchTestModel()
-	m.batch.marked = []string{"one"}
+	m.batch.marked = cellMarks("one")
 
 	m, _ = pressBatch(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
 	if m.mode != gridMode {
@@ -166,7 +166,7 @@ func TestBatchQuickNavJumps(t *testing.T) {
 
 	// The jump composes with marking: space marks the cell we jumped to.
 	m, _ = pressBatch(t, m, spaceKey)
-	if m.batch.mark("two") == 0 {
+	if m.batch.mark(core.Selection{Cell: "two"}) == 0 {
 		t.Error("space after a quick-nav jump should mark the target cell")
 	}
 }
@@ -197,4 +197,13 @@ func TestBatchViewShowsUnmarkedGlyph(t *testing.T) {
 	if !strings.Contains(out, "○ one") || !strings.Contains(out, "○ two") {
 		t.Errorf("markable cells start unmarked, got:\n%s", out)
 	}
+}
+
+// cellMarks is a grid mark set, one entry per cell name.
+func cellMarks(names ...string) []core.Selection {
+	out := make([]core.Selection, len(names))
+	for i, n := range names {
+		out[i] = core.Selection{Cell: n}
+	}
+	return out
 }

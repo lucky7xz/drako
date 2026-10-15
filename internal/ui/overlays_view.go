@@ -132,7 +132,7 @@ func (m Model) renderDropdownPopup() string {
 	// item also carries its mark glyph.
 	var raw []string
 	for i, item := range m.dropdown.items {
-		label := fmt.Sprintf("%d %s%s", i+1, m.itemMarkPrefix(item), item.Name)
+		label := fmt.Sprintf("%d %s%s", i+1, m.itemMarkPrefix(i, item), item.Name)
 		if i == m.dropdown.selectedIdx {
 			raw = append(raw, cursorSel.Render("► ")+textSel.Render(label))
 		} else {

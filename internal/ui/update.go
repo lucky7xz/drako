@@ -259,6 +259,11 @@ func (m Model) dropdownCell() string {
 func (m Model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 
+	// The layout dialog owns every key once it is open, the leader included.
+	if m.batch.choosing() {
+		return m.updateBatchDialog(msg)
+	}
+
 	// Leader sequence: inside a dropdown the only continuation is 'b'
 	// (start marking this folder's items); everything else is swallowed.
 	if m.leader.pending {

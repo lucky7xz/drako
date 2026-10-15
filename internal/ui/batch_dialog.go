@@ -4,8 +4,6 @@ import (
 	"slices"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/lucky7xz/drako/internal/config"
-	"github.com/lucky7xz/drako/internal/core"
 	"github.com/lucky7xz/drako/internal/multiplex"
 )
 
@@ -31,27 +29,12 @@ func (m Model) beginLaunch() (tea.Model, tea.Cmd) {
 // launchBatch hands the marked cells and their layout to the app and quits;
 // the TUI relaunches once the batch is done.
 func (m Model) launchBatch() (tea.Model, tea.Cmd) {
-	m.SelectedBatch = m.batchSelections()
+	m.SelectedBatch = slices.Clone(m.batch.marked)
 	m.SelectedTabs = slices.Clone(m.batch.tabs)
 	if m.SelectedTabs == nil {
 		m.SelectedTabs = multiplex.Distribute(len(m.SelectedBatch), multiplex.MinTabs(len(m.SelectedBatch)))
 	}
 	return m, tea.Quit
-}
-
-// batchSelections turns the marks into exact entries; inside a dropdown each
-// mark is an item of the open folder, so it is addressed by its position there.
-func (m Model) batchSelections() []core.Selection {
-	sels := make([]core.Selection, 0, len(m.batch.marked))
-	for _, name := range m.batch.marked {
-		if !m.batch.dropdown {
-			sels = append(sels, core.Selection{Cell: name})
-			continue
-		}
-		i := slices.IndexFunc(m.dropdown.items, func(it config.CommandItem) bool { return it.Name == name })
-		sels = append(sels, core.Selection{Cell: m.dropdownCell(), Item: i + 1})
-	}
-	return sels
 }
 
 // updateBatchDialog consumes a key while the layout dialog is open.

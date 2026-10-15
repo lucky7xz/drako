@@ -29,7 +29,7 @@ func dialogModel(t *testing.T, n int) Model {
 		styles:  BuildStyles(cfg),
 		mode:    batchMode,
 		gridNav: gridNav{grid: config.BuildGrid(cfg)},
-		batch:   batchState{marked: names[:n]},
+		batch:   batchState{marked: cellMarks(names[:n]...)},
 	}
 	next, _ := m.updateBatchMode(tea.KeyMsg{Type: tea.KeyEnter})
 	return next.(Model)

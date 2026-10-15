@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"slices"
 	"strconv"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -17,9 +18,9 @@ import (
 var resolveBackend = multiplex.Resolve
 
 type batchState struct {
-	// marked holds cell/item names in the order they were marked — that
-	// order is the launch order, and decides how cells group into tabs.
-	marked []string
+	// marked holds the marked cells or folder items in marking order — the
+	// launch order, which decides how cells group into tabs.
+	marked []core.Selection
 	// dropdown scopes the mark set to the open folder's items: an inside
 	// batch never mixes with grid cells, and vice versa.
 	dropdown bool
@@ -34,31 +35,19 @@ type batchState struct {
 // choosing reports whether the layout dialog is open.
 func (b batchState) choosing() bool { return b.tabs != nil }
 
-// mark is name's 1-based position in the mark set, or 0 when unmarked.
-func (b batchState) mark(name string) int {
-	for i, n := range b.marked {
-		if n == name {
-			return i + 1
-		}
-	}
-	return 0
+// mark is sel's 1-based position in the mark set, or 0 when unmarked.
+func (b batchState) mark(sel core.Selection) int {
+	return slices.Index(b.marked, sel) + 1
 }
 
-// toggle adds name to the mark set or drops it, keeping the rest in order.
-func (b *batchState) toggle(name string) {
-	out := make([]string, 0, len(b.marked)+1)
-	found := false
-	for _, n := range b.marked {
-		if n == name {
-			found = true
-			continue
-		}
-		out = append(out, n)
+// toggle adds sel to the mark set or drops it, keeping the rest in order. It
+// builds a new slice, so a copied Model never shares its marks.
+func (b *batchState) toggle(sel core.Selection) {
+	if i := slices.Index(b.marked, sel); i >= 0 {
+		b.marked = slices.Delete(slices.Clone(b.marked), i, i+1)
+		return
 	}
-	if !found {
-		out = append(out, name)
-	}
-	b.marked = out
+	b.marked = append(slices.Clone(b.marked), sel)
 }
 
 // batchGate is the single availability check for every batch entry point.
@@ -98,12 +87,6 @@ func (m Model) enterDropdownBatch() (tea.Model, tea.Cmd) {
 // handled=false hands the key back for the dropdown's normal behavior
 // (navigation, digit jumps, explain).
 func (m Model) updateDropdownMarking(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
-	// The layout dialog owns every key once it is open.
-	if m.batch.choosing() {
-		next, cmd := m.updateBatchDialog(msg)
-		return next, cmd, true
-	}
-
 	if IsCancel(m.Config.Keys, msg) {
 		// End marking, keep the dropdown open; the next esc/q closes it.
 		m.batch = batchState{}
@@ -115,14 +98,15 @@ func (m Model) updateDropdownMarking(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) 
 		if m.dropdown.selectedIdx < 0 || m.dropdown.selectedIdx >= len(m.dropdown.items) {
 			return m, nil, true
 		}
-		item := m.dropdown.items[m.dropdown.selectedIdx]
-		if item.Command == "" {
+		if m.dropdown.items[m.dropdown.selectedIdx].Command == "" {
 			return m, m.setProfileStatus("Item not batchable", false), true
 		}
-		if m.batch.mark(item.Name) == 0 && len(m.batch.marked) >= multiplex.MaxCommands {
+		// By position: two items in a folder may share a name.
+		sel := core.Selection{Cell: m.dropdownCell(), Item: m.dropdown.selectedIdx + 1}
+		if m.batch.mark(sel) == 0 && len(m.batch.marked) >= multiplex.MaxCommands {
 			return m, m.setProfileStatus("Batch is full (9 max)", false), true
 		}
-		m.batch.toggle(item.Name)
+		m.batch.toggle(sel)
 		return m, nil, true
 
 	case "enter":
@@ -169,10 +153,11 @@ func (m Model) updateBatchMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if name == "" || !m.markable(name) {
 			return m, m.setProfileStatus("Cell not batchable", false)
 		}
-		if m.batch.mark(name) == 0 && len(m.batch.marked) >= multiplex.MaxCommands {
+		sel := core.Selection{Cell: name}
+		if m.batch.mark(sel) == 0 && len(m.batch.marked) >= multiplex.MaxCommands {
 			return m, m.setProfileStatus("Batch is full (9 max)", false)
 		}
-		m.batch.toggle(name)
+		m.batch.toggle(sel)
 		return m, nil
 
 	case key == "enter":
