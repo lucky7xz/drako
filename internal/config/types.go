@@ -96,9 +96,11 @@ type ConfigBundle struct {
 	Broken      []ProfileParseError
 	// DroppedProfile names the profile that was requested on this load (via the
 	// pivot lock, the session, or config.toml) but no longer exists — deleted or
-	// moved to the inventory — forcing the drop into Rescue Mode. Empty on every
-	// other path. The UI uses it to explain the otherwise-silent rescue.
+	// moved to the inventory. The load fell through to the next source, or to
+	// Rescue Mode; the UI uses it to explain the otherwise-silent switch.
 	DroppedProfile string
+	// Rescue means Config is the rescue grid, not Profiles[ActiveIndex].
+	Rescue bool
 }
 
 // ── Platform-variant commands ────────────────────────────────────────

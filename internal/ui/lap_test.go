@@ -160,3 +160,29 @@ func TestAfterEditInGlassrootRejectsAnEmptyBundle(t *testing.T) {
 		t.Errorf("glassroot kept running on the rescue grid (quitting=%v, first cell %q)", got.Quitting, got.Config.Commands[0].Name)
 	}
 }
+
+// Two broken decks land on rescue; a lap keeps rescue instead of switching back
+// into the deck the load just rejected.
+func TestRescueSurvivesALap(t *testing.T) {
+	xdg := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", xdg)
+	t.Setenv("DRAKO_PROFILE", "beta")
+	dir := filepath.Join(xdg, "drako")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, n := range []string{"alpha", "beta"} {
+		deck := "x = 1\ny = 1\n[[commands]]\nname = \"far\"\ncommand = \"echo\"\nrow = 5\ncol = \"a\"\n"
+		if err := os.WriteFile(filepath.Join(dir, n+".profile.toml"), []byte(deck), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	first := InitialModel(false, Session{})
+	second := InitialModel(false, first.Session())
+	for lap, m := range []Model{first, second} {
+		if !m.profile.rescue || m.ActiveProfileName() != "" {
+			t.Errorf("lap %d: want rescue with no active deck, got rescue=%v active=%q", lap+1, m.profile.rescue, m.ActiveProfileName())
+		}
+	}
+}

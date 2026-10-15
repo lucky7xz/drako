@@ -160,13 +160,11 @@ func loadConfig(profileOverride *string, sessionProfile string) (ConfigBundle, e
 		droppedProfile = req.Name
 	}
 
-	effective, activeIndex, extraBroken, fellBack := buildEffective(base, profiles, activeIndex, useFactoryDefaults)
+	effective, activeIndex, extraBroken, fellBack, rescue := buildEffective(base, profiles, activeIndex, useFactoryDefaults)
 	broken = append(broken, extraBroken...)
 	if fellBack {
 		pivotStillValid = false
 	}
-
-	effective.Commands = CopyCommands(effective.Commands)
 
 	return ConfigBundle{
 		Base:        base,
@@ -182,5 +180,6 @@ func loadConfig(profileOverride *string, sessionProfile string) (ConfigBundle, e
 		}(),
 		Broken:         broken,
 		DroppedProfile: droppedProfile,
+		Rescue:         rescue,
 	}, nil
 }

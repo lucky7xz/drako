@@ -115,7 +115,10 @@ func invalidProfile(name string) ProfileInfo {
 func TestBuildEffective_AppliesSelectedProfile(t *testing.T) {
 	profiles := []ProfileInfo{validProfile("alpha"), validProfile("work")}
 
-	effective, active, extraBroken, fellBack := buildEffective(Config{}, profiles, 1, false)
+	effective, active, extraBroken, fellBack, rescue := buildEffective(Config{}, profiles, 1, false)
+	if rescue != false {
+		t.Errorf("rescue = %v, want false", rescue)
+	}
 	if len(extraBroken) != 0 || fellBack {
 		t.Fatalf("clean profile should not fall back: broken=%+v fellBack=%v", extraBroken, fellBack)
 	}
@@ -130,7 +133,10 @@ func TestBuildEffective_AppliesSelectedProfile(t *testing.T) {
 func TestBuildEffective_FactoryDefaultsSkipOverlay(t *testing.T) {
 	profiles := []ProfileInfo{validProfile("alpha")}
 
-	effective, _, extraBroken, fellBack := buildEffective(Config{}, profiles, 0, true)
+	effective, _, extraBroken, fellBack, rescue := buildEffective(Config{}, profiles, 0, true)
+	if rescue != true {
+		t.Errorf("rescue = %v, want true", rescue)
+	}
 	if len(extraBroken) != 0 || fellBack {
 		t.Fatalf("factory defaults are not a fallback: broken=%+v fellBack=%v", extraBroken, fellBack)
 	}
@@ -140,7 +146,10 @@ func TestBuildEffective_FactoryDefaultsSkipOverlay(t *testing.T) {
 }
 
 func TestBuildEffective_NoProfilesForcesFactoryDefaults(t *testing.T) {
-	effective, active, extraBroken, fellBack := buildEffective(Config{}, nil, 0, false)
+	effective, active, extraBroken, fellBack, rescue := buildEffective(Config{}, nil, 0, false)
+	if rescue != true {
+		t.Errorf("rescue = %v, want true", rescue)
+	}
 	if len(extraBroken) != 0 || fellBack || active != 0 {
 		t.Fatalf("no profiles is not a fallback: broken=%+v fellBack=%v active=%d", extraBroken, fellBack, active)
 	}
@@ -152,7 +161,10 @@ func TestBuildEffective_NoProfilesForcesFactoryDefaults(t *testing.T) {
 func TestBuildEffective_InvalidProfileFallsBackToFirst(t *testing.T) {
 	profiles := []ProfileInfo{validProfile("alpha"), invalidProfile("broken")}
 
-	effective, active, extraBroken, fellBack := buildEffective(Config{}, profiles, 1, false)
+	effective, active, extraBroken, fellBack, rescue := buildEffective(Config{}, profiles, 1, false)
+	if rescue != false {
+		t.Errorf("rescue = %v, want false", rescue)
+	}
 	if !fellBack {
 		t.Fatal("invalid profile must report fellBack")
 	}
@@ -167,10 +179,26 @@ func TestBuildEffective_InvalidProfileFallsBackToFirst(t *testing.T) {
 	}
 }
 
+// Both the selected deck and the first one it falls back to are reported.
+func TestBuildEffective_SelectedAndFallbackInvalid(t *testing.T) {
+	profiles := []ProfileInfo{invalidProfile("a"), invalidProfile("b")}
+
+	_, _, extraBroken, _, rescue := buildEffective(Config{}, profiles, 1, false)
+	if rescue != true {
+		t.Errorf("rescue = %v, want true", rescue)
+	}
+	if len(extraBroken) != 2 || extraBroken[0].Name != "b" || extraBroken[1].Name != "a" {
+		t.Fatalf("want b then a reported broken, got %+v", extraBroken)
+	}
+}
+
 func TestBuildEffective_AllInvalidLandsOnRescue(t *testing.T) {
 	profiles := []ProfileInfo{invalidProfile("broken")}
 
-	effective, active, extraBroken, fellBack := buildEffective(Config{}, profiles, 0, false)
+	effective, active, extraBroken, fellBack, rescue := buildEffective(Config{}, profiles, 0, false)
+	if rescue != true {
+		t.Errorf("rescue = %v, want true", rescue)
+	}
 	if !fellBack || active != 0 {
 		t.Fatalf("want fellBack at index 0, got fellBack=%v active=%d", fellBack, active)
 	}

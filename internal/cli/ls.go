@@ -104,7 +104,7 @@ func renderLs(out io.Writer, bundle config.ConfigBundle, width int) {
 
 	for i, p := range bundle.Profiles {
 		marker := ""
-		if i == bundle.ActiveIndex {
+		if i == bundle.ActiveIndex && !bundle.Rescue {
 			marker = " (active)"
 		}
 		fmt.Fprintf(out, "\n%s%s — %dx%d\n", safeText(p.Name), marker, p.Profile.X, p.Profile.Y)

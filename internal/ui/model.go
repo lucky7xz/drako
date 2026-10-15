@@ -190,7 +190,7 @@ func (m *Model) applyBundle(bundle config.ConfigBundle) {
 		m.profile.activeIndex = bundle.ActiveIndex
 	}
 	m.applyConfig(bundle.Config)
-	m.profile.rescue = false
+	m.profile.rescue = bundle.Rescue
 	m.batch = batchState{} // marks name cells of the grid being replaced
 	if showsGridCells(m.lock.modeBefore) {
 		m.lock.modeBefore = gridMode // and so would the mode unlocking returns to
@@ -486,7 +486,8 @@ func (m Model) Session() Session {
 // by this: the pivot pins a starting point, it is not an access control, and
 // glassroot already contracts that a session can reach every equipped profile.
 func (m *Model) Restore(s Session) {
-	if s.Profile != "" && s.Profile != m.ActiveProfileName() {
+	// deckName, not ActiveProfileName: a rescue load already rejected that deck.
+	if s.Profile != "" && s.Profile != m.profile.deckName() {
 		for i, p := range m.profile.profiles {
 			if p.Name != s.Profile {
 				continue

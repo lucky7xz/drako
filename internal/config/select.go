@@ -99,8 +99,8 @@ func resolveRequested(override *string, pivotLocked, envProfile, cfgProfile stri
 // if that fails too, land on the rescue config (always a valid grid).
 // fellBack is true whenever the selected profile had to be abandoned, so the
 // caller can drop a pivot lock that points at it. With no profiles, or with
-// useFactoryDefaults set, the rescue config is used directly.
-func buildEffective(base Config, profiles []ProfileInfo, activeIndex int, useFactoryDefaults bool) (effective Config, newActive int, extraBroken []ProfileParseError, fellBack bool) {
+// useFactoryDefaults set, the rescue config is used directly; rescue reports it.
+func buildEffective(base Config, profiles []ProfileInfo, activeIndex int, useFactoryDefaults bool) (effective Config, newActive int, extraBroken []ProfileParseError, fellBack, rescue bool) {
 	newActive = activeIndex
 
 	var selected ProfileInfo
@@ -125,35 +125,35 @@ func buildEffective(base Config, profiles []ProfileInfo, activeIndex int, useFac
 	if useFactoryDefaults {
 		effective = RescueConfig()
 		effective.ApplyDefaults()
-		return effective, newActive, nil, false
+		return effective, newActive, nil, false, true
 	}
 
 	effective, err := applyAndValidate(selected)
 	if err == nil {
 		log.Printf("Applied profile overlay: %s", selected.Name)
-		return effective, newActive, nil, false
+		return effective, newActive, nil, false, false
 	}
 
+	gridBroken := func(p ProfileInfo, err error) ProfileParseError {
+		return ProfileParseError{Name: p.Name, Path: p.Path, Err: fmt.Sprintf("Grid validation failed: %v", err)}
+	}
 	log.Printf("Selected profile %q is invalid: %v. Falling back to defaults.", selected.Name, err)
-	extraBroken = append(extraBroken, ProfileParseError{
-		Name: selected.Name,
-		Path: selected.Path,
-		Err:  fmt.Sprintf("Grid validation failed: %v", err),
-	})
+	extraBroken = append(extraBroken, gridBroken(selected, err))
 	// "First available" fallback policy: try the first profile;
 	// if that fails too, fall back to rescue mode (a valid grid).
-	effective = RescueConfig()
-	effective.ApplyDefaults()
-	newActive = 0
 	selected = profiles[0]
 	log.Printf("Falling back to first available profile: %s", selected.Name)
 	fallbackConfig, err2 := applyAndValidate(selected)
 	if err2 == nil {
-		effective = fallbackConfig
-	} else {
-		log.Printf("Fallback profile %s is also invalid: %v", selected.Name, err2)
+		return fallbackConfig, 0, extraBroken, true, false
 	}
-	return effective, newActive, extraBroken, true
+	log.Printf("Fallback profile %s is also invalid: %v", selected.Name, err2)
+	if activeIndex != 0 { // profile 0 was the selected one, already reported
+		extraBroken = append(extraBroken, gridBroken(selected, err2))
+	}
+	effective = RescueConfig()
+	effective.ApplyDefaults()
+	return effective, 0, extraBroken, true, true
 }
 
 // selectProfile finds requested among profiles by normalized name. An empty
