@@ -72,7 +72,13 @@ func (m Model) handleMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.GlassrootMode && glassrootRejectsBundle(bundle) {
 			return m.failGlassroot()
 		}
-		return m.applyReloadedBundle(bundle), nil
+		m = m.applyReloadedBundle(bundle)
+		// From the inventory this is Apply's reload, and Apply means done. A
+		// watcher reload (ConfigChangedMsg) leaves the inventory open instead.
+		if m.mode == inventoryMode {
+			m.mode = gridMode
+		}
+		return m, nil
 
 	case ConfigChangedMsg:
 		// Config file changed on disk, reload everything

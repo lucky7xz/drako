@@ -99,3 +99,25 @@ func TestAfterEditSurvivesUnreadableInventory(t *testing.T) {
 		t.Error("the failed rebuild should surface as the inventory error")
 	}
 }
+
+// Apply means the user is done, so its reload closes the inventory. A file
+// changing on disk must leave it open: TestReloadKeepsTheInventoryOpen.
+func TestApplyClosesTheInventory(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	m := InitialModel(false, Session{})
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}})
+	m = next.(Model)
+	if m.mode != inventoryMode {
+		t.Fatalf("i did not open the inventory, mode = %v", m.mode)
+	}
+	m.inventory.focusedList = focusApply
+
+	next, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("Apply returned no command")
+	}
+	next, _ = next.(Model).Update(cmd())
+	if mode := next.(Model).mode; mode != gridMode {
+		t.Errorf("after Apply, mode = %v, want the grid (%v)", mode, gridMode)
+	}
+}
