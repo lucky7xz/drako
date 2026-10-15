@@ -57,7 +57,7 @@ func Plan(session string, cmds []Command, tabs []int, paths []string, insideTmux
 		} else {
 			step = append([]string{"tmux", "new-window"}, target...)
 		}
-		step = append(append(step, "-n", tmuxArg(tabLabel(group))), runScript(paths[cell])...)
+		step = append(append(step, "-n", tmuxName(tabLabel(group))), runScript(paths[cell])...)
 		for i := 1; i < panes; i++ {
 			step = append(append(append(step, ";", "split-window"), target...), runScript(paths[cell+i])...)
 		}
@@ -69,6 +69,10 @@ func Plan(session string, cmds []Command, tabs []int, paths []string, insideTmux
 	}
 
 	if !insideTmux {
+		// Every new window took focus; open on the first tab, as herdr does.
+		if len(tabs) > 1 {
+			s.Steps = append(s.Steps, []string{"tmux", "select-window", "-t", session + ":{start}"})
+		}
 		s.Steps = append(s.Steps, []string{"tmux", "attach-session", "-t", session})
 		s.Attach = true
 	}
@@ -112,9 +116,10 @@ func tabLabel(cmds []Command) string {
 	return string(label)
 }
 
-// tmuxArg escapes a trailing ";", which tmux reads as the end of a command
-// wherever it appears; tmux turns "\;" back into ";".
-func tmuxArg(s string) string {
+// tmuxName keeps a window name literal: tmux expands formats in names (#(cmd)
+// runs a shell job) and ends a command at a trailing ";", so both are escaped.
+func tmuxName(s string) string {
+	s = strings.ReplaceAll(s, "#", "##")
 	if strings.HasSuffix(s, ";") {
 		return s[:len(s)-1] + `\;`
 	}

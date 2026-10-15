@@ -107,10 +107,14 @@ func TestPlan_OneTabOfFourPanes(t *testing.T) {
 func TestPlan_TwoTabsFromFiveCells(t *testing.T) {
 	s := planFor(t, cells(5), []int{4, 1}, false)
 	wantVerbs(t, s, "new-session", "split-window", "split-window", "split-window",
-		"select-layout", "new-window", "attach-session")
+		"select-layout", "new-window", "select-window", "attach-session")
 	// A one-pane tab needs no layout step.
 	if strings.Contains(strings.Join(s.Steps[1], " "), "tiled") {
 		t.Errorf("a single-pane tab must not be arranged: %v", s.Steps[1])
+	}
+	// Each new window takes focus; the batch opens on its first tab, as in herdr.
+	if sel := s.Steps[2]; !slices.Equal(sel, []string{"tmux", "select-window", "-t", "drako-1:{start}"}) {
+		t.Errorf("the attach must land on the first tab, got %v", sel)
 	}
 }
 
@@ -134,6 +138,17 @@ func TestPlan_EscapesATabNameEndingInASemicolon(t *testing.T) {
 	step := planFor(t, cmds, []int{1}, false).Steps[0]
 	if i := slices.Index(step, "-n"); i < 0 || step[i+1] != `build\;` {
 		t.Errorf("the name must reach tmux as build\\;, got %v", step)
+	}
+}
+
+// tmux expands formats in a window name (#W, #{…}, #(cmd) runs a shell job),
+// so every "#" goes doubled and the name shows as written.
+func TestPlan_EscapesHashesInATabName(t *testing.T) {
+	cmds := cells(1)
+	cmds[0].Name = "C# #{session_name} #(touch x)"
+	step := planFor(t, cmds, []int{1}, false).Steps[0]
+	if i := slices.Index(step, "-n"); i < 0 || step[i+1] != "C## ##{session_name} ##(touch x)" {
+		t.Errorf("every # must reach tmux doubled, got %v", step)
 	}
 }
 
