@@ -81,17 +81,13 @@ func validateProfileFile(path string) (config.ProfileFile, error) {
 		return profile, fmt.Errorf("failed to read file: %w", err)
 	}
 
-	// Try to parse as ProfileFile (what drako expects)
-	meta, err := toml.Decode(string(data), &profile)
+	profile, problems, err := config.DecodeProfile(data)
 	if err != nil {
 		return profile, fmt.Errorf("invalid TOML format: %w", err)
 	}
-
-	// Check if it has at least one profile-related field
-	if ok, problems := config.ValidateProfileFile(profile, data, meta); !ok {
+	if len(problems) > 0 {
 		return profile, fmt.Errorf("invalid profile: %s", strings.Join(problems, "; "))
 	}
-
 	return profile, nil
 }
 

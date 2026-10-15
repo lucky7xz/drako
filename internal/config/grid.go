@@ -91,6 +91,9 @@ func ValidateConfig(cfg Config) error {
 		if err != nil {
 			return fmt.Errorf("command %q has invalid column %q: %v", cmd.Name, cmd.Col, err)
 		}
+		if row < 0 {
+			return fmt.Errorf("command %q has invalid row %d (rows start at 0; -1 is the last)", cmd.Name, cmd.Row)
+		}
 		if row >= cfg.Y {
 			return fmt.Errorf("command %q needs y >= %d (have %d)", cmd.Name, row+1, cfg.Y)
 		}

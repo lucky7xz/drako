@@ -1,6 +1,9 @@
 package config
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // TestResolveCell pins the shared cell-resolution that ValidateConfig and
 // BuildGrid both rely on, including the "-1 / 'z' means last" rule.
@@ -36,6 +39,18 @@ func TestResolveCell(t *testing.T) {
 				t.Errorf("got (row=%d, col=%d), want (row=%d, col=%d)", row, col, tc.wantRow, tc.wantCol)
 			}
 		})
+	}
+}
+
+// BuildGrid drops a row below -1 silently, so validation must reject it.
+func TestValidateConfigRejectsNegativeRow(t *testing.T) {
+	cfg := Config{X: 1, Y: 1, Commands: []Command{{Name: "gone", Command: "true", Row: -2, Col: "a"}}}
+	if err := ValidateConfig(cfg); err == nil || !strings.Contains(err.Error(), "invalid row -2") {
+		t.Errorf("want an invalid row error, got %v", err)
+	}
+	cfg.Commands[0].Row = -1
+	if err := ValidateConfig(cfg); err != nil {
+		t.Errorf("row -1 is the last row, got %v", err)
 	}
 }
 

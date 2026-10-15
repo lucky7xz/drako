@@ -114,6 +114,46 @@ row = 5
 			t.Errorf("missing bounds findings: %+v", fs)
 		}
 	})
+
+	t.Run("row below -1 vanishes from the grid", func(t *testing.T) {
+		fs := CheckProfile([]byte("x = 1\ny = 1\n[[commands]]\nname = \"gone\"\ncommand = \"echo\"\ncol = \"A\"\nrow = -2\n"))
+		if !findingsContain(fs, "error", "invalid row -2") {
+			t.Errorf("missing row finding: %+v", fs)
+		}
+	})
+
+	t.Run("wrong types and unknown keys the loader drops", func(t *testing.T) {
+		fs := CheckProfile([]byte(`
+x = 1
+y = 1
+[[commands]]
+name = "typed"
+command = "echo"
+col = "A"
+row = "0"
+auto_close_execution = "false"
+descripton = "typo"
+items = [{ name = "i", command = "echo", Danger = true }]
+`))
+		for _, want := range []struct{ level, msg string }{
+			{"error", "row must be an integer, got a string"},
+			{"error", "auto_close_execution must be a boolean, got a string"},
+			{"warning", `unrecognized key "descripton"`},
+			{"warning", `item "i": unrecognized key "Danger"`},
+		} {
+			if !findingsContain(fs, want.level, want.msg) {
+				t.Errorf("missing %s %q: %+v", want.level, want.msg, fs)
+			}
+		}
+	})
+}
+
+// The loader matches [[Commands]] ignoring case, so check must find it too.
+func TestCheckProfileCapitalisedCommands(t *testing.T) {
+	fs := CheckProfile([]byte("X = 1\nY = 1\n[[Commands]]\nname = \"a\"\ncommand = \"echo\"\ncol = \"A\"\nrow = 0\n"))
+	if len(fs) != 0 {
+		t.Errorf("want a clean deck, got %+v", fs)
+	}
 }
 
 func TestCheckProfileShapes(t *testing.T) {

@@ -12,8 +12,8 @@ import (
 	profilepkg "github.com/lucky7xz/drako/internal/profiles"
 )
 
-// CopyCommands returns an independent copy of a command slice so callers
-// can mutate it without affecting the source.
+// CopyCommands returns a new slice of the same commands, so callers can sort or
+// replace cells; Items and the *bool fields still point into the source.
 func CopyCommands(src []Command) []Command {
 	if len(src) == 0 {
 		return []Command{}
@@ -30,15 +30,25 @@ func CheckProfileFile(path string) error {
 	if err != nil {
 		return fmt.Errorf("could not read file: %w", err)
 	}
-	var pf ProfileFile
-	meta, err := toml.Decode(string(data), &pf)
+	_, problems, err := DecodeProfile(data)
 	if err != nil {
 		return fmt.Errorf("invalid TOML: %w", err)
 	}
-	if ok, problems := ValidateProfileFile(pf, data, meta); !ok {
+	if len(problems) > 0 {
 		return fmt.Errorf("%s", strings.Join(problems, "; "))
 	}
 	return nil
+}
+
+// DecodeProfile decodes a profile file the way the loader does: err is a TOML
+// error, problems what ValidateProfileFile rejects.
+func DecodeProfile(raw []byte) (pf ProfileFile, problems []string, err error) {
+	meta, err := toml.Decode(string(raw), &pf)
+	if err != nil {
+		return pf, nil, err
+	}
+	_, problems = ValidateProfileFile(pf, raw, meta)
+	return pf, problems, nil
 }
 
 // ValidateProfileFile checks a profile has at least one command, x/y in 1-9,
@@ -90,11 +100,15 @@ func validateGridDim(key string, val int, raw []byte) []string {
 	return []string{fmt.Sprintf("%s = %d is invalid (must be 1-9) (line %d)", key, val, line)}
 }
 
-// findKeyLine returns the 1-based line of a `key =` / `key=` assignment, or 0.
+// findKeyLine returns the 1-based line of a top-level `key =` assignment, matched
+// ignoring case like the decoder, or 0.
 func findKeyLine(raw []byte, key string) int {
 	for i, line := range strings.Split(string(raw), "\n") {
 		t := strings.TrimSpace(line)
-		if strings.HasPrefix(t, key+"=") || strings.HasPrefix(t, key+" =") {
+		if strings.HasPrefix(t, "[") {
+			return 0 // the first table header ends the top level
+		}
+		if k, _, ok := strings.Cut(t, "="); ok && strings.EqualFold(strings.TrimSpace(k), key) {
 			return i + 1
 		}
 	}
@@ -132,15 +146,13 @@ func DiscoverProfilesWithErrors(configDir string) ([]ProfileInfo, []ProfileParse
 			continue
 		}
 
-		var profileFile ProfileFile
-		meta, err := toml.Decode(string(raw), &profileFile)
+		profileFile, problems, err := DecodeProfile(raw)
 		if err != nil {
 			log.Printf("Failed to parse profile %s: %v", entry.Name(), err)
 			broken = append(broken, ProfileParseError{Name: profileName, Path: fullPath, Err: err.Error()})
 			continue
 		}
-
-		if ok, problems := ValidateProfileFile(profileFile, raw, meta); !ok {
+		if len(problems) > 0 {
 			broken = append(broken, ProfileParseError{
 				Name: profileName,
 				Path: fullPath,

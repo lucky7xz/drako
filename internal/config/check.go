@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"sort"
 	"strings"
@@ -49,12 +50,10 @@ func knownVariantKeys() []string {
 // loaderFindings reports what the profile loader itself rejects, so check never
 // passes a deck the TUI would show as broken.
 func loaderFindings(src []byte) []Finding {
-	var pf ProfileFile
-	meta, err := toml.Decode(string(src), &pf)
+	_, problems, err := DecodeProfile(src)
 	if err != nil {
 		return []Finding{errorf("%v", err)}
 	}
-	_, problems := ValidateProfileFile(pf, src, meta)
 	var fs []Finding
 	for _, p := range problems {
 		fs = append(fs, errorf("%s", p))
@@ -91,7 +90,7 @@ func CheckProfile(src []byte) []Finding {
 	var fs []Finding
 	x, y := rawInt(raw, "x"), rawInt(raw, "y")
 
-	cmds := rawTables(raw["commands"])
+	cmds := rawTables(rawKey(raw, "commands"))
 	if len(cmds) == 0 {
 		return append(fs, errorf("no [[commands]] found"))
 	}
@@ -109,6 +108,7 @@ func CheckProfile(src []byte) []Finding {
 			fs = append(fs, errorf("duplicate command name %q — cells are looked up by name, so one of them can never run", name))
 		}
 		seenNames[name] = true
+		fs = append(fs, checkFields(label, cmd, cellFields)...)
 
 		// Cell address: parse the column, resolve 'z'/-1 against the grid
 		// when its size is known, then check bounds and collisions.
@@ -120,6 +120,8 @@ func CheckProfile(src []byte) []Finding {
 			fs = append(fs, errorf("%s has no col", label))
 		case err != nil:
 			fs = append(fs, errorf("%s: invalid col %q: %v", label, colStr, err))
+		case row < -1:
+			fs = append(fs, errorf("%s: invalid row %d (rows start at 0; -1 is the last)", label, row))
 		default:
 			if col == -1 && x > 0 {
 				col = x - 1
@@ -158,11 +160,58 @@ func CheckProfile(src []byte) []Finding {
 				ilabel = fmt.Sprintf("%s, item #%d", label, j+1)
 				fs = append(fs, warnf("%s has no name", ilabel))
 			}
+			fs = append(fs, checkFields(ilabel, item, itemFields)...)
 			fs = append(fs, checkCommandValue(ilabel, item["command"], false)...)
 			fs = append(fs, checkDanger(ilabel, item)...)
 		}
 	}
 	return fs
+}
+
+// cellFields and itemFields are the keys the loader reads, with the type each
+// must have; "" marks a key checked on its own (command, items, danger).
+var (
+	cellFields = map[string]string{
+		"name": "a string", "description": "a string", "col": "a string", "row": "an integer",
+		"auto_close_execution": "a boolean", "debug_execution": "a boolean",
+		"command": "", "items": "", "danger": "",
+	}
+	itemFields = map[string]string{
+		"name": "a string", "description": "a string",
+		"auto_close_execution": "a boolean", "debug_execution": "a boolean",
+		"command": "", "danger": "",
+	}
+)
+
+// checkFields flags keys the loader ignores and values it would read as unset.
+func checkFields(label string, m map[string]any, fields map[string]string) []Finding {
+	var fs []Finding
+	for _, k := range slices.Sorted(maps.Keys(m)) {
+		want, known := fields[k]
+		switch got := kindOf(m[k]); {
+		case !known:
+			fs = append(fs, warnf("%s: unrecognized key %q is ignored (check for a typo)", label, k))
+		case want != "" && got != want:
+			fs = append(fs, errorf("%s: %s must be %s, got %s", label, k, want, got))
+		}
+	}
+	return fs
+}
+
+func kindOf(v any) string {
+	switch v.(type) {
+	case string:
+		return "a string"
+	case int64:
+		return "an integer"
+	case bool:
+		return "a boolean"
+	case float64:
+		return "a float"
+	case map[string]any, []any, []map[string]any:
+		return "a table or array"
+	}
+	return fmt.Sprintf("%T", v)
 }
 
 // checkDanger rejects a non-boolean danger: decoding treats it as true, so a
@@ -231,15 +280,21 @@ func rawTables(v any) []map[string]any {
 	}
 }
 
-// rawInt reads an int key case-insensitively — generic decode preserves the
-// author's casing (decks write both `x` and `X`).
-func rawInt(m map[string]any, key string) int {
+// rawKey reads a top-level key the way the loader matches it: exact, else
+// ignoring case (decks write both `x` and `X`).
+func rawKey(m map[string]any, key string) any {
+	if v, ok := m[key]; ok {
+		return v
+	}
 	for k, v := range m {
 		if strings.EqualFold(k, key) {
-			if n, ok := v.(int64); ok {
-				return int(n)
-			}
+			return v
 		}
 	}
-	return 0
+	return nil
+}
+
+func rawInt(m map[string]any, key string) int {
+	n, _ := rawKey(m, key).(int64)
+	return int(n)
 }

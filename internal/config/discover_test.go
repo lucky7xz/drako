@@ -96,8 +96,8 @@ func TestValidateProfileFile_UnrecognizedKeyReported(t *testing.T) {
 }
 
 func TestFindKeyLine(t *testing.T) {
-	raw := []byte("# comment\nx = 3\ny=4\n[[commands]]\n")
-	cases := map[string]int{"x": 2, "y": 3, "z": 0}
+	raw := []byte("# comment\nX = 3\ny=4\n[[commands]]\nz = 1\n")
+	cases := map[string]int{"x": 2, "y": 3, "z": 0} // z sits in a cell, not at the top
 	for key, want := range cases {
 		if got := findKeyLine(raw, key); got != want {
 			t.Errorf("findKeyLine(%q) = %d, want %d", key, got, want)
