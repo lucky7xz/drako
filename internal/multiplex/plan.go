@@ -63,7 +63,7 @@ func Plan(session string, cmds []Command, tabs []int, paths []string, insideTmux
 		} else {
 			step = append([]string{"tmux", "new-window"}, target...)
 		}
-		step = append(append(step, "-n", tabLabel(group)), runScript(paths[cell])...)
+		step = append(append(step, "-n", tmuxArg(tabLabel(group))), runScript(paths[cell])...)
 		for i := 1; i < panes; i++ {
 			step = append(append(append(step, ";", "split-window"), target...), runScript(paths[cell+i])...)
 		}
@@ -116,6 +116,15 @@ func tabLabel(cmds []Command) string {
 		label = label[:maxTabLabel]
 	}
 	return string(label)
+}
+
+// tmuxArg escapes a trailing ";", which tmux reads as the end of a command
+// wherever it appears; tmux turns "\;" back into ";".
+func tmuxArg(s string) string {
+	if strings.HasSuffix(s, ";") {
+		return s[:len(s)-1] + `\;`
+	}
+	return s
 }
 
 // buildScript wraps one command for its pane. The script itself is plain sh;

@@ -126,6 +126,17 @@ func TestPlan_TabsAreNamedAfterTheirCells(t *testing.T) {
 	}
 }
 
+// tmux ends a command at any argument ending in ";", so a name's own trailing
+// ";" goes as "\;", which tmux turns back into ";".
+func TestPlan_EscapesATabNameEndingInASemicolon(t *testing.T) {
+	cmds := cells(1)
+	cmds[0].Name = "build;"
+	step := planFor(t, cmds, []int{1}, false).Steps[0]
+	if i := slices.Index(step, "-n"); i < 0 || step[i+1] != `build\;` {
+		t.Errorf("the name must reach tmux as build\\;, got %v", step)
+	}
+}
+
 // Inside tmux the batch gets its own windows; drako's pane is never split.
 func TestPlan_InsideTmuxMakesItsOwnTabs(t *testing.T) {
 	s := planFor(t, cells(3), []int{3}, true)
