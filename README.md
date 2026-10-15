@@ -246,8 +246,12 @@ batch_force_tmux = true
 
 A pane waits for `Enter` before it closes when its cell fails, and after
 success too when the cell sets `auto_close_execution = false` or
-`debug_execution = true`. A batch cell knows its deck through `DRAKO_PROFILE`,
-just like a single run.
+`debug_execution = true`.
+
+A cell starts in drako's directory, with the environment its multiplexer gives
+new panes plus `DRAKO_PROFILE`. A tmux server or herdr that was already running
+hands out the environment it started with, so a variable exported since then
+(a new `AWS_PROFILE`, say) reaches a single run but not a batch cell.
 
 ## 📇 Profile Creation Example
 
