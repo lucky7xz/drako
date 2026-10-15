@@ -215,17 +215,21 @@ func runBatch(state ui.Model) {
 		core.LogExecution(c.Name, "batch: "+strings.Join(c.Argv, " "))
 	}
 
-	if err := multiplex.Launch(backend, session, cmds, tabs, scriptDir); err != nil {
+	err = multiplex.Launch(backend, session, cmds, tabs, scriptDir)
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "batch launch failed: %v\n", err)
-		core.Pause("\nPress any key to return to the application.")
-		return
 	}
-
-	// Only a tmux launch that attached can leave a session behind; if it is
-	// still there the user detached rather than quitting, so say how to return.
-	tmux, attached := backend.(*multiplex.Tmux)
-	if attached && !tmux.Inside && exec.Command("tmux", "has-session", "-t", session).Run() == nil {
-		core.Pause(fmt.Sprintf("\nBatch session still running: tmux attach -t %s\nPress any key to return to drako.", session))
+	// A session drako made outside tmux outlives a detach, and a launch that broke
+	// after creating it; its cells may be running, so say how to get back.
+	left := false
+	if tmux, ok := backend.(*multiplex.Tmux); ok && !tmux.Inside {
+		left = exec.Command("tmux", "has-session", "-t", "="+session).Run() == nil // "=": exact name, no prefix match
+	}
+	if left {
+		fmt.Printf("\nBatch session still running: tmux attach -t %s\n", session)
+	}
+	if err != nil || left {
+		core.Pause("\nPress any key to return to drako.")
 	}
 }
 
