@@ -237,6 +237,9 @@ func (m Model) applyReloadedBundle(bundle config.ConfigBundle) Model {
 	if len(bundle.Broken) > 0 {
 		m.profile.pendingErrors = append(m.profile.pendingErrors, bundle.Broken...)
 		m.profile.errorQueueActive = true
+		if bundle.DroppedProfile != "" && bundle.DroppedProfile != m.profile.droppedNoted {
+			m.profile.pendingDroppedProfile = bundle.DroppedProfile // shown once the queue is dismissed
+		}
 		return m.presentNextBrokenProfile()
 	}
 	m.profile.pendingErrors, m.profile.errorQueueActive = nil, false // nothing is broken any more
@@ -571,6 +574,9 @@ func InitialModel(glassrootMode bool, carried Session) Model {
 	if len(bundle.Broken) > 0 {
 		m.profile.pendingErrors = append(m.profile.pendingErrors, bundle.Broken...)
 		m.profile.errorQueueActive = true
+		if bundle.DroppedProfile != "" && bundle.DroppedProfile != m.profile.droppedNoted {
+			m.profile.pendingDroppedProfile = bundle.DroppedProfile // shown once the queue is dismissed
+		}
 		m = m.presentNextBrokenProfile()
 	} else if bundle.DroppedProfile != "" && bundle.DroppedProfile != m.profile.droppedNoted {
 		// Relaunched after the active profile was deleted out from under us:

@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -240,4 +242,62 @@ func TestDeferredDroppedNoteWaitsForTheQueue(t *testing.T) {
 	if m.activeDetail == nil || m.activeDetail.Title != "Profile no longer available" {
 		t.Errorf("after the queue the deferred note should show, got %+v", m.activeDetail)
 	}
+}
+
+// pinnedWorkDeck bootstraps a config dir and pins a "work" deck in it.
+func pinnedWorkDeck(t *testing.T) (dir string) {
+	t.Helper()
+	xdg := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", xdg)
+	if _, err := config.LoadConfig(nil); err != nil {
+		t.Fatal(err)
+	}
+	dir = filepath.Join(xdg, "drako")
+	deck := "x = 1\ny = 1\n[[commands]]\nname = \"hi\"\ncommand = \"echo hi\"\ncol = \"a\"\nrow = 0\n"
+	if err := os.WriteFile(filepath.Join(dir, "work.profile.toml"), []byte(deck), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := config.WritePivotLocked(dir, "work"); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
+// dropWorkAndBreakAnother deletes the pinned deck and adds a broken one.
+func dropWorkAndBreakAnother(t *testing.T, dir string) {
+	t.Helper()
+	if err := os.Remove(filepath.Join(dir, "work.profile.toml")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "bad.profile.toml"), []byte("x = [\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func expectBrokenThenDropped(t *testing.T, m Model) {
+	t.Helper()
+	if m.activeDetail == nil || !strings.Contains(m.activeDetail.Title, "bad") {
+		t.Fatalf("want the broken-deck notice first, got %+v", m.activeDetail)
+	}
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(Model)
+	if m.activeDetail == nil || m.activeDetail.Title != "Profile no longer available" {
+		t.Errorf("after the broken-deck notice, want the dropped-deck note, got %+v", m.activeDetail)
+	}
+}
+
+// Deleting the active deck while another is broken: both get explained, the
+// broken one first, whether a reload or a new lap finds them.
+func TestDroppedNoteFollowsBrokenNoticeOnReload(t *testing.T) {
+	dir := pinnedWorkDeck(t)
+	m := InitialModel(false, Session{})
+	dropWorkAndBreakAnother(t, dir)
+	next, _ := m.Update(ConfigChangedMsg{Path: filepath.Join(dir, "bad.profile.toml")})
+	expectBrokenThenDropped(t, next.(Model))
+}
+
+func TestDroppedNoteFollowsBrokenNoticeOnNewLap(t *testing.T) {
+	dir := pinnedWorkDeck(t)
+	dropWorkAndBreakAnother(t, dir)
+	expectBrokenThenDropped(t, InitialModel(false, Session{}))
 }
