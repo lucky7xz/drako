@@ -1,15 +1,12 @@
 package core
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/lucky7xz/drako/internal/config"
 )
 
 func boolPtr(b bool) *bool { return &b }
-
-func noLookPath(string) (string, error) { return "", errors.New("not found") }
 
 func planTestConfig() config.Config {
 	return config.Config{
@@ -35,7 +32,7 @@ func planTestConfig() config.Config {
 }
 
 func TestBuildExecPlan_TopLevelCommand(t *testing.T) {
-	plan := buildExecPlan(planTestConfig(), Selection{Cell: "hello"}, noLookPath)
+	plan := buildExecPlan(planTestConfig(), Selection{Cell: "hello"})
 	if plan.kind != planShell {
 		t.Fatalf("kind = %v, want planShell", plan.kind)
 	}
@@ -48,14 +45,14 @@ func TestBuildExecPlan_TopLevelCommand(t *testing.T) {
 }
 
 func TestBuildExecPlan_FlagOverrides(t *testing.T) {
-	plan := buildExecPlan(planTestConfig(), Selection{Cell: "careful"}, noLookPath)
+	plan := buildExecPlan(planTestConfig(), Selection{Cell: "careful"})
 	if plan.autoClose || !plan.debug {
 		t.Errorf("overrides: autoClose=%v debug=%v, want false/true", plan.autoClose, plan.debug)
 	}
 }
 
 func TestBuildExecPlan_DropdownItem(t *testing.T) {
-	plan := buildExecPlan(planTestConfig(), Selection{Cell: "folder", Item: 1}, noLookPath)
+	plan := buildExecPlan(planTestConfig(), Selection{Cell: "folder", Item: 1})
 	if plan.kind != planShell || plan.commandStr != "ls -la" {
 		t.Fatalf("plan = %+v, want ls -la via shell", plan)
 	}
@@ -66,23 +63,10 @@ func TestBuildExecPlan_DropdownItem(t *testing.T) {
 
 func TestBuildExecPlan_ConfiguredButEmpty(t *testing.T) {
 	for _, sel := range []Selection{{Cell: "empty-cell"}, {Cell: "folder", Item: 2}} {
-		plan := buildExecPlan(planTestConfig(), sel, noLookPath)
+		plan := buildExecPlan(planTestConfig(), sel)
 		if plan.kind != planNoCommand {
-			t.Errorf("%+v: kind = %v, want planNoCommand (never fall through to PATH)", sel, plan.kind)
+			t.Errorf("%+v: kind = %v, want planNoCommand ", sel, plan.kind)
 		}
-	}
-}
-
-func TestBuildExecPlan_PathFallback(t *testing.T) {
-	lookPath := func(name string) (string, error) {
-		if name == "htop" {
-			return "/usr/bin/htop", nil
-		}
-		return "", errors.New("not found")
-	}
-	plan := buildExecPlan(planTestConfig(), Selection{Cell: "htop"}, lookPath)
-	if plan.kind != planDirect || plan.path != "/usr/bin/htop" {
-		t.Fatalf("plan = %+v, want direct /usr/bin/htop", plan)
 	}
 }
 
@@ -98,30 +82,11 @@ func TestAssembleCmd_ShellPlanCarriesEnv(t *testing.T) {
 	}
 }
 
-func TestAssembleCmd_DirectPlanCarriesEnv(t *testing.T) {
-	plan := execPlan{kind: planDirect, path: "/bin/true"}
-	cmd := assembleCmd(plan, []string{"A=1"})
-	if cmd == nil || cmd.Path != "/bin/true" {
-		t.Fatalf("direct plan should exec the resolved path, got %+v", cmd)
-	}
-	if len(cmd.Env) != 1 || cmd.Env[0] != "A=1" {
-		t.Errorf("the command env must be attached, got %v", cmd.Env)
-	}
-}
-
 func TestBuildExecPlan_NotFound(t *testing.T) {
-	plan := buildExecPlan(planTestConfig(), Selection{Cell: "ghost"}, noLookPath)
-	if plan.kind != planNotFound {
-		t.Fatalf("kind = %v, want planNotFound", plan.kind)
-	}
-}
-
-// An item index past the folder's end matches nothing, and must not try the
-// folder's name as a binary on PATH.
-func TestBuildExecPlan_StaleItemSkipsPath(t *testing.T) {
-	anything := func(string) (string, error) { return "/usr/bin/folder", nil }
-	plan := buildExecPlan(planTestConfig(), Selection{Cell: "folder", Item: 9}, anything)
-	if plan.kind != planNotFound {
-		t.Fatalf("kind = %v, want planNotFound", plan.kind)
+	// A cell the config no longer has, or an item past the folder's end.
+	for _, sel := range []Selection{{Cell: "ghost"}, {Cell: "folder", Item: 9}} {
+		if plan := buildExecPlan(planTestConfig(), sel); plan.kind != planNoCommand {
+			t.Errorf("%+v: kind = %v, want planNoCommand", sel, plan.kind)
+		}
 	}
 }

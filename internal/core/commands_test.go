@@ -1,8 +1,10 @@
 package core
 
 import (
-	"fmt"
+	"errors"
 	"os/exec"
+	"runtime"
+	"syscall"
 	"testing"
 
 	"github.com/lucky7xz/drako/internal/config"
@@ -86,53 +88,56 @@ func TestFallbackShell(t *testing.T) {
 }
 
 func TestRunCommand_ConfigMatchButEmptyCommand(t *testing.T) {
-	// Save original seams
-	oldPause, oldLook, oldCmd := pauseFn, lookPathFn, commandFn
-	defer func() { pauseFn, lookPathFn, commandFn = oldPause, oldLook, oldCmd }()
+	oldPause, oldCmd := pauseFn, commandFn
+	defer func() { pauseFn, commandFn = oldPause, oldCmd }()
 
-	// Stub seams
 	var paused bool
 	gotArgs := []string{}
 	pauseFn = func(string) { paused = true }
-	lookPathFn = func(s string) (string, error) { return "", fmt.Errorf("should not be called") }
 	commandFn = func(name string, args ...string) *exec.Cmd {
 		gotArgs = append([]string{name}, args...)
 		return exec.Command("echo")
 	}
 
-	cfg := config.Config{
-		Commands: []config.Command{{Name: "test", Command: ""}},
-	}
-	RunCommand(cfg, Selection{Cell: "test"}, "")
+	for _, sel := range []Selection{{Cell: "test"}, {Cell: "blank"}, {Cell: "gone"}} {
+		paused, gotArgs = false, nil
+		cfg := config.Config{
+			Commands: []config.Command{{Name: "test", Command: ""}, {Name: "blank", Command: "   "}},
+		}
+		RunCommand(cfg, sel, "")
 
-	// Should pause but not execute anything
-	if !paused {
-		t.Fatal("expected pause call")
-	}
-	if len(gotArgs) > 0 {
-		t.Fatalf("expected no command execution, got %v", gotArgs)
+		// Says so and pauses, but runs nothing.
+		if !paused {
+			t.Errorf("%s: expected pause call", sel.Cell)
+		}
+		if len(gotArgs) > 0 {
+			t.Errorf("%s: expected no command execution, got %v", sel.Cell, gotArgs)
+		}
 	}
 }
 
-func TestRunCommand_PathFallback(t *testing.T) {
-	// Save original seams
-	oldPause, oldLook, oldCmd := pauseFn, lookPathFn, commandFn
-	defer func() { pauseFn, lookPathFn, commandFn = oldPause, oldLook, oldCmd }()
-
-	// Stub seams
-	var gotArgs []string
-	gotArgs = nil // Reset capture
-	pauseFn = func(string) {}
-	lookPathFn = func(s string) (string, error) { return "/bin/echo", nil }
-	commandFn = func(name string, args ...string) *exec.Cmd {
-		gotArgs = append([]string{name}, args...)
-		return exec.Command("echo")
+// Ctrl-C reaches drako and the command alike; drako must outlive it.
+func TestRunRelayedOutlivesInterrupt(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("no kill on Windows")
 	}
+	err := runRelayed(exec.Command("sh", "-c", "kill -INT $PPID; sleep 0.2; exit 3"))
+	var exitErr *exec.ExitError
+	if !errors.As(err, &exitErr) || exitErr.ExitCode() != 3 {
+		t.Fatalf("want the command's exit 3, got %v", err)
+	}
+}
 
-	cfg := config.Config{} // No matching configured command
-	RunCommand(cfg, Selection{Cell: "echo"}, "")
-
-	if len(gotArgs) == 0 || gotArgs[0] != "/bin/echo" {
-		t.Fatalf("expected to build cmd with looked-up path, got %v", gotArgs)
+func TestRunRelayedPassesTerm(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("no kill on Windows")
+	}
+	err := runRelayed(exec.Command("sh", "-c", "kill -TERM $PPID; exec sleep 5"))
+	var exitErr *exec.ExitError
+	if !errors.As(err, &exitErr) {
+		t.Fatalf("want the command killed by TERM, got %v", err)
+	}
+	if ws, ok := exitErr.Sys().(syscall.WaitStatus); !ok || !ws.Signaled() || ws.Signal() != syscall.SIGTERM {
+		t.Errorf("want death by SIGTERM, got %v", err)
 	}
 }

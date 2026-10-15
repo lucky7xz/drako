@@ -1,21 +1,23 @@
 package core
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
+	"os/signal"
 	"runtime"
 	"strings"
+	"syscall"
 
 	"github.com/lucky7xz/drako/internal/config"
 	"golang.org/x/term"
 )
 
 var (
-	pauseFn    = pause
-	lookPathFn = exec.LookPath
-	commandFn  = exec.Command
+	pauseFn   = Pause
+	commandFn = exec.Command
 )
 
 // - Optional booleans in config are represented as *bool (pointer-to-bool) so we
@@ -40,22 +42,19 @@ func waitForAnyKey() {
 	}
 	defer term.Restore(fd, oldState)
 
-	// Read one byte (ignore errors since we're just pausing)
-	buf := make([]byte, 1)
+	// One read takes a whole key, so an escape sequence (arrow, Alt+key) can't
+	// leave bytes behind for the next TUI to read as keys.
+	buf := make([]byte, 64)
 	_, _ = os.Stdin.Read(buf)
-}
-
-func pause(msg string) {
-	if msg != "" {
-		fmt.Print(msg)
-	}
-	waitForAnyKey()
 }
 
 // Pause prints msg and blocks until any keypress. Exported for the app layer,
 // which needs the same "press any key" beat between TUI sessions.
 func Pause(msg string) {
-	pause(msg)
+	if msg != "" {
+		fmt.Print(msg)
+	}
+	waitForAnyKey()
 }
 
 // Selection is what the user picked: the cell named Cell, or item Item (1-based)
@@ -98,9 +97,11 @@ func (s Selection) Name(cfg config.Config) string {
 // Default shell for inline strings; can be wired from config later.
 
 // buildShellCmd constructs an *exec.Cmd for the given shell. Pure function: no execution.
-func buildShellCmd(shell_config, commandStr string) *exec.Cmd {
-	argv := ShellArgv(shell_config, commandStr)
-	return exec.Command(argv[0], argv[1:]...)
+func buildShellCmd(shell, commandStr string) *exec.Cmd {
+	argv := ShellArgv(shell, commandStr)
+	cmd := commandFn(argv[0], argv[1:]...)
+	passCmdExeLine(cmd, argv)
+	return cmd
 }
 
 // ShellArgv is the command line that runs commandStr under the configured shell,
@@ -138,18 +139,14 @@ func fallbackShell(goos string) string {
 // RunCommand finds the selected command from the loaded config and executes
 // it. activeProfile is exported to the child process as DRAKO_PROFILE.
 func RunCommand(cfg config.Config, sel Selection, activeProfile string) {
-	plan := buildExecPlan(cfg, sel, lookPathFn)
+	plan := buildExecPlan(cfg, sel)
 	selected := sel.Name(cfg)
 
-	switch plan.kind {
-	case planNoCommand:
+	if plan.kind == planNoCommand {
 		log.Printf("No command configured for: %s", selected)
 		fmt.Printf("\n--- No Command Configured ---\n")
 		fmt.Printf("Command: '%s'\n", selected)
 		pauseFn("\nPress any key to return to the application.")
-		return
-	case planNotFound:
-		log.Printf("Executable not found in PATH: %s", selected)
 		return
 	}
 
@@ -160,10 +157,12 @@ func RunCommand(cfg config.Config, sel Selection, activeProfile string) {
 
 	if plan.debug {
 		// Debug: capture combined output and pause.
-		output, err := cmd.CombinedOutput()
+		var output bytes.Buffer
+		cmd.Stdout, cmd.Stderr = &output, &output
+		err := runRelayed(cmd)
 		fmt.Printf("\n--- Command Output ---\n")
 		fmt.Printf("Command: '%s'\n\n", selected)
-		fmt.Print(string(output))
+		fmt.Print(output.String())
 		if err != nil {
 			fmt.Printf("\n--- Command Failed ---\n")
 			fmt.Printf("Error: %v\n", err)
@@ -177,7 +176,7 @@ func RunCommand(cfg config.Config, sel Selection, activeProfile string) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	if err := cmd.Run(); err != nil {
+	if err := runRelayed(cmd); err != nil {
 		fmt.Printf("\n--- Command Failed ---\n")
 		fmt.Printf("Command: '%s'\n", selected)
 		fmt.Printf("Error: %v\n", err)
@@ -190,8 +189,35 @@ func RunCommand(cfg config.Config, sel Selection, activeProfile string) {
 	if !plan.autoClose {
 		fmt.Printf("\n--- Command Finished ---\n")
 		fmt.Printf("Command: '%s'\n", selected)
-		pause("\nPress any key to return to the application.")
+		pauseFn("\nPress any key to return to the application.")
 
 		return
 	}
+}
+
+// runRelayed runs cmd and keeps drako alive until it exits: Ctrl-C and Ctrl-\
+// already reach it through the terminal, TERM and HUP are passed on.
+func runRelayed(cmd *exec.Cmd) error {
+	sigs := make(chan os.Signal, 1)
+	// Registered before Start, so no signal can take drako's default exit.
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGHUP)
+	defer signal.Stop(sigs)
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	done := make(chan struct{})
+	defer close(done)
+	go func() {
+		for {
+			select {
+			case sig := <-sigs:
+				if sig == syscall.SIGTERM || sig == syscall.SIGHUP {
+					cmd.Process.Signal(sig)
+				}
+			case <-done:
+				return
+			}
+		}
+	}()
+	return cmd.Wait()
 }
