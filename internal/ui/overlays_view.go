@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/lucky7xz/drako/internal/multiplex"
 )
 
 // renderSizeOverlay shows a centered panel with current and required dimensions
@@ -142,7 +141,7 @@ func (m Model) renderDropdownPopup() string {
 	if m.batch.dropdown {
 		// Same look as the grid's batch counter (styles.Title), so the mode
 		// reads at a glance; the key hints stay in the quiet item style.
-		counter := m.styles.Title.Background(bg).Render(fmt.Sprintf("[ BATCH %d/%d ]", len(m.batch.marked), multiplex.MaxCommands))
+		counter := m.styles.Title.Background(bg).Render(m.batchCount())
 		hints := textNorm.Render(" Space mark · Enter launch · Esc/q cancel")
 		raw = append(raw, gap.Render("  ")+counter+hints)
 	}
@@ -227,7 +226,7 @@ func (m Model) renderLayoutPopup() string {
 	headRow := lipgloss.JoinHorizontal(lipgloss.Left, heads...)
 	cellRows := strings.Split(lipgloss.JoinHorizontal(lipgloss.Top, cells...), "\n")
 	counter := bgFill.Width(lipgloss.Width(headRow)).Align(lipgloss.Center).
-		Render(title.Render(fmt.Sprintf("[ BATCH %d/%d ]", len(m.batch.marked), multiplex.MaxCommands)))
+		Render(title.Render(m.batchCount()))
 
 	raw := append([]string{headRow}, cellRows...)
 	raw = append(raw, "", counter)

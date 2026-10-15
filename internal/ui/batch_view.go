@@ -17,7 +17,12 @@ import (
 
 // renderBatchCounter replaces the profile counter while marking.
 func (m Model) renderBatchCounter() string {
-	return m.styles.Title.Render(fmt.Sprintf("[ BATCH %d/%d ]", len(m.batch.marked), multiplex.MaxCommands))
+	return m.styles.Title.Render(m.batchCount())
+}
+
+// batchCount is the mark count every batch view shows.
+func (m Model) batchCount() string {
+	return fmt.Sprintf("[ BATCH %d/%d ]", len(m.batch.marked), multiplex.MaxCommands)
 }
 
 // batchHelpText is the batch-mode footer line.

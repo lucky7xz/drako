@@ -11,14 +11,14 @@ import (
 // marked cells split into tabs — with two knobs. The tab count re-runs the
 // distribution; a tab's pane count moves a single pane between tabs.
 
-// beginLaunch opens the dialog, or launches straight away when the cells allow
-// only one layout (a single cell, and nothing else).
+// beginLaunch opens the dialog, or launches a single cell straight away: it has
+// only one layout.
 func (m Model) beginLaunch() (tea.Model, tea.Cmd) {
 	n := len(m.batch.marked)
 	if n == 0 {
 		return m, m.setProfileStatus("Nothing marked", false)
 	}
-	if multiplex.MinTabs(n) == n {
+	if n == 1 {
 		return m.launchBatch()
 	}
 	m.batch.tabs = multiplex.Distribute(n, multiplex.MinTabs(n))
@@ -31,9 +31,6 @@ func (m Model) beginLaunch() (tea.Model, tea.Cmd) {
 func (m Model) launchBatch() (tea.Model, tea.Cmd) {
 	m.SelectedBatch = slices.Clone(m.batch.marked)
 	m.SelectedTabs = slices.Clone(m.batch.tabs)
-	if m.SelectedTabs == nil {
-		m.SelectedTabs = multiplex.Distribute(len(m.SelectedBatch), multiplex.MinTabs(len(m.SelectedBatch)))
-	}
 	return m, tea.Quit
 }
 
@@ -69,8 +66,6 @@ func (m Model) adjustLayout(delta int) (tea.Model, tea.Cmd) {
 	if m.batch.focus == 0 {
 		k := min(max(len(m.batch.tabs)+delta, multiplex.MinTabs(n)), n)
 		m.batch.tabs = multiplex.Distribute(n, k)
-		// A shorter layout must not leave focus pointing past the last box.
-		m.batch.focus = min(m.batch.focus, len(m.batch.tabs))
 		return m, nil
 	}
 	tabs, ok := multiplex.Shift(m.batch.tabs, m.batch.focus-1, delta)

@@ -206,10 +206,10 @@ func runBatch(state ui.Model) {
 	}
 	// The temp dir's random suffix keeps two batches started together apart.
 	session := "drako-" + strings.TrimPrefix(filepath.Base(scriptDir), "drako-batch-")
-	// The layout chosen in the dialog, or the default when a cell was skipped
-	// above and the vector no longer matches.
+	// The layout chosen in the dialog; the default when there was none (a single
+	// cell) or a mark no longer resolved above.
 	tabs := state.SelectedTabs
-	if len(cmds) != len(state.SelectedBatch) {
+	if len(tabs) == 0 || len(cmds) != len(state.SelectedBatch) {
 		tabs = multiplex.Distribute(len(cmds), multiplex.MinTabs(len(cmds)))
 	}
 	for _, c := range cmds {
