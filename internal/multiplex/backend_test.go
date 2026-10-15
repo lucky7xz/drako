@@ -2,7 +2,9 @@ package multiplex
 
 import (
 	"errors"
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -16,16 +18,15 @@ type fakeBackend struct {
 	tabs    []int
 	paths   []string
 	calls   int
-	attach  bool
 	err     error
 }
 
 func (f *fakeBackend) Name() string { return "fake" }
 
-func (f *fakeBackend) Launch(session string, cmds []Command, tabs []int, paths []string) (bool, error) {
+func (f *fakeBackend) Launch(session string, cmds []Command, tabs []int, paths []string) error {
 	f.session, f.cmds, f.tabs, f.paths = session, cmds, tabs, paths
 	f.calls++
-	return f.attach, f.err
+	return f.err
 }
 
 func TestLaunch_WritesAScriptPerCellAndHandsOverThePaths(t *testing.T) {
@@ -67,23 +68,15 @@ func TestLaunch_WritesAScriptPerCellAndHandsOverThePaths(t *testing.T) {
 	}
 }
 
-// An attached session is over when Launch returns, so its scripts go; a
-// detached one is still spawning panes that hold them open.
-func TestLaunch_RemovesScriptsOnlyAfterAnAttachedSession(t *testing.T) {
-	attached := filepath.Join(t.TempDir(), "batch")
-	if err := Launch(&fakeBackend{attach: true}, "s", cells(1), []int{1}, attached); err != nil {
+// Panes may still be starting when a launch returns, so Launch leaves the
+// scripts of a launch that worked to delete themselves.
+func TestLaunch_LeavesTheScriptsToThePanes(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "batch")
+	if err := Launch(&fakeBackend{}, "s", cells(1), []int{1}, dir); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(attached); !os.IsNotExist(err) {
-		t.Error("an attached session's scripts should be cleaned up")
-	}
-
-	detached := filepath.Join(t.TempDir(), "batch")
-	if err := Launch(&fakeBackend{attach: false}, "s", cells(1), []int{1}, detached); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Stat(detached); err != nil {
-		t.Error("a detached launch must leave its scripts for the panes still starting")
+	if _, err := os.Stat(dir); err != nil {
+		t.Error("the scripts must stay for the panes still starting")
 	}
 }
 
@@ -127,5 +120,32 @@ func TestLaunch_RemovesTheScriptsWhenTheBackendFails(t *testing.T) {
 	}
 	if _, err := os.Stat(dir); !os.IsNotExist(err) {
 		t.Errorf("scripts left behind after a failed launch (%v)", err)
+	}
+}
+
+// runningBackend starts every script the way a pane would.
+type runningBackend struct{}
+
+func (runningBackend) Name() string { return "running" }
+
+func (runningBackend) Launch(session string, cmds []Command, tabs []int, paths []string) error {
+	for _, p := range paths {
+		if out, err := exec.Command("sh", p).CombinedOutput(); err != nil {
+			return fmt.Errorf("%s: %v: %s", p, err, out)
+		}
+	}
+	return nil
+}
+
+// A script deletes itself once sh has it open, and the last one its directory,
+// so no batch leaves command text in the temp dir.
+func TestLaunch_ScriptsCleanUpAfterThemselves(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "batch")
+	cmds := []Command{{Name: "a", Argv: []string{"sh", "-c", "true"}}, {Name: "b", Argv: []string{"sh", "-c", "true"}}}
+	if err := Launch(runningBackend{}, "s", cmds, []int{2}, dir); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		t.Errorf("the scripts stayed after every pane ran (%v)", err)
 	}
 }

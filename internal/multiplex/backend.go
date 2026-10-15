@@ -18,17 +18,12 @@ type Backend interface {
 	// Name is what config.toml calls this backend.
 	Name() string
 
-	// Launch runs paths[i] for cmds[i], grouped into tabs. It reports whether
-	// it handed the terminal over: an attached session has already ended when
-	// Launch returns, a detached one is still spawning.
-	Launch(session string, cmds []Command, tabs []int, paths []string) (attached bool, err error)
+	// Launch runs paths[i] for cmds[i], grouped into tabs.
+	Launch(session string, cmds []Command, tabs []int, paths []string) error
 }
 
-// Launch writes one script per cell into scriptDir, then hands the paths to b.
-// The scripts are 0700 — they hold the user's command text, the same
-// sensitivity as history.log — and are removed once an attached session ends.
-// A detached launch leaves them for the OS tmp reaper rather than racing the
-// panes that are still starting.
+// Launch writes one 0700 script per cell into scriptDir (command text, like
+// history.log) and hands b the paths; each script deletes itself once it runs.
 func Launch(b Backend, session string, cmds []Command, tabs []int, scriptDir string) error {
 	if len(cmds) == 0 {
 		return fmt.Errorf("nothing to launch")
@@ -52,15 +47,9 @@ func Launch(b Backend, session string, cmds []Command, tabs []int, scriptDir str
 		}
 	}
 
-	attached, err := b.Launch(session, cmds, tabs, paths)
-	if err != nil {
-		os.RemoveAll(scriptDir) // a cell that already started keeps its script open
+	if err := b.Launch(session, cmds, tabs, paths); err != nil {
+		os.RemoveAll(scriptDir) // the scripts of cells that never started
 		return fmt.Errorf("%s: %w", b.Name(), err)
-	}
-	if attached {
-		if err := os.RemoveAll(scriptDir); err != nil {
-			return fmt.Errorf("could not clean up scripts: %w", err)
-		}
 	}
 	return nil
 }

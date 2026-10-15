@@ -36,7 +36,7 @@ func NewHerdr() *Herdr { return &Herdr{} }
 func (h *Herdr) Name() string { return herdrMux }
 
 // session goes unused: herdr has no named sessions to target.
-func (h *Herdr) Launch(session string, cmds []Command, tabs []int, paths []string) (bool, error) {
+func (h *Herdr) Launch(session string, cmds []Command, tabs []int, paths []string) error {
 	cell := 0
 	for t, panes := range tabs {
 		// The batch is worth looking at, but only once: the rest of the tabs
@@ -47,7 +47,7 @@ func (h *Herdr) Launch(session string, cmds []Command, tabs []int, paths []strin
 		}
 		root, err := h.create("tab", "create", "--label", tabLabel(cmds[cell:cell+panes]), focus)
 		if err != nil {
-			return false, err
+			return err
 		}
 
 		ids := make([]string, panes)
@@ -55,19 +55,19 @@ func (h *Herdr) Launch(session string, cmds []Command, tabs []int, paths []strin
 		for i, s := range splitTree(panes) {
 			id, err := h.create("pane", "split", "--pane", ids[s.parent], "--direction", s.dir, "--no-focus")
 			if err != nil {
-				return false, err
+				return err
 			}
 			ids[i+1] = id
 		}
 
 		for i, id := range ids {
 			if err := runCell(id, paths[cell+i]); err != nil {
-				return false, err
+				return err
 			}
 		}
 		cell += panes
 	}
-	return false, nil
+	return nil
 }
 
 // runCell starts one cell in its pane. exec replaces the shell, so the pane

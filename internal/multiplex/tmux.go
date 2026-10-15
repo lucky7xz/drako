@@ -21,18 +21,18 @@ func NewTmux(inside bool) *Tmux { return &Tmux{Inside: inside} }
 
 func (t *Tmux) Name() string { return tmuxMux }
 
-func (t *Tmux) Launch(session string, cmds []Command, tabs []int, paths []string) (bool, error) {
+func (t *Tmux) Launch(session string, cmds []Command, tabs []int, paths []string) error {
 	plan, err := Plan(session, cmds, tabs, paths, t.Inside)
 	if err != nil {
-		return false, err
+		return err
 	}
 	for i, step := range plan.Steps {
 		attach := plan.Attach && i == len(plan.Steps)-1
 		if err := execStep(step, attach); err != nil {
-			return false, fmt.Errorf("%s failed: %w", describeStep(step), err)
+			return fmt.Errorf("%s failed: %w", describeStep(step), err)
 		}
 	}
-	return plan.Attach, nil
+	return nil
 }
 
 // describeStep names the commands in one tmux call, e.g. "new-window; split-window".

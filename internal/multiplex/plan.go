@@ -134,6 +134,8 @@ func buildScript(c Command) string {
 	var b strings.Builder
 	b.WriteString("#!/bin/sh\n")
 	fmt.Fprintf(&b, "# drako batch cell: %s\n", strings.ReplaceAll(c.Name, "\n", " "))
+	// sh has the script open now, so it can go; the last one out takes the dir.
+	b.WriteString(`rm -f -- "$0"; rmdir -- "${0%/*}" 2>/dev/null` + "\n")
 
 	if c.Profile != "" { // the pane keeps its own environment; only the deck is added
 		fmt.Fprintf(&b, "export DRAKO_PROFILE=%s\n", posixSingleQuote(c.Profile))
