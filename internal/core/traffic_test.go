@@ -23,6 +23,20 @@ func TestTrafficMeter(t *testing.T) {
 		}
 	})
 
+	t.Run("counters going down restart the window", func(t *testing.T) {
+		var tm TrafficMeter
+		tm.WindowSeconds = 10
+		tm.Sample(5000, 9000, base)
+		tm.Sample(1000, 2000, base.Add(time.Second)) // an interface left the sum
+		if _, _, ok := tm.Rates(); ok || tm.Samples() != 1 {
+			t.Fatalf("want a fresh window, got %d samples", tm.Samples())
+		}
+		tm.Sample(1500, 2000, base.Add(2*time.Second))
+		if sent, _, ok := tm.Rates(); !ok || sent != 500 {
+			t.Errorf("sent = %v, want 500 from the new baseline", sent)
+		}
+	})
+
 	t.Run("rate is delta over duration", func(t *testing.T) {
 		var tm TrafficMeter
 		tm.WindowSeconds = 10

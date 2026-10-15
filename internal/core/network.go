@@ -41,7 +41,8 @@ func CheckNetworkStatus() NetworkStatus {
 // isVirtualInterface returns true for loopback or known virtual interface prefixes.
 // This avoids counting local chatter (Docker, VMs, multicast) as WAN activity.
 func isVirtualInterface(name string) bool {
-	virtualPrefixes := []string{"lo", "docker", "veth", "br-", "vbox", "vmnet", "tailscale", "tun", "tap"}
+	virtualPrefixes := []string{"lo", "Loopback Pseudo-Interface", "docker", "veth", "br-", "virbr", "vbox", "vmnet",
+		"tailscale", "tun", "utun", "tap", "wg"}
 	for _, prefix := range virtualPrefixes {
 		if strings.HasPrefix(name, prefix) {
 			return true
@@ -51,15 +52,16 @@ func isVirtualInterface(name string) bool {
 }
 
 // localOnline determines likely online status without external probes, cross-platform.
-// It returns true if there is at least one non-loopback, up interface with a
-// non-link-local global unicast IP address.
+// It returns true if a real interface is up with a carrier (running) and holds
+// a global unicast address; that excludes link-local, so DHCP-less APIPA too.
 func localOnline() bool {
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		return false
 	}
 	for _, iface := range ifaces {
-		if (iface.Flags&net.FlagUp) == 0 || (iface.Flags&net.FlagLoopback) != 0 {
+		running := iface.Flags&net.FlagUp != 0 && iface.Flags&net.FlagRunning != 0
+		if !running || iface.Flags&net.FlagLoopback != 0 || isVirtualInterface(iface.Name) {
 			continue
 		}
 		addrs, err := iface.Addrs()
@@ -77,19 +79,12 @@ func localOnline() bool {
 			if ip == nil {
 				continue
 			}
-			if ip.IsGlobalUnicast() && !ip.IsLinkLocalUnicast() && !isAPIPA(ip) {
+			if ip.IsGlobalUnicast() {
 				return true
 			}
 		}
 	}
 	return false
-}
-
-// isAPIPA reports whether the IP is an IPv4 Automatic Private IP Address (169.254.0.0/16).
-// We exclude APIPA because it indicates no DHCP/gateway and thus no real upstream connectivity.
-func isAPIPA(ip net.IP) bool {
-	ip4 := ip.To4()
-	return ip4 != nil && ip4[0] == 169 && ip4[1] == 254
 }
 
 func FormatTraffic(bps float64) string {

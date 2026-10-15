@@ -15,8 +15,12 @@ type TrafficMeter struct {
 }
 
 // Sample records cumulative sent/recv counters observed at now, then drops
-// any samples older than the window.
+// any samples older than the window. Counters that went down (an interface
+// left the sum) restart the window rather than wrap the rate.
 func (tm *TrafficMeter) Sample(sent, recv uint64, now time.Time) {
+	if n := len(tm.times); n > 0 && (sent < tm.sent[n-1] || recv < tm.recv[n-1]) {
+		tm.times, tm.sent, tm.recv = nil, nil, nil
+	}
 	tm.times = append(tm.times, now)
 	tm.sent = append(tm.sent, sent)
 	tm.recv = append(tm.recv, recv)
