@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"testing"
 )
@@ -148,5 +149,42 @@ func TestRestoreCoreProfile_StashedNotDuplicated(t *testing.T) {
 	}
 	if _, err := os.Stat(root); err == nil {
 		t.Error("core.profile.toml re-created at root despite being stashed")
+	}
+}
+
+// A failed core deck write is an error, not a logged success.
+func TestRestoreBootstrap_CoreWriteFailureReturned(t *testing.T) {
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory the test can't write to")
+	}
+	dst := t.TempDir()
+	if _, err := RestoreBootstrap(dst); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(filepath.Join(dst, "core.profile.toml")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(dst, 0o555); err != nil { // only the core deck is left to write
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(dst, 0o755) })
+	if _, err := RestoreBootstrap(dst); err == nil {
+		t.Fatal("want the core deck write error")
+	}
+}
+
+// Never overwrite holds for a dangling symlink: nothing is written through it.
+func TestWriteSettingsTemplate_DanglingSymlink(t *testing.T) {
+	dst := t.TempDir()
+	elsewhere := filepath.Join(dst, "elsewhere.toml")
+	if err := os.Symlink(elsewhere, filepath.Join(dst, "config.toml")); err != nil {
+		t.Skip("symlinks unavailable:", err)
+	}
+	wrote, err := WriteSettingsTemplate(dst)
+	if wrote || err != nil {
+		t.Fatalf("want nothing written, got wrote=%v err=%v", wrote, err)
+	}
+	if _, err := os.Stat(elsewhere); err == nil {
+		t.Error("the template was written through the symlink")
 	}
 }

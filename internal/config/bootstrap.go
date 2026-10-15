@@ -2,7 +2,7 @@ package config
 
 import (
 	"embed"
-	"io"
+	"errors"
 	"io/fs"
 	"log"
 	"os"
@@ -19,9 +19,9 @@ var bootstrapFS embed.FS
 // dstRoot and returns the relative paths it created. It never overwrites an
 // existing file, so it is safe to run any time: first-run bootstrap uses it to
 // populate an empty config dir, and "drako restore-bootstrap" uses it to put
-// back whatever the user deleted (the core deck, starter decks like ssh-utils,
+// back whatever the user deleted (the core deck, starter decks like ssh-101,
 // themes, specs). The returned paths are config-dir-relative ("core.profile.toml",
-// "inventory/ssh-utils.profile.toml", …); an empty slice means nothing was missing.
+// "inventory/ssh-101.profile.toml", …); an empty slice means nothing was missing.
 func RestoreBootstrap(dstRoot string) ([]string, error) {
 	log.Printf("bootstrap: restoring missing embedded files into %s", dstRoot)
 	var restored []string
@@ -43,7 +43,7 @@ func RestoreBootstrap(dstRoot string) ([]string, error) {
 
 	// 2. core.profile.toml (the default deck).
 	if created, err := RestoreCoreProfile(dstRoot); err != nil {
-		log.Printf("bootstrap error: failed to write core profile: %v", err)
+		return restored, err
 	} else if created {
 		restored = append(restored, "core.profile.toml")
 		log.Printf("bootstrap: generated core.profile.toml")
@@ -76,30 +76,20 @@ func RestoreBootstrap(dstRoot string) ([]string, error) {
 			return os.MkdirAll(target, 0o755)
 		}
 
-		// Never overwrite, and never duplicate a deck the user has moved: a
-		// profile shipped under inventory/ counts as present whether it is
-		// stashed or equipped (config root). Other files live in one place.
-		if strings.HasSuffix(rel, ".profile.toml") {
-			if profileDeckPresent(dstRoot, filepath.Base(rel)) {
-				return nil
-			}
-		} else if _, err := os.Stat(target); err == nil {
+		// Never duplicate a deck the user has moved: a profile shipped under
+		// inventory/ counts as present whether stashed or equipped (config root).
+		if strings.HasSuffix(rel, ".profile.toml") && profileDeckPresent(dstRoot, filepath.Base(rel)) {
 			return nil
 		}
 
 		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 			return err
 		}
-		r, err := bootstrapFS.Open(path)
+		b, err := bootstrapFS.ReadFile(path)
 		if err != nil {
 			return err
 		}
-		defer r.Close()
-		b, err := io.ReadAll(r)
-		if err != nil {
-			return err
-		}
-		if err := os.WriteFile(target, b, 0o644); err != nil {
+		if wrote, err := writeNewFile(target, b); err != nil || !wrote {
 			return err
 		}
 		// Report with forward slashes regardless of OS separator.
@@ -116,11 +106,7 @@ func WriteSettingsTemplate(dstRoot string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	target := paths.ConfigFile(dstRoot)
-	if _, err := os.Stat(target); !os.IsNotExist(err) {
-		return false, err
-	}
-	return true, os.WriteFile(target, settings, 0o644)
+	return writeNewFile(paths.ConfigFile(dstRoot), settings)
 }
 
 // RestoreCoreProfile writes the embedded default deck as core.profile.toml
@@ -134,14 +120,27 @@ func RestoreCoreProfile(dstRoot string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	targetProfile := filepath.Join(dstRoot, "core.profile.toml")
 	if profileDeckPresent(dstRoot, "core.profile.toml") {
 		return false, nil
 	}
-	if err := os.WriteFile(targetProfile, deck, 0o644); err != nil {
+	return writeNewFile(filepath.Join(dstRoot, "core.profile.toml"), deck)
+}
+
+// writeNewFile creates path holding data, or reports false when anything is
+// there already; O_EXCL keeps "never overwrite" true under races and symlinks.
+func writeNewFile(path string, data []byte) (bool, error) {
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if errors.Is(err, fs.ErrExist) {
+		return false, nil
+	}
+	if err != nil {
 		return false, err
 	}
-	return true, nil
+	_, err = f.Write(data)
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	return err == nil, err
 }
 
 // profileDeckPresent reports whether a bootstrap-shipped deck already lives in
