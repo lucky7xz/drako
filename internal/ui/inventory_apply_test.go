@@ -3,11 +3,13 @@ package ui
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/paths"
 )
 
 // Apply commits the arrangement on screen when it was pressed. Keys handled
@@ -119,5 +121,28 @@ func TestApplyClosesTheInventory(t *testing.T) {
 	next, _ = next.(Model).Update(cmd())
 	if mode := next.(Model).mode; mode != gridMode {
 		t.Errorf("after Apply, mode = %v, want the grid (%v)", mode, gridMode)
+	}
+}
+
+// An unreadable pivot.toml is reported, never replaced, so Apply must say the
+// order wasn't saved instead of closing as if it was.
+func TestApplyReportsAnUnsavedOrder(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	m := InitialModel(false, Session{})
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}})
+	m = next.(Model)
+	if m.mode != inventoryMode || m.inventory.err != nil {
+		t.Fatalf("i did not open the inventory: mode = %v, err = %v", m.mode, m.inventory.err)
+	}
+	if err := os.WriteFile(paths.PivotFile(m.profile.configDir), []byte("locked = [\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m.inventory.focusedList = focusApply
+
+	next, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	next, _ = next.(Model).Update(cmd())
+	m = next.(Model)
+	if m.mode != inventoryMode || m.inventory.err == nil || !strings.Contains(m.inventory.err.Error(), "pivot.toml") {
+		t.Errorf("after Apply: mode = %v, err = %v; want the unsaved order on screen", m.mode, m.inventory.err)
 	}
 }

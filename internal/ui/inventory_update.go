@@ -218,7 +218,7 @@ func ApplyInventoryChangesCmd(configDir string, m inventoryModel) tea.Cmd {
 
 		// Persist the visible order into pivot.toml as equipped_order.
 		if err := config.WritePivotEquippedOrder(configDir, desired); err != nil {
-			log.Printf("could not write equipped order: %v", err)
+			return inventoryErrorMsg{err: fmt.Errorf("could not save the deck order: pivot.toml: %w", err)}
 		}
 
 		return reloadProfilesMsg{}
