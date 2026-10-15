@@ -80,7 +80,7 @@ func TestLoadBaseConfig_GarbageFallsBackToRescue(t *testing.T) {
 	}
 }
 
-func TestLoadBaseConfig_MissingFileWritesRescue(t *testing.T) {
+func TestLoadBaseConfig_MissingFileRunsOnRescue(t *testing.T) {
 	dir := t.TempDir()
 
 	base, broken := loadBaseConfig(dir)
@@ -91,14 +91,18 @@ func TestLoadBaseConfig_MissingFileWritesRescue(t *testing.T) {
 		t.Error("rescue config should carry its helper commands")
 	}
 	if _, err := os.Stat(filepath.Join(dir, "config.toml")); err != nil {
-		t.Errorf("rescue config should be written to disk: %v", err)
+		t.Errorf("config.toml should be written to disk: %v", err)
 	}
 }
 
-func TestLoadBaseConfig_ExpandsEnvVars(t *testing.T) {
+// config.toml is read as written: a $NAME in a value stays, and a variable
+// named in a comment cannot add a setting.
+func TestLoadBaseConfig_ReadsDollarsLiterally(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("DRAKO_TEST_SHELL", "zsh")
-	if err := os.WriteFile(filepath.Join(dir, "config.toml"), []byte("default_shell = \"$DRAKO_TEST_SHELL\"\n"), 0o644); err != nil {
+	t.Setenv("DRAKO_TEST_THEME", "expanded")
+	t.Setenv("DRAKO_TEST_INJECT", "\nprofile = \"injected\"")
+	content := "# see $DRAKO_TEST_INJECT\ntheme = \"my$DRAKO_TEST_THEME\"\n"
+	if err := os.WriteFile(filepath.Join(dir, "config.toml"), []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -106,8 +110,11 @@ func TestLoadBaseConfig_ExpandsEnvVars(t *testing.T) {
 	if len(broken) != 0 {
 		t.Fatalf("unexpected broken entries: %+v", broken)
 	}
-	if base.DefaultShell != "zsh" {
-		t.Errorf("env vars must expand before decode, got shell=%q", base.DefaultShell)
+	if base.Theme != "my$DRAKO_TEST_THEME" {
+		t.Errorf("theme = %q, want it as written", base.Theme)
+	}
+	if base.Profile != "" {
+		t.Errorf("a comment added profile = %q", base.Profile)
 	}
 }
 

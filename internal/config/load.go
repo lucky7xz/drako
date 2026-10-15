@@ -14,8 +14,8 @@ import (
 // loadBaseConfig reads config.toml into the base Config. Every failure path
 // lands on the rescue config: a missing file gets the settings template written
 // (best effort), while read and syntax errors keep the broken file and
-// report it as a ProfileParseError. Env vars in the file are expanded before
-// decoding, and commands are always empty — those come from profile overlays.
+// report it as a ProfileParseError. Commands are always empty — those come
+// from profile overlays.
 func loadBaseConfig(configDir string) (Config, []ProfileParseError) {
 	configPath := paths.ConfigFile(configDir)
 
@@ -39,10 +39,8 @@ func loadBaseConfig(configDir string) (Config, []ProfileParseError) {
 		}}
 	}
 
-	configString := os.ExpandEnv(string(configBytes))
-
 	var settings AppSettings
-	if _, err := toml.Decode(configString, &settings); err != nil {
+	if _, err := toml.Decode(string(configBytes), &settings); err != nil {
 		log.Printf("could not decode config file: %v", err)
 		return RescueConfig(), []ProfileParseError{{
 			Name: paths.ConfigFileName,
