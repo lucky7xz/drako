@@ -68,6 +68,15 @@ func undecodedTopLevelKeys(meta toml.MetaData) []string {
 	return keys
 }
 
+// undecodedKeys returns every key path that matched no field, e.g. "keys.lader".
+func undecodedKeys(meta toml.MetaData) []string {
+	var keys []string
+	for _, k := range meta.Undecoded() {
+		keys = append(keys, k.String())
+	}
+	return keys
+}
+
 // validateGridDim distinguishes "key absent" from "present but out of
 // range" instead of reporting the zero-default as if it were typed.
 func validateGridDim(key string, val int, raw []byte) []string {

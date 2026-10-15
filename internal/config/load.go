@@ -40,13 +40,18 @@ func loadBaseConfig(configDir string) (Config, []ProfileParseError) {
 	}
 
 	var settings AppSettings
-	if _, err := toml.Decode(string(configBytes), &settings); err != nil {
+	meta, err := toml.Decode(string(configBytes), &settings)
+	if err != nil {
 		log.Printf("could not decode config file: %v", err)
 		return RescueConfig(), []ProfileParseError{{
 			Name: paths.ConfigFileName,
 			Path: configPath,
 			Err:  fmt.Sprintf("SYNTAX ERROR: %v", err),
 		}}
+	}
+
+	if keys := undecodedKeys(meta); len(keys) > 0 { // drako check reports them
+		log.Printf("config.toml: ignoring unrecognized key(s): %s", strings.Join(keys, ", "))
 	}
 
 	// Settings become the base config; commands only ever

@@ -3,6 +3,7 @@ package cli
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -99,5 +100,31 @@ func TestCheckTargetsWithoutInventory(t *testing.T) {
 	files, err := checkTargets(nil)
 	if err != nil || len(files) != 1 {
 		t.Errorf("checkTargets = (%v, %v), want the one equipped profile", files, err)
+	}
+}
+
+// With no arguments check covers config.toml too, linted as settings, not a deck.
+func TestCheck_CoversConfigTomlAsSettings(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", tmp)
+	dir := filepath.Join(tmp, "drako")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeCheckFile(t, dir, "alpha.profile.toml", cleanProfile)
+	cfg := writeCheckFile(t, dir, "config.toml", "thme = \"nord\"\n")
+
+	files, err := checkTargets(nil)
+	if err != nil || !slices.Contains(files, cfg) {
+		t.Fatalf("checkTargets = (%v, %v), want config.toml included", files, err)
+	}
+	var out strings.Builder
+	if errs := runChecks(&out, files); errs != 0 {
+		t.Errorf("an unknown setting is a warning, not an error: %d file(s) with errors\n%s", errs, out.String())
+	}
+	for _, want := range []string{"config.toml", "warning", "thme"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("output missing %q:\n%s", want, out.String())
+		}
 	}
 }

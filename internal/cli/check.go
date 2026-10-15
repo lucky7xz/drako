@@ -15,9 +15,9 @@ import (
 )
 
 // HandleCheckCommand processes 'drako check [path ...]': lint profile files
-// for authoring mistakes. With no arguments it checks every equipped and
-// inventory profile. Returns exit code 1 when any error-level finding
-// exists, so deck repositories can run it in CI.
+// for authoring mistakes. With no arguments it checks config.toml and every
+// equipped and inventory profile. Returns exit code 1 when any error-level
+// finding exists, so deck repositories can run it in CI.
 func HandleCheckCommand(args []string) int {
 	targets, err := checkTargets(args[2:])
 	if err != nil {
@@ -37,12 +37,15 @@ func HandleCheckCommand(args []string) int {
 
 // checkTargets resolves the argument list to profile files. Arguments may be
 // files or directories (scanned non-recursively for *.profile.toml); no
-// arguments means the equipped dir + inventory.
+// arguments means config.toml, the equipped dir and the inventory.
 func checkTargets(args []string) ([]string, error) {
 	if len(args) == 0 {
 		configDir, err := paths.ConfigDir()
 		if err != nil {
 			return nil, fmt.Errorf("could not get config dir: %v", err)
+		}
+		if _, err := os.Stat(paths.ConfigFile(configDir)); err == nil {
+			args = append(args, paths.ConfigFile(configDir))
 		}
 		// A default dir that doesn't exist yet has nothing to check.
 		for _, d := range []string{configDir, paths.InventoryDir(configDir)} {
@@ -78,9 +81,12 @@ func runChecks(out io.Writer, files []string) int {
 	for _, f := range files {
 		src, err := os.ReadFile(f)
 		var findings []config.Finding
-		if err != nil {
+		switch {
+		case err != nil:
 			findings = []config.Finding{{Level: "error", Msg: fmt.Sprintf("cannot read file: %v", err)}}
-		} else {
+		case filepath.Base(f) == paths.ConfigFileName:
+			findings = config.CheckSettings(src)
+		default:
 			findings = config.CheckProfile(src)
 		}
 

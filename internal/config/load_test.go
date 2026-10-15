@@ -118,6 +118,22 @@ func TestLoadBaseConfig_ReadsDollarsLiterally(t *testing.T) {
 	}
 }
 
+// An unknown key is only a warning for drako check: the broken-file notice would
+// claim the file is invalid and drop the user into rescue mode.
+func TestLoadBaseConfig_UnknownKeysStayHarmless(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "config.toml"), []byte("env_whitelist = [\"PATH\"]\ntheme = \"nord\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	base, broken := loadBaseConfig(dir)
+	if len(broken) != 0 {
+		t.Errorf("an unknown key must not report config.toml broken: %+v", broken)
+	}
+	if base.Theme != "nord" {
+		t.Errorf("the rest of the file must still apply, got theme %q", base.Theme)
+	}
+}
+
 // Characterization pins for the selection behavior LoadConfig has today.
 
 func TestLoadConfig_EnvVarSelectsProfile(t *testing.T) {

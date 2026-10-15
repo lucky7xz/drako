@@ -398,10 +398,10 @@ they just don't get a `1-9` chord of their own.
 
 ### ✅ Deck Linting
 
-`drako check` lints profile files for authoring mistakes and prints one row per file. With no arguments it checks every equipped and inventory profile; pass files or directories to check a deck repo instead:
+`drako check` lints profile files for authoring mistakes and prints one row per file. With no arguments it checks your `config.toml` (an unknown setting is a warning: a typo, or one drako no longer has) and every equipped and inventory profile; pass files or directories to check a deck repo instead:
 
 ```bash
-drako check                  # everything equipped + inventory
+drako check                  # config.toml + everything equipped + inventory
 drako check path/to/deck/    # a deck repo checkout
 ```
 

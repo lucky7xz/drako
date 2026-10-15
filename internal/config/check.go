@@ -62,6 +62,20 @@ func loaderFindings(src []byte) []Finding {
 	return fs
 }
 
+// CheckSettings lints raw config.toml: what sends the loader to rescue mode, and
+// keys it ignores (a typo, or a setting drako no longer has).
+func CheckSettings(src []byte) []Finding {
+	var settings AppSettings
+	meta, err := toml.Decode(string(src), &settings)
+	if err != nil {
+		return []Finding{errorf("%v", err)}
+	}
+	if keys := undecodedKeys(meta); len(keys) > 0 {
+		return []Finding{warnf("unrecognized key(s): %s (a typo, or a setting drako no longer has)", strings.Join(keys, ", "))}
+	}
+	return nil
+}
+
 // CheckProfile lints raw profile TOML. It never touches the filesystem and
 // is independent of the platform it runs on.
 func CheckProfile(src []byte) []Finding {
