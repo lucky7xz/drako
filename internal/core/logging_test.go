@@ -3,6 +3,7 @@ package core
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -104,5 +105,33 @@ func TestLogExecutionAppendsHistory(t *testing.T) {
 	line := string(data)
 	if !strings.Contains(line, "my cell") || !strings.Contains(line, "(exec: batch: echo hi)") {
 		t.Errorf("history entry malformed: %q", line)
+	}
+}
+
+// history.log holds full command lines, so only its owner may read it, even
+// a file created before it was made private.
+func TestLogExecutionKeepsHistoryPrivate(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("no Unix permissions")
+	}
+	tmp := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", tmp)
+	t.Setenv("HOME", tmp)
+	path := filepath.Join(tmp, "drako", "history.log")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	LogExecution("cell", "curl -H 'Authorization: secret'")
+
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mode := info.Mode().Perm(); mode != 0o600 {
+		t.Errorf("history.log mode = %o, want 600", mode)
 	}
 }
