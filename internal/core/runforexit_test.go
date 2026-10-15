@@ -112,13 +112,12 @@ func TestRunForExitSetsProfileEnv(t *testing.T) {
 	}
 }
 
-func TestRunForExitHonorsEnvWhitelist(t *testing.T) {
+func TestRunForExitInheritsTheEnvironment(t *testing.T) {
 	runExitDir(t)
-	t.Setenv("DRAKO_TEST_SECRET", "leak")
-	cfg := config.Config{DefaultShell: "sh", EnvWhitelist: []string{"PATH", "HOME"}}
-	code, err := RunForExit(cfg, "env", `test -z "$DRAKO_TEST_SECRET"`, "core")
+	t.Setenv("DRAKO_TEST_INHERITED", "yes")
+	code, err := RunForExit(shCfg, "env", `test "$DRAKO_TEST_INHERITED" = "yes"`, "core")
 	if err != nil || code != 0 {
-		t.Errorf("whitelist must keep DRAKO_TEST_SECRET out of the child: (%d, %v)", code, err)
+		t.Errorf("the child must inherit drako's environment: (%d, %v)", code, err)
 	}
 }
 

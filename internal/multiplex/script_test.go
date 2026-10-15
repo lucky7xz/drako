@@ -1,6 +1,9 @@
 package multiplex
 
 import (
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -32,39 +35,36 @@ func TestBuildScript_KeepOpenPausesBeforeThePaneCloses(t *testing.T) {
 	}
 }
 
-func TestBuildScript_EnvExportedOnTopOfInherited(t *testing.T) {
-	content := buildScript(Command{
-		Name: "cell", Argv: []string{"bash", "-lc", "ls"},
-		Env: []string{"DRAKO_PROFILE=work"},
-	})
-	if !strings.Contains(content, "export DRAKO_PROFILE='work'\n") {
-		t.Errorf("env entry must be exported before the command:\n%s", content)
+// The deck is the one variable a cell adds; the pane keeps its own environment.
+func TestBuildScript_ExportsTheProfile(t *testing.T) {
+	ls := []string{"bash", "-lc", "ls"}
+	if got := buildScript(Command{Name: "cell", Argv: ls, Profile: "work"}); !strings.Contains(got, "export DRAKO_PROFILE='work'\n") {
+		t.Errorf("the profile must be exported before the command:\n%s", got)
 	}
-	if strings.Contains(content, "env -i") {
-		t.Errorf("without Isolate the inherited environment stays:\n%s", content)
+	if got := buildScript(Command{Name: "cell", Argv: ls}); strings.Contains(got, "DRAKO_PROFILE") {
+		t.Errorf("without a profile nothing is exported:\n%s", got)
 	}
 }
 
-func TestBuildScript_IsolateReplacesTheEnvironment(t *testing.T) {
-	content := buildScript(Command{
-		Name: "cell", Argv: []string{"bash", "-lc", "ls"},
-		Env: []string{"PATH=/bin", "DRAKO_PROFILE=work"}, Isolate: true,
-	})
-	if !strings.Contains(content, "env -i PATH='/bin' DRAKO_PROFILE='work' bash -lc 'ls'") {
-		t.Errorf("isolated cell must run under env -i with exactly Env:\n%s", content)
+// A deck name is file-name text: it must reach the cell as data, never as shell.
+func TestBuildScript_ProfileIsDataNotShell(t *testing.T) {
+	dir := t.TempDir()
+	pwned := filepath.Join(dir, "pwned")
+	profile := "it's $(touch " + pwned + ")"
+	c := Command{Name: "x", Argv: []string{"sh", "-c", `printf '%s' "$DRAKO_PROFILE"`}, Profile: profile}
+	script := filepath.Join(dir, "cell.sh")
+	if err := os.WriteFile(script, []byte(buildScript(c)), 0o700); err != nil {
+		t.Fatal(err)
 	}
-	if strings.Contains(content, "export ") {
-		t.Errorf("isolated cell needs no exports:\n%s", content)
+	out, err := exec.Command("sh", script).CombinedOutput()
+	if err != nil {
+		t.Fatalf("the cell failed: %v\n%s", err, out)
 	}
-}
-
-func TestBuildScript_EnvValuesQuoted(t *testing.T) {
-	content := buildScript(Command{
-		Name: "cell", Argv: []string{"bash", "-lc", "ls"},
-		Env: []string{`DRAKO_PROFILE=it's here`},
-	})
-	if !strings.Contains(content, `export DRAKO_PROFILE='it'\''s here'`) {
-		t.Errorf("env values must be single-quote escaped:\n%s", content)
+	if _, err := os.Stat(pwned); err == nil {
+		t.Error("the deck name ran as shell code")
+	}
+	if string(out) != profile {
+		t.Errorf("the cell saw DRAKO_PROFILE = %q, want %q", out, profile)
 	}
 }
 

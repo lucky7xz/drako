@@ -153,9 +153,7 @@ func RunCommand(cfg config.Config, sel Selection, activeProfile string) {
 		return
 	}
 
-	// Sanitize the child environment: the whitelist (if configured) restricts
-	// what commands inherit; drako's own DRAKO_PROFILE is always present.
-	cmd := assembleCmd(plan, CommandEnv(os.Environ(), cfg.EnvWhitelist, activeProfile))
+	cmd := assembleCmd(plan, CommandEnv(os.Environ(), activeProfile))
 
 	// Log the execution to history.log; best-effort, never blocks the run.
 	LogExecution(selected, strings.Join(cmd.Args, " "))

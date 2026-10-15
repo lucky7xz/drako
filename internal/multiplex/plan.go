@@ -2,7 +2,6 @@ package multiplex
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 )
 
@@ -14,12 +13,7 @@ type Command struct {
 	Name     string   // cell name — becomes the window name and script name
 	Argv     []string // the command line, as a single run would use it (core.ShellArgv)
 	KeepOpen bool     // auto_close_execution = false: pause before the pane closes
-
-	// Env entries applied to this cell's command. Isolate replaces the
-	// inherited environment with exactly Env (env -i); otherwise Env is
-	// exported on top of it.
-	Env     []string
-	Isolate bool
+	Profile  string   // the active deck, exported as DRAKO_PROFILE like a single run
 }
 
 // Session is an inert tmux launch plan: the invocations to run, in order.
@@ -136,16 +130,11 @@ func buildScript(c Command) string {
 	b.WriteString("#!/bin/sh\n")
 	fmt.Fprintf(&b, "# drako batch cell: %s\n", strings.ReplaceAll(c.Name, "\n", " "))
 
-	prefix := ""
-	if c.Isolate {
-		prefix = strings.Join(append([]string{"env", "-i"}, envAssignments(c.Env)...), " ") + " "
-	} else {
-		for _, a := range envAssignments(c.Env) {
-			fmt.Fprintf(&b, "export %s\n", a)
-		}
+	if c.Profile != "" { // the pane keeps its own environment; only the deck is added
+		fmt.Fprintf(&b, "export DRAKO_PROFILE=%s\n", posixSingleQuote(c.Profile))
 	}
 	if n := len(c.Argv); n > 0 { // the shell and its flags are fixed words; the command is quoted
-		fmt.Fprintf(&b, "%s%s %s\n", prefix, strings.Join(c.Argv[:n-1], " "), posixSingleQuote(c.Argv[n-1]))
+		fmt.Fprintf(&b, "%s %s\n", strings.Join(c.Argv[:n-1], " "), posixSingleQuote(c.Argv[n-1]))
 	}
 	if c.KeepOpen {
 		b.WriteString("status=$?\n")
@@ -154,23 +143,6 @@ func buildScript(c Command) string {
 	}
 	return b.String()
 }
-
-// envAssignments renders env entries as shell-safe `K='v'` pairs, dropping
-// anything without a '='. A whitelist can pass any name, so odd ones are quoted.
-func envAssignments(env []string) []string {
-	out := make([]string, 0, len(env))
-	for _, e := range env {
-		if k, v, ok := strings.Cut(e, "="); ok {
-			if !shellIdentifier.MatchString(k) {
-				k = posixSingleQuote(k)
-			}
-			out = append(out, k+"="+posixSingleQuote(v))
-		}
-	}
-	return out
-}
-
-var shellIdentifier = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
 // runScript is a pane's command as separate arguments, which tmux runs without a
 // shell: the path is never parsed, and sh reads a script on a noexec mount.

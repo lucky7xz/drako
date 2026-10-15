@@ -2,32 +2,22 @@ package core
 
 import (
 	"slices"
-	"strings"
 	"testing"
 )
 
-func TestCommandEnv_WhitelistFilters(t *testing.T) {
-	base := []string{"PATH=/usr/bin", "SECRET=hunter2"}
-	env := CommandEnv(base, []string{"PATH"}, "")
-	if !slices.Contains(env, "PATH=/usr/bin") {
-		t.Error("whitelisted PATH should survive")
-	}
-	if slices.Contains(env, "SECRET=hunter2") {
-		t.Error("SECRET is not whitelisted and must be dropped")
-	}
-}
-
-func TestCommandEnv_ProfileInjectedDespiteWhitelist(t *testing.T) {
-	base := []string{"PATH=/usr/bin"}
-	env := CommandEnv(base, []string{"PATH"}, "work")
-	if !slices.Contains(env, "DRAKO_PROFILE=work") {
-		t.Errorf("drako's own var must reach children regardless of whitelist, got %v", env)
+// Commands inherit drako's whole environment; only DRAKO_PROFILE is added.
+func TestCommandEnv_KeepsTheInheritedEnvironment(t *testing.T) {
+	env := CommandEnv([]string{"PATH=/usr/bin", "SECRET=hunter2"}, "work")
+	for _, want := range []string{"PATH=/usr/bin", "SECRET=hunter2", "DRAKO_PROFILE=work"} {
+		if !slices.Contains(env, want) {
+			t.Errorf("env %v is missing %s", env, want)
+		}
 	}
 }
 
 func TestCommandEnv_StaleProfileReplaced(t *testing.T) {
 	base := []string{"DRAKO_PROFILE=old", "PATH=/usr/bin"}
-	env := CommandEnv(base, nil, "new")
+	env := CommandEnv(base, "new")
 	if slices.Contains(env, "DRAKO_PROFILE=old") {
 		t.Errorf("stale inherited DRAKO_PROFILE must be replaced, got %v", env)
 	}
@@ -44,41 +34,8 @@ func TestCommandEnv_StaleProfileReplaced(t *testing.T) {
 
 func TestCommandEnv_NoProfileKeepsInherited(t *testing.T) {
 	base := []string{"DRAKO_PROFILE=external", "PATH=/usr/bin"}
-	env := CommandEnv(base, nil, "")
+	env := CommandEnv(base, "")
 	if !slices.Contains(env, "DRAKO_PROFILE=external") {
 		t.Errorf("without an active profile, an externally set value passes through, got %v", env)
-	}
-}
-
-func TestBatchEnv_WhitelistIsolatesTheCell(t *testing.T) {
-	base := []string{"PATH=/bin", "SECRET=x"}
-	env, isolate := BatchEnv(base, []string{"PATH"}, "work")
-	if !isolate {
-		t.Fatal("a whitelist must isolate the cell")
-	}
-	joined := strings.Join(env, " ")
-	if strings.Contains(joined, "SECRET") {
-		t.Errorf("whitelist must drop SECRET, got %v", env)
-	}
-	if !strings.Contains(joined, "PATH=/bin") || !strings.Contains(joined, "DRAKO_PROFILE=work") {
-		t.Errorf("isolated cell needs the whitelisted vars and the profile, got %v", env)
-	}
-}
-
-func TestBatchEnv_PassThroughAddsOnlyProfile(t *testing.T) {
-	base := []string{"PATH=/bin", "SECRET=x"}
-	env, isolate := BatchEnv(base, nil, "work")
-	if isolate {
-		t.Fatal("without a whitelist the cell inherits the environment")
-	}
-	if len(env) != 1 || env[0] != "DRAKO_PROFILE=work" {
-		t.Errorf("pass-through must add only the profile, got %v", env)
-	}
-}
-
-func TestBatchEnv_NoProfileNoAdditions(t *testing.T) {
-	env, isolate := BatchEnv([]string{"PATH=/bin"}, nil, "")
-	if isolate || len(env) != 0 {
-		t.Errorf("nothing to apply without a whitelist or a profile, got %v isolate=%v", env, isolate)
 	}
 }

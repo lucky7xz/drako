@@ -19,7 +19,7 @@ func RunForExit(cfg config.Config, name, commandStr, activeProfile string) (int,
 		return 0, fmt.Errorf("%q has no command for this platform", name)
 	}
 	plan := execPlan{kind: planShell, shell: cfg.DefaultShell, commandStr: commandStr}
-	cmd := assembleCmd(plan, CommandEnv(os.Environ(), cfg.EnvWhitelist, activeProfile))
+	cmd := assembleCmd(plan, CommandEnv(os.Environ(), activeProfile))
 	LogExecution(name, strings.Join(cmd.Args, " "))
 
 	cmd.Stdin = os.Stdin

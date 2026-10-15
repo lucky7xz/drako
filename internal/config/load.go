@@ -58,8 +58,6 @@ func loadBaseConfig(configDir string) (Config, []ProfileParseError) {
 		Profile:            settings.Profile,
 		LockTimeoutMinutes: settings.LockTimeoutMinutes,
 		AutoLockEnabled:    settings.AutoLockEnabled,
-		EnvWhitelist:       settings.EnvWhitelist,
-		EnvBlocklist:       settings.EnvBlocklist,
 		BatchForceTmux:     settings.BatchForceTmux,
 		Theme:              settings.Theme,
 		Keys:               settings.Keys,

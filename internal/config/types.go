@@ -39,8 +39,6 @@ type AppSettings struct {
 	Profile            string      `toml:"profile"`
 	LockTimeoutMinutes *int        `toml:"lock_timeout_minutes"`
 	AutoLockEnabled    *bool       `toml:"auto_lock_enabled"`
-	EnvWhitelist       []string    `toml:"env_whitelist"`
-	EnvBlocklist       []string    `toml:"env_blocklist"`
 	BatchForceTmux     bool        `toml:"batch_force_tmux"`
 	Theme              string      `toml:"theme"` // Global Fallback Theme
 	Keys               InputConfig `toml:"keys"`
@@ -57,8 +55,6 @@ type Config struct {
 	Profile            string      `toml:"profile"`
 	LockTimeoutMinutes *int        `toml:"lock_timeout_minutes"`
 	AutoLockEnabled    *bool       `toml:"auto_lock_enabled"`
-	EnvWhitelist       []string    `toml:"env_whitelist"`
-	EnvBlocklist       []string    `toml:"env_blocklist"`
 	BatchForceTmux     bool        `toml:"batch_force_tmux"`
 	Keys               InputConfig `toml:"keys"`
 	Commands           []Command   `toml:"commands"`

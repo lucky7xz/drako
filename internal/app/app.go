@@ -185,8 +185,6 @@ func runBatch(state ui.Model) {
 		return
 	}
 
-	cellEnv, isolate := core.BatchEnv(os.Environ(), state.Config.EnvWhitelist, state.ActiveProfileName())
-
 	var cmds []multiplex.Command
 	for _, sel := range state.SelectedBatch {
 		name := sel.Name(state.Config)
@@ -209,8 +207,7 @@ func runBatch(state ui.Model) {
 			Name:     name,
 			Argv:     core.ShellArgv(state.Config.DefaultShell, command),
 			KeepOpen: autoClosePtr != nil && !*autoClosePtr,
-			Env:      cellEnv,
-			Isolate:  isolate,
+			Profile:  state.ActiveProfileName(),
 		})
 	}
 	if len(cmds) == 0 {

@@ -245,8 +245,7 @@ batch_force_tmux = true
 ```
 
 Cells keep their own `auto_close_execution` setting on both, and a batch cell
-gets the same environment a single run would — including `DRAKO_PROFILE` and
-your `env_whitelist`.
+knows its deck through `DRAKO_PROFILE`, just like a single run.
 
 ## 📇 Profile Creation Example
 

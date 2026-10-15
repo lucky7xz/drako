@@ -118,8 +118,8 @@ func TestLaunch_ReportsWhatTheBackendFailedOn(t *testing.T) {
 	}
 }
 
-// A launch that failed may have written scripts holding command text (and, when
-// isolated, whitelisted env values); they must not be left in the temp dir.
+// A launch that failed may have written scripts holding command text; they must
+// not be left in the temp dir.
 func TestLaunch_RemovesTheScriptsWhenTheBackendFails(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "batch")
 	if err := Launch(&fakeBackend{err: errors.New("attach failed")}, "s", cells(2), []int{2}, dir); err == nil {

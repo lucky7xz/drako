@@ -94,7 +94,7 @@ func TestAssembleCmd_ShellPlanCarriesEnv(t *testing.T) {
 		t.Fatal("shell plan must produce a command")
 	}
 	if len(cmd.Env) != 2 || cmd.Env[1] != "DRAKO_PROFILE=work" {
-		t.Errorf("sanitized env must be attached before any run mode, got %v", cmd.Env)
+		t.Errorf("the command env must be attached before any run mode, got %v", cmd.Env)
 	}
 }
 
@@ -105,7 +105,7 @@ func TestAssembleCmd_DirectPlanCarriesEnv(t *testing.T) {
 		t.Fatalf("direct plan should exec the resolved path, got %+v", cmd)
 	}
 	if len(cmd.Env) != 1 || cmd.Env[0] != "A=1" {
-		t.Errorf("sanitized env must be attached, got %v", cmd.Env)
+		t.Errorf("the command env must be attached, got %v", cmd.Env)
 	}
 }
 
