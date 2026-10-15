@@ -342,7 +342,7 @@ drako explain work:B2       # equipped profile 'work'
 drako explain A1.2          # dropdown item 2 of cell A1
 ```
 
-`drako run` executes one cell by the same address and exits with its exit code, so scripts, cron and AI agents can drive a deck. Output and stdin pass straight through, and the run lands in `history.log` like any other. When drako itself refuses or can't resolve the address, it exits `125` with a `drako run:` line on stderr — the way `timeout` and `env` keep their own failures apart from the command's. A command killed by a signal reports `128+N`, as a shell would.
+`drako run` executes one cell by the same address and exits with its exit code, so scripts, cron and AI agents can drive a deck. Output and stdin pass straight through, and the run lands in `history.log` like any other. When drako itself refuses or can't resolve the address, it exits `125` with a `drako run:` line on stderr — the way `timeout` and `env` keep their own failures apart from the command's. The command takes drako's place, so a signal sent to `drako run` reaches it, and a command killed by a signal ends `drako run` the same way (a shell shows `128+N`).
 
 ```bash
 drako run A0                # run cell A0 of the active profile

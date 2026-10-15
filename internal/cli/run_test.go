@@ -1,9 +1,11 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -188,9 +190,30 @@ func ran(dir, sentinel string) bool {
 	return err == nil
 }
 
+// The test binary doubles as drako: a run that reaches its command replaces
+// the process, so drakoRun runs drako run in a child that lands here.
+func TestMain(m *testing.M) {
+	if ref, ok := os.LookupEnv("DRAKO_TEST_RUN"); ok {
+		os.Exit(HandleRunCommand([]string{"drako", "run", ref}))
+	}
+	os.Exit(m.Run())
+}
+
+// drakoRun runs drako run ref in a child test process and returns its exit code.
+func drakoRun(t *testing.T, ref string) int {
+	t.Helper()
+	cmd := exec.Command(os.Args[0])
+	cmd.Env = append(os.Environ(), "DRAKO_TEST_RUN="+ref)
+	var exitErr *exec.ExitError
+	if err := cmd.Run(); err != nil && !errors.As(err, &exitErr) {
+		t.Fatal(err)
+	}
+	return cmd.ProcessState.ExitCode()
+}
+
 func TestRunExecutesSafeCells(t *testing.T) {
 	dir := runFixture(t)
-	if code := HandleRunCommand([]string{"drako", "run", "solo:A0"}); code != 0 {
+	if code := drakoRun(t, "solo:A0"); code != 0 {
 		t.Fatalf("solo:A0 exit = %d, want 0", code)
 	}
 	b, err := os.ReadFile(filepath.Join(dir, "safe.ran"))
@@ -201,14 +224,14 @@ func TestRunExecutesSafeCells(t *testing.T) {
 		t.Errorf("DRAKO_PROFILE in child = %q, want solo", b)
 	}
 
-	if code := HandleRunCommand([]string{"drako", "run", "solo:B0.1"}); code != 0 || !ran(dir, "calm.ran") {
+	if code := drakoRun(t, "solo:B0.1"); code != 0 || !ran(dir, "calm.ran") {
 		t.Errorf("solo:B0.1 exit = %d, ran = %v; want 0, true", code, ran(dir, "calm.ran"))
 	}
 }
 
 func TestRunPassesExitCodeThrough(t *testing.T) {
 	runFixture(t)
-	if code := HandleRunCommand([]string{"drako", "run", "solo:A2"}); code != 7 {
+	if code := drakoRun(t, "solo:A2"); code != 7 {
 		t.Errorf("exit = %d, want the child's 7", code)
 	}
 }
@@ -220,7 +243,7 @@ func TestRunRefusesDanger(t *testing.T) {
 		"solo:B0.2": "wipe.ran",  // danger item
 		"solo:B1.1": "child.ran", // item of a danger folder
 	} {
-		if code := HandleRunCommand([]string{"drako", "run", ref}); code != 125 {
+		if code := drakoRun(t, ref); code != 125 {
 			t.Errorf("%s exit = %d, want 125", ref, code)
 		}
 		if ran(dir, sentinel) {
@@ -231,7 +254,7 @@ func TestRunRefusesDanger(t *testing.T) {
 
 func TestRunWritesHistory(t *testing.T) {
 	dir := runFixture(t)
-	HandleRunCommand([]string{"drako", "run", "solo:A0"})
+	drakoRun(t, "solo:A0")
 	b, err := os.ReadFile(filepath.Join(dir, "history.log"))
 	if err != nil || !strings.Contains(string(b), "safe") {
 		t.Errorf("history.log missing the run: %q, %v", b, err)
