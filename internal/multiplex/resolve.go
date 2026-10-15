@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 // The names the backends answer to, and the binaries they need on PATH.
@@ -16,19 +17,44 @@ const (
 // struct rather than direct os.Getenv calls so the whole decision can be
 // exercised without setting environment variables.
 type Env struct {
-	Tmux     string // $TMUX — set inside a tmux session
-	Herdr    string // $HERDR_ENV — "1" inside a herdr pane, per herdr's own check
-	LookPath func(string) (string, error)
+	Tmux  string // $TMUX — set inside a tmux session
+	Herdr string // $HERDR_ENV — "1" inside a herdr pane, per herdr's own check
+	// InTmuxPane: drako's terminal is a tmux pane, so inside both multiplexers
+	// tmux is the nearer one. OSEnv only asks tmux when both are set.
+	InTmuxPane bool
+	LookPath   func(string) (string, error)
 }
 
 // OSEnv reads what Resolve needs from the process environment. The variable
 // names live here and nowhere else.
 func OSEnv() Env {
-	return Env{
+	e := Env{
 		Tmux:     os.Getenv("TMUX"),
 		Herdr:    os.Getenv("HERDR_ENV"),
 		LookPath: exec.LookPath,
 	}
+	if e.insideTmux() && e.insideHerdr() {
+		e.InTmuxPane = ttyIsTmuxPane()
+	}
+	return e
+}
+
+// ttyIsTmuxPane reports whether drako's terminal is one of tmux's panes.
+func ttyIsTmuxPane() bool {
+	self, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+	out, err := exec.Command(tmuxMux, "list-panes", "-a", "-F", "#{pane_tty}").Output()
+	if err != nil {
+		return false
+	}
+	for _, tty := range strings.Fields(string(out)) {
+		if pane, err := os.Stat(tty); err == nil && os.SameFile(self, pane) {
+			return true
+		}
+	}
+	return false
 }
 
 func (e Env) insideTmux() bool  { return e.Tmux != "" }
@@ -40,9 +66,9 @@ func (e Env) installed(name string) bool {
 }
 
 // Resolve picks the backend for a batch. By default that is whichever
-// multiplexer drako already runs inside, so a batch never nests one in the
-// other — and outside both only tmux is reachable, because tmux can build a
-// session from nothing and herdr cannot.
+// multiplexer drako already runs inside (inside both, the nearer one), so a
+// batch never nests one in the other — and outside both only tmux is
+// reachable, because tmux can build a session from nothing and herdr cannot.
 //
 // forceTmux is the one override worth having: from inside herdr, run batches
 // through tmux anyway. Every other preference either matches the default or
@@ -58,7 +84,7 @@ func Resolve(forceTmux bool, env Env) (Backend, error) {
 	}
 
 	switch {
-	case env.insideHerdr() && env.installed(herdrMux):
+	case env.insideHerdr() && !env.InTmuxPane && env.installed(herdrMux):
 		return NewHerdr(), nil
 	case env.installed(tmuxMux):
 		return NewTmux(env.insideTmux()), nil

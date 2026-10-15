@@ -17,6 +17,11 @@ func onPath(tmux, herdr string, installed ...string) Env {
 	}}
 }
 
+func inTmuxPane(e Env) Env {
+	e.InTmuxPane = true
+	return e
+}
+
 func TestResolve(t *testing.T) {
 	const in = "/tmp/tmux-1000/default,123,0" // a plausible $TMUX
 
@@ -30,7 +35,11 @@ func TestResolve(t *testing.T) {
 		// batch never nests one in the other.
 		{"inside herdr", false, onPath("", "1", "tmux", "herdr"), "herdr"},
 		{"inside tmux", false, onPath(in, "", "tmux", "herdr"), "tmux"},
-		{"inside both", false, onPath(in, "1", "tmux", "herdr"), "herdr"},
+
+		// Inside both, the nearer one: herdr started from a tmux pane, or tmux
+		// started from a herdr pane, where drako's terminal is tmux's.
+		{"herdr inside tmux", false, onPath(in, "1", "tmux", "herdr"), "herdr"},
+		{"tmux inside herdr", false, inTmuxPane(onPath(in, "1", "tmux", "herdr")), "tmux"},
 
 		// Outside either, tmux is the only one that can start a session from
 		// nothing, so it is the only thing reachable.
