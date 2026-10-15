@@ -40,9 +40,8 @@ func TestLockedFGIsADarkerShadeOfAccent(t *testing.T) {
 	}
 }
 
-// BuildStyles is pure, so we can assert it wires the right theme role onto the
-// right style — the behavior the old side-effecting applyThemeStyles could not
-// have covered.
+// BuildStyles returns a value, so we can assert it wires the right theme role
+// onto the right style — which the old side-effecting applyThemeStyles couldn't.
 func TestBuildStylesMapsThemeRolesToStyles(t *testing.T) {
 	cfg := config.Config{Theme: "dracula"}
 	ui := config.MapThemeToUI(config.GetTheme(cfg.Theme))

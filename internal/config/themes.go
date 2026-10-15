@@ -65,15 +65,24 @@ func buildThemes(configDir string) map[string]DracoThemeConfig {
 	return themes
 }
 
-// mergeThemes decodes data and merges its themes into dst; a malformed
-// document is logged and ignored.
+// mergeThemes decodes data's themes onto dst: a colour a theme leaves out keeps
+// the layer below's, or dracula's for a new theme. Malformed input is logged and ignored.
 func mergeThemes(dst map[string]DracoThemeConfig, data []byte, source string) {
-	var parsed map[string]DracoThemeConfig
-	if _, err := toml.Decode(string(data), &parsed); err != nil {
+	var parsed map[string]toml.Primitive
+	md, err := toml.Decode(string(data), &parsed)
+	if err != nil {
 		log.Printf("themes: %s is malformed, ignoring it: %v", source, err)
 		return
 	}
-	for name, theme := range parsed {
+	for name, prim := range parsed {
+		theme, ok := dst[name]
+		if !ok {
+			theme = dracula
+		}
+		if err := md.PrimitiveDecode(prim, &theme); err != nil {
+			log.Printf("themes: %s: theme %q is malformed, ignoring it: %v", source, name, err)
+			continue
+		}
 		dst[name] = theme
 	}
 }

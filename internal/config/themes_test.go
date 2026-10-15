@@ -50,6 +50,22 @@ Primary = "#abcdef"
 	}
 }
 
+// A partial override keeps the colours it leaves out; a new theme fills its
+// gaps from dracula.
+func TestPartialUserThemeKeepsOtherColours(t *testing.T) {
+	dir := t.TempDir()
+	writeUserThemes(t, dir, "[nord]\nPrimary = \"#000001\"\n\n[mine]\nAccent = \"#abcdef\"\n")
+	embedded := buildThemes("")["nord"]
+	themes := buildThemes(dir)
+
+	if got := themes["nord"]; got.Primary != "#000001" || got.Background != embedded.Background {
+		t.Errorf("nord: want Primary overridden and Background kept, got %+v", got)
+	}
+	if got := themes["mine"]; got.Accent != "#abcdef" || got.Background != dracula.Background {
+		t.Errorf("mine: want dracula's gaps filled, got %+v", got)
+	}
+}
+
 // TestMalformedUserThemesIgnored: a broken themes.toml is ignored, not fatal;
 // the foundation and embedded themes remain.
 func TestMalformedUserThemesIgnored(t *testing.T) {
