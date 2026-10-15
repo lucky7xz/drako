@@ -134,14 +134,16 @@ func launchHerdr(t *testing.T, n int, tabs []int) ([][]string, []string) {
 // Every pane in a tab is created before anything runs in it — a split carves
 // up a shell, never a pane already busy with a cell.
 func TestHerdr_CreatesEveryPaneBeforeRunningInThem(t *testing.T) {
+	wd := t.TempDir()
+	t.Chdir(wd)
 	got, paths := launchHerdr(t, 3, []int{2, 1})
 	got = withoutConfirmations(got)
 	want := [][]string{
-		{"herdr", "tab", "create", "--label", "cell 1·cell 2", "--focus"},
-		{"herdr", "pane", "split", "--pane", "w1:p1", "--direction", "right", "--no-focus"},
+		{"herdr", "tab", "create", "--label", "cell 1·cell 2", "--cwd", wd, "--focus"},
+		{"herdr", "pane", "split", "--pane", "w1:p1", "--direction", "right", "--cwd", wd, "--no-focus"},
 		{"herdr", "pane", "run", "w1:p1", "exec sh " + posixSingleQuote(paths[0])},
 		{"herdr", "pane", "run", "w1:p2", "exec sh " + posixSingleQuote(paths[1])},
-		{"herdr", "tab", "create", "--label", "cell 3", "--no-focus"},
+		{"herdr", "tab", "create", "--label", "cell 3", "--cwd", wd, "--no-focus"},
 		{"herdr", "pane", "run", "w1:p3", "exec sh " + posixSingleQuote(paths[2])},
 	}
 	if len(got) != len(want) {
@@ -157,6 +159,8 @@ func TestHerdr_CreatesEveryPaneBeforeRunningInThem(t *testing.T) {
 // A full tab splits per splitTree, and every split names an id the server
 // actually handed back.
 func TestHerdr_SplitsAFullTabByTheTree(t *testing.T) {
+	wd := t.TempDir()
+	t.Chdir(wd)
 	got, _ := launchHerdr(t, 4, []int{4})
 	var splits [][]string
 	for _, c := range got {
@@ -165,9 +169,9 @@ func TestHerdr_SplitsAFullTabByTheTree(t *testing.T) {
 		}
 	}
 	want := [][]string{
-		{"herdr", "pane", "split", "--pane", "w1:p1", "--direction", "right", "--no-focus"},
-		{"herdr", "pane", "split", "--pane", "w1:p1", "--direction", "down", "--no-focus"},
-		{"herdr", "pane", "split", "--pane", "w1:p2", "--direction", "down", "--no-focus"},
+		{"herdr", "pane", "split", "--pane", "w1:p1", "--direction", "right", "--cwd", wd, "--no-focus"},
+		{"herdr", "pane", "split", "--pane", "w1:p1", "--direction", "down", "--cwd", wd, "--no-focus"},
+		{"herdr", "pane", "split", "--pane", "w1:p2", "--direction", "down", "--cwd", wd, "--no-focus"},
 	}
 	for i := range want {
 		if i >= len(splits) || !slices.Equal(splits[i], want[i]) {
@@ -192,6 +196,21 @@ func TestHerdr_SendsExecSoAPaneClosesWithItsCell(t *testing.T) {
 	t.Fatal("no pane run call")
 }
 
+// Every tab and pane starts where drako is (path mode moves it), whatever
+// herdr's own new_cwd setting would pick.
+func TestHerdr_StartsPanesWhereDrakoIs(t *testing.T) {
+	wd := t.TempDir()
+	t.Chdir(wd)
+	got, _ := launchHerdr(t, 3, []int{2, 1})
+	for _, c := range got {
+		if c[2] == "create" || c[2] == "split" {
+			if i := slices.Index(c, "--cwd"); i < 0 || i+1 >= len(c) || c[i+1] != wd {
+				t.Errorf("%v must start in %s", c, wd)
+			}
+		}
+	}
+}
+
 // The batch is worth looking at, but only once: later tabs are built behind it.
 func TestHerdr_OnlyTheFirstTabTakesFocus(t *testing.T) {
 	got, _ := launchHerdr(t, 3, []int{1, 1, 1})
@@ -206,9 +225,9 @@ func TestHerdr_OnlyTheFirstTabTakesFocus(t *testing.T) {
 	}
 }
 
-// herdr is only ever used from inside herdr, so it never hands over a
-// terminal — and its scripts must outlive the call that started the panes.
-func TestHerdr_NeverAttaches(t *testing.T) {
+// Panes may still be starting when Launch returns, so their scripts stay until
+// each one deletes itself.
+func TestHerdr_LeavesTheScriptsToThePanes(t *testing.T) {
 	fakeHerdr(t)
 	dir := filepath.Join(t.TempDir(), "batch")
 	if err := Launch(NewHerdr(), "drako-t", cells(2), []int{2}, dir); err != nil {

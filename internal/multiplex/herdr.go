@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"time"
 )
@@ -37,6 +39,11 @@ func (h *Herdr) Name() string { return herdrMux }
 
 // session goes unused: herdr has no named sessions to target.
 func (h *Herdr) Launch(session string, cmds []Command, tabs []int, paths []string) error {
+	// Panes start where drako is (path mode moves it), whatever herdr's new_cwd says.
+	var cwd []string
+	if wd, err := os.Getwd(); err == nil {
+		cwd = []string{"--cwd", wd}
+	}
 	cell := 0
 	for t, panes := range tabs {
 		// The batch is worth looking at, but only once: the rest of the tabs
@@ -45,7 +52,8 @@ func (h *Herdr) Launch(session string, cmds []Command, tabs []int, paths []strin
 		if t == 0 {
 			focus = "--focus"
 		}
-		root, err := h.create("tab", "create", "--label", tabLabel(cmds[cell:cell+panes]), focus)
+		label := tabLabel(cmds[cell : cell+panes])
+		root, err := h.create(slices.Concat([]string{"tab", "create", "--label", label}, cwd, []string{focus})...)
 		if err != nil {
 			return err
 		}
@@ -53,7 +61,8 @@ func (h *Herdr) Launch(session string, cmds []Command, tabs []int, paths []strin
 		ids := make([]string, panes)
 		ids[0] = root
 		for i, s := range splitTree(panes) {
-			id, err := h.create("pane", "split", "--pane", ids[s.parent], "--direction", s.dir, "--no-focus")
+			args := []string{"pane", "split", "--pane", ids[s.parent], "--direction", s.dir}
+			id, err := h.create(slices.Concat(args, cwd, []string{"--no-focus"})...)
 			if err != nil {
 				return err
 			}
