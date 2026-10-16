@@ -100,6 +100,10 @@ func validateFilename(filename string) error {
 	if !strings.HasSuffix(filename, ".profile.toml") {
 		return fmt.Errorf("filename must end with .profile.toml (got: %s)", filename)
 	}
+	// The stem names the deck's assets dir: "..." would put them in the config root.
+	if stem := strings.TrimSuffix(filename, ".profile.toml"); stem == "" || stem == "." || stem == ".." {
+		return fmt.Errorf("filename needs a deck name before .profile.toml (got: %s)", filename)
+	}
 	return nil
 }
 

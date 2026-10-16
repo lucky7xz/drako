@@ -67,7 +67,8 @@ func TestValidateFilename(t *testing.T) {
 	if err := validateFilename("networking.profile.toml"); err != nil {
 		t.Errorf("valid name rejected: %v", err)
 	}
-	for _, bad := range []string{"networking.toml", "profile.toml.bak", "networking"} {
+	for _, bad := range []string{"networking.toml", "profile.toml.bak", "networking",
+		".profile.toml", "..profile.toml", "...profile.toml"} {
 		if err := validateFilename(bad); err == nil {
 			t.Errorf("%q should be rejected", bad)
 		}
