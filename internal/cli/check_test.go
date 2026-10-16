@@ -154,3 +154,23 @@ func TestRunChecks_WarnsOnNamesDifferingOnlyByCase(t *testing.T) {
 		}
 	}
 }
+
+// The same deck equipped and stashed: Apply cannot move either copy onto the other.
+func TestRunChecks_WarnsOnSameDeckInTwoPlaces(t *testing.T) {
+	dir := t.TempDir()
+	inv := filepath.Join(dir, "inventory")
+	if err := os.MkdirAll(inv, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	equipped := writeCheckFile(t, dir, "git.profile.toml", cleanProfile)
+	stashed := writeCheckFile(t, inv, "git.profile.toml", cleanProfile)
+
+	var out strings.Builder
+	if errs := runChecks(&out, []string{equipped, stashed}); errs != 0 {
+		t.Errorf("a duplicate is a warning, not an error: %d file(s) with errors", errs)
+	}
+	got := out.String()
+	if n := strings.Count(got, "warning"); n != 2 || !strings.Contains(got, "inventory/") {
+		t.Errorf("want a warning on each copy naming inventory/:\n%s", got)
+	}
+}

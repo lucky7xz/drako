@@ -411,7 +411,7 @@ drako check                  # config.toml + everything equipped + inventory
 drako check path/to/deck/    # a deck repo checkout
 ```
 
-Deck names are matched ignoring case, so two files whose names differ only by case (`Git.profile.toml`, `git.profile.toml`) are not supported; `check` warns about them.
+Deck names are matched ignoring case, so two files whose names differ only by case (`Git.profile.toml`, `git.profile.toml`) are not supported, and neither is the same deck both equipped and in `inventory/`; `check` warns about both.
 
 It exits `1` when any error-level finding exists — wire it into your deck repository's CI and a broken deck never ships.
 
