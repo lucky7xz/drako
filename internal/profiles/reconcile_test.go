@@ -79,6 +79,29 @@ func TestReconcile_AppliesMovesOnDisk(t *testing.T) {
 	}
 }
 
+// Stashes run before equips, so a move failing partway never leaves more decks
+// equipped than the plan was allowed to end with.
+func TestReconcile_FailedStashNeverExceedsTheCap(t *testing.T) {
+	cfg := t.TempDir()
+	inv := paths.InventoryDir(cfg)
+	for _, f := range profileFiles("eq", MaxEquipped) {
+		mustWrite(t, filepath.Join(cfg, f))
+	}
+	// A directory where eq0 would land makes its stash fail.
+	if err := os.MkdirAll(filepath.Join(inv, "eq0"+ProfileSuffix), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	mustWrite(t, filepath.Join(inv, "new.profile.toml"))
+
+	desired := append(profileNames("eq", MaxEquipped)[1:], "new")
+	if _, err := Reconcile(cfg, desired); err == nil {
+		t.Fatal("Reconcile should report the failed stash")
+	}
+	if n, _ := List(cfg); len(n) > MaxEquipped {
+		t.Errorf("%d decks equipped after the failure, cap is %d", len(n), MaxEquipped)
+	}
+}
+
 // profileFiles/profileNames build n synthetic profiles as on-disk filenames
 // and as the bare references a spec would list.
 func profileFiles(prefix string, n int) []string {

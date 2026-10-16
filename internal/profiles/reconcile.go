@@ -147,7 +147,8 @@ type move struct {
 // planReconcile computes the moves needed so that exactly the desired profiles
 // are equipped. equipped and inventory are the current filenames in each
 // location; desired is a list of profile references (any form NormalizeName
-// accepts). It performs no I/O.
+// accepts). It performs no I/O. Stashes come first, so a run that stops
+// partway never has more decks equipped than at its start or its end.
 func planReconcile(equipped, inventory, desired []string) []move {
 	want := make(map[string]bool, len(desired))
 	for _, d := range desired {
@@ -155,14 +156,14 @@ func planReconcile(equipped, inventory, desired []string) []move {
 	}
 
 	var moves []move
-	for _, file := range inventory {
-		if want[NormalizeName(file)] {
-			moves = append(moves, move{File: file, From: Inventory, To: Equipped})
-		}
-	}
 	for _, file := range equipped {
 		if !want[NormalizeName(file)] {
 			moves = append(moves, move{File: file, From: Equipped, To: Inventory})
+		}
+	}
+	for _, file := range inventory {
+		if want[NormalizeName(file)] {
+			moves = append(moves, move{File: file, From: Inventory, To: Equipped})
 		}
 	}
 	return moves
