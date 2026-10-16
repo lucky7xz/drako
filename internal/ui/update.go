@@ -91,7 +91,12 @@ func (m Model) handleMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.GlassrootMode && glassrootRejectsBundle(bundle) {
 			return m.failGlassroot()
 		}
-		return m.applyReloadedBundle(bundle), nil
+		wasInventory := m.mode == inventoryMode
+		m = m.applyReloadedBundle(bundle)
+		if wasInventory {
+			m = m.refreshInventory()
+		}
+		return m, nil
 
 	case inventoryErrorMsg:
 		m.inventory.err = msg.err
@@ -432,15 +437,7 @@ func (m Model) afterEdit(msg editorFinishedMsg) (tea.Model, tea.Cmd) {
 	}
 
 	// Rebuild the inventory (validity may have changed), keep the cursor.
-	prev := m.inventory
-	m.inventory = InitInventoryModel(m.profile.configDir)
-	if m.inventory.err == nil { // a failed rebuild has no State; the view shows err
-		m.inventory.focusedList = prev.focusedList
-		m.inventory.cursor = prev.cursor
-		if listPtr, err := m.inventory.State.GetList(prev.focusedList); err == nil && m.inventory.cursor >= len(*listPtr) {
-			m.inventory.cursor = max(len(*listPtr)-1, 0)
-		}
-	}
+	m = m.adoptInventory(InitInventoryModel(m.profile.configDir))
 
 	name := filepath.Base(msg.path)
 	if err := config.CheckProfileFile(msg.path); err != nil {

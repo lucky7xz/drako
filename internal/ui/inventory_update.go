@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -438,6 +439,34 @@ func (m Model) updatePendingDelete(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+// refreshInventory rereads the decks on disk while the inventory is open. When
+// they no longer match the lists on screen, the lists are replaced and any
+// staged moves go with them: they were made against a stale picture.
+func (m Model) refreshInventory() Model {
+	fresh := InitInventoryModel(m.profile.configDir)
+	if cur := m.inventory.State; fresh.err == nil && cur != nil &&
+		slices.Equal(fresh.State.Visible, cur.Visible) && slices.Equal(fresh.State.Inventory, cur.Inventory) {
+		return m
+	}
+	m = m.adoptInventory(fresh)
+	m.inventory.status = "Decks changed on disk — inventory reloaded"
+	return m
+}
+
+// adoptInventory swaps in a freshly read inventory, keeping focus and cursor.
+func (m Model) adoptInventory(fresh inventoryModel) Model {
+	prev := m.inventory
+	m.inventory = fresh
+	if fresh.err == nil { // a failed rebuild has no State; the view shows err
+		m.inventory.focusedList = prev.focusedList
+		m.inventory.cursor = prev.cursor
+		if listPtr, err := fresh.State.GetList(prev.focusedList); err == nil && m.inventory.cursor >= len(*listPtr) {
+			m.inventory.cursor = max(len(*listPtr)-1, 0)
+		}
+	}
+	return m
 }
 
 // dropSelected removes the highlighted entry from its staged list after the
