@@ -173,6 +173,7 @@ Beyond the TUI, drako gives you CLI commands for managing decks at scale:
 | `drako run [profile:]<addr>` | Run one cell from the shell and exit with its exit code; `danger` cells refuse |
 | `drako agents`              | Print a brief that teaches an AI agent to drive the deck — `drako agents >> AGENTS.md` |
 | `drako summon <repo>`       | Pull a deck from any Git host into your inventory; pin with `--sha256`/`--rev` |
+| `drako summon <folder>`     | Bring in the decks (and their assets) from a folder on disk, e.g. `drako summon .` |
 | `drako check [path ...]`    | Lint profile files; exits 1 on errors — run it in your deck repo's CI        |
 | `drako spec <name>`         | Equip the profiles a spec lists; stash the rest (context switch)             |
 | `drako stash <name>`        | Move a spec's profiles to the inventory                                      |
@@ -370,6 +371,9 @@ drako summon git@github.com:user/my_profile_collection.git
 # Verify what arrived matches what the author published (optional, recommended):
 drako summon https://example.com/deck.profile.toml --sha256 <full 64-char hex digest>
 drako summon git@github.com:user/repo.git --rev <full 40-char commit hash>
+
+# A deck you're writing, from its own folder (re-run after edits; stash it first if equipped)
+drako summon .
 ```
 
 **NOTE:** Works with any Git host (GitHub, GitLab, self-hosted). Summoned profiles land in `inventory/`, validated before copying. Summoning without a pin still works — drako just warns that the download is unverified.

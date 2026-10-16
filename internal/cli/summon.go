@@ -65,6 +65,10 @@ func (s *Summoner) Summon(sourceURL string) error {
 		return fmt.Errorf("failed to create inventory directory: %w", err)
 	}
 
+	if info, err := os.Stat(sourceURL); err == nil && info.IsDir() && !isGitURL(sourceURL) {
+		return s.summonFromFolder(sourceURL, inventoryDir)
+	}
+
 	if isGitURL(sourceURL) {
 		if s.SHA256 != "" {
 			return fmt.Errorf("--sha256 pins single-file downloads; for git repositories use --rev <full-commit-hash>")
@@ -181,13 +185,41 @@ func (s *Summoner) summonFromGit(repoURL, inventoryDir string) error {
 		}
 		fmt.Printf("✓ Verified commit: HEAD = %.12s…\n", head)
 	}
+	return s.summonFromDir(tempDir, inventoryDir, repoURL)
+}
 
-	profileFiles, specFiles, err := findRepoFiles(tempDir)
+// summonFromFolder summons the decks in a folder on disk, for authors who
+// haven't published them; it reads the folder in place.
+func (s *Summoner) summonFromFolder(dir, inventoryDir string) error {
+	if s.SHA256 != "" || s.Rev != "" {
+		return fmt.Errorf("--sha256 and --rev verify downloads; a folder on disk has nothing to pin")
+	}
+	root, err := filepath.Abs(dir)
+	if err != nil {
+		return err
+	}
+	// Inside the config dir, or around it, summon would copy decks onto themselves.
+	inside, _ := isPathWithinBase(s.ConfigDir, root)
+	around, _ := isPathWithinBase(root, s.ConfigDir)
+	if inside || around {
+		return fmt.Errorf("%s is or holds drako's config dir; summon from your deck's own folder", root)
+	}
+
+	fmt.Printf("\nYou are about to summon from a folder:\n")
+	fmt.Printf("  Source: %s\n", root)
+	fmt.Printf("  Destination: %s\n", inventoryDir)
+	return s.summonFromDir(root, inventoryDir, root)
+}
+
+// summonFromDir walks root, a clone or a local folder, and offers every
+// profile and spec in it; source names root in messages.
+func (s *Summoner) summonFromDir(root, inventoryDir, source string) error {
+	profileFiles, specFiles, err := findRepoFiles(root)
 	if err != nil {
 		return fmt.Errorf("failed to search for files: %w", err)
 	}
 	if len(profileFiles) == 0 && len(specFiles) == 0 {
-		return fmt.Errorf("no .profile.toml or .spec.toml files found in repository")
+		return fmt.Errorf("no .profile.toml or .spec.toml files found in %s", source)
 	}
 	printFoundFiles(profileFiles, specFiles)
 
@@ -207,7 +239,7 @@ func (s *Summoner) summonFromGit(repoURL, inventoryDir string) error {
 
 	// 1. Process Profile Files
 	for _, srcPath := range profileFiles {
-		outcome, err := s.summonRepoProfile(srcPath, tempDir, inventoryDir)
+		outcome, err := s.summonRepoProfile(srcPath, root, inventoryDir)
 		if err != nil {
 			return err
 		}
@@ -241,10 +273,10 @@ func (s *Summoner) summonFromGit(repoURL, inventoryDir string) error {
 		if cancelled > 0 {
 			return fmt.Errorf("no items summoned (all cancelled by user)")
 		}
-		return fmt.Errorf("no valid items found in repository (%d skipped)", skipped)
+		return fmt.Errorf("no valid items found in %s (%d skipped)", source, skipped)
 	}
 
-	log.Printf("Successfully summoned %d item(s) from repository: %s (skipped: %d, cancelled: %d)", summoned, repoURL, skipped, cancelled)
+	log.Printf("Successfully summoned %d item(s) from %s (skipped: %d, cancelled: %d)", summoned, source, skipped, cancelled)
 	return nil
 }
 

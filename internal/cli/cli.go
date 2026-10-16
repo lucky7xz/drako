@@ -186,7 +186,7 @@ func parseSummonArgs(args []string) (sourceURL, sha, rev string, err error) {
 
 // PrintSummonUsage prints the usage information for the summon command
 func PrintSummonUsage() {
-	fmt.Fprintf(os.Stderr, "Usage: drako summon <url> [--sha256 <hex64> | --rev <commit40>]\n")
+	fmt.Fprintf(os.Stderr, "Usage: drako summon <url|folder> [--sha256 <hex64> | --rev <commit40>]\n")
 	fmt.Fprintf(os.Stderr, "\nSummoned profiles are saved to ~/.config/drako/inventory/\n")
 	fmt.Fprintf(os.Stderr, "Pins verify that what arrived is what the author published;\n")
 	fmt.Fprintf(os.Stderr, "without one, drako warns and proceeds unverified.\n")
@@ -196,6 +196,8 @@ func PrintSummonUsage() {
 	fmt.Fprintf(os.Stderr, "\n  # Summon from a git repository (pin with a full commit hash):\n")
 	fmt.Fprintf(os.Stderr, "  drako summon git@github.com:user/repo.git --rev 3f81c2d...\n")
 	fmt.Fprintf(os.Stderr, "  drako summon https://github.com/user/repo.git\n")
+	fmt.Fprintf(os.Stderr, "\n  # Summon the decks you're writing, with their assets (no pins):\n")
+	fmt.Fprintf(os.Stderr, "  drako summon .\n")
 }
 
 // HandleRestoreBootstrapCommand restores every embedded bootstrap file that is
