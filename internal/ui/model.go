@@ -354,7 +354,7 @@ func (m Model) presentNextBrokenProfile() Model {
 	}
 
 	desc := "This profile has an error and was hidden from selection.\n\n"
-	if e.Name == paths.ConfigFileName || strings.HasSuffix(e.Path, paths.ConfigFileName) {
+	if e.Name == paths.ConfigFileName {
 		// Specific message for the main config
 		desc = "If your config.toml is invalid, **Rescue Mode** can be helpful.\n" +
 			"**Warning:** Default keybindings are in effect. Your custom keys may not work (since the config.toml which stores them is invalid).\n\n" +
