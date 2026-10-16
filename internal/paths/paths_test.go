@@ -7,13 +7,11 @@ import (
 	"testing"
 )
 
-// TestConfigDir pins the resolution contract the rest of the codebase
-// relies on: XDG_CONFIG_HOME wins when set, HOME/.config is the normal
-// Linux path, and an unresolvable platform directory is an error — never
-// a guessed location.
+// TestConfigDir pins ~/.config/drako on every OS, an absolute XDG_CONFIG_HOME
+// over it, and an error rather than a guessed location.
 func TestConfigDir(t *testing.T) {
-	if runtime.GOOS != "linux" {
-		t.Skip("pins Linux (XDG) behavior only")
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows finds home through USERPROFILE, not HOME")
 	}
 
 	cases := []struct {
@@ -34,6 +32,12 @@ func TestConfigDir(t *testing.T) {
 			xdg:  "",
 			home: "/fake/home",
 			want: "/fake/home/.config/drako",
+		},
+		{
+			name:    "relative XDG_CONFIG_HOME: error",
+			xdg:     "relative/xdg",
+			home:    "/fake/home",
+			wantErr: true,
 		},
 		{
 			name:    "XDG and HOME both unset: error",
@@ -66,9 +70,8 @@ func TestConfigDir(t *testing.T) {
 	}
 }
 
-// The join helpers are pure string builders; one table covers them all.
-// If a well-known name ever changes, exactly one constant and one line
-// here change with it.
+// The join helpers are pure string builders; one table covers them all, so a
+// renamed location changes one constant and one line here.
 func TestWellKnownLocations(t *testing.T) {
 	const cfg = "/fake/config/drako"
 
@@ -99,10 +102,8 @@ func TestWellKnownLocations(t *testing.T) {
 	}
 }
 
-// TestLogFilesIncludesArchives locks the coupling that the .old fix was
-// about: "drako purge --logs" must delete the rotated backups, not just the
-// live logs. If an archive is ever dropped from this list, the rotated file
-// it names would survive a purge — this test fails before that ships.
+// "drako purge --logs" deletes exactly LogFiles, so it must list the rotated
+// backups too; the order doesn't matter.
 func TestLogFilesIncludesArchives(t *testing.T) {
 	const cfg = "/fake/config/drako"
 
@@ -113,8 +114,8 @@ func TestLogFilesIncludesArchives(t *testing.T) {
 		HistoryArchive(cfg),
 	}
 
-	got := LogFiles(cfg)
-	if !slices.Equal(got, want) {
+	got := slices.Sorted(slices.Values(LogFiles(cfg)))
+	if slices.Sort(want); !slices.Equal(got, want) {
 		t.Errorf("LogFiles() = %v, want %v", got, want)
 	}
 }

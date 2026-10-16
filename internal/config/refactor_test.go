@@ -16,7 +16,7 @@ func TestRefactorBootstrap(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	// Set env var to redirect config dir
-	// GetConfigDir uses os.UserConfigDir which uses XDG_CONFIG_HOME on Linux
+	// ConfigDir honors XDG_CONFIG_HOME on every OS
 	t.Setenv("XDG_CONFIG_HOME", tempDir)
 	// Also unset HOME to forces dependency on XDG on some systems, or set HOME to tempDir
 	t.Setenv("HOME", tempDir)

@@ -1,13 +1,5 @@
-// Package paths is the single authority on where drako's files live on disk.
-//
-// It is intentionally pure: every function only computes strings and never
-// touches the filesystem. That keeps the package at the bottom of the
-// dependency graph (it imports only the standard library), so any other
-// package can use it without import cycles, and its tests need no real
-// directories.
-//
-// The rule for the rest of the codebase: never build a path to a well-known
-// drako location by hand. If a location matters, it has a name here.
+// Package paths is the one place that knows where drako's files live; it only
+// computes strings. Never build a path to a well-known location by hand.
 package paths
 
 import (
@@ -32,25 +24,24 @@ const (
 	historyArchiveName = "history.log.old"
 )
 
-// ConfigFileName is the bare filename of drako's main configuration file.
-// Exported because some callers need the name itself (matching file-watcher
-// events, addressing files relative to the config dir) rather than a full
-// path. Names that are only ever used as full paths stay unexported.
+// ConfigFileName is exported because callers match the bare name (watcher
+// events, error reports); names only used as full paths stay unexported.
 const ConfigFileName = "config.toml"
 
-// ConfigDir resolves drako's root config directory, e.g. ~/.config/drako
-// on Linux.
-//
-// It defers the platform rules to os.UserConfigDir (XDG on Linux, AppData on
-// Windows, Library/Application Support on macOS) and appends "drako". If the
-// platform directory cannot be resolved, ConfigDir returns an error rather
-// than guessing a location.
+// ConfigDir is drako's root config directory: ~/.config/drako on every OS, or
+// $XDG_CONFIG_HOME/drako when that is set. It errors rather than guess.
 func ConfigDir() (string, error) {
-	base, err := os.UserConfigDir()
-	if err != nil {
-		return "", fmt.Errorf("cannot resolve the user config directory (check HOME / XDG_CONFIG_HOME): %w", err)
+	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
+		if !filepath.IsAbs(xdg) {
+			return "", fmt.Errorf("XDG_CONFIG_HOME must be an absolute path, got %q", xdg)
+		}
+		return filepath.Join(xdg, appDirName), nil
 	}
-	return filepath.Join(base, appDirName), nil
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("cannot find your home directory: %w", err)
+	}
+	return filepath.Join(home, ".config", appDirName), nil
 }
 
 // InventoryDir is where stashed (non-equipped) profiles live.
@@ -109,9 +100,8 @@ func HistoryArchive(configDir string) string {
 	return filepath.Join(configDir, historyArchiveName)
 }
 
-// LogFiles lists every log file drako may have written, including the
-// rotated backups. This is the authoritative deletion list for
-// "drako purge --logs".
+// LogFiles is every log drako writes, rotated backups included: exactly what
+// "drako purge --logs" deletes.
 func LogFiles(configDir string) []string {
 	return []string{
 		LogFile(configDir),

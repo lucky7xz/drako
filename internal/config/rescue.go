@@ -8,7 +8,7 @@ import (
 )
 
 // shellQuote keeps s one argument for the rescue shell, spaces and quotes
-// included (macOS config lives under "Application Support").
+// included (a home directory can hold both).
 func shellQuote(shell, s string) string {
 	if shell == "powershell" {
 		return "'" + strings.ReplaceAll(s, "'", "''") + "'"

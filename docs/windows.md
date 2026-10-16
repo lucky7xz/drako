@@ -16,13 +16,13 @@ go install github.com/lucky7xz/drako@latest
 
 ## Configuration
 
-On Windows, your configuration lives in the standard AppData location:
+On Windows, as everywhere, your configuration lives in `.config\drako` under your home folder:
 
 ```
-%APPDATA%\drako\config.toml
+%USERPROFILE%\.config\drako\config.toml
 ```
 
-(Usually `C:\Users\YourName\AppData\Roaming\drako\config.toml`)
+(Usually `C:\Users\YourName\.config\drako\config.toml`; `XDG_CONFIG_HOME` overrides it.)
 
 ## Features
 
