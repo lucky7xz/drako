@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -89,5 +90,62 @@ func TestWatcherLeavesAnUpToDateInventory(t *testing.T) {
 
 	if m.inventory.status != "Trashed c → trash/" {
 		t.Errorf("status = %q, want it kept", m.inventory.status)
+	}
+}
+
+// Saving a deck changes what is in a file, not where the decks are, so the
+// staged arrangement and the cursor survive the editor closing.
+func TestEditKeepsStagedMoves(t *testing.T) {
+	m, dir := openInventory(t)
+	st := m.inventory.State
+	if err := st.PickUpItem(core.ListVisible, 0); err != nil { // stage a stash
+		t.Fatal(err)
+	}
+	if err := st.PlaceItem(core.ListInventory, 0); err != nil {
+		t.Fatal(err)
+	}
+	staged := slices.Clone(st.Visible)
+
+	core := filepath.Join(dir, "core.profile.toml")
+	next, _ := m.afterEdit(editorFinishedMsg{path: core})
+	next, _ = next.(Model).Update(ConfigChangedMsg{Path: core}) // the watcher sees the save
+	m = next.(Model)
+
+	if !slices.Equal(m.inventory.State.Visible, staged) {
+		t.Errorf("Visible = %v, want the staged %v", m.inventory.State.Visible, staged)
+	}
+}
+
+// drako's own trash is not a change on disk to the inventory: the staged
+// arrangement and the verdict survive the watcher event it causes.
+func TestOwnTrashKeepsStagedMoves(t *testing.T) {
+	m, dir := openInventory(t)
+	extra := filepath.Join(dir, "extra.profile.toml")
+	for _, f := range []string{extra, filepath.Join(dir, "zz.profile.toml")} {
+		if err := os.WriteFile(f, []byte("x = 1\ny = 1\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	m = m.refreshInventory() // core, extra, zz
+	st := m.inventory.State
+	if err := st.PickUpItem(core.ListVisible, 2); err != nil { // stage a stash of zz
+		t.Fatal(err)
+	}
+	if err := st.PlaceItem(core.ListInventory, 0); err != nil {
+		t.Fatal(err)
+	}
+	m.inventory.cursor = 1 // extra
+	for _, k := range []tea.KeyMsg{{Type: tea.KeyDelete}, {Type: tea.KeyRunes, Runes: []rune("extra")}, {Type: tea.KeyEnter}} {
+		next, _ := m.Update(k)
+		m = next.(Model)
+	}
+	next, _ := m.Update(ConfigChangedMsg{Path: extra})
+	m = next.(Model)
+
+	if got := m.inventory.State.Visible; len(got) != 1 || got[0] != "core.profile.toml" {
+		t.Errorf("Visible = %v, want only core", got)
+	}
+	if !strings.HasPrefix(m.inventory.status, "Trashed extra") {
+		t.Errorf("status = %q, want the trash verdict kept", m.inventory.status)
 	}
 }

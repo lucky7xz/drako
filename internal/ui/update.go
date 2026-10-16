@@ -405,9 +405,8 @@ func (m Model) updateInfoMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 }
 
-// afterEdit reacts to the external editor closing: reload everything, let
-// the broken-profile queue take over if the edit broke an equipped profile,
-// otherwise return to the inventory view with a validity verdict.
+// afterEdit reloads after the editor closes: broken decks go to the queue, else
+// back to the inventory with a verdict. Its lists stay; an edit moves no deck.
 func (m Model) afterEdit(msg editorFinishedMsg) (tea.Model, tea.Cmd) {
 	if msg.err != nil {
 		m.inventory.status = "Edit failed: " + msg.err.Error()
@@ -435,9 +434,6 @@ func (m Model) afterEdit(msg editorFinishedMsg) (tea.Model, tea.Cmd) {
 		m.profile.errorQueueActive = true
 		return m.presentNextBrokenProfile(), nil
 	}
-
-	// Rebuild the inventory (validity may have changed), keep the cursor.
-	m = m.adoptInventory(InitInventoryModel(m.profile.configDir))
 
 	name := filepath.Base(msg.path)
 	if err := config.CheckProfileFile(msg.path); err != nil {

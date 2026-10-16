@@ -51,6 +51,10 @@ type inventoryModel struct {
 
 	// specs is the spec-function picker, nil when it is closed.
 	specs *specsOverlay
+
+	// seen is both lists as last read from disk, so refreshInventory can tell
+	// a change on disk from a staged move.
+	seen [2][]string
 }
 
 // pendingDelete is a delete waiting on confirmation: the user types the
@@ -140,7 +144,7 @@ func InitInventoryModel(configDir string) inventoryModel {
 
 	state := core.NewInventoryState(visible, inventory, profiles.MaxEquipped)
 
-	return inventoryModel{State: state}
+	return inventoryModel{State: state, seen: [2][]string{slices.Clone(visible), slices.Clone(inventory)}}
 }
 
 // selectedFilePath resolves the highlighted list item to its current on-disk
@@ -427,6 +431,9 @@ func (m Model) updatePendingDelete(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		inv.dropSelected()
+		for i := range inv.seen { // drako's own trash is no news to refreshInventory
+			inv.seen[i] = slices.DeleteFunc(inv.seen[i], func(f string) bool { return f == filepath.Base(pd.rel) })
+		}
 		inv.status, inv.statusOK = "Trashed "+pd.name+" → trash/", true
 		return m, nil
 
@@ -442,21 +449,14 @@ func (m Model) updatePendingDelete(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // refreshInventory rereads the decks on disk while the inventory is open. When
-// they no longer match the lists on screen, the lists are replaced and any
-// staged moves go with them: they were made against a stale picture.
+// they changed since the last read, the lists are replaced and any staged
+// moves go with them: they were made against a stale picture.
 func (m Model) refreshInventory() Model {
 	fresh := InitInventoryModel(m.profile.configDir)
-	if cur := m.inventory.State; fresh.err == nil && cur != nil &&
-		slices.Equal(fresh.State.Visible, cur.Visible) && slices.Equal(fresh.State.Inventory, cur.Inventory) {
+	if old := m.inventory.seen; fresh.err == nil && m.inventory.err == nil &&
+		slices.Equal(fresh.seen[0], old[0]) && slices.Equal(fresh.seen[1], old[1]) {
 		return m
 	}
-	m = m.adoptInventory(fresh)
-	m.inventory.status = "Decks changed on disk — inventory reloaded"
-	return m
-}
-
-// adoptInventory swaps in a freshly read inventory, keeping focus and cursor.
-func (m Model) adoptInventory(fresh inventoryModel) Model {
 	prev := m.inventory
 	m.inventory = fresh
 	if fresh.err == nil { // a failed rebuild has no State; the view shows err
@@ -465,6 +465,7 @@ func (m Model) adoptInventory(fresh inventoryModel) Model {
 		if listPtr, err := fresh.State.GetList(prev.focusedList); err == nil && m.inventory.cursor >= len(*listPtr) {
 			m.inventory.cursor = max(len(*listPtr)-1, 0)
 		}
+		m.inventory.status = "Decks changed on disk — inventory reloaded"
 	}
 	return m
 }

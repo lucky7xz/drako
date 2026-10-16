@@ -69,39 +69,6 @@ func TestApplyRefusedWhileHolding(t *testing.T) {
 	}
 }
 
-// The inventory rebuild after an edit can fail (here inventory/ is a file);
-// afterEdit must show that error, not dereference the missing state.
-func TestAfterEditSurvivesUnreadableInventory(t *testing.T) {
-	xdg := t.TempDir()
-	t.Setenv("XDG_CONFIG_HOME", xdg)
-	dir := filepath.Join(xdg, "drako")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	good := filepath.Join(dir, "good.profile.toml")
-	if err := os.WriteFile(good, []byte("x = 1\ny = 1\n[[commands]]\nname = \"hi\"\ncommand = \"echo hi\"\nrow = 0\ncol = \"a\"\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	m := InitialModel(false, Session{})
-	if err := os.RemoveAll(filepath.Join(dir, "inventory")); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "inventory"), []byte("not a directory"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	m.mode, m.inventory.focusedList = inventoryMode, 0 // cursor on the equipped list
-
-	defer func() {
-		if r := recover(); r != nil {
-			t.Fatalf("afterEdit panicked: %v", r)
-		}
-	}()
-	next, _ := m.afterEdit(editorFinishedMsg{path: good})
-	if next.(Model).inventory.err == nil {
-		t.Error("the failed rebuild should surface as the inventory error")
-	}
-}
-
 // Apply means the user is done, so its reload closes the inventory. A file
 // changing on disk must leave it open: TestReloadKeepsTheInventoryOpen.
 func TestApplyClosesTheInventory(t *testing.T) {
