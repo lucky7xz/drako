@@ -7,7 +7,9 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
+	"strings"
 
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/paths"
@@ -78,6 +80,7 @@ func runChecks(out io.Writer, files []string) int {
 	filesWithErrors := 0
 	total := 0
 	var rows [][]string
+	twins := caseTwins(files)
 	for _, f := range files {
 		src, err := os.ReadFile(f)
 		var findings []config.Finding
@@ -88,6 +91,10 @@ func runChecks(out io.Writer, files []string) int {
 			findings = config.CheckSettings(src)
 		default:
 			findings = config.CheckProfile(src)
+		}
+		if len(twins[f]) > 0 {
+			findings = append(findings, config.Finding{Level: "warning", Msg: fmt.Sprintf(
+				"clashes with %s: drako ignores case in deck names", strings.Join(twins[f], ", "))})
 		}
 
 		if len(findings) == 0 {
@@ -113,4 +120,26 @@ func runChecks(out io.Writer, files []string) int {
 			total, len(files), filesWithErrors)
 	}
 	return filesWithErrors
+}
+
+// caseTwins maps each deck file to the other deck files whose names differ
+// from its own only by case, which drako's name matching cannot tell apart.
+func caseTwins(files []string) map[string][]string {
+	byNorm := map[string][]string{}
+	for _, f := range files {
+		if base := filepath.Base(f); base != paths.ConfigFileName {
+			n := profiles.NormalizeName(base)
+			byNorm[n] = append(byNorm[n], base)
+		}
+	}
+	twins := map[string][]string{}
+	for _, f := range files {
+		base := filepath.Base(f)
+		for _, other := range byNorm[profiles.NormalizeName(base)] {
+			if other != base && !slices.Contains(twins[f], other) {
+				twins[f] = append(twins[f], other)
+			}
+		}
+	}
+	return twins
 }

@@ -128,3 +128,29 @@ func TestCheck_CoversConfigTomlAsSettings(t *testing.T) {
 		}
 	}
 }
+
+// drako matches deck names case-insensitively, so Git and git are one deck to it.
+func TestRunChecks_WarnsOnNamesDifferingOnlyByCase(t *testing.T) {
+	dir := t.TempDir()
+	inv := filepath.Join(dir, "inventory")
+	if err := os.MkdirAll(inv, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	upper := writeCheckFile(t, dir, "Git.profile.toml", cleanProfile)
+	lower := writeCheckFile(t, inv, "git.profile.toml", cleanProfile)
+	other := writeCheckFile(t, dir, "work.profile.toml", cleanProfile)
+
+	var out strings.Builder
+	if errs := runChecks(&out, []string{upper, lower, other}); errs != 0 {
+		t.Errorf("a case clash is a warning, not an error: %d file(s) with errors", errs)
+	}
+	got := out.String()
+	if n := strings.Count(got, "warning"); n != 2 {
+		t.Errorf("want a warning on each of the two files, got %d:\n%s", n, got)
+	}
+	for _, line := range strings.Split(got, "\n") {
+		if strings.Contains(line, "work.profile.toml") && !strings.Contains(line, "ok") {
+			t.Errorf("work should stay clean: %s", line)
+		}
+	}
+}
