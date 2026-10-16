@@ -3,8 +3,6 @@ package config
 import (
 	"fmt"
 	"log"
-	"slices"
-	"sort"
 	"strings"
 
 	profilepkg "github.com/lucky7xz/drako/internal/profiles"
@@ -13,24 +11,19 @@ import (
 // Profile selection policy, factored out of LoadConfig so each rule is a
 // pure function: same inputs, same choice, no filesystem.
 
-// reorderByPivot arranges profiles to match the pivot's equipped order;
-// profiles not named in order are appended sorted by name. An empty order
-// returns profiles unchanged.
+// reorderByPivot arranges profiles in the pivot's equipped order, the same
+// profiles.Order the inventory uses, so the two never disagree.
 func reorderByPivot(profiles []ProfileInfo, order []string) []ProfileInfo {
-	if len(order) == 0 {
-		return profiles
+	byName := make(map[string]ProfileInfo, len(profiles))
+	names := make([]string, len(profiles))
+	for i, p := range profiles {
+		byName[p.Name], names[i] = p, p.Name
 	}
-	rest := slices.Clone(profiles) // a list, not a map: Git and git are two decks
-	var ordered []ProfileInfo
-	for _, n := range order {
-		norm := profilepkg.NormalizeName(n)
-		if i := slices.IndexFunc(rest, func(p ProfileInfo) bool { return profilepkg.NormalizeName(p.Name) == norm }); i >= 0 {
-			ordered = append(ordered, rest[i])
-			rest = slices.Delete(rest, i, i+1)
-		}
+	out := make([]ProfileInfo, 0, len(profiles))
+	for _, n := range profilepkg.Order(names, order) {
+		out = append(out, byName[n])
 	}
-	sort.Slice(rest, func(i, j int) bool { return rest[i].Name < rest[j].Name })
-	return append(ordered, rest...)
+	return out
 }
 
 type profileRequest struct {

@@ -9,6 +9,7 @@ package profiles
 
 import (
 	"os"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -40,6 +41,24 @@ func NormalizeName(name string) string {
 	n = strings.TrimSuffix(n, ".toml")
 	n = strings.TrimSuffix(n, ".profile")
 	return n
+}
+
+// Order arranges deck names or filenames as the grid shows them: those named in
+// order first (matched by NormalizeName), then the rest sorted by deck name.
+func Order(items, order []string) []string {
+	rest := slices.Clone(items)
+	sort.Slice(rest, func(i, j int) bool {
+		return strings.TrimSuffix(rest[i], ProfileSuffix) < strings.TrimSuffix(rest[j], ProfileSuffix)
+	})
+	var ordered []string
+	for _, n := range order {
+		norm := NormalizeName(n)
+		if i := slices.IndexFunc(rest, func(r string) bool { return NormalizeName(r) == norm }); i >= 0 {
+			ordered = append(ordered, rest[i])
+			rest = slices.Delete(rest, i, i+1)
+		}
+	}
+	return append(ordered, rest...)
 }
 
 // List returns every *.profile.toml file in dir, sorted by Name. A missing

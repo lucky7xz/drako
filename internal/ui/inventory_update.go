@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -67,25 +66,6 @@ type pendingDelete struct {
 	typed string
 }
 
-// NewList creates a new list of profiles by scanning a directory for .profile.toml files.
-func NewList(dir string) ([]string, error) {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return []string{}, nil
-		}
-		return nil, err
-	}
-
-	var files []string
-	for _, entry := range entries {
-		if !entry.IsDir() && strings.HasSuffix(entry.Name(), profiles.ProfileSuffix) {
-			files = append(files, entry.Name())
-		}
-	}
-	return files, nil
-}
-
 // InitInventoryModel creates the initial state for the inventory TUI.
 func InitInventoryModel(configDir string) inventoryModel {
 	inventoryDir := paths.InventoryDir(configDir)
@@ -95,52 +75,21 @@ func InitInventoryModel(configDir string) inventoryModel {
 		return inventoryModel{err: err}
 	}
 
-	visibleFiles, err := NewList(configDir)
+	equipped, err := profiles.List(configDir)
 	if err != nil {
 		log.Printf("could not read config directory: %v", err)
 		return inventoryModel{err: err}
 	}
-
-	inventory, err := NewList(inventoryDir)
+	stashed, err := profiles.List(inventoryDir)
 	if err != nil {
 		log.Printf("could not read inventory directory: %v", err)
 		return inventoryModel{err: err}
 	}
 
-	// Sort inventory list alphabetically
-	sort.Strings(inventory)
-
-	// Order the visible list by the persisted equipped_order, which uses
-	// canonical names (e.g., "core", "nw_pro"); leftovers follow alphabetically.
-	var visible []string // contains filenames for overlays
-	if pf, err := config.ReadPivotProfile(configDir); err == nil && len(pf.EquippedOrder) > 0 {
-		// Canonical name -> filename; entries are consumed as the saved
-		// order claims them, leftovers get appended below.
-		remaining := make(map[string]string, len(visibleFiles))
-		for _, f := range visibleFiles {
-			remaining[strings.TrimSuffix(f, profiles.ProfileSuffix)] = f
-		}
-
-		for _, n := range pf.EquippedOrder {
-			if f, ok := remaining[n]; ok {
-				visible = append(visible, f)
-				delete(remaining, n)
-			}
-		}
-		// Append any leftovers alphabetically by name
-		var restNames []string
-		for n := range remaining {
-			restNames = append(restNames, n)
-		}
-		sort.Strings(restNames)
-		for _, n := range restNames {
-			visible = append(visible, remaining[n])
-		}
-	} else {
-		// No saved order: files alphabetically
-		sort.Strings(visibleFiles)
-		visible = append(visible, visibleFiles...)
-	}
+	// Equipped decks in the grid's order; an unreadable pivot.toml means none saved.
+	pf, _ := config.ReadPivotProfile(configDir)
+	visible := profiles.Order(profiles.Files(equipped), pf.EquippedOrder)
+	inventory := profiles.Files(stashed)
 
 	state := core.NewInventoryState(visible, inventory, profiles.MaxEquipped)
 

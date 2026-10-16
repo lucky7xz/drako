@@ -37,7 +37,7 @@ func PlannedEquippedCount(configDir string, desired []string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	moves := planReconcile(fileNames(equipped), fileNames(inventory), desired)
+	moves := planReconcile(Files(equipped), Files(inventory), desired)
 	return finalCount(len(equipped), moves), nil
 }
 
@@ -79,7 +79,7 @@ func reconcile(configDir string, desired []string, enforceCap bool) (Result, err
 		return Result{}, err
 	}
 
-	moves := planReconcile(fileNames(equipped), fileNames(inventory), desired)
+	moves := planReconcile(Files(equipped), Files(inventory), desired)
 	if enforceCap {
 		if err := checkCap(len(equipped), moves); err != nil {
 			return Result{}, err
@@ -128,8 +128,8 @@ func checkCap(equipped int, moves []move) error {
 	return nil
 }
 
-// fileNames extracts the on-disk filenames from a slice of entries.
-func fileNames(entries []Entry) []string {
+// Files extracts the on-disk filenames from a slice of entries.
+func Files(entries []Entry) []string {
 	names := make([]string, len(entries))
 	for i, e := range entries {
 		names[i] = e.File
