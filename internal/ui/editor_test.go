@@ -99,6 +99,23 @@ func TestInventoryEditGuards(t *testing.T) {
 		}
 	})
 
+	// Staged moves are not on disk yet: st still sits in inventory/.
+	t.Run("a staged deck opens from where it sits", func(t *testing.T) {
+		m, _ := editInventoryModel(t)
+		t.Setenv("VISUAL", "true")
+		if err := m.inventory.State.PickUpItem(core.ListInventory, 0); err != nil {
+			t.Fatal(err)
+		}
+		if err := m.inventory.State.PlaceItem(core.ListVisible, 1); err != nil {
+			t.Fatal(err)
+		}
+		m.inventory.focusedList, m.inventory.cursor = core.ListVisible, 1
+		tm, cmd := m.updateInventoryMode(keyRune("e"))
+		if cmd == nil {
+			t.Fatalf("expected an editor command, status = %q", tm.(Model).inventory.status)
+		}
+	})
+
 	t.Run("selected file launches the editor", func(t *testing.T) {
 		m, _ := editInventoryModel(t)
 		t.Setenv("VISUAL", "true") // /usr/bin/true: exits instantly if ever run
@@ -109,18 +126,18 @@ func TestInventoryEditGuards(t *testing.T) {
 	})
 }
 
-func TestSelectedFilePath(t *testing.T) {
+func TestSelectedFile(t *testing.T) {
 	m, dir := editInventoryModel(t)
 
-	if p, ok := m.inventory.selectedFilePath(dir); !ok || p != filepath.Join(dir, "eq.profile.toml") {
-		t.Errorf("equipped path = %q (%v)", p, ok)
+	if rel, _, ok := m.inventory.selectedFile(dir); !ok || rel != "eq.profile.toml" {
+		t.Errorf("equipped path = %q (%v)", rel, ok)
 	}
 	m.inventory.focusedList = core.ListInventory
-	if p, ok := m.inventory.selectedFilePath(dir); !ok || p != filepath.Join(dir, "inventory", "st.profile.toml") {
-		t.Errorf("inventory path = %q (%v)", p, ok)
+	if rel, _, ok := m.inventory.selectedFile(dir); !ok || rel != filepath.Join("inventory", "st.profile.toml") {
+		t.Errorf("inventory path = %q (%v)", rel, ok)
 	}
 	m.inventory.focusedList = 3 // rescue button
-	if _, ok := m.inventory.selectedFilePath(dir); ok {
+	if _, _, ok := m.inventory.selectedFile(dir); ok {
 		t.Error("button rows must not resolve to a path")
 	}
 }

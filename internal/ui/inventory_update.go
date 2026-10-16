@@ -147,24 +147,6 @@ func InitInventoryModel(configDir string) inventoryModel {
 	return inventoryModel{State: state, seen: [2][]string{slices.Clone(visible), slices.Clone(inventory)}}
 }
 
-// selectedFilePath resolves the highlighted list item to its current on-disk
-// location. Staged (unapplied) moves don't matter: disk is unchanged until
-// Apply Changes runs. ok is false when a button row or no item is selected.
-func (inv inventoryModel) selectedFilePath(configDir string) (string, bool) {
-	if inv.focusedList != core.ListVisible && inv.focusedList != core.ListInventory {
-		return "", false
-	}
-	listPtr, err := inv.State.GetList(inv.focusedList)
-	if err != nil || inv.cursor < 0 || inv.cursor >= len(*listPtr) {
-		return "", false
-	}
-	name := (*listPtr)[inv.cursor]
-	if inv.focusedList == core.ListVisible {
-		return filepath.Join(configDir, name), true
-	}
-	return filepath.Join(paths.InventoryDir(configDir), name), true
-}
-
 // isLockedProfile reports whether name is the profile the pivot lock points
 // at. Moving or deleting it would quietly change what drako launches next, so
 // both refuse and send the user to the grid to break the lock themselves.
@@ -178,12 +160,9 @@ func (m Model) lockedRefusal() string {
 	return "Locked profile — unlock it with " + m.Config.Keys.Lock + " in the grid"
 }
 
-// trashTarget resolves the highlighted item to where it actually sits on disk,
-// which can differ from the list it is currently shown in: lift-and-place is
-// staged until Apply runs, so an item dragged out of the inventory is still an
-// inventory file. Returns the path relative to configDir, as MoveToTrash wants
-// it, plus the display name for the confirmation prompt.
-func (inv inventoryModel) trashTarget(configDir string) (rel, name string, ok bool) {
+// selectedFile finds where the highlighted deck really is: staged moves leave
+// files in place, so it may differ from its list. rel is relative to configDir.
+func (inv inventoryModel) selectedFile(configDir string) (rel, name string, ok bool) {
 	if inv.focusedList != core.ListVisible && inv.focusedList != core.ListInventory {
 		return "", "", false
 	}
@@ -308,15 +287,11 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			inv.status = "Place the held item before editing"
 			return m, nil
 		}
-		path, ok := inv.selectedFilePath(m.profile.configDir)
+		rel, _, ok := inv.selectedFile(m.profile.configDir)
 		if !ok {
 			return m, nil
 		}
-		if _, err := os.Stat(path); err != nil {
-			inv.status = "Cannot edit: " + err.Error()
-			return m, nil
-		}
-		return m, openInEditorCmd(path)
+		return m, openInEditorCmd(filepath.Join(m.profile.configDir, rel))
 
 	// Arm a delete; the trashing itself waits on the typed name.
 	case IsDelete(m.Config.Keys, msg):
@@ -329,7 +304,7 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			inv.status = "Place the held item before deleting"
 			return m, nil
 		}
-		rel, name, ok := inv.trashTarget(m.profile.configDir)
+		rel, name, ok := inv.selectedFile(m.profile.configDir)
 		if !ok {
 			return m, nil
 		}
