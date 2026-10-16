@@ -71,11 +71,7 @@ func Run() int {
 	// =======================================
 	// Logging setup
 
-	// Rotate if > 1MB
-	logPath := paths.LogFile(configDir)
-	core.RotateLogIfNeeded(logPath, paths.LogArchive(configDir), 1024*1024)
-
-	f, err := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	f, err := core.OpenLog(configDir)
 	if err != nil {
 		// NOTE: cli.go treats this as a non-fatal warning and continues;
 		// reconcile (warn vs exit) in a follow-up.

@@ -42,6 +42,14 @@ func LogExecution(selected, executed string) {
 	}
 }
 
+// OpenLog opens drako.log for appending, rotating it first once it passes 1 MB.
+// The TUI and every CLI command log through it.
+func OpenLog(configDir string) (*os.File, error) {
+	path := paths.LogFile(configDir)
+	RotateLogIfNeeded(path, paths.LogArchive(configDir), 1024*1024)
+	return os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o600)
+}
+
 // RotateLogIfNeeded renames path to archivePath if path exceeds maxBytes,
 // overwriting any previous backup. The caller supplies archivePath (from
 // paths) so the backup-naming convention lives in one place.

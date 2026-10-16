@@ -135,3 +135,22 @@ func TestLogExecutionKeepsHistoryPrivate(t *testing.T) {
 		t.Errorf("history.log mode = %o, want 600", mode)
 	}
 }
+
+// The TUI and the CLI share OpenLog, so a CLI-only user still gets rotation.
+func TestOpenLogRotatesPastOneMB(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "drako.log"), strings.Repeat("x", 1024*1024+1))
+
+	f, err := OpenLog(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.Close()
+
+	if info, err := os.Stat(filepath.Join(dir, "drako.log")); err != nil || info.Size() != 0 {
+		t.Errorf("want a fresh drako.log, got %v, %v", info, err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "drako.log.old")); err != nil {
+		t.Errorf("want the old log archived: %v", err)
+	}
+}

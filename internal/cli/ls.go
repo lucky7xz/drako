@@ -14,6 +14,7 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/core"
 	"github.com/lucky7xz/drako/internal/paths"
 	"golang.org/x/term"
 )
@@ -38,7 +39,7 @@ const (
 func quietLogs() {
 	log.SetOutput(io.Discard)
 	if configDir, err := paths.ConfigDir(); err == nil {
-		if f, err := os.OpenFile(paths.LogFile(configDir), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o644); err == nil {
+		if f, err := core.OpenLog(configDir); err == nil {
 			log.SetOutput(f)
 		}
 	}
