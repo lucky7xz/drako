@@ -55,6 +55,17 @@ func TestLoadSpec_EmptyProfilesIsNotAnError(t *testing.T) {
 	}
 }
 
+// A mistyped key must not read as an empty list: applying that strips every deck.
+func TestLoadSpec_UnknownKeyIsAnError(t *testing.T) {
+	dir := t.TempDir()
+	writeSpec(t, dir, "typo.spec.toml", "profile = [\"git\"]\n")
+
+	_, err := LoadSpec(filepath.Join(dir, "typo.spec.toml"))
+	if err == nil || !strings.Contains(err.Error(), "profile") {
+		t.Fatalf("err = %v, want it to name the unknown key", err)
+	}
+}
+
 // One unreadable spec must not cost the caller every other spec in the
 // directory — the same contract DiscoverProfilesWithErrors keeps.
 func TestDiscoverSpecs_CarriesPerFileErrors(t *testing.T) {

@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 	profilepkg "github.com/lucky7xz/drako/internal/profiles"
@@ -30,8 +31,13 @@ type SpecInfo struct {
 // through here, so "what a spec is" is stated once.
 func LoadSpec(path string) ([]string, error) {
 	var sf specFile
-	if _, err := toml.DecodeFile(path, &sf); err != nil {
+	meta, err := toml.DecodeFile(path, &sf)
+	if err != nil {
 		return nil, err
+	}
+	// A typo like "profile" must not read as an empty list: applying that stashes every deck.
+	if unknown := undecodedKeys(meta); len(unknown) > 0 {
+		return nil, fmt.Errorf("unrecognized key(s): %s (check for a typo)", strings.Join(unknown, ", "))
 	}
 	return sf.Profiles, nil
 }

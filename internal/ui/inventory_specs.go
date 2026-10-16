@@ -297,6 +297,13 @@ func (m Model) planVerdict(p specPlan) (string, verdictKind) {
 	case p.parseErr != nil:
 		return fmt.Sprintf("%s does not parse: %v", p.subject(), p.parseErr), verdictBlocked
 
+	case p.verb == specEquip && len(p.profiles) == 0:
+		return fmt.Sprintf("%s lists no decks", p.subject()), verdictBlocked
+
+	case p.verb == specEquip && len(p.missing) == len(p.profiles):
+		// Equipping it would stash every deck; strip is the row for that.
+		return fmt.Sprintf("%s: none installed (%s)", p.subject(), summarizeNames(p.missing)), verdictBlocked
+
 	case m.inventory.State.CanArrange(p.desired) != nil:
 		return fmt.Sprintf("%s: %v", p.subject(), m.inventory.State.CanArrange(p.desired)), verdictBlocked
 

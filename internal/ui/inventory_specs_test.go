@@ -225,6 +225,22 @@ func TestSpecRows_IncompleteSpecWarnsButStillRuns(t *testing.T) {
 	}
 }
 
+// Equipping a spec with no installed deck would stash everything.
+func TestSpecRows_SpecWithNothingInstalledIsBlocked(t *testing.T) {
+	m, _ := specsInventoryModel(t, []string{"eq"}, []string{"st"}, map[string]string{
+		"ops":   specList("ghost"),
+		"empty": "profiles = []\n",
+	})
+
+	m = send(t, m, keyType(tea.KeyTab))
+
+	for _, name := range []string{"ops", "empty"} {
+		if _, kind := verdictFor(t, m, specEquip, name); kind != verdictBlocked {
+			t.Errorf("%s: kind = %d, want verdictBlocked", name, kind)
+		}
+	}
+}
+
 func TestSpecsOverlay_IncompleteSpecEquipsWhatExists(t *testing.T) {
 	m, _ := specsInventoryModel(t, []string{"eq"}, []string{"st"}, map[string]string{
 		"ops": specList("st", "ghost"),

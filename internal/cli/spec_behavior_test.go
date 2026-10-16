@@ -93,6 +93,23 @@ func TestApplySpec_EquipsTargetsStashesRest(t *testing.T) {
 	}
 }
 
+// A spec that names no installed deck would stash everything; it is refused
+// before anything moves.
+func TestApplySpec_RefusesWhenNothingMatches(t *testing.T) {
+	cfg := t.TempDir()
+	writeProfile(t, cfg, "git")
+
+	for _, target := range [][]string{{"gti"}, nil} {
+		err := ApplySpec(cfg, target, false)
+		if err == nil {
+			t.Fatalf("ApplySpec(%v) = nil, want a refusal", target)
+		}
+		if !exists(t, cfg, "git.profile.toml") {
+			t.Fatalf("ApplySpec(%v) moved git", target)
+		}
+	}
+}
+
 // A deck may legitimately list more profiles than the leader chords address,
 // but only the confirmed path is allowed to apply it.
 func TestApplySpec_OverCapNeedsConsent(t *testing.T) {

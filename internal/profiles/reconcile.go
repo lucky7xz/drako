@@ -41,6 +41,26 @@ func PlannedEquippedCount(configDir string, desired []string) (int, error) {
 	return finalCount(len(equipped), moves), nil
 }
 
+// Unmatched returns the names in desired that match no profile file in
+// either location.
+func Unmatched(configDir string, desired []string) ([]string, error) {
+	equipped, inventory, err := listBothLocations(configDir)
+	if err != nil {
+		return nil, err
+	}
+	have := make(map[string]bool, len(equipped)+len(inventory))
+	for _, e := range append(equipped, inventory...) {
+		have[e.Norm] = true
+	}
+	var missing []string
+	for _, d := range desired {
+		if !have[NormalizeName(d)] {
+			missing = append(missing, d)
+		}
+	}
+	return missing, nil
+}
+
 func listBothLocations(configDir string) (equipped, inventory []Entry, err error) {
 	equipped, err = List(configDir)
 	if err != nil {

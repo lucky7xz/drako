@@ -241,6 +241,21 @@ func StashSpec(configDir string, targetProfiles []string) error {
 // MaxEquipped ceiling and must only be set once the user has confirmed the
 // overflow — see HandleSpecCommand.
 func ApplySpec(configDir string, targetProfiles []string, allowOverCap bool) error {
+	// A spec that matches no deck would stash everything; strip is the command for that.
+	missing, err := profiles.Unmatched(configDir, targetProfiles)
+	if err != nil {
+		return err
+	}
+	if len(targetProfiles) == 0 {
+		return errors.New("the spec lists no profiles; nothing changed (drako strip stashes everything)")
+	}
+	if len(missing) == len(targetProfiles) {
+		return fmt.Errorf("none of the spec's profiles are installed (%s); nothing changed", strings.Join(missing, ", "))
+	}
+	if len(missing) > 0 {
+		fmt.Printf("  ! Skipped (not installed): %s\n", strings.Join(missing, ", "))
+	}
+
 	// Equip the targets, stash the rest — file moves live in the profiles
 	// package; the CLI keeps the pivot bookkeeping and feedback.
 	reconcile := profiles.Reconcile
