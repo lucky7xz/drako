@@ -39,7 +39,7 @@ func profileAssets(profile config.ProfileFile) []string {
 }
 
 // copyAssetsList copies a list of assets (files or directories) from the cloned repo into configDir's assets.
-// - repoRoot: tempDir where repo was cloned
+// - repoRoot: the clone or folder being summoned from
 // - profileDir: directory of the profile file (assets are relative to this)
 // - profileName: name of the profile (used for subfolder isolation)
 // Returns counts of copied/skipped/missing and total bytes copied.
@@ -271,8 +271,8 @@ func isPathWithinBase(base, target string) (bool, error) {
 	// Where /home is a symlink — Fedora atomic points it at /var/home — an
 	// unresolved base can never contain a resolved target, and every asset
 	// reads as [missing]:
-	//   base    /home/you/.config/drako/inventory/.summon-temp
-	//   target  /var/home/you/.config/drako/inventory/.summon-temp/serve.sh
+	//   base    /home/you/decks
+	//   target  /var/home/you/decks/serve.sh
 	// The target is still resolved in full, so the escape check below holds.
 	if resolvedBase, rerr := filepath.EvalSymlinks(baseAbs); rerr == nil {
 		baseAbs = resolvedBase

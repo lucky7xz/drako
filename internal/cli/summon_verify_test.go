@@ -194,6 +194,9 @@ func TestSummonGitRevChecksOutThePinnedCommit(t *testing.T) {
 	git("commit", "-qam", "v2")
 
 	s := &Summoner{ConfigDir: t.TempDir(), Downloader: &MockDownloader{}, Cloner: &GitCloner{}, UI: &yesToAll{}, Rev: pinned}
+	// A clone a Ctrl-C left behind in the old fixed spot must not get in the way.
+	os.MkdirAll(filepath.Join(s.ConfigDir, "inventory", ".summon-temp"), 0o755)
+	os.WriteFile(filepath.Join(s.ConfigDir, "inventory", ".summon-temp", "leftover"), nil, 0o644)
 	if err := s.Summon(src); err != nil {
 		t.Fatalf("Summon pinned to the older commit: %v", err)
 	}

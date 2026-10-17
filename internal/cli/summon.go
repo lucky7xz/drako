@@ -161,8 +161,11 @@ const (
 // summonFromGit clones a profile repository and walks the user through
 // summoning every profile and spec file it contains.
 func (s *Summoner) summonFromGit(repoURL, inventoryDir string) error {
-	// Create a temporary directory for cloning
-	tempDir := filepath.Join(inventoryDir, ".summon-temp")
+	// A fresh dir per run: one left by a Ctrl-C can't block the next summon.
+	tempDir, err := os.MkdirTemp("", "drako-summon-*")
+	if err != nil {
+		return err
+	}
 	defer os.RemoveAll(tempDir)
 
 	// Clone the repository using injected Cloner
