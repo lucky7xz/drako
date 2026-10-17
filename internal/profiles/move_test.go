@@ -71,3 +71,34 @@ func TestMove_RefusesToOverwriteExisting(t *testing.T) {
 		t.Errorf("destination was clobbered: %q", got)
 	}
 }
+
+func TestMove_RelativeLinkKeepsItsTarget(t *testing.T) {
+	root := t.TempDir()
+	cfg := filepath.Join(root, "config", "drako")
+	if err := os.MkdirAll(filepath.Join(root, "dotfiles"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(cfg, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "dotfiles", "git.profile.toml"), []byte("x = 1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	const target = "../../dotfiles/git.profile.toml" // what stow makes
+	if err := os.Symlink(target, filepath.Join(cfg, "git.profile.toml")); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := Move(cfg, "git.profile.toml", Equipped, Inventory); err != nil {
+		t.Fatalf("stash: %v", err)
+	}
+	if got, err := os.ReadFile(filepath.Join(paths.InventoryDir(cfg), "git.profile.toml")); string(got) != "x = 1\n" {
+		t.Errorf("stashed link reads %q, %v; want the dotfiles deck", got, err)
+	}
+	if err := Move(cfg, "git.profile.toml", Inventory, Equipped); err != nil {
+		t.Fatalf("equip: %v", err)
+	}
+	if got, _ := os.Readlink(filepath.Join(cfg, "git.profile.toml")); got != target {
+		t.Errorf("link after the round trip = %q, want %q", got, target)
+	}
+}

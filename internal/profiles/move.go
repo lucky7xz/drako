@@ -41,5 +41,15 @@ func Move(configDir, file string, from, to Location) error {
 	if err := os.MkdirAll(dstDir, 0o755); err != nil {
 		return err
 	}
+	// A relative link (stow makes these) resolves from its own folder, so re-aim it.
+	if target, err := os.Readlink(src); err == nil && !filepath.IsAbs(target) {
+		if target, err = filepath.Rel(dstDir, filepath.Join(filepath.Dir(src), target)); err != nil {
+			return err
+		}
+		if err := os.Symlink(target, dst); err != nil {
+			return err
+		}
+		return os.Remove(src)
+	}
 	return os.Rename(src, dst)
 }
