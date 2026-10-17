@@ -437,7 +437,7 @@ Safely reset or remove configurations.
 # Remove Core profile (moves to trash/); `drako restore-bootstrap` regenerates it
 drako purge --target/-t core
 
-# Remove a specific profile (moves to trash/)
+# Remove a specific profile, equipped or in inventory/ (moves to trash/)
 drako purge --target/-t git
 
 # Use interactive mode to purge profiles

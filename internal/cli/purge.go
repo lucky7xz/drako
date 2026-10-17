@@ -25,7 +25,7 @@ var errNoPurgeTarget = errors.New("no target specified")
 // PurgeOptions defines the scope of the purge operation
 type PurgeOptions struct {
 	DestroyEverything bool     // Nuke ~/.config/drako entirely
-	TargetProfiles    []string // Delete/Move specific profiles (e.g. "git", "core")
+	TargetProfiles    []string // files to trash, relative to the config dir (see purgeFile)
 	TargetConfig      bool     // Reset config.toml
 	TargetLogs        bool     // Purge logs (history.log and drako.log)
 }
@@ -92,20 +92,16 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 	}
 
 	// Case 3: Target Specific Profiles
-	for _, target := range opts.TargetProfiles {
-		log.Printf("Purging Profile: %s", target)
-		filename := target
-		if filepath.Ext(filename) != ".toml" {
-			filename = filename + profiles.ProfileSuffix
-		}
-		if err := profiles.MoveToTrash(configDir, filename); err != nil {
-			failed = append(failed, fmt.Errorf("could not move %s to trash: %w", filename, err))
+	for _, file := range opts.TargetProfiles {
+		log.Printf("Purging Profile: %s", file)
+		if err := profiles.MoveToTrash(configDir, file); err != nil {
+			failed = append(failed, fmt.Errorf("could not move %s to trash: %w", file, err))
 		} else {
-			fmt.Printf("  ✓ Moved %s to trash\n", filename)
+			fmt.Printf("  ✓ Moved %s to trash\n", file)
 			// A purged profile is no longer equipped, so a lock still aimed at
 			// it would drop the next launch into rescue. Covers --interactive
 			// too: it appends into this same target list.
-			unlockIfLocked(configDir, filename)
+			unlockIfLocked(configDir, file)
 		}
 	}
 
@@ -158,6 +154,12 @@ func ExecutePurge(args []string) error {
 	if err != nil {
 		return fmt.Errorf("could not get config dir: %w", err)
 	}
+	// Resolved before the prompt, so it names the real file and a typo never asks.
+	for i, target := range opts.TargetProfiles {
+		if opts.TargetProfiles[i], err = purgeFile(configDir, target); err != nil {
+			return err
+		}
+	}
 
 	// Flag scopes get one confirmation; profiles picked with -i are confirmed one by one.
 	confirmMsg := purgeConfirmMessage(configDir, *opts)
@@ -196,6 +198,30 @@ func ExecutePurge(args []string) error {
 		fmt.Printf("  Items moved to %s/trash/\n", configDir)
 	}
 	return nil
+}
+
+// purgeFile finds the file a --target means, relative to configDir: the file it
+// names (bare names get .profile.toml) if that exists, else the deck it names.
+func purgeFile(configDir, target string) (string, error) {
+	file := target
+	if filepath.Ext(file) != ".toml" {
+		file += profiles.ProfileSuffix
+	}
+	if _, err := os.Stat(filepath.Join(configDir, file)); err == nil {
+		return file, nil
+	}
+	for _, dir := range []string{configDir, paths.InventoryDir(configDir)} {
+		entries, err := profiles.List(dir)
+		if err != nil {
+			return "", err
+		}
+		for _, e := range entries {
+			if e.Norm == profiles.NormalizeName(target) {
+				return filepath.Rel(configDir, filepath.Join(dir, e.File))
+			}
+		}
+	}
+	return "", fmt.Errorf("no deck named %s", target)
 }
 
 // purgeConfirmMessage names every scope the flags selected; "" when none did.

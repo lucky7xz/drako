@@ -85,7 +85,7 @@ func TestPurgeConfig_TargetProfile(t *testing.T) {
 	}
 
 	opts := PurgeOptions{
-		TargetProfiles: []string{"core"},
+		TargetProfiles: []string{"core.profile.toml"},
 	}
 
 	if err := PurgeConfig(tmpDir, opts); err != nil {
@@ -408,11 +408,44 @@ func TestPurgeConfirmNamesEveryScope(t *testing.T) {
 	}
 }
 
-func TestPurgeReportsFailedMoves(t *testing.T) {
-	purgeFixture(t, "y\n")
+func TestPurgeFile(t *testing.T) {
+	dir := t.TempDir()
+	for _, f := range []string{"config.toml", "git.profile.toml", "inventory/work.profile.toml"} {
+		writeFile(t, filepath.Join(dir, f), "x")
+	}
+	for target, want := range map[string]string{
+		"git":            "git.profile.toml",
+		"Git":            "git.profile.toml",
+		"git.profile":    "git.profile.toml",
+		"work":           "inventory/work.profile.toml",
+		"inventory/work": "inventory/work.profile.toml",
+		"config.toml":    "config.toml",
+		"inventory":      "", // never the inventory folder itself
+		"nope":           "",
+	} {
+		got, err := purgeFile(dir, target)
+		if got != want || (err != nil) != (want == "") {
+			t.Errorf("purgeFile(%q) = %q, %v; want %q", target, got, err, want)
+		}
+	}
+}
+
+func TestPurgeTrashesAStashedDeckByName(t *testing.T) {
+	dir := purgeFixture(t, "y\n")
+	writeFile(t, filepath.Join(dir, "inventory", "work.profile.toml"), "x")
+	if err := ExecutePurge([]string{"--target", "Work"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "inventory", "work.profile.toml")); !os.IsNotExist(err) {
+		t.Error("inventory/work.profile.toml should be in the trash")
+	}
+}
+
+func TestPurgeUnknownTargetFailsBeforeAsking(t *testing.T) {
+	purgeFixture(t, "") // a prompt would read EOF and cancel
 	err := ExecutePurge([]string{"--target", "nonexist"})
-	if err == nil || !strings.Contains(err.Error(), "nonexist.profile.toml") {
-		t.Errorf("err = %v, want the failed move named", err)
+	if err == nil || !strings.Contains(err.Error(), "no deck named nonexist") {
+		t.Errorf("err = %v, want no deck named nonexist", err)
 	}
 }
 

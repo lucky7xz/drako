@@ -88,7 +88,7 @@ func TestLockReleasedWhenProfileLeavesEquipped(t *testing.T) {
 		writeProfile(t, cfg, "work")
 		lock(t, cfg, "work")
 
-		if err := PurgeConfig(cfg, PurgeOptions{TargetProfiles: []string{"work"}}); err != nil {
+		if err := PurgeConfig(cfg, PurgeOptions{TargetProfiles: []string{"work.profile.toml"}}); err != nil {
 			t.Fatalf("purge: %v", err)
 		}
 		if _, err := os.Stat(filepath.Join(cfg, "work.profile.toml")); !os.IsNotExist(err) {
