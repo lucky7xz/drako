@@ -35,7 +35,7 @@ func Move(configDir, file string, from, to Location) error {
 	src := filepath.Join(from.Dir(configDir), file)
 	dstDir := to.Dir(configDir)
 	dst := filepath.Join(dstDir, file)
-	if _, err := os.Stat(dst); err == nil {
+	if _, err := os.Lstat(dst); err == nil {
 		return fmt.Errorf("destination already exists: %s", dst)
 	}
 	if err := os.MkdirAll(dstDir, 0o755); err != nil {

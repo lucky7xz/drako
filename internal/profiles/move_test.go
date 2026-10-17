@@ -102,3 +102,24 @@ func TestMove_RelativeLinkKeepsItsTarget(t *testing.T) {
 		t.Errorf("link after the round trip = %q, want %q", got, target)
 	}
 }
+
+func TestMove_RefusesToReplaceABrokenLink(t *testing.T) {
+	cfg := t.TempDir()
+	inv := paths.InventoryDir(cfg)
+	if err := os.MkdirAll(inv, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(cfg, "git.profile.toml"), []byte("x = 1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("nowhere", filepath.Join(inv, "git.profile.toml")); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := Move(cfg, "git.profile.toml", Equipped, Inventory); err == nil {
+		t.Error("expected error moving onto a broken link, got nil")
+	}
+	if got, _ := os.Readlink(filepath.Join(inv, "git.profile.toml")); got != "nowhere" {
+		t.Errorf("broken link was replaced: now %q", got)
+	}
+}
