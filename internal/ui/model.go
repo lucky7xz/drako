@@ -504,7 +504,7 @@ func (m Model) Session() Session {
 //
 // A carried profile outranks the pivot lock, which is the one behaviour this
 // changes. The pivot answers "which profile does a fresh process start on"
-// (config.resolveRequested: override > pivot > DRAKO_PROFILE > config.toml), and
+// (config.resolveRequested: pivot > DRAKO_PROFILE > config.toml), and
 // it still does; a lap of the launch loop is not a fresh start, and an explicit
 // mid-session switch is the more recent statement of intent. Nothing is granted
 // by this: the pivot pins a starting point, it is not an access control, and
@@ -547,7 +547,7 @@ func InitialModel(glassrootMode bool, carried Session) Model {
 		path = "could not get path"
 	}
 
-	bundle, err := config.LoadConfig(nil)
+	bundle, err := config.LoadConfig()
 	if err != nil {
 		// No config directory means nothing to run from; hand the host a
 		// model that is already done and let app.Run exit with the code.

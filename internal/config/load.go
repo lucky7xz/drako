@@ -73,24 +73,23 @@ func loadBaseConfig(configDir string) (Config, []ProfileParseError) {
 // LoadConfig assembles the full configuration bundle: it bootstraps a
 // missing config on first run, loads the base settings (falling back to
 // rescue mode on read or syntax errors), discovers and orders the profiles,
-// and applies the requested profile as an overlay. profileOverride takes
-// precedence over the pivot lock, the DRAKO_PROFILE env var, and the
-// profile named in config.toml, in that order. It errors only when the
+// and applies the requested profile as an overlay: the pivot lock, else the
+// DRAKO_PROFILE env var, else the profile named in config.toml. It errors only when the
 // environment is unusable — no config directory can be resolved or created;
 // everything else degrades to the rescue config and Broken entries.
-func LoadConfig(profileOverride *string) (ConfigBundle, error) {
-	return loadConfig(profileOverride, "")
+func LoadConfig() (ConfigBundle, error) {
+	return loadConfig("")
 }
 
 // ReloadConfig is LoadConfig for a running session: sessionProfile is the
 // profile the session currently has active, and it takes the env var's slot
 // in the selection precedence (pivot lock still snaps back over it). An empty
-// sessionProfile behaves exactly like LoadConfig(nil).
+// sessionProfile behaves exactly like LoadConfig().
 func ReloadConfig(sessionProfile string) (ConfigBundle, error) {
-	return loadConfig(nil, sessionProfile)
+	return loadConfig(sessionProfile)
 }
 
-func loadConfig(profileOverride *string, sessionProfile string) (ConfigBundle, error) {
+func loadConfig(sessionProfile string) (ConfigBundle, error) {
 	configDir, err := paths.ConfigDir()
 	if err != nil {
 		return ConfigBundle{}, fmt.Errorf("could not resolve a config directory: %w", err)
@@ -136,10 +135,9 @@ func loadConfig(profileOverride *string, sessionProfile string) (ConfigBundle, e
 		envProfile = os.Getenv("DRAKO_PROFILE")
 	}
 
-	req := resolveRequested(profileOverride, pf.Locked, envProfile, base.Profile, profiles, profileErrors)
+	req := resolveRequested(pf.Locked, envProfile, base.Profile, profiles, profileErrors)
 
 	pivotStillValid := requestedPivot != ""
-	useFactoryDefaults := false
 
 	droppedProfile := req.Dropped
 	if droppedProfile != "" {
@@ -152,15 +150,8 @@ func loadConfig(profileOverride *string, sessionProfile string) (ConfigBundle, e
 		pivotStillValid = false
 	}
 
-	activeIndex, found := selectProfile(profiles, req.Name)
-	if !found {
-		// Only an explicit override reaches here.
-		log.Printf("profile not found, falling back to factory defaults: %s", req.Name)
-		useFactoryDefaults = true
-		droppedProfile = req.Name
-	}
-
-	effective, activeIndex, extraBroken, fellBack, rescue := buildEffective(base, profiles, activeIndex, useFactoryDefaults)
+	activeIndex, _ := selectProfile(profiles, req.Name) // resolveRequested only names equipped decks
+	effective, activeIndex, extraBroken, fellBack, rescue := buildEffective(base, profiles, activeIndex)
 	broken = append(broken, extraBroken...)
 	if fellBack {
 		pivotStillValid = false

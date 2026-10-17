@@ -34,9 +34,9 @@ func loadTestDir(t *testing.T, profileNames ...string) string {
 
 // mustLoadConfig runs LoadConfig and fails the test on an environment error,
 // which no test environment should produce.
-func mustLoadConfig(t *testing.T, override *string) ConfigBundle {
+func mustLoadConfig(t *testing.T) ConfigBundle {
 	t.Helper()
-	bundle, err := LoadConfig(override)
+	bundle, err := LoadConfig()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,23 +140,9 @@ func TestLoadConfig_EnvVarSelectsProfile(t *testing.T) {
 	loadTestDir(t, "alpha", "work")
 	t.Setenv("DRAKO_PROFILE", "work")
 
-	bundle := mustLoadConfig(t, nil)
+	bundle := mustLoadConfig(t)
 	if got := bundle.Profiles[bundle.ActiveIndex].Name; got != "work" {
 		t.Errorf("DRAKO_PROFILE should select work, got %q", got)
-	}
-}
-
-func TestLoadConfig_OverrideBeatsEnvAndPivot(t *testing.T) {
-	dir := loadTestDir(t, "alpha", "work")
-	t.Setenv("DRAKO_PROFILE", "work")
-	if err := WritePivotLocked(dir, "work"); err != nil {
-		t.Fatal(err)
-	}
-
-	override := "alpha"
-	bundle := mustLoadConfig(t, &override)
-	if got := bundle.Profiles[bundle.ActiveIndex].Name; got != "alpha" {
-		t.Errorf("override should beat env and pivot, got %q", got)
 	}
 }
 
@@ -207,7 +193,7 @@ func TestLoadConfig_PivotOrderReorders(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bundle := mustLoadConfig(t, nil)
+	bundle := mustLoadConfig(t)
 	var got []string
 	for _, p := range bundle.Profiles {
 		got = append(got, p.Name)

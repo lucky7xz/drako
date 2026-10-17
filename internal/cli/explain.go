@@ -26,7 +26,7 @@ func HandleExplainCommand(args []string) int {
 	}
 
 	quietLogs()
-	bundle, err := config.LoadConfig(nil)
+	bundle, err := config.LoadConfig()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "drako: %v\n", err)
 		return 1

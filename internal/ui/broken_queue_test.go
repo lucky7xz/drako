@@ -249,7 +249,7 @@ func freshConfigDir(t *testing.T) (dir string) {
 	t.Helper()
 	xdg := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", xdg)
-	if _, err := config.LoadConfig(nil); err != nil {
+	if _, err := config.LoadConfig(); err != nil {
 		t.Fatal(err)
 	}
 	return filepath.Join(xdg, "drako")

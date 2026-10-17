@@ -15,7 +15,7 @@ func TestPurgeConfigResetsOnlyConfigAndCore(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", xdg)
 	t.Setenv("HOME", xdg)
 	dir := filepath.Join(xdg, "drako")
-	if _, err := config.LoadConfig(nil); err != nil { // first run bootstraps
+	if _, err := config.LoadConfig(); err != nil { // first run bootstraps
 		t.Fatal(err)
 	}
 	jukebox := filepath.Join(dir, "inventory", "jukebox.profile.toml")
@@ -29,7 +29,7 @@ func TestPurgeConfigResetsOnlyConfigAndCore(t *testing.T) {
 	if err := PurgeConfig(dir, PurgeOptions{TargetConfig: true}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := config.LoadConfig(nil); err != nil { // the next launch
+	if _, err := config.LoadConfig(); err != nil { // the next launch
 		t.Fatal(err)
 	}
 

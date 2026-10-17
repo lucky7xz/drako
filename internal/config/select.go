@@ -34,15 +34,10 @@ type profileRequest struct {
 }
 
 // resolveRequested picks which profile to activate:
-// override > pivot lock > DRAKO_PROFILE env > config.toml profile.
+// pivot lock > DRAKO_PROFILE env > config.toml profile.
 // A source naming an unequipped profile is skipped rather than honoured and
-// then failed — falling through is what a precedence list is for. A non-nil
-// override is used verbatim.
-func resolveRequested(override *string, pivotLocked, envProfile, cfgProfile string, available []ProfileInfo, broken []ProfileParseError) profileRequest {
-	if override != nil {
-		return profileRequest{Name: *override}
-	}
-
+// then failed — falling through is what a precedence list is for.
+func resolveRequested(pivotLocked, envProfile, cfgProfile string, available []ProfileInfo, broken []ProfileParseError) profileRequest {
 	equipped := func(name string) bool {
 		_, ok := selectProfile(available, name)
 		return ok
@@ -91,20 +86,16 @@ func resolveRequested(override *string, pivotLocked, envProfile, cfgProfile stri
 // triggers the "first available" fallback policy: try the first profile, and
 // if that fails too, land on the rescue config (always a valid grid).
 // fellBack is true whenever the selected profile had to be abandoned, so the
-// caller can drop a pivot lock that points at it. With no profiles, or with
-// useFactoryDefaults set, the rescue config is used directly; rescue reports it.
-func buildEffective(base Config, profiles []ProfileInfo, activeIndex int, useFactoryDefaults bool) (effective Config, newActive int, extraBroken []ProfileParseError, fellBack, rescue bool) {
-	newActive = activeIndex
-
-	var selected ProfileInfo
-	if len(profiles) > 0 {
-		selected = profiles[activeIndex]
-	} else {
-		// No profiles found; enforce factory defaults with a stand-in
-		// profile for logging and selection logic.
-		useFactoryDefaults = true
-		selected = ProfileInfo{Name: "Rescue", Path: "internal", Profile: ProfileFile{}}
+// caller can drop a pivot lock that points at it. With no profiles, the
+// rescue config is used directly; rescue reports it.
+func buildEffective(base Config, profiles []ProfileInfo, activeIndex int) (effective Config, newActive int, extraBroken []ProfileParseError, fellBack, rescue bool) {
+	if len(profiles) == 0 {
+		effective = RescueConfig()
+		effective.ApplyDefaults()
+		return effective, activeIndex, nil, false, true
 	}
+	newActive = activeIndex
+	selected := profiles[activeIndex]
 
 	applyAndValidate := func(p ProfileInfo) (Config, error) {
 		temp := ApplyProfileOverlay(base, p.Profile)
@@ -113,12 +104,6 @@ func buildEffective(base Config, profiles []ProfileInfo, activeIndex int, useFac
 			return temp, err
 		}
 		return temp, nil
-	}
-
-	if useFactoryDefaults {
-		effective = RescueConfig()
-		effective.ApplyDefaults()
-		return effective, newActive, nil, false, true
 	}
 
 	effective, err := applyAndValidate(selected)

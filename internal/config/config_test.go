@@ -104,7 +104,7 @@ func TestLoadConfig_HandlesBrokenProfiles(t *testing.T) {
 
 	// Run LoadConfig
 	// Note: It might create config.toml (bootstrap) which is fine.
-	bundle := mustLoadConfig(t, nil)
+	bundle := mustLoadConfig(t)
 
 	// Assertions
 	// 1. Check for Broken report
@@ -123,9 +123,8 @@ func TestLoadConfig_HandlesBrokenProfiles(t *testing.T) {
 		// LoadConfig constructs a dummy "Rescue" profile if len=0
 		// Wait, my implementation of DiscoverProfiles excludes broken ones.
 		// So Profiles should be Empty?
-		// Let's check LoadConfig logic: if len(profiles) == 0 -> useFactoryDefaults=true
-		// selected = ProfileInfo{Name: "Rescue"...}
-		// It does NOT append "Rescue" to bundle.Profiles usually, just sets selected.
+		// Let's check LoadConfig logic: if len(profiles) == 0 -> the rescue config,
+		// with nothing appended to bundle.Profiles.
 		// Let's check ActiveIndex or Config.Commands
 		// If using factory defaults, Config.Commands should be the built-in rescue commands.
 	}
@@ -153,7 +152,7 @@ func TestBootstrap_GeneratesFiles(t *testing.T) {
 	t.Setenv("HOME", tmpDir)
 
 	// Run
-	mustLoadConfig(t, nil)
+	mustLoadConfig(t)
 
 	// Verify
 	expectedConfig := filepath.Join(tmpDir, "drako", "config.toml")
@@ -188,7 +187,7 @@ func TestLoadConfig_HandlesBrokenConfig(t *testing.T) {
 	os.WriteFile(configPath, []byte("NOT TOML! ["), 0644)
 
 	// Run LoadConfig - Should NOT PANIC
-	bundle := mustLoadConfig(t, nil)
+	bundle := mustLoadConfig(t)
 
 	// Assertions
 	// 1. Check for Broken report
@@ -229,7 +228,7 @@ func TestLoadConfig_HandlesBrokenConfig(t *testing.T) {
 	// Effective config logic in LoadConfig:
 	// "effective = base"
 	// Then tries to load profile.
-	// If profiles are broken/missing -> useFactoryDefaults = true
+	// If profiles are broken/missing -> the rescue config
 	// "effective = RescueConfig()"
 	// "effective.ApplyDefaults()"
 

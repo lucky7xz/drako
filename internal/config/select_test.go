@@ -50,47 +50,41 @@ func TestReorderByPivot(t *testing.T) {
 }
 
 func TestResolveRequested(t *testing.T) {
-	override := func(s string) *string { return &s }
 	all := []ProfileInfo{
 		validProfile("work"), validProfile("env"), validProfile("envprofile"),
-		validProfile("cfg"), validProfile("cfgprofile"), validProfile("alpha"),
+		validProfile("cfg"), validProfile("cfgprofile"),
 	}
 	tests := []struct {
 		name            string
-		override        *string
 		pivot, env, cfg string
 		available       []ProfileInfo
 		want            profileRequest
 	}{
-		{"override wins over everything", override("alpha"), "work", "env", "cfg", all,
-			profileRequest{Name: "alpha"}},
-		{"empty override still wins (verbatim)", override(""), "work", "env", "cfg", all,
-			profileRequest{Name: ""}},
-		{"pivot beats env and cfg", nil, "work", "env", "cfg", all,
+		{"pivot beats env and cfg", "work", "env", "cfg", all,
 			profileRequest{Name: "work", FromPivot: true}},
-		{"env beats cfg", nil, "", "envprofile", "cfg", all,
+		{"env beats cfg", "", "envprofile", "cfg", all,
 			profileRequest{Name: "envprofile"}},
-		{"cfg is the last resort", nil, "", "", "cfgprofile", all,
+		{"cfg is the last resort", "", "", "cfgprofile", all,
 			profileRequest{Name: "cfgprofile"}},
-		{"whitespace pivot is no pivot", nil, "   ", " env ", "", all,
+		{"whitespace pivot is no pivot", "   ", " env ", "", all,
 			profileRequest{Name: "env"}},
-		{"nothing requested", nil, "", "", "", all,
+		{"nothing requested", "", "", "", all,
 			profileRequest{}},
 
 		// Stashing the deck a source names must fall through to the next
 		// source, not be honoured and then fail downstream.
-		{"stashed lock falls through to env", nil, "gone", "env", "cfg", all,
+		{"stashed lock falls through to env", "gone", "env", "cfg", all,
 			profileRequest{Name: "env", Dropped: "gone", StaleLock: true}},
-		{"stashed session falls through to cfg", nil, "", "gone", "cfg", all,
+		{"stashed session falls through to cfg", "", "gone", "cfg", all,
 			profileRequest{Name: "cfg", Dropped: "gone"}},
-		{"only the first casualty is reported", nil, "gone", "alsogone", "cfg", all,
+		{"only the first casualty is reported", "gone", "alsogone", "cfg", all,
 			profileRequest{Name: "cfg", Dropped: "gone", StaleLock: true}},
-		{"nothing equipped leaves no name", nil, "gone", "", "", nil,
+		{"nothing equipped leaves no name", "gone", "", "", nil,
 			profileRequest{Dropped: "gone", StaleLock: true}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := resolveRequested(tt.override, tt.pivot, tt.env, tt.cfg, tt.available, nil)
+			got := resolveRequested(tt.pivot, tt.env, tt.cfg, tt.available, nil)
 			if got != tt.want {
 				t.Errorf("resolveRequested = %+v, want %+v", got, tt.want)
 			}
@@ -115,7 +109,7 @@ func invalidProfile(name string) ProfileInfo {
 func TestBuildEffective_AppliesSelectedProfile(t *testing.T) {
 	profiles := []ProfileInfo{validProfile("alpha"), validProfile("work")}
 
-	effective, active, extraBroken, fellBack, rescue := buildEffective(Config{}, profiles, 1, false)
+	effective, active, extraBroken, fellBack, rescue := buildEffective(Config{}, profiles, 1)
 	if rescue != false {
 		t.Errorf("rescue = %v, want false", rescue)
 	}
@@ -130,23 +124,8 @@ func TestBuildEffective_AppliesSelectedProfile(t *testing.T) {
 	}
 }
 
-func TestBuildEffective_FactoryDefaultsSkipOverlay(t *testing.T) {
-	profiles := []ProfileInfo{validProfile("alpha")}
-
-	effective, _, extraBroken, fellBack, rescue := buildEffective(Config{}, profiles, 0, true)
-	if rescue != true {
-		t.Errorf("rescue = %v, want true", rescue)
-	}
-	if len(extraBroken) != 0 || fellBack {
-		t.Fatalf("factory defaults are not a fallback: broken=%+v fellBack=%v", extraBroken, fellBack)
-	}
-	if len(effective.Commands) == 0 {
-		t.Error("factory defaults should carry the rescue helper commands")
-	}
-}
-
 func TestBuildEffective_NoProfilesForcesFactoryDefaults(t *testing.T) {
-	effective, active, extraBroken, fellBack, rescue := buildEffective(Config{}, nil, 0, false)
+	effective, active, extraBroken, fellBack, rescue := buildEffective(Config{}, nil, 0)
 	if rescue != true {
 		t.Errorf("rescue = %v, want true", rescue)
 	}
@@ -161,7 +140,7 @@ func TestBuildEffective_NoProfilesForcesFactoryDefaults(t *testing.T) {
 func TestBuildEffective_InvalidProfileFallsBackToFirst(t *testing.T) {
 	profiles := []ProfileInfo{validProfile("alpha"), invalidProfile("broken")}
 
-	effective, active, extraBroken, fellBack, rescue := buildEffective(Config{}, profiles, 1, false)
+	effective, active, extraBroken, fellBack, rescue := buildEffective(Config{}, profiles, 1)
 	if rescue != false {
 		t.Errorf("rescue = %v, want false", rescue)
 	}
@@ -183,7 +162,7 @@ func TestBuildEffective_InvalidProfileFallsBackToFirst(t *testing.T) {
 func TestBuildEffective_SelectedAndFallbackInvalid(t *testing.T) {
 	profiles := []ProfileInfo{invalidProfile("a"), invalidProfile("b")}
 
-	_, _, extraBroken, _, rescue := buildEffective(Config{}, profiles, 1, false)
+	_, _, extraBroken, _, rescue := buildEffective(Config{}, profiles, 1)
 	if rescue != true {
 		t.Errorf("rescue = %v, want true", rescue)
 	}
@@ -195,7 +174,7 @@ func TestBuildEffective_SelectedAndFallbackInvalid(t *testing.T) {
 func TestBuildEffective_AllInvalidLandsOnRescue(t *testing.T) {
 	profiles := []ProfileInfo{invalidProfile("broken")}
 
-	effective, active, extraBroken, fellBack, rescue := buildEffective(Config{}, profiles, 0, false)
+	effective, active, extraBroken, fellBack, rescue := buildEffective(Config{}, profiles, 0)
 	if rescue != true {
 		t.Errorf("rescue = %v, want true", rescue)
 	}
