@@ -1,6 +1,9 @@
 package cli
 
-// Summon fetches untrusted profile files into the inventory (quarantine).
+// Summon fetches untrusted profile files into the config dir. A deck replaces
+// the copy you already have, wherever it is; a new one is equipped while there
+// is room, else it waits in the inventory (placeFor). Only the top level of a
+// folder or repo is searched.
 // This file is the orchestration: source classification, user confirmation,
 // and the per-file summon flow. The moving parts live next door:
 //   summon_transport.go — git/HTTP transports, URL parsing, file copying
@@ -12,9 +15,11 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/lucky7xz/drako/internal/paths"
+	"github.com/lucky7xz/drako/internal/profiles"
 )
 
 // FileDownloader defines the interface for downloading a file
@@ -66,7 +71,7 @@ func (s *Summoner) Summon(sourceURL string) error {
 	}
 
 	if info, err := os.Stat(sourceURL); err == nil && info.IsDir() && !isGitURL(sourceURL) {
-		return s.summonFromFolder(sourceURL, inventoryDir)
+		return s.summonFromFolder(sourceURL)
 	}
 
 	if isGitURL(sourceURL) {
@@ -83,8 +88,8 @@ func (s *Summoner) Summon(sourceURL string) error {
 
 		fmt.Printf("\nYou are about to clone a git repository:\n")
 		fmt.Printf("  Source: %s\n", sourceURL)
-		fmt.Printf("  Destination: %s\n", inventoryDir)
-		fmt.Printf("  Action: Find and copy all .profile.toml files\n\n")
+		fmt.Printf("  Destination: %s (equipped; inventory/ once %d are equipped)\n", s.ConfigDir, profiles.MaxEquipped)
+		fmt.Printf("  Action: Find and copy the .profile.toml files at its top level\n\n")
 
 		if s.Rev == "" {
 			fmt.Printf("⚠️  Unverified summon: no --rev given. drako cannot confirm this deck\n")
@@ -96,7 +101,7 @@ func (s *Summoner) Summon(sourceURL string) error {
 			return fmt.Errorf("operation cancelled by user")
 		}
 
-		return s.summonFromGit(sourceURL, inventoryDir)
+		return s.summonFromGit(sourceURL)
 	}
 
 	// HTTP/HTTPS Download
@@ -111,18 +116,16 @@ func (s *Summoner) Summon(sourceURL string) error {
 		return err
 	}
 
-	// Safety: Check Equipped Collision
-	if err := s.checkEquippedCollision(filename); err != nil {
+	dstPath, err := placeFor(s.ConfigDir, filename)
+	if err != nil {
 		return err
 	}
-
-	dstPath := filepath.Join(inventoryDir, filename)
 	fmt.Printf("\nYou are about to download a profile:\n")
 	fmt.Printf("  Source: %s\n", sourceURL)
 	fmt.Printf("  Destination: %s\n", dstPath)
 
 	if _, err := os.Stat(dstPath); err == nil {
-		fmt.Printf("  ⚠️  Warning: %s already exists and will be overwritten\n", filename)
+		fmt.Printf("  ⚠️  Warning: %s already exists and will be overwritten\n", filepath.Base(dstPath))
 	}
 	fmt.Println()
 
@@ -136,16 +139,36 @@ func (s *Summoner) Summon(sourceURL string) error {
 		return fmt.Errorf("operation cancelled by user")
 	}
 
-	return s.summonFromHTTP(sourceURL, filename, inventoryDir)
+	return s.summonFromHTTP(sourceURL, dstPath)
 }
 
-// checkEquippedCollision ensures we don't summon a profile that conflicts with an actively equipped one (in root)
-func (s *Summoner) checkEquippedCollision(filename string) error {
-	equippedPath := filepath.Join(s.ConfigDir, filename)
-	if _, err := os.Stat(equippedPath); err == nil {
-		return fmt.Errorf("safety violation: '%s' is currently EQUIPPED (in root). Cannot overwrite active profile from inventory summon. Please unequip or stash it first", filename)
+// placeFor says where the summoned deck named file lands: over the copy you
+// already have, equipped or in the inventory, so there is never a second one;
+// else equipped while fewer than MaxEquipped are; else the inventory. It reads
+// the disk each time, so decks summoned earlier in the same run count.
+func placeFor(configDir, file string) (string, error) {
+	inventoryDir := paths.InventoryDir(configDir)
+	equipped, err := profiles.List(configDir)
+	if err != nil {
+		return "", err
 	}
-	return nil
+	stashed, err := profiles.List(inventoryDir)
+	if err != nil {
+		return "", err
+	}
+
+	norm := profiles.NormalizeName(file)
+	same := func(e profiles.Entry) bool { return e.Norm == norm }
+	if i := slices.IndexFunc(equipped, same); i >= 0 {
+		return filepath.Join(configDir, equipped[i].File), nil
+	}
+	if i := slices.IndexFunc(stashed, same); i >= 0 {
+		return filepath.Join(inventoryDir, stashed[i].File), nil
+	}
+	if len(equipped) < profiles.MaxEquipped {
+		return filepath.Join(configDir, file), nil
+	}
+	return filepath.Join(inventoryDir, file), nil
 }
 
 // summonOutcome classifies what happened to one candidate file.
@@ -160,7 +183,7 @@ const (
 
 // summonFromGit clones a profile repository and walks the user through
 // summoning every profile and spec file it contains.
-func (s *Summoner) summonFromGit(repoURL, inventoryDir string) error {
+func (s *Summoner) summonFromGit(repoURL string) error {
 	// A fresh dir per run: one left by a Ctrl-C can't block the next summon.
 	tempDir, err := os.MkdirTemp("", "drako-summon-*")
 	if err != nil {
@@ -188,12 +211,12 @@ func (s *Summoner) summonFromGit(repoURL, inventoryDir string) error {
 		}
 		fmt.Printf("✓ Verified commit: HEAD = %.12s…\n", head)
 	}
-	return s.summonFromDir(tempDir, inventoryDir, repoURL)
+	return s.summonFromDir(tempDir, repoURL)
 }
 
 // summonFromFolder summons the decks in a folder on disk, for authors who
 // haven't published them; it reads the folder in place.
-func (s *Summoner) summonFromFolder(dir, inventoryDir string) error {
+func (s *Summoner) summonFromFolder(dir string) error {
 	if s.SHA256 != "" || s.Rev != "" {
 		return fmt.Errorf("--sha256 and --rev verify downloads; a folder on disk has nothing to pin")
 	}
@@ -210,13 +233,13 @@ func (s *Summoner) summonFromFolder(dir, inventoryDir string) error {
 
 	fmt.Printf("\nYou are about to summon from a folder:\n")
 	fmt.Printf("  Source: %s\n", root)
-	fmt.Printf("  Destination: %s\n", inventoryDir)
-	return s.summonFromDir(root, inventoryDir, root)
+	fmt.Printf("  Destination: %s (equipped; inventory/ once %d are equipped)\n", s.ConfigDir, profiles.MaxEquipped)
+	return s.summonFromDir(root, root)
 }
 
-// summonFromDir walks root, a clone or a local folder, and offers every
-// profile and spec in it; source names root in messages.
-func (s *Summoner) summonFromDir(root, inventoryDir, source string) error {
+// summonFromDir offers every profile and spec at the top level of root, a
+// clone or a local folder; source names root in messages.
+func (s *Summoner) summonFromDir(root, source string) error {
 	profileFiles, specFiles, err := findRepoFiles(root)
 	if err != nil {
 		return fmt.Errorf("failed to search for files: %w", err)
@@ -242,7 +265,7 @@ func (s *Summoner) summonFromDir(root, inventoryDir, source string) error {
 
 	// 1. Process Profile Files
 	for _, srcPath := range profileFiles {
-		outcome, err := s.summonRepoProfile(srcPath, root, inventoryDir)
+		outcome, err := s.summonRepoProfile(srcPath, root)
 		if err != nil {
 			return err
 		}
@@ -283,24 +306,26 @@ func (s *Summoner) summonFromDir(root, inventoryDir, source string) error {
 	return nil
 }
 
-// findRepoFiles walks a cloned repo for .profile.toml and .spec.toml files.
-func findRepoFiles(tempDir string) (profileFiles, specFiles []string, err error) {
-	err = filepath.Walk(tempDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
+// findRepoFiles lists the .profile.toml and .spec.toml files at the top level
+// of root; subfolders are not searched.
+func findRepoFiles(root string) (profileFiles, specFiles []string, err error) {
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, de := range entries {
 		// Regular files only: a symlink could point outside the repo or at a device.
-		if !info.Mode().IsRegular() {
-			return nil
+		if !de.Type().IsRegular() {
+			continue
 		}
+		path := filepath.Join(root, de.Name())
 		if strings.HasSuffix(path, ".profile.toml") {
 			profileFiles = append(profileFiles, path)
 		} else if strings.HasSuffix(path, ".spec.toml") {
 			specFiles = append(specFiles, path)
 		}
-		return nil
-	})
-	return profileFiles, specFiles, err
+	}
+	return profileFiles, specFiles, nil
 }
 
 // printFoundFiles shows the user what the repository contains.
@@ -321,19 +346,11 @@ func printFoundFiles(profileFiles, specFiles []string) {
 // user what summoning it would do (including its asset plan), and copies it
 // plus its assets on confirmation. A copy failure after confirmation is
 // fatal for the whole summon (err != nil).
-func (s *Summoner) summonRepoProfile(srcPath, tempDir, inventoryDir string) (summonOutcome, error) {
+func (s *Summoner) summonRepoProfile(srcPath, tempDir string) (summonOutcome, error) {
 	dstName := filepath.Base(srcPath)
-	dstPath := filepath.Join(inventoryDir, dstName)
 
 	// Validate filename
 	if err := validateFilename(dstName); err != nil {
-		fmt.Printf("⚠️  Skipping %s: %v\n", dstName, err)
-		return outcomeSkipped, nil
-	}
-
-	// Safety Check: Equipped Collision
-	// Ensure this profile doesn't conflict with what is actively equipped in root
-	if err := s.checkEquippedCollision(dstName); err != nil {
 		fmt.Printf("⚠️  Skipping %s: %v\n", dstName, err)
 		return outcomeSkipped, nil
 	}
@@ -347,6 +364,11 @@ func (s *Summoner) summonRepoProfile(srcPath, tempDir, inventoryDir string) (sum
 	}
 	assets := profileAssets(profile)
 
+	dstPath, err := placeFor(s.ConfigDir, dstName)
+	if err != nil {
+		return outcomeFailed, err
+	}
+
 	// Get file info for size display
 	info, _ := os.Stat(srcPath)
 	size := info.Size()
@@ -354,11 +376,11 @@ func (s *Summoner) summonRepoProfile(srcPath, tempDir, inventoryDir string) (sum
 	// Ask for confirmation (include assets plan if any)
 	fmt.Printf("  File: %s\n", dstName)
 	fmt.Printf("  Size: %d bytes (%.1f KB)\n", size, float64(size)/1024)
-	fmt.Printf("  Destination: %s\n", inventoryDir)
+	fmt.Printf("  Destination: %s\n", filepath.Dir(dstPath))
 	if _, err := os.Stat(dstPath); err == nil {
 		fmt.Printf("  ⚠️  Warning: Will overwrite existing file\n")
 	}
-	profileName := strings.TrimSuffix(dstName, ".profile.toml")
+	profileName := strings.TrimSuffix(filepath.Base(dstPath), ".profile.toml")
 	if len(assets) > 0 {
 		printAssetsPlan(tempDir, filepath.Dir(srcPath), assets, profileName)
 	}
@@ -453,12 +475,12 @@ func (s *Summoner) summonRepoSpec(srcPath, specsDir string) summonOutcome {
 }
 
 // summonFromHTTP downloads a single profile file from an HTTP/HTTPS URL,
-// validates it, and moves it into the inventory as filename.
-func (s *Summoner) summonFromHTTP(sourceURL, filename, inventoryDir string) error {
-	dstPath := filepath.Join(inventoryDir, filename)
+// validates it, and copies it to dstPath.
+func (s *Summoner) summonFromHTTP(sourceURL, dstPath string) error {
+	filename := filepath.Base(dstPath)
 
 	// Download to a temp path so validation happens before anything lands in
-	// the inventory.
+	// the config dir.
 	tempFile, err := os.CreateTemp("", "drako-summon-*.toml")
 	if err != nil {
 		return err

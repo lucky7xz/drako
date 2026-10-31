@@ -76,7 +76,7 @@ func TestVerifyFileSHA256(t *testing.T) {
 }
 
 // End to end through Summon with the mock downloader: a correct pin admits
-// the file to the inventory, a wrong pin keeps the inventory empty.
+// the deck, a wrong pin keeps it out of both equipped and the inventory.
 func TestSummonHTTPPin(t *testing.T) {
 	payload := "x=3\ny=3\n[[commands]]\nname=\"T\"\ncommand=\"echo t\"\n"
 	sum := sha256.Sum256([]byte(payload))
@@ -99,8 +99,8 @@ func TestSummonHTTPPin(t *testing.T) {
 		if err := newSummoner(dir, goodPin).Summon("https://x/team.profile.toml"); err != nil {
 			t.Fatalf("Summon: %v", err)
 		}
-		if _, err := os.Stat(filepath.Join(dir, "inventory", "team.profile.toml")); err != nil {
-			t.Errorf("expected file in inventory: %v", err)
+		if _, err := os.Stat(filepath.Join(dir, "team.profile.toml")); err != nil {
+			t.Errorf("expected the deck equipped: %v", err)
 		}
 	})
 
@@ -110,9 +110,10 @@ func TestSummonHTTPPin(t *testing.T) {
 		if err == nil || !strings.Contains(err.Error(), "MISMATCH") {
 			t.Fatalf("err = %v, want MISMATCH", err)
 		}
-		entries, _ := os.ReadDir(filepath.Join(dir, "inventory"))
-		if len(entries) != 0 {
-			t.Errorf("inventory must stay empty on mismatch, has %d entries", len(entries))
+		for _, d := range []string{dir, filepath.Join(dir, "inventory")} {
+			if _, err := os.Stat(filepath.Join(d, "team.profile.toml")); err == nil {
+				t.Errorf("the deck landed in %s despite the mismatch", d)
+			}
 		}
 	})
 }
@@ -200,7 +201,10 @@ func TestSummonGitRevChecksOutThePinnedCommit(t *testing.T) {
 	if err := s.Summon(src); err != nil {
 		t.Fatalf("Summon pinned to the older commit: %v", err)
 	}
-	got, _ := os.ReadFile(filepath.Join(s.ConfigDir, "inventory", "deck.profile.toml"))
+	got, err := os.ReadFile(filepath.Join(s.ConfigDir, "deck.profile.toml"))
+	if err != nil {
+		t.Fatalf("pinned deck not summoned: %v", err)
+	}
 	if strings.Contains(string(got), "v2") {
 		t.Error("summoned the branch tip instead of the pinned commit")
 	}

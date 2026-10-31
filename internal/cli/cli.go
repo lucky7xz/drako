@@ -129,8 +129,7 @@ func HandleSummonCommand(args []string) int {
 		return 1
 	}
 
-	inventoryDir := paths.InventoryDir(configDir)
-	fmt.Printf("\n✓ Profile summoned successfully to %s\n", inventoryDir)
+	fmt.Printf("\n✓ Summon complete\n")
 	return 0
 }
 
@@ -187,7 +186,9 @@ func parseSummonArgs(args []string) (sourceURL, sha, rev string, err error) {
 // PrintSummonUsage prints the usage information for the summon command
 func PrintSummonUsage() {
 	fmt.Fprintf(os.Stderr, "Usage: drako summon <url|folder> [--sha256 <hex64> | --rev <commit40>]\n")
-	fmt.Fprintf(os.Stderr, "\nSummoned profiles are saved to ~/.config/drako/inventory/\n")
+	fmt.Fprintf(os.Stderr, "\nA summoned deck replaces the copy you have, equipped or in the inventory;\n")
+	fmt.Fprintf(os.Stderr, "a new one is equipped, or goes to ~/.config/drako/inventory/ once 9 are.\n")
+	fmt.Fprintf(os.Stderr, "Only files at the top level of the folder or repo are summoned.\n")
 	fmt.Fprintf(os.Stderr, "Pins verify that what arrived is what the author published;\n")
 	fmt.Fprintf(os.Stderr, "without one, drako warns and proceeds unverified.\n")
 	fmt.Fprintf(os.Stderr, "\nExamples:\n")

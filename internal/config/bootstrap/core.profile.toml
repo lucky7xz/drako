@@ -384,9 +384,9 @@ fi
 flatpak install flathub io.github.kolunmi.Bazaar
 ''', macos = "echo 'Bazaar is a Flathub store for Linux only.'", windows = "Write-Host 'Bazaar is a Flathub store for Linux only.'" }, auto_close_execution = false },
 
-    { name = "🃏 Summon '101 Series' Command Deck", description = "Pulls the 101 deck from the remote archives into your inventory. New space to explore.", command = { linux_generic = "drako summon https://github.com/lucky7xz/101-deck.git", macos = "drako summon https://github.com/lucky7xz/101-deck.git", windows = "drako summon https://github.com/lucky7xz/101-deck.git" }, auto_close_execution = false },
+    { name = "🃏 Summon '101 Series' Command Deck", description = "Pulls the 101 deck from the remote archives into your decks. New space to explore.", command = { linux_generic = "drako summon https://github.com/lucky7xz/101-deck.git", macos = "drako summon https://github.com/lucky7xz/101-deck.git", windows = "drako summon https://github.com/lucky7xz/101-deck.git" }, auto_close_execution = false },
 
-    { name = "🃏 Summon 'ggml' Command Deck", description = "Pulls the ggml deck from the remote archives into your inventory. Start learning about llama.cpp.", command = { linux_generic = "drako summon https://github.com/lucky7xz/ggml-deck.git", macos = "drako summon https://github.com/lucky7xz/ggml-deck.git", windows = "drako summon https://github.com/lucky7xz/ggml-deck.git" }, auto_close_execution = false },
+    { name = "🃏 Summon 'ggml' Command Deck", description = "Pulls the ggml deck from the remote archives into your decks. Start learning about llama.cpp.", command = { linux_generic = "drako summon https://github.com/lucky7xz/ggml-deck.git", macos = "drako summon https://github.com/lucky7xz/ggml-deck.git", windows = "drako summon https://github.com/lucky7xz/ggml-deck.git" }, auto_close_execution = false },
 
     { name = "🃏 Summon Private Deck", description = "Pulls a private deck from locked archives. Requires SSH keys to access the hidden chambers.", command = { linux_generic = '''
 echo "Enter GitHub Username:"

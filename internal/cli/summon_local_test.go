@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -28,6 +29,30 @@ func writeAll(t *testing.T, root string, files map[string]string) {
 	}
 }
 
+// placed reports where file sits in s's config dir: "equipped", "inventory",
+// "both", or "" when it is in neither.
+func placed(s *Summoner, file string) string {
+	_, inRoot := os.Stat(filepath.Join(s.ConfigDir, file))
+	_, inInv := os.Stat(filepath.Join(s.ConfigDir, "inventory", file))
+	switch {
+	case inRoot == nil && inInv == nil:
+		return "both"
+	case inRoot == nil:
+		return "equipped"
+	case inInv == nil:
+		return "inventory"
+	}
+	return ""
+}
+
+// equip fills s's config root with n decks, e0.profile.toml onwards.
+func equip(t *testing.T, s *Summoner, n int) {
+	t.Helper()
+	for i := range n {
+		writeAll(t, s.ConfigDir, map[string]string{fmt.Sprintf("e%d.profile.toml", i): validDeck})
+	}
+}
+
 func TestSummonLocalFolderCopiesDeckAndAssets(t *testing.T) {
 	s, dir := localSummoner(t)
 	writeAll(t, dir, map[string]string{
@@ -38,7 +63,7 @@ func TestSummonLocalFolderCopiesDeckAndAssets(t *testing.T) {
 	if err := s.Summon(dir); err != nil {
 		t.Fatalf("Summon: %v", err)
 	}
-	for _, p := range []string{"inventory/deck.profile.toml", "assets/deck/scripts/run.sh", "assets/deck/scripts/lib/util.sh"} {
+	for _, p := range []string{"deck.profile.toml", "assets/deck/scripts/run.sh", "assets/deck/scripts/lib/util.sh"} {
 		if _, err := os.Stat(filepath.Join(s.ConfigDir, p)); err != nil {
 			t.Errorf("%s not summoned: %v", p, err)
 		}
@@ -51,6 +76,100 @@ func TestSummonLocalFolderCopiesDeckAndAssets(t *testing.T) {
 	}
 	if got, _ := os.ReadFile(filepath.Join(s.ConfigDir, "assets/deck/scripts/run.sh")); string(got) != "v2" {
 		t.Errorf("asset not replaced on re-summon, got %q", got)
+	}
+}
+
+// New decks are equipped while there is room; once nine are, the rest wait in the inventory.
+func TestSummonEquipsNewDecksUntilFull(t *testing.T) {
+	s, dir := localSummoner(t)
+	equip(t, s, 8)
+	writeAll(t, dir, map[string]string{"a.profile.toml": validDeck, "b.profile.toml": validDeck})
+	if err := s.Summon(dir); err != nil {
+		t.Fatalf("Summon: %v", err)
+	}
+	if got := placed(s, "a.profile.toml"); got != "equipped" {
+		t.Errorf("a: placed %q, want equipped (the ninth slot)", got)
+	}
+	if got := placed(s, "b.profile.toml"); got != "inventory" {
+		t.Errorf("b: placed %q, want inventory (equipped is full)", got)
+	}
+}
+
+// A deck the user declines is never written, so it holds no equipped slot.
+func TestSummonDeclinedDeckTakesNoSlot(t *testing.T) {
+	s, dir := localSummoner(t)
+	equip(t, s, 8)
+	writeAll(t, dir, map[string]string{"a.profile.toml": validDeck, "b.profile.toml": validDeck})
+	s.UI = &MockUI{ConfirmFunc: func(p string) bool { return !strings.Contains(p, "a.profile.toml") }}
+	if err := s.Summon(dir); err != nil {
+		t.Fatalf("Summon: %v", err)
+	}
+	if got := placed(s, "b.profile.toml"); got != "equipped" {
+		t.Errorf("b: placed %q, want equipped (a was declined)", got)
+	}
+}
+
+// A deck that is already equipped is replaced there even when equipped is full.
+func TestSummonReplacesEquippedDeckWhenFull(t *testing.T) {
+	s, dir := localSummoner(t)
+	equip(t, s, 9)
+	writeAll(t, dir, map[string]string{"e3.profile.toml": validDeck + "# v2\n"})
+	if err := s.Summon(dir); err != nil {
+		t.Fatalf("Summon: %v", err)
+	}
+	if got := placed(s, "e3.profile.toml"); got != "equipped" {
+		t.Errorf("e3: placed %q, want equipped", got)
+	}
+	if got, _ := os.ReadFile(filepath.Join(s.ConfigDir, "e3.profile.toml")); !strings.Contains(string(got), "# v2") {
+		t.Error("the equipped e3 was not replaced")
+	}
+}
+
+// Deck names match the way the rest of drako matches them, ignoring case, so a
+// differently cased file replaces the deck instead of adding a twin.
+func TestSummonReplacesDeckWhateverItsCase(t *testing.T) {
+	s, dir := localSummoner(t)
+	writeAll(t, s.ConfigDir, map[string]string{"core.profile.toml": validDeck})
+	writeAll(t, dir, map[string]string{"Core.profile.toml": validDeck + "# v2\n"})
+	if err := s.Summon(dir); err != nil {
+		t.Fatalf("Summon: %v", err)
+	}
+	var decks []string
+	for _, d := range []string{s.ConfigDir, filepath.Join(s.ConfigDir, "inventory")} {
+		entries, _ := os.ReadDir(d)
+		for _, e := range entries {
+			if strings.HasSuffix(e.Name(), ".profile.toml") {
+				decks = append(decks, e.Name())
+			}
+		}
+	}
+	if got := strings.Join(decks, " "); got != "core.profile.toml" {
+		t.Fatalf("decks on disk: %q, want just core.profile.toml", got)
+	}
+	if got, _ := os.ReadFile(filepath.Join(s.ConfigDir, "core.profile.toml")); !strings.Contains(string(got), "# v2") {
+		t.Error("core.profile.toml was not replaced")
+	}
+}
+
+// Only the top level of the folder is summoned; decks and specs in subfolders stay put.
+func TestSummonIgnoresSubfolders(t *testing.T) {
+	s, dir := localSummoner(t)
+	writeAll(t, dir, map[string]string{
+		"top.profile.toml":      validDeck,
+		"sub/deep.profile.toml": validDeck,
+		"sub/deep.spec.toml":    "profiles = [\"top\"]\n",
+	})
+	if err := s.Summon(dir); err != nil {
+		t.Fatalf("Summon: %v", err)
+	}
+	if got := placed(s, "top.profile.toml"); got != "equipped" {
+		t.Errorf("top: placed %q, want equipped", got)
+	}
+	if got := placed(s, "deep.profile.toml"); got != "" {
+		t.Errorf("a deck from a subfolder was summoned: placed %q", got)
+	}
+	if _, err := os.Stat(filepath.Join(s.ConfigDir, "specs", "deep.spec.toml")); err == nil {
+		t.Error("a spec from a subfolder was summoned")
 	}
 }
 

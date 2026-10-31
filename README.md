@@ -172,7 +172,7 @@ Beyond the TUI, drako gives you CLI commands for managing decks at scale:
 | `drako explain [profile:]<addr>` | Zoom into one cell: name, actual command, description, auto_close (e.g. `A0`, `work:A1.2`) |
 | `drako run [profile:]<addr>` | Run one cell from the shell and exit with its exit code; `danger` cells refuse |
 | `drako agents`              | Print a brief that teaches an AI agent to drive the deck — `drako agents >> AGENTS.md` |
-| `drako summon <repo>`       | Pull a deck from any Git host into your inventory; pin with `--sha256`/`--rev` |
+| `drako summon <repo>`       | Pull the decks from any Git host; pin with `--sha256`/`--rev`                 |
 | `drako summon <folder>`     | Bring in the decks (and their assets) from a folder on disk, e.g. `drako summon .` |
 | `drako check [path ...]`    | Lint profile files; exits 1 on errors — run it in your deck repo's CI        |
 | `drako spec <name>`         | Equip the profiles a spec lists; stash the rest (context switch)             |
@@ -365,18 +365,18 @@ The brief is static — it reads no config — so it never goes stale in a file.
 Share and reuse command decks across machines and teams. Instead of manually copying profiles, summon them directly from remote sources:
 
 ```bash
-# Clones the repo, looks for .profile.toml files, discards the temporary repo.
+# Clones the repo, looks for .profile.toml files at its top level, discards the temporary repo.
 drako summon git@github.com:user/my_profile_collection.git
 
 # Verify what arrived matches what the author published (optional, recommended):
 drako summon https://example.com/deck.profile.toml --sha256 <full 64-char hex digest>
 drako summon git@github.com:user/repo.git --rev <full 40-char commit hash>
 
-# A deck you're writing, from its own folder (re-run after edits; stash it first if equipped)
+# A deck you're writing, from its own folder (re-run after edits)
 drako summon .
 ```
 
-**NOTE:** Works with any Git host (GitHub, GitLab, self-hosted). Summoned profiles land in `inventory/`, validated before copying. Summoning without a pin still works — drako just warns that the download is unverified.
+**NOTE:** Works with any Git host (GitHub, GitLab, self-hosted). Only files at the top level of the repo or folder are summoned, each validated before copying. A summoned deck replaces the copy you already have, equipped or in `inventory/`, so there is never a second one; a new deck is equipped, or lands in `inventory/` once 9 are equipped. Summoning without a pin still works — drako just warns that the download is unverified.
 
 If a profile needs extra files (scripts, configs), declare it under `assets = ["relative/path/to/file", ...]`.
 `drako` will copy these assets to `~/.config/drako/assets/<profile_name>/`.
