@@ -289,6 +289,8 @@ row = 2
 danger = true                      # Only the grid runs it; drako run refuses.
 ```
 
+Every cell in a deck needs its own `name`: drako finds cells by name, so of two cells with the same name only one could ever run. `drako check` reports it as an error.
+
 ## 🧶 Cross-Platform Decks (The Weaver)
 
 A cell's `command` can be a plain string — or a table of per-platform variants, resolved when the profile loads:
