@@ -123,6 +123,7 @@ type Model struct {
 	inventory inventoryModel
 	leader    leaderState
 	batch     batchState
+	sheet     *sheetState // the key sheet; nil while closed
 
 	activeDetail *DetailState // Single source of truth for detail view
 }

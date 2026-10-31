@@ -75,6 +75,9 @@ profile_next = "p"
 # The legacy Alt+1-9 chord still works alongside it.
 #leader = "m"
 
+# Opens the key sheet: every key for every screen, your remaps included.
+#help = "?"
+
 # ┌─ Batch Multiplexer ──────────────────────────────────────┐
 # │ Batch mode runs the cells you marked side by side, in
 # │ whichever multiplexer drako is already inside — herdr if

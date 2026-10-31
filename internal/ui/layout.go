@@ -39,17 +39,10 @@ const (
 type Layout struct {
 	ShowHeader bool
 	ShowFooter bool
-	// ShiftLeft reports whether the header+grid+footer block should hug the
-	// left edge (lipgloss.Left) instead of being centered. It fires once the
-	// terminal is 10 columns narrower than the point at which the active
-	// help text would start wrapping — see CalculateLayout for why this
-	// guarantees ShiftLeft is never true while ShowHeader is still true.
-	ShiftLeft bool
 }
 
 // widestLineWidth is the on-screen width of the widest line in s. Used to
-// measure both the resolved header art (or view-specific title) and the
-// active mode's help text.
+// measure the resolved header art (or view-specific title).
 func widestLineWidth(s string) int {
 	widest := 0
 	for _, line := range strings.Split(s, "\n") {
@@ -64,12 +57,8 @@ func widestLineWidth(s string) int {
 // It prioritizes the Grid and Footer information. headerArt is the
 // resolved header template (m.styles.HeaderArt for the ASCII-art views; a
 // view-specific title string, e.g. inventory mode's; "" if the view has no
-// header-equivalent element) — used only to measure its width. helpText is
-// the exact active-mode help line that view is about to render in its
-// footer ("" if it has none) — used only to measure its width, to
-// guarantee the header hides before that line would ever need to wrap, and
-// to compute ShiftLeft.
-func CalculateLayout(termW, termH int, cfg config.Config, headerArt, helpText string) Layout {
+// header-equivalent element) — used only to measure its width.
+func CalculateLayout(termW, termH int, cfg config.Config, headerArt string) Layout {
 	// The essential central grid: beyond the minimum window it scrolls,
 	// so it never claims more height than that window.
 	gridHeight := min(cfg.Y, MinVisibleGridRows) * GridCellHeight
@@ -100,29 +89,16 @@ func CalculateLayout(termW, termH int, cfg config.Config, headerArt, helpText st
 
 	// If terminal is too narrow, hide the header too — before the grid
 	// would need to compress cells below their comfortable footprint
-	// (fitFootprint, viewport.go), before the terminal is narrower than the
-	// header art itself, and before the active help line would need to
-	// wrap (helpWidth below). Folding helpWidth into the same max() that
-	// gates the header guarantees neededWidth >= helpWidth always, so
-	// ShiftLeft (10 narrower than helpWidth) can never fire while the
-	// header is still shown — the "hide, then wrap, then shift" ordering
-	// falls out of this structurally, it isn't separately enforced. The
-	// footer is never hidden by width — only wrapped, then the block
-	// shifts.
-	helpWidth := widestLineWidth(helpText) + LayoutSideMargin
-
+	// (fitFootprint, viewport.go), and before the terminal is narrower than
+	// the header art itself. The footer is never hidden by width: its bars
+	// trim to fit instead.
 	neededWidth := min(cfg.X, MinVisibleGridCols)*comfortableCellFootprint + LayoutSideMargin
 	if hw := widestLineWidth(headerArt) + LayoutSideMargin; hw > neededWidth {
 		neededWidth = hw
 	}
-	if helpWidth > neededWidth {
-		neededWidth = helpWidth
-	}
 	if termW < neededWidth {
 		l.ShowHeader = false
 	}
-
-	l.ShiftLeft = termW < helpWidth-10
 
 	return l
 }

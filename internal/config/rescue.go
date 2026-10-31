@@ -44,6 +44,7 @@ func factorySettings() Config {
 			PathSearch:   "e",
 			ToggleHidden: ".",
 			Leader:       "m",
+			Help:         "?",
 		},
 	}
 }

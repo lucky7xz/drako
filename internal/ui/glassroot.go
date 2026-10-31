@@ -23,6 +23,9 @@ import (
 // Deliberately allowed (decided 2026-07-03): profile switching/cycling and the
 // explain popup. Operator contract: every profile equipped on a glassroot box
 // must be kiosk-safe, because a session can reach all of them.
+//
+// The key sheet follows this list: sheetSections leaves out every key blocked
+// here, and batch mode, which enterBatchMode refuses under glassroot.
 
 // glassrootBlocksKey reports whether glassroot suppresses this keypress.
 func (m Model) glassrootBlocksKey(msg tea.KeyMsg) bool {

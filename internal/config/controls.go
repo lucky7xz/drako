@@ -26,6 +26,8 @@ type InputConfig struct {
 	// Leader arms a two-key sequence: leader then 'b' (batch mode) or
 	// 1-9 (switch profile). The legacy modifier chord (alt+1-9) still works.
 	Leader string `toml:"leader"`
+	// Help opens the key sheet: every key for every screen.
+	Help string `toml:"help"`
 
 	// Internal computed sets for fast lookup
 	NavUp    []string

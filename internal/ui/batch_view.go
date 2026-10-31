@@ -11,9 +11,8 @@ import (
 	"github.com/lucky7xz/drako/internal/multiplex"
 )
 
-// Batch mode rendering: the counter line swaps for a mark count, runnable
-// cells get a mark glyph, and the footer explains the three keys. Everything
-// else reuses the normal grid view.
+// Batch mode rendering: the counter line swaps for a mark count and runnable
+// cells get a mark glyph. Everything else reuses the normal grid view.
 
 // renderBatchCounter replaces the profile counter while marking.
 func (m Model) renderBatchCounter() string {
@@ -23,14 +22,6 @@ func (m Model) renderBatchCounter() string {
 // batchCount is the mark count every batch view shows.
 func (m Model) batchCount() string {
 	return fmt.Sprintf("[ BATCH %d/%d ]", len(m.batch.marked), multiplex.MaxCommands)
-}
-
-// batchHelpText is the batch-mode footer line.
-func (m Model) batchHelpText() string {
-	if m.batch.choosing() {
-		return "Layout | ←/→/ad: Field, ↑/↓/ws: Adjust, Enter: Launch, Esc/q: Back"
-	}
-	return fmt.Sprintf("Batch | Space: Mark, Enter: Launch %d, Esc/q: Cancel", len(m.batch.marked))
 }
 
 // layoutFields are the dialog's selectable boxes, in a row: the tab count,

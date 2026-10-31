@@ -165,9 +165,10 @@ func (m Model) renderProfileCounter() string {
 	return m.styles.Title.Render(counter)
 }
 
-// renderProfileBar shows HOST | PROFILE | lock/glassroot badges. When it
-// doesn't fit availWidth, PROFILE drops first — HOST and the badges stay,
-// since those are what you'd check when something's gone sideways.
+// renderProfileBar shows HOST | PROFILE | lock/glassroot badges | key hint.
+// When it doesn't fit availWidth, PROFILE drops first, then HOST shortens —
+// the badges and the hint stay: the badges are what you'd check when
+// something's gone sideways, and the hint is how you find every other key.
 func (m Model) renderProfileBar(availWidth int) string {
 	hostname, _ := os.Hostname()
 	currUser, _ := user.Current()
@@ -190,27 +191,26 @@ func (m Model) renderProfileBar(availWidth int) string {
 	hostSeg := "HOST: " + username + "@" + hostname + " " + osArch
 	profileSeg := lipgloss.NewStyle().Render("PROFILE: ") + m.profile.activeName()
 
-	var tail string
+	var badges string
 	if m.profile.pivotName != "" {
-		tail += m.styles.LockBadge.Render(fmt.Sprintf("🔒 %s", m.profile.pivotName))
+		badges += m.styles.LockBadge.Render(fmt.Sprintf("🔒 %s", m.profile.pivotName))
 	}
 	if m.GlassrootMode {
-		tail += lipgloss.NewStyle().Foreground(lipgloss.Color("#A8E6CF")).Render("🧊 G-ROOT")
+		badges += lipgloss.NewStyle().Foreground(lipgloss.Color("#A8E6CF")).Render("🧊 G-ROOT")
+	}
+	tail := m.styles.Help.Render(m.keyHint())
+	if badges != "" {
+		tail = badges + sep + tail
 	}
 
-	full := hostSeg + sep + profileSeg
-	if tail != "" {
-		full += sep + tail
-	}
-	if lipgloss.Width(full) <= availWidth {
+	if full := hostSeg + sep + profileSeg + sep + tail; lipgloss.Width(full) <= availWidth {
 		return full
 	}
-
-	slim := hostSeg
-	if tail != "" {
-		slim += sep + tail
+	room := availWidth - lipgloss.Width(sep+tail)
+	if room < 1 {
+		return truncateText(tail, availWidth)
 	}
-	return truncateText(slim, availWidth)
+	return truncateText(hostSeg, room) + sep + tail
 }
 
 // renderStatusMessage is its own row rather than a profileBar segment — a

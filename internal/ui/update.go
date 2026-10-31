@@ -119,9 +119,10 @@ func (m Model) handleMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// 2. touch the idle timer (skipped while already locked).
 		// 3. locked mode owns every other key.
 		// 4. the session-lock chord works everywhere — mid-search, in glassroot.
-		// 5. glassroot vetoes its restricted keys before anything below acts.
-		// 6. cross-mode bindings (profile lock/switch), skipped while typing.
-		// 7. the mode-specific handler.
+		// 5. the key sheet: open, it owns every key; the help key opens it.
+		// 6. glassroot vetoes its restricted keys before anything below acts.
+		// 7. cross-mode bindings (profile lock/switch), skipped while typing.
+		// 8. the mode-specific handler.
 
 		// Global Emergency Exit: Ctrl+C should always quit (except in Locked Mode, handled below)
 		if key == "ctrl+c" {
@@ -146,6 +147,16 @@ func (m Model) handleMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// anything, and the guest pumps straight back in.
 		if IsSessionLock(m.Config.Keys, msg, m.Config.NumbModifier) {
 			return m.enterLockedMode(), nil
+		}
+
+		// The sheet floats over the screen it lists, so while it is open the
+		// screen underneath gets no keys at all.
+		if m.sheet != nil {
+			return m.updateKeySheet(msg), nil
+		}
+		if m.opensKeySheet(msg) {
+			m.sheet = &sheetState{}
+			return m, nil
 		}
 
 		// Glassroot gatekeeper: restricted keys are no-ops. The full policy

@@ -10,11 +10,6 @@ import (
 	"github.com/lucky7xz/drako/internal/profiles"
 )
 
-// inventoryHelpText is this view's footer help line — extracted to a
-// package-level const so CalculateLayout and the footer-building code below
-// measure/render the exact same string.
-const inventoryHelpText = "↑/↓: Lists | ←/→: Move | enter: Lift/Place | tab: Specs | e: Edit | del: Trash | q/esc: Back"
-
 func (m Model) viewInventoryMode() string {
 	// If there's an error, just show that.
 	if m.inventory.err != nil {
@@ -31,7 +26,7 @@ func (m Model) viewInventoryMode() string {
 	// Calculate layout to determine visibility of header/footer. This
 	// view's header is the "Inventory Management" title, not the ASCII-art
 	// logo, so the width gate measures that string's actual length.
-	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config, "Inventory Management", inventoryHelpText)
+	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config, "Inventory Management")
 
 	title := m.styles.InventoryTitle.Render("Inventory Management")
 
@@ -84,17 +79,8 @@ func (m Model) viewInventoryMode() string {
 
 	var footer string
 	if layout.ShowFooter {
-		// Render Help, wrapped before styling (one Render() per wrapped
-		// line) so narrow terminals get multiple lines instead of overflow.
-		availWidth := m.termWidth - LayoutSideMargin
-		wrapped := WrapText(inventoryHelpText, availWidth)
-		helpLines := make([]string, len(wrapped))
-		for i, line := range wrapped {
-			helpLines[i] = m.styles.Help.Render(line)
-		}
-		help := lipgloss.JoinVertical(lipgloss.Left, helpLines...)
-		version := m.styles.Help.Render(config.AppName + " | " + config.Version())
-		footer = m.styles.Footer.Render(lipgloss.JoinVertical(lipgloss.Center, help, version))
+		version := m.styles.Help.Render(config.AppName + " | " + config.Version() + " | " + m.keyHint())
+		footer = m.styles.Footer.Render(version)
 	}
 
 	// Everything except the two grids is fixed-height chrome — measure it
@@ -143,23 +129,18 @@ func (m Model) viewInventoryMode() string {
 	}
 	content := lipgloss.JoinVertical(lipgloss.Left, sections...)
 
-	hAlign := lipgloss.Center
-	if layout.ShiftLeft {
-		hAlign = lipgloss.Left
-	}
-
 	if m.inventory.specs != nil {
 		popup := lipgloss.Place(m.termWidth, m.termHeight,
 			lipgloss.Center, lipgloss.Center,
 			m.renderSpecsPopup(),
 		)
 		return appStyle.Render(
-			lipgloss.Place(m.termWidth, m.termHeight, hAlign, lipgloss.Center, content+"\n"+popup),
+			lipgloss.Place(m.termWidth, m.termHeight, lipgloss.Center, lipgloss.Center, content+"\n"+popup),
 		)
 	}
 
 	return appStyle.Render(
-		lipgloss.Place(m.termWidth, m.termHeight, hAlign, lipgloss.Center, content),
+		lipgloss.Place(m.termWidth, m.termHeight, lipgloss.Center, lipgloss.Center, content),
 	)
 }
 

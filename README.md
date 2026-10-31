@@ -190,6 +190,7 @@ Run any of these with no arguments for usage. Details in [Power Tools](#-power-t
 
 ## 🧭 Navigation
 
+- **Key Sheet:** `?` shows every key for every screen, your remaps included (`help` in config.toml rebinds it). The footer's `? help · q quit` is the reminder; outside the grid, `q` backs out instead of quitting.
 - **Grid Navigation:** Use arrows, `w/a/s/d`, or `h/j/k/l` (customizable in config.toml).
 - **Quick Navigation:** For example: pressing `2` and `3` in quick sequence moves the cursor to the 2nd column, 3rd row.
 - **Switch Profile:** `m` then `1-9` (leader sequence), or the legacy `Alt` + `1-9` chord.

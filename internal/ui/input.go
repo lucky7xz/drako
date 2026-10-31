@@ -108,6 +108,11 @@ func IsSessionLock(c config.InputConfig, msg tea.KeyMsg, modifier string) bool {
 	return msg.String() == modifier+"+"+c.SessionLock
 }
 
+// IsHelp checks if the key opens the key sheet.
+func IsHelp(c config.InputConfig, msg tea.KeyMsg) bool {
+	return msg.String() == c.Help
+}
+
 // IsEditFile checks if the key matches the edit-file action (inventory mode).
 func IsEditFile(c config.InputConfig, msg tea.KeyMsg) bool {
 	return msg.String() == c.EditFile

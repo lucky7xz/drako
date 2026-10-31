@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 )
 
 // renderSizeOverlay shows a centered panel with current and required dimensions
@@ -36,6 +37,36 @@ func (m Model) renderSizeOverlay(reqW, reqH int) string {
 		lipgloss.Center, lipgloss.Center,
 		overlay,
 	)
+}
+
+// overlay draws popup centered over base, a finished w×h frame, leaving the
+// rest of base visible around it. The renderer shows only the last h lines of
+// a taller frame (bubbletea drops lines from the top), so those are the ones
+// kept and centered on. Each covered line is cut around the popup with the
+// ANSI-aware truncations, which keep the style codes on either side; a reset
+// at both seams stops a color from running into or out of the popup.
+func overlay(base, popup string, w, h int) string {
+	lines := strings.Split(base, "\n")
+	if len(lines) > h {
+		lines = lines[len(lines)-h:]
+	}
+	popLines := strings.Split(popup, "\n")
+	popW := lipgloss.Width(popup)
+	top := max(0, (h-len(popLines))/2)
+	left := max(0, (w-popW)/2)
+
+	for i, pl := range popLines {
+		row := top + i
+		if row >= len(lines) {
+			break
+		}
+		under := lines[row]
+		before := ansi.Truncate(under, left, "")
+		pad := strings.Repeat(" ", left-ansi.StringWidth(before))
+		after := ansi.TruncateLeft(under, left+popW, "")
+		lines[row] = before + pad + ansi.ResetStyle + pl + ansi.ResetStyle + after
+	}
+	return strings.Join(lines, "\n")
 }
 
 // padLinesToWidth right-pads every line to the widest line's width with
@@ -69,8 +100,7 @@ func padLinesTo(raw []string, width int, bgFill lipgloss.Style) []string {
 
 func (m Model) viewDropdownMode() string {
 	// Render the base grid view
-	helpText := "Dropdown Mode | ↑/↓/ws: Select, Enter: Execute, Esc/q: Cancel"
-	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config, m.styles.HeaderArt, helpText)
+	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config, m.styles.HeaderArt)
 	header := ""
 	if layout.ShowHeader {
 		header = m.styles.renderHeaderArt(m.spinner.View())
@@ -78,22 +108,14 @@ func (m Model) viewDropdownMode() string {
 
 	var footer string
 	if layout.ShowFooter {
-		footer = m.renderCombinedFooter(helpText)
+		footer = m.renderCombinedFooter()
 	}
 
-	hAlign := lipgloss.Center
-	if layout.ShiftLeft {
-		hAlign = lipgloss.Left
-	}
-
-	// hAlign governs these inner joins too, not just the outer Place()
-	// below — otherwise the grid would stay centered relative to a wider
-	// wrapped footer even while the block as a whole shifts left.
 	grid := m.renderGrid(gridRowBudget(m.termHeight, header, footer))
-	mainContent := lipgloss.JoinVertical(hAlign, header, grid)
+	mainContent := lipgloss.JoinVertical(lipgloss.Center, header, grid)
 
 	finalContent := lipgloss.JoinVertical(
-		hAlign,
+		lipgloss.Center,
 		mainContent,
 		footer,
 	)
@@ -102,8 +124,7 @@ func (m Model) viewDropdownMode() string {
 	dropdownPopup := m.renderDropdownPopup()
 
 	// Place the dropdown in the center of the screen — it's a small floating
-	// overlay, not part of the header/grid/footer width cascade, so it stays
-	// centered regardless of layout.ShiftLeft.
+	// overlay, not part of the header/grid/footer width cascade.
 	popupOverlay := lipgloss.Place(m.termWidth, m.termHeight,
 		lipgloss.Center, lipgloss.Center,
 		dropdownPopup,
@@ -111,7 +132,7 @@ func (m Model) viewDropdownMode() string {
 
 	return appStyle.Render(
 		lipgloss.Place(m.termWidth, m.termHeight,
-			hAlign, lipgloss.Center,
+			lipgloss.Center, lipgloss.Center,
 			finalContent+"\n"+popupOverlay,
 		),
 	)
@@ -155,25 +176,19 @@ func (m Model) renderDropdownPopup() string {
 // the dropdown popup when the batch came from a folder, so one framed box is
 // on screen at a time and the dialog looks the same from either entry point.
 func (m Model) viewLayoutDialog() string {
-	helpText := m.batchHelpText()
-	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config, m.styles.HeaderArt, helpText)
+	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config, m.styles.HeaderArt)
 	header := ""
 	if layout.ShowHeader {
 		header = m.styles.renderHeaderArt(m.spinner.View())
 	}
 	var footer string
 	if layout.ShowFooter {
-		footer = m.renderCombinedFooter(helpText)
-	}
-
-	hAlign := lipgloss.Center
-	if layout.ShiftLeft {
-		hAlign = lipgloss.Left
+		footer = m.renderCombinedFooter()
 	}
 
 	grid := m.renderGrid(gridRowBudget(m.termHeight, header, footer))
-	finalContent := lipgloss.JoinVertical(hAlign,
-		lipgloss.JoinVertical(hAlign, header, grid),
+	finalContent := lipgloss.JoinVertical(lipgloss.Center,
+		lipgloss.JoinVertical(lipgloss.Center, header, grid),
 		footer,
 	)
 
@@ -184,7 +199,7 @@ func (m Model) viewLayoutDialog() string {
 
 	return appStyle.Render(
 		lipgloss.Place(m.termWidth, m.termHeight,
-			hAlign, lipgloss.Center,
+			lipgloss.Center, lipgloss.Center,
 			finalContent+"\n"+popup,
 		),
 	)
@@ -385,7 +400,7 @@ func (m Model) infoScrollMetrics() (valueLines []string, viewportH, maxOffset in
 	pinned += 2 // blank spacer + help line
 
 	headerH := 0
-	if CalculateLayout(m.termWidth, m.termHeight, m.Config, m.styles.HeaderArt, "").ShowHeader {
+	if CalculateLayout(m.termWidth, m.termHeight, m.Config, m.styles.HeaderArt).ShowHeader {
 		headerH = lipgloss.Height(m.styles.renderHeaderArt(m.spinner.View()))
 	}
 
@@ -442,10 +457,7 @@ func scrollbarColumn(total, offset, viewportH int, thumb, track lipgloss.Style) 
 }
 
 func (m Model) viewInfoMode() string {
-	// No footer/help line is rendered in this view, so helpText is "" —
-	// ShiftLeft is structurally always false here (see CalculateLayout),
-	// and this view's own Place call stays unconditionally centered.
-	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config, m.styles.HeaderArt, "")
+	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config, m.styles.HeaderArt)
 	header := ""
 	if layout.ShowHeader {
 		header = m.styles.renderHeaderArt(m.spinner.View())

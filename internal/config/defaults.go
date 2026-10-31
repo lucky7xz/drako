@@ -59,6 +59,9 @@ func (c *Config) ApplyDefaults() {
 	if strings.TrimSpace(c.Keys.Leader) == "" {
 		c.Keys.Leader = defaults.Keys.Leader
 	}
+	if strings.TrimSpace(c.Keys.Help) == "" {
+		c.Keys.Help = defaults.Keys.Help
+	}
 
 	// Initialize control sets (WASD, Vim, arrows)
 	c.Keys.InitControls()

@@ -40,6 +40,7 @@ func TestApplyDefaults(t *testing.T) {
 		"path_search":    cfg.Keys.PathSearch,
 		"toggle_hidden":  cfg.Keys.ToggleHidden,
 		"leader":         cfg.Keys.Leader,
+		"help":           cfg.Keys.Help,
 	} {
 		if binding == "" {
 			t.Errorf("ApplyDefaults left %q unbound", name)

@@ -2,7 +2,6 @@ package ui
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
@@ -10,7 +9,21 @@ import (
 	"github.com/muesli/termenv"
 )
 
+// View is the current screen, with the key sheet floating over it while open.
+// The frame is wider than the terminal by appStyle's margin, so the sheet is
+// centered on that width — in line with the screen's own content.
 func (m Model) View() string {
+	frame := m.view()
+	if m.sheet == nil || m.termWidth == 0 {
+		return frame
+	}
+	if tooSmall, _, _ := m.belowMinimum(); tooSmall {
+		return frame
+	}
+	return overlay(frame, m.renderKeySheet(), m.termWidth+appStyle.GetHorizontalMargins(), m.termHeight)
+}
+
+func (m Model) view() string {
 	if m.termWidth == 0 {
 		return "Initializing..."
 	}
@@ -42,21 +55,7 @@ func (m Model) View() string {
 		return m.viewInfoMode()
 	}
 
-	var helpText string
-	switch m.mode {
-	case pathMode:
-		helpText = fmt.Sprintf("Path Mode | ←/→/ad: Select, ↓/s: Children, Enter: cd, %s: Search, q/Esc: Back",
-			m.Config.Keys.PathSearch)
-	case childMode:
-		helpText = fmt.Sprintf("Child Mode | ↑/↓/ws: Select, Enter: cd, %s: Search, q/Esc: Back",
-			m.Config.Keys.PathSearch)
-	case batchMode:
-		helpText = m.batchHelpText()
-	default:
-		helpText = "Grid Mode | Enter: Select, e: Explain, Tab: Path, r: Start-Lock, i: Inventory"
-	}
-
-	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config, m.styles.HeaderArt, helpText)
+	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config, m.styles.HeaderArt)
 
 	header := ""
 	if layout.ShowHeader {
@@ -67,64 +66,39 @@ func (m Model) View() string {
 		counter = m.renderBatchCounter()
 	}
 
-	footer := m.renderCombinedFooter(helpText)
+	footer := m.renderCombinedFooter()
 
 	// Respect layout.ShowFooter
 	if !layout.ShowFooter {
 		footer = ""
 	}
 
-	hAlign := lipgloss.Center
-	if layout.ShiftLeft {
-		hAlign = lipgloss.Left
-	}
-
-	// The grid gets whatever vertical space the chrome leaves over. hAlign
-	// governs these inner joins too, not just the outer Place() below:
-	// otherwise the grid (narrower than the wrapped footer text) would stay
-	// centered relative to its siblings even while the block as a whole
-	// shifts left, undercutting the actual goal of moving the cells left.
+	// The grid gets whatever vertical space the chrome leaves over.
 	grid := m.renderGrid(gridRowBudget(m.termHeight, header, counter, footer))
-	mainContent := lipgloss.JoinVertical(hAlign, header, counter, grid)
+	mainContent := lipgloss.JoinVertical(lipgloss.Center, header, counter, grid)
 
 	finalContent := lipgloss.JoinVertical(
-		hAlign,
+		lipgloss.Center,
 		mainContent,
 		footer,
 	)
 
 	return appStyle.Render(
 		lipgloss.Place(m.termWidth, m.termHeight,
-			hAlign, lipgloss.Center,
+			lipgloss.Center, lipgloss.Center,
 			finalContent,
 		),
 	)
 }
 
-// renderCombinedFooter creates the standard bottom block: Help | Status | Profile | Path.
-// helpText is the raw (unstyled) active-mode help line; pass "" to skip it.
-// It is word-wrapped (WrapText) before styling, one Render() call per
-// wrapped line, so it degrades to multiple lines on narrow terminals
-// instead of overflowing — wrapping before styling matters here, since a
-// single Render() over the whole line carries one ANSI start/reset pair
-// that a post-hoc wrap could split across lines. The NET/STATUS/THEME line
-// is NOT wrapped: m.net.traffic/m.net.online already carry ANSI color
-// codes and can contain internal spaces (e.g. "↓ 1.2kb/s ↑ 3.4kb/s"), so
-// word-wrapping that joined line risks splitting an ANSI start/reset pair
-// across lines and bleeding color into unrelated text — it's truncated
-// instead.
-func (m Model) renderCombinedFooter(helpText string) string {
+// renderCombinedFooter creates the standard bottom block: Status | Profile | Path.
+// Every bar trims to the width rather than wrapping: m.net.traffic and
+// m.net.online already carry ANSI color codes and can contain internal
+// spaces (e.g. "↓ 1.2kb/s ↑ 3.4kb/s"), so word-wrapping a joined line risks
+// splitting an ANSI start/reset pair across lines and bleeding color into
+// unrelated text.
+func (m Model) renderCombinedFooter() string {
 	availWidth := m.termWidth - LayoutSideMargin
-
-	var help string
-	if helpText != "" {
-		lines := WrapText(helpText, availWidth)
-		styledLines := make([]string, len(lines))
-		for i, line := range lines {
-			styledLines[i] = m.styles.Help.Render(line)
-		}
-		help = strings.Join(styledLines, "\n")
-	}
 
 	networkStatusBar := lipgloss.NewStyle().PaddingTop(1).Render(m.renderNetworkBar(availWidth))
 
@@ -134,11 +108,7 @@ func (m Model) renderCombinedFooter(helpText string) string {
 	pathBar := m.path.RenderPathBar(m.mode == pathMode, m.styles, availWidth)
 	childDirs := m.path.RenderChildDirs(m.mode, m.styles, availWidth)
 
-	items := []string{}
-	if help != "" {
-		items = append(items, help)
-	}
-	items = append(items, networkStatusBar, profileBar)
+	items := []string{networkStatusBar, profileBar}
 	if statusMsg := m.renderStatusMessage(availWidth); statusMsg != "" {
 		items = append(items, statusMsg)
 	}

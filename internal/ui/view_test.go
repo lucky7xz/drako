@@ -58,11 +58,15 @@ func createTestModelForView(mode navMode) Model {
 
 func TestView_GridMode(t *testing.T) {
 	m := createTestModelForView(gridMode)
+	m.Config.ApplyDefaults()
 	output := m.View()
 
-	// Check for Grid-specific elements
-	if !strings.Contains(output, "Grid Mode") {
-		t.Errorf("View output missing 'Grid Mode' indicator. Got:\n%s", output)
+	// The footer carries the key hint, and no help line any more
+	if !strings.Contains(output, "? help · q quit") {
+		t.Errorf("View output missing the key hint. Got:\n%s", output)
+	}
+	if strings.Contains(output, "Grid Mode") {
+		t.Errorf("the old help line is still on screen:\n%s", output)
 	}
 	if !strings.Contains(output, "Cmd1") {
 		t.Error("View output missing grid content 'Cmd1'")
@@ -356,58 +360,57 @@ func TestView_LockedMode(t *testing.T) {
 	}
 }
 
-// The active help line's wrap boundary is derived from the same W used to
-// widen the header-hide threshold; picking a termW inside (W-10, W)
-// exercises wrap without shift. The final render is appStyle.Render(...) of
-// a Place()'d block: Place sizes content to exactly m.termWidth, then
+// Nothing in the footer wraps or overflows on a narrow terminal, and the key
+// hint survives the trim. The final render is appStyle.Render(...) of a
+// Place()'d block: Place sizes content to exactly m.termWidth, then
 // appStyle's own outer margin adds appStyle.GetHorizontalMargins() more —
 // that overhead is pre-existing (present at any width, unrelated to this
 // feature), so the bound accounts for it rather than asserting termW exactly.
-func TestView_NarrowTerminalWrapsHelpText(t *testing.T) {
-	helpText := "Grid Mode | Enter: Select, e: Explain, Tab: Path, r: Start-Lock, i: Inventory"
-	W := lipgloss.Width(helpText) + LayoutSideMargin
-	termW := W - 5
-	m := makeScrollTestModel(1, 1, termW, 30)
-	output := m.View()
+func TestView_NarrowTerminalKeepsTheKeyHint(t *testing.T) {
+	for _, termW := range []int{40, 60, 80} {
+		m := makeScrollTestModel(1, 1, termW, 30)
+		m.Config.ApplyDefaults()
+		output := m.View()
 
-	maxAllowed := termW + appStyle.GetHorizontalMargins()
-	for _, ln := range strings.Split(output, "\n") {
-		if w := lipgloss.Width(ln); w > maxAllowed {
-			t.Errorf("line exceeds allowed width %d: %q (%d wide)", maxAllowed, ln, w)
+		maxAllowed := termW + appStyle.GetHorizontalMargins()
+		for _, ln := range strings.Split(output, "\n") {
+			if w := lipgloss.Width(ln); w > maxAllowed {
+				t.Errorf("termW=%d: line exceeds allowed width %d: %q (%d wide)", termW, maxAllowed, ln, w)
+			}
 		}
-	}
-	if !strings.Contains(output, "Grid Mode") || !strings.Contains(output, "Inventory") {
-		t.Error("wrapped help text should still contain its content, just split across lines")
+		if !strings.Contains(output, "? help · q quit") {
+			t.Errorf("termW=%d: the profile bar trimmed the key hint away:\n%s", termW, output)
+		}
 	}
 }
 
-// Below W-10 the block should hug the left edge instead of leaving centered
-// slack: the block's widest line should trail only appStyle's static outer
-// margin, not a variable centering offset. Narrower sibling lines (e.g. the
-// profile counter, centered relative to the grid by an inner JoinVertical)
-// are unaffected by this outer-Place change and may still show their own
-// relative indentation — this checks the widest/dominant line specifically,
-// via the minimum leading whitespace across all non-empty lines.
-func TestView_ShiftLeftHugsLeftEdge(t *testing.T) {
-	helpText := "Grid Mode | Enter: Select, e: Explain, Tab: Path, r: Start-Lock, i: Inventory"
-	W := lipgloss.Width(helpText) + LayoutSideMargin
-	termW := W - 15
-	m := makeScrollTestModel(1, 1, termW, 30)
-	output := m.View()
-
-	minLeading := -1
-	for _, ln := range strings.Split(output, "\n") {
-		stripped := ansi.Strip(ln)
-		trimmed := strings.TrimLeft(stripped, " ")
-		if trimmed == "" {
-			continue
-		}
-		if leading := len(stripped) - len(trimmed); minLeading == -1 || leading < minLeading {
-			minLeading = leading
-		}
-	}
-	if maxStaticMargin := appStyle.GetHorizontalMargins()/2 + 1; minLeading > maxStaticMargin {
-		t.Errorf("expected some line to hug the left edge (leading <= %d, appStyle's static margin), smallest leading was %d", maxStaticMargin, minLeading)
+// q only quits from the grid; everywhere else it backs out one step
+// (IsCancel), so the hint names what it does on this screen.
+func TestView_KeyHintSaysWhatQDoesHere(t *testing.T) {
+	folder := []config.CommandItem{{Name: "a", Command: "true"}}
+	for _, tt := range []struct {
+		name  string
+		setup func(m *Model)
+		want  string
+	}{
+		{"grid", func(m *Model) {}, "q quit"},
+		{"path", func(m *Model) { m.mode = pathMode }, "q back"},
+		{"child", func(m *Model) { m.mode = childMode }, "q back"},
+		{"folder", func(m *Model) { m.mode, m.dropdown.items = dropdownMode, folder }, "q close"},
+		{"folder batch", func(m *Model) { m.mode, m.dropdown.items, m.batch.dropdown = dropdownMode, folder, true }, "q cancel"},
+		{"batch", func(m *Model) { m.mode = batchMode }, "q cancel"},
+		{"layout dialog", func(m *Model) { m.mode, m.batch.tabs = batchMode, []int{1} }, "q back"},
+		{"inventory", func(m *Model) { m.mode = inventoryMode }, "q back"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModelForView(gridMode)
+			m.Config.ApplyDefaults()
+			tt.setup(&m)
+			want := "? help · " + tt.want
+			if got := ansi.Strip(m.View()); !strings.Contains(got, want) {
+				t.Errorf("footer is missing %q:\n%s", want, got)
+			}
+		})
 	}
 }
 
@@ -531,7 +534,7 @@ func TestRenderCombinedFooter_LongPathFitsBudget(t *testing.T) {
 	for _, termWidth := range []int{40, 60, 80, 200} {
 		m := longPathModel(pathMode, termWidth)
 		availWidth := termWidth - LayoutSideMargin
-		footer := m.renderCombinedFooter("Path Mode | Enter: cd")
+		footer := m.renderCombinedFooter()
 		for i, line := range strings.Split(footer, "\n") {
 			if w := lipgloss.Width(line); w > availWidth {
 				t.Errorf("termWidth=%d: footer line %d is %d wide (budget %d):\n%q",
