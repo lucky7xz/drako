@@ -12,9 +12,9 @@ import (
 // exactly one answer and one test.
 //
 // Blocked: entering inventory, entering path mode, toggling the pivot lock,
-// copying to the clipboard, and exposing config/rescue details when a profile
-// is broken or no profiles are equipped at all (the session ends silently
-// instead — see failGlassroot and glassrootRejectsBundle).
+// copying to the clipboard, starting a batch, and exposing config/rescue
+// details when a profile is broken or no profiles are equipped at all (the
+// session ends silently instead — see failGlassroot and glassrootRejectsBundle).
 // The inventory's spec-function picker needs no rule of its own: it lives
 // inside inventory mode, and its key is the path-mode key blocked here.
 // File editing is blocked transitively (it lives inside inventory mode) plus
@@ -25,7 +25,7 @@ import (
 // must be kiosk-safe, because a session can reach all of them.
 //
 // The key sheet follows this list: sheetSections leaves out every key blocked
-// here, and batch mode, which enterBatchMode refuses under glassroot.
+// here.
 
 // glassrootBlocksKey reports whether glassroot suppresses this keypress.
 func (m Model) glassrootBlocksKey(msg tea.KeyMsg) bool {
@@ -41,6 +41,13 @@ func (m Model) glassrootBlocksKey(msg tea.KeyMsg) bool {
 // server-side clipboard tools (wl-copy/xclip/…) and can expose broken-profile
 // TOML contents, so glassroot forbids it.
 func (m Model) allowCopy() bool {
+	return !m.GlassrootMode
+}
+
+// allowBatch reports whether a batch may start. A batch hands the guest a full
+// tmux or herdr session — new windows, shells — far outside the kiosk contract,
+// so glassroot forbids it. batchGate asks this for every batch entry point.
+func (m Model) allowBatch() bool {
 	return !m.GlassrootMode
 }
 

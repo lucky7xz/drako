@@ -115,13 +115,9 @@ func TestViewInventoryMode_ManyProfilesScrollInsteadOfOverflowing(t *testing.T) 
 	m := makeInventoryTestModel(50, 40, 1, 80, 24)
 	output := m.View()
 
-	// The whole rendered page must fit the terminal height budget (plus the
-	// known static appStyle margin overhead — see the width-cascade tests
-	// in view_test.go for why that overhead exists).
-	lineCount := strings.Count(output, "\n") + 1
-	maxAllowed := m.termHeight + appStyle.GetVerticalMargins()
-	if lineCount > maxAllowed {
-		t.Errorf("inventory page is %d lines, want <= %d (termHeight=%d)", lineCount, maxAllowed, m.termHeight)
+	// The whole rendered page must fit the terminal.
+	if lineCount := strings.Count(output, "\n") + 1; lineCount > m.termHeight {
+		t.Errorf("inventory page is %d lines, want <= %d", lineCount, m.termHeight)
 	}
 	if !strings.Contains(output, "profile-40") {
 		t.Error("cursor's profile must stay visible even when the list doesn't fit")

@@ -505,7 +505,8 @@ func TestSpecsPopup_RendersEveryGroup(t *testing.T) {
 		}
 	}
 	// The inventory stays underneath — the picker is an overlay, not a screen.
-	if !strings.Contains(out, "Equipped Items") {
+	// It covers the lists; the inventory's footer below it still shows.
+	if !strings.Contains(out, config.AppName) {
 		t.Error("the inventory should still be visible behind the popup")
 	}
 }

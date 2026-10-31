@@ -673,6 +673,7 @@ func (m Model) enterLockedMode() Model {
 	m.mode = lockedMode
 	m.lock.progress = 0
 	m.lock.lastDirection = 0
+	m.sheet = nil // nobody is reading it any more; unlocking must not spend a key on it
 	return m
 }
 

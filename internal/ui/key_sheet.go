@@ -10,21 +10,34 @@ import (
 // key (? by default). It replaces the per-screen help lines, so the footer
 // only carries keyHint.
 
-// keyHint is the footer's reminder of the two keys everyone needs: the key
-// sheet, and what q does here. q quits only from the grid; everywhere else it
-// backs out one step (IsCancel).
-func (m Model) keyHint() string {
-	verb := "back"
+// here is the screen the user is on, as the key sheet files it and as q
+// treats it: q quits only from the grid and backs out one step elsewhere
+// (IsCancel). Explain closes on any key, so it has no q of its own.
+func (m Model) here() (section, q string) {
 	switch {
+	case m.mode == infoMode:
+		return "EXPLAIN", ""
 	case m.batch.choosing():
-	case m.mode == gridMode:
-		verb = "quit"
-	case m.mode == batchMode, m.mode == dropdownMode && m.batch.dropdown:
-		verb = "cancel"
+		return "BATCH", "back"
+	case m.batch.dropdown, m.mode == batchMode:
+		return "BATCH", "cancel"
 	case m.mode == dropdownMode:
-		verb = "close"
+		return "FOLDER", "close"
+	case m.mode == pathMode, m.mode == childMode:
+		return "PATH", "back"
+	case m.mode == inventoryMode:
+		return "INVENTORY", "back"
 	}
-	return m.Config.Keys.Help + " help · q " + verb
+	return "GRID", "quit"
+}
+
+// keyHint is the footer's reminder of the two keys everyone needs: the key
+// sheet, and what q does here.
+func (m Model) keyHint() string {
+	if _, q := m.here(); q != "" {
+		return m.Config.Keys.Help + " help · q " + q
+	}
+	return "any key closes"
 }
 
 // A binding is one entry on the key sheet: what you press, and what it does.
@@ -46,7 +59,7 @@ func gated(keys, does string) binding { return binding{keys: keys, does: does, g
 
 // sheetSections is every screen's keys, read off the config so a remapped key
 // shows as remapped. Each section mirrors what that screen's handler does.
-// Glassroot leaves out what it blocks (glassroot.go, enterBatchMode), so the
+// Glassroot leaves out what it blocks (glassroot.go), so the
 // sheet never offers a key that does nothing.
 func sheetSections(cfg config.Config, glassroot bool) []sheetSection {
 	k := cfg.Keys
@@ -150,17 +163,7 @@ func moveLabel(k config.InputConfig, arrows, wasd, vim string) string {
 // sheetHere is the sheet as this screen shows it: the current screen's
 // section first, marked here.
 func (m Model) sheetHere() []sheetSection {
-	here := "GRID"
-	switch {
-	case m.batch.choosing(), m.batch.dropdown, m.mode == batchMode:
-		here = "BATCH"
-	case m.mode == dropdownMode:
-		here = "FOLDER"
-	case m.mode == pathMode, m.mode == childMode:
-		here = "PATH"
-	case m.mode == inventoryMode:
-		here = "INVENTORY"
-	}
+	here, _ := m.here()
 
 	secs := sheetSections(m.Config, m.GlassrootMode)
 	for i, s := range secs {
@@ -217,12 +220,12 @@ func (m Model) updateKeySheet(msg tea.KeyMsg) Model {
 }
 
 // sheetWidth is the width the sheet's rows are packed to: up to 60 columns,
-// narrower when the terminal is, so the whole popup stays on screen. The
-// frame is the popup's border, padding and margin, the scrollbar column, and
-// appStyle's margin.
+// narrower when the terminal is, so the whole popup stays on screen. Popups
+// float over the full terminal, so the frame is only the popup's border,
+// padding and margin, and the scrollbar column.
 func (m Model) sheetWidth() int {
-	frame := m.styles.DropdownPopup.GetHorizontalFrameSize() + 2 + appStyle.GetHorizontalMargins()
-	return max(20, min(60, m.termWidth-frame))
+	frame := m.styles.DropdownPopup.GetHorizontalFrameSize() + 2
+	return max(8, min(60, m.termWidth-frame))
 }
 
 // sheetMetrics returns the sheet's rows, how many fit on screen, and the

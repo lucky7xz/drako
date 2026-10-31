@@ -361,21 +361,16 @@ func TestView_LockedMode(t *testing.T) {
 }
 
 // Nothing in the footer wraps or overflows on a narrow terminal, and the key
-// hint survives the trim. The final render is appStyle.Render(...) of a
-// Place()'d block: Place sizes content to exactly m.termWidth, then
-// appStyle's own outer margin adds appStyle.GetHorizontalMargins() more —
-// that overhead is pre-existing (present at any width, unrelated to this
-// feature), so the bound accounts for it rather than asserting termW exactly.
+// hint survives the trim.
 func TestView_NarrowTerminalKeepsTheKeyHint(t *testing.T) {
 	for _, termW := range []int{40, 60, 80} {
 		m := makeScrollTestModel(1, 1, termW, 30)
 		m.Config.ApplyDefaults()
 		output := m.View()
 
-		maxAllowed := termW + appStyle.GetHorizontalMargins()
 		for _, ln := range strings.Split(output, "\n") {
-			if w := lipgloss.Width(ln); w > maxAllowed {
-				t.Errorf("termW=%d: line exceeds allowed width %d: %q (%d wide)", termW, maxAllowed, ln, w)
+			if w := lipgloss.Width(ln); w > termW {
+				t.Errorf("termW=%d: line exceeds the terminal: %q (%d wide)", termW, ln, w)
 			}
 		}
 		if !strings.Contains(output, "? help · q quit") {
@@ -512,18 +507,13 @@ func longPathModel(mode navMode, termWidth int) Model {
 }
 
 func TestView_LongPathNeverExceedsTerminalWidth(t *testing.T) {
-	// appStyle is Margin(1,2) and Place is handed the full termWidth, so real
-	// output already runs 4 columns over. That is a separate, known overflow;
-	// account for it rather than accidentally asserting it away.
-	slack := appStyle.GetHorizontalMargins()
-
 	for _, mode := range []navMode{gridMode, pathMode, childMode} {
 		for _, termWidth := range []int{60, 80, 120, 200} {
 			m := longPathModel(mode, termWidth)
 			for i, line := range strings.Split(m.View(), "\n") {
-				if w := lipgloss.Width(line); w > termWidth+slack {
-					t.Errorf("mode=%v termWidth=%d: line %d is %d wide (max %d):\n%q",
-						mode, termWidth, i, w, termWidth+slack, line)
+				if w := lipgloss.Width(line); w > termWidth {
+					t.Errorf("mode=%v termWidth=%d: line %d is %d wide:\n%q",
+						mode, termWidth, i, w, line)
 				}
 			}
 		}
@@ -534,7 +524,7 @@ func TestRenderCombinedFooter_LongPathFitsBudget(t *testing.T) {
 	for _, termWidth := range []int{40, 60, 80, 200} {
 		m := longPathModel(pathMode, termWidth)
 		availWidth := termWidth - LayoutSideMargin
-		footer := m.renderCombinedFooter()
+		footer := m.renderCombinedFooter(m.keyHint())
 		for i, line := range strings.Split(footer, "\n") {
 			if w := lipgloss.Width(line); w > availWidth {
 				t.Errorf("termWidth=%d: footer line %d is %d wide (budget %d):\n%q",
@@ -568,9 +558,6 @@ func TestRenderPathBar_KeepsSelectionVisible(t *testing.T) {
 // It used to be a fixed box: the "Idle for N minute(s)" line alone held a
 // 28-column floor, and the box sizes itself to its widest child.
 func TestView_LockScreenFitsAnyTerminal(t *testing.T) {
-	slackW := appStyle.GetHorizontalMargins()
-	slackH := appStyle.GetVerticalMargins()
-
 	for termWidth := 28; termWidth <= 130; termWidth++ {
 		for _, termHeight := range []int{13, 14, 15, 16, 21, 22, 23, 30, 40} {
 			m := createTestModelForView(lockedMode)
@@ -578,14 +565,13 @@ func TestView_LockScreenFitsAnyTerminal(t *testing.T) {
 			lines := strings.Split(m.View(), "\n")
 
 			for i, line := range lines {
-				if w := lipgloss.Width(line); w > termWidth+slackW {
-					t.Fatalf("%dx%d: line %d is %d wide (max %d):\n%q",
-						termWidth, termHeight, i, w, termWidth+slackW, line)
+				if w := lipgloss.Width(line); w > termWidth {
+					t.Fatalf("%dx%d: line %d is %d wide:\n%q",
+						termWidth, termHeight, i, w, line)
 				}
 			}
-			if len(lines) > termHeight+slackH {
-				t.Fatalf("%dx%d: %d rows (max %d)",
-					termWidth, termHeight, len(lines), termHeight+slackH)
+			if len(lines) > termHeight {
+				t.Fatalf("%dx%d: %d rows", termWidth, termHeight, len(lines))
 			}
 			// Row count alone would pass while the margin overflow quietly
 			// ate the top of the box, so require both corners to survive.

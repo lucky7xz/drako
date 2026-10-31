@@ -39,6 +39,8 @@ func (m Model) renderGrid(budgetLines int) string {
 	rowWin := window(m.gridNav.cursorRow, totalRows, visibleCount(rowBudget, rowHeight, totalRows, 1))
 
 	inGridOrBatch := m.mode == gridMode || m.mode == batchMode
+	// A folder's dropdown floats over the grid, so the folder stays selected.
+	showCursor := inGridOrBatch || m.mode == dropdownMode
 
 	// --- Build Header ---
 	var headerParts []string
@@ -69,7 +71,7 @@ func (m Model) renderGrid(budgetLines int) string {
 		var renderedCells []string
 		for c := colWin.start; c < colWin.end; c++ {
 			style := m.styles.Cell
-			if inGridOrBatch && r == m.gridNav.cursorRow && c == m.gridNav.cursorCol {
+			if showCursor && r == m.gridNav.cursorRow && c == m.gridNav.cursorCol {
 				style = m.styles.SelectedCell
 			}
 
@@ -169,7 +171,7 @@ func (m Model) renderProfileCounter() string {
 // When it doesn't fit availWidth, PROFILE drops first, then HOST shortens —
 // the badges and the hint stay: the badges are what you'd check when
 // something's gone sideways, and the hint is how you find every other key.
-func (m Model) renderProfileBar(availWidth int) string {
+func (m Model) renderProfileBar(availWidth int, hint string) string {
 	hostname, _ := os.Hostname()
 	currUser, _ := user.Current()
 	username := "unknown"
@@ -198,7 +200,7 @@ func (m Model) renderProfileBar(availWidth int) string {
 	if m.GlassrootMode {
 		badges += lipgloss.NewStyle().Foreground(lipgloss.Color("#A8E6CF")).Render("🧊 G-ROOT")
 	}
-	tail := m.styles.Help.Render(m.keyHint())
+	tail := m.styles.Help.Render(hint)
 	if badges != "" {
 		tail = badges + sep + tail
 	}

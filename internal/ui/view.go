@@ -9,21 +9,10 @@ import (
 	"github.com/muesli/termenv"
 )
 
-// View is the current screen, with the key sheet floating over it while open.
-// The frame is wider than the terminal by appStyle's margin, so the sheet is
-// centered on that width — in line with the screen's own content.
+// View is the screen the current mode sits on, with its popups floated over
+// it. Explain has no screen of its own: it floats over the one it was opened
+// from.
 func (m Model) View() string {
-	frame := m.view()
-	if m.sheet == nil || m.termWidth == 0 {
-		return frame
-	}
-	if tooSmall, _, _ := m.belowMinimum(); tooSmall {
-		return frame
-	}
-	return overlay(frame, m.renderKeySheet(), m.termWidth+appStyle.GetHorizontalMargins(), m.termHeight)
-}
-
-func (m Model) view() string {
 	if m.termWidth == 0 {
 		return "Initializing..."
 	}
@@ -33,28 +22,84 @@ func (m Model) view() string {
 		return m.renderSizeOverlay(reqW, reqH)
 	}
 
-	if m.mode == lockedMode {
+	// The screen underneath is drawn as its own mode, but its footer hint is
+	// this one's: under explain, q is not what the grid makes of it.
+	under := m
+	under.mode = m.underneath()
+	frame := under.screen(m.keyHint())
+	for _, popup := range m.popups(under.mode) {
+		frame = overlay(frame, popup, m.termWidth, m.termHeight)
+	}
+	return frame
+}
+
+// underneath is the mode whose screen shows beneath the current one. Explain
+// floats over the screen it was opened from; a profile note returns to the
+// grid when it is dismissed, so it floats over the grid — a folder it
+// interrupted belongs to the config the reload replaced.
+func (m Model) underneath() navMode {
+	switch {
+	case m.mode != infoMode:
+		return m.mode
+	case m.profile.errorQueueActive:
+		return gridMode
+	}
+	return m.previousMode
+}
+
+// screen is the mode's own screen, with nothing floating over it, its footer
+// carrying hint. Every mode but the lock screen and the inventory sits on the
+// grid.
+func (m Model) screen(hint string) string {
+	switch m.mode {
+	case lockedMode:
 		return m.viewLockedMode()
+	case inventoryMode:
+		return m.viewInventoryMode(hint)
 	}
+	return m.viewGrid(hint)
+}
 
-	if m.mode == inventoryMode {
-		return m.viewInventoryMode()
+// popups lists what floats over the screen of mode under, bottom to top: the
+// folder's dropdown, or the batch layout dialog that takes its place; the spec
+// picker; explain; the key sheet. The lock screen hides them all. A dropdown
+// with no items is a folder that already closed — previousMode can be stale.
+func (m Model) popups(under navMode) []string {
+	if m.mode == lockedMode {
+		return nil
 	}
-
-	// The layout dialog is reachable from the grid and from inside a folder,
-	// and looks the same either way — so it is checked before the mode.
-	if m.batch.choosing() {
-		return m.viewLayoutDialog()
+	var ps []string
+	switch {
+	case m.batch.choosing():
+		ps = append(ps, m.renderLayoutPopup())
+	case under == dropdownMode && len(m.dropdown.items) > 0:
+		ps = append(ps, m.renderDropdownPopup())
 	}
-
-	if m.mode == dropdownMode {
-		return m.viewDropdownMode()
+	if under == inventoryMode && m.inventory.specs != nil {
+		ps = append(ps, m.renderSpecsPopup())
 	}
-
 	if m.mode == infoMode {
-		return m.viewInfoMode()
+		ps = append(ps, m.renderInfoPopup())
 	}
+	if m.sheet != nil {
+		ps = append(ps, m.renderKeySheet())
+	}
+	return ps
+}
 
+// frame centres content on the screen. appStyle's margin sits inside the
+// terminal, so the content gets the terminal less that margin and the frame
+// is exactly the terminal's size: the renderer never has to crop it.
+func (m Model) frame(content string) string {
+	return appStyle.Render(lipgloss.Place(
+		m.termWidth-appStyle.GetHorizontalMargins(), m.termHeight-appStyle.GetVerticalMargins(),
+		lipgloss.Center, lipgloss.Center,
+		content,
+	))
+}
+
+// viewGrid is the grid screen: header, deck counter, grid and footer.
+func (m Model) viewGrid(hint string) string {
 	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config, m.styles.HeaderArt)
 
 	header := ""
@@ -66,7 +111,7 @@ func (m Model) view() string {
 		counter = m.renderBatchCounter()
 	}
 
-	footer := m.renderCombinedFooter()
+	footer := m.renderCombinedFooter(hint)
 
 	// Respect layout.ShowFooter
 	if !layout.ShowFooter {
@@ -77,34 +122,23 @@ func (m Model) view() string {
 	grid := m.renderGrid(gridRowBudget(m.termHeight, header, counter, footer))
 	mainContent := lipgloss.JoinVertical(lipgloss.Center, header, counter, grid)
 
-	finalContent := lipgloss.JoinVertical(
-		lipgloss.Center,
-		mainContent,
-		footer,
-	)
-
-	return appStyle.Render(
-		lipgloss.Place(m.termWidth, m.termHeight,
-			lipgloss.Center, lipgloss.Center,
-			finalContent,
-		),
-	)
+	return m.frame(lipgloss.JoinVertical(lipgloss.Center, mainContent, footer))
 }
 
-// renderCombinedFooter creates the standard bottom block: Status | Profile | Path.
-// Every bar trims to the width rather than wrapping: m.net.traffic and
-// m.net.online already carry ANSI color codes and can contain internal
-// spaces (e.g. "↓ 1.2kb/s ↑ 3.4kb/s"), so word-wrapping a joined line risks
-// splitting an ANSI start/reset pair across lines and bleeding color into
-// unrelated text.
-func (m Model) renderCombinedFooter() string {
+// renderCombinedFooter creates the standard bottom block: Status | Profile |
+// Path, the profile bar ending in hint. Every bar trims to the width rather
+// than wrapping: m.net.traffic and m.net.online already carry ANSI color codes
+// and can contain internal spaces (e.g. "↓ 1.2kb/s ↑ 3.4kb/s"), so
+// word-wrapping a joined line risks splitting an ANSI start/reset pair across
+// lines and bleeding color into unrelated text.
+func (m Model) renderCombinedFooter(hint string) string {
 	availWidth := m.termWidth - LayoutSideMargin
 
 	networkStatusBar := lipgloss.NewStyle().PaddingTop(1).Render(m.renderNetworkBar(availWidth))
 
 	// JoinVertical rectangularizes to the widest sibling and Place will not pad
 	// content wider than the box, so one unbounded line skews the whole frame.
-	profileBar := lipgloss.NewStyle().PaddingTop(1).Render(m.renderProfileBar(availWidth))
+	profileBar := lipgloss.NewStyle().PaddingTop(1).Render(m.renderProfileBar(availWidth, hint))
 	pathBar := m.path.RenderPathBar(m.mode == pathMode, m.styles, availWidth)
 	childDirs := m.path.RenderChildDirs(m.mode, m.styles, availWidth)
 
@@ -151,6 +185,16 @@ func truncateText(s string, maxLength int) string {
 		return s
 	}
 	return ansi.Truncate(s, maxLength, "...")
+}
+
+// truncateLeft clips s to maxLength from the left, keeping its end: for a
+// path, the part that says where.
+func truncateLeft(s string, maxLength int) string {
+	w := lipgloss.Width(s)
+	if w <= maxLength {
+		return s
+	}
+	return ansi.TruncateLeft(s, w-maxLength+1, "…")
 }
 
 func (m Model) renderFooter() string {

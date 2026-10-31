@@ -233,7 +233,7 @@ func TestInventoryDelete_PromptSharesTheStatusRow(t *testing.T) {
 		m.styles = BuildStyles(m.Config)
 		mutate(&m)
 
-		lines := strings.Split(m.viewInventoryMode(), "\n")
+		lines := strings.Split(m.viewInventoryMode(m.keyHint()), "\n")
 		for i, ln := range lines {
 			if strings.Contains(ln, want) {
 				return i

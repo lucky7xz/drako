@@ -10,7 +10,8 @@ import (
 	"github.com/lucky7xz/drako/internal/profiles"
 )
 
-func (m Model) viewInventoryMode() string {
+// viewInventoryMode is the inventory screen, its footer carrying hint.
+func (m Model) viewInventoryMode(hint string) string {
 	// If there's an error, just show that.
 	if m.inventory.err != nil {
 		errorText := lipgloss.JoinVertical(lipgloss.Center,
@@ -18,9 +19,7 @@ func (m Model) viewInventoryMode() string {
 			m.styles.ErrorText.Render(m.inventory.err.Error()),
 			m.styles.Help.Render("\nPress any key to return to the grid."),
 		)
-		return appStyle.Render(
-			lipgloss.Place(m.termWidth, m.termHeight, lipgloss.Center, lipgloss.Center, errorText),
-		)
+		return m.frame(errorText)
 	}
 
 	// Calculate layout to determine visibility of header/footer. This
@@ -79,8 +78,11 @@ func (m Model) viewInventoryMode() string {
 
 	var footer string
 	if layout.ShowFooter {
-		version := m.styles.Help.Render(config.AppName + " | " + config.Version() + " | " + m.keyHint())
-		footer = m.styles.Footer.Render(version)
+		// Trimmed like the HOST bar: the version shortens, the hint stays.
+		tail := " | " + hint
+		room := max(1, m.termWidth-appStyle.GetHorizontalMargins()-lipgloss.Width(tail))
+		version := truncateText(config.AppName+" | "+config.Version(), room)
+		footer = m.styles.Footer.Render(m.styles.Help.Render(version + tail))
 	}
 
 	// Everything except the two grids is fixed-height chrome — measure it
@@ -127,21 +129,8 @@ func (m Model) viewInventoryMode() string {
 	if layout.ShowFooter {
 		sections = append(sections, footer)
 	}
-	content := lipgloss.JoinVertical(lipgloss.Left, sections...)
-
-	if m.inventory.specs != nil {
-		popup := lipgloss.Place(m.termWidth, m.termHeight,
-			lipgloss.Center, lipgloss.Center,
-			m.renderSpecsPopup(),
-		)
-		return appStyle.Render(
-			lipgloss.Place(m.termWidth, m.termHeight, lipgloss.Center, lipgloss.Center, content+"\n"+popup),
-		)
-	}
-
-	return appStyle.Render(
-		lipgloss.Place(m.termWidth, m.termHeight, lipgloss.Center, lipgloss.Center, content),
-	)
+	// The spec picker floats over this screen (View's popups), not inside it.
+	return m.frame(lipgloss.JoinVertical(lipgloss.Left, sections...))
 }
 
 // unlimitedRowBudget is a large sentinel that makes visibleCount always
@@ -193,9 +182,9 @@ func (m Model) renderInventoryGrid(items []string, listID, rowBudget int) string
 		return ""
 	}
 
-	// Wrap cells into rows of however many fit per line.
+	// Wrap cells into rows of however many fit inside appStyle's margin.
 	cellWidth := lipgloss.Width(cells[0])
-	maxCellsPerLine := m.termWidth / cellWidth
+	maxCellsPerLine := (m.termWidth - appStyle.GetHorizontalMargins()) / cellWidth
 	if maxCellsPerLine < 1 {
 		maxCellsPerLine = 1
 	}

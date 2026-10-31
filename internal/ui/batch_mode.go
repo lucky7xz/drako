@@ -50,11 +50,10 @@ func (b *batchState) toggle(sel core.Selection) {
 	b.marked = append(slices.Clone(b.marked), sel)
 }
 
-// batchGate is the single availability check for every batch entry point.
-// Glassroot never offers batch: a batch hands the guest a full tmux session
-// (new windows, shells) — far outside the kiosk contract.
+// batchGate is the single availability check for every batch entry point:
+// glassroot's policy (allowBatch, glassroot.go), then a reachable multiplexer.
 func (m *Model) batchGate() (bool, tea.Cmd) {
-	if m.GlassrootMode {
+	if !m.allowBatch() {
 		return false, m.setProfileStatus("Batch unavailable here", false)
 	}
 	if _, err := resolveBackend(m.Config.BatchForceTmux, multiplex.OSEnv()); err != nil {

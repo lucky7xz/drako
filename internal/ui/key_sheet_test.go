@@ -260,10 +260,9 @@ func TestSheetFitsTheTerminal(t *testing.T) {
 		if len(lines) != h {
 			t.Errorf("%dx%d: %d lines, want %d", w, h, len(lines), h)
 		}
-		maxAllowed := w + appStyle.GetHorizontalMargins()
 		for _, ln := range lines {
-			if lw := lipgloss.Width(ln); lw > maxAllowed {
-				t.Errorf("%dx%d: line is %d wide (max %d): %q", w, h, lw, maxAllowed, ansi.Strip(ln))
+			if lw := lipgloss.Width(ln); lw > w {
+				t.Errorf("%dx%d: line is %d wide: %q", w, h, lw, ansi.Strip(ln))
 			}
 		}
 		if out := ansi.Strip(m.View()); !strings.Contains(out, "Keys") {
@@ -310,5 +309,25 @@ func TestSheetTitleAndHintLineUpWithTheMarker(t *testing.T) {
 	}
 	if marker < 0 || title != marker || hint != marker {
 		t.Errorf("columns: ▸ %d, Keys %d, hint %d; want all equal", marker, title, hint)
+	}
+}
+
+// Locking the session closes the sheet: after unlocking, the first key acts
+// instead of being spent closing a sheet nobody is looking at.
+func TestLockingClosesTheKeySheet(t *testing.T) {
+	m := sendKeys(t, sheetModel(100, 40), keyRunes("?"))
+	if m = m.enterLockedMode(); m.sheet != nil {
+		t.Error("the key sheet survived the lock")
+	}
+}
+
+// While explain is up, the footer names explain's rule, not the grid's.
+func TestExplainFooterSaysAnyKeyCloses(t *testing.T) {
+	m := sheetModel(110, 45)
+	m.mode, m.previousMode = infoMode, gridMode
+	m.activeDetail = &DetailState{Title: "x", KeyLabel: "Command", Value: "echo x"}
+	out := ansi.Strip(m.View())
+	if !strings.Contains(out, "| any key closes") || strings.Contains(out, "q quit") {
+		t.Errorf("the footer under explain should say any key closes:\n%s", out)
 	}
 }

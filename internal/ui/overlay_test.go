@@ -47,3 +47,11 @@ func TestOverlayPadsShortLinesUpToThePopup(t *testing.T) {
 		t.Errorf("got %q, want %q", got, "ab  XX")
 	}
 }
+
+// A popup taller than the screen keeps its bottom, as the renderer would: its
+// way out (the hint and the border) stays on screen, and the title goes first.
+func TestOverlayKeepsTheBottomOfATallPopup(t *testing.T) {
+	if got := ansi.Strip(overlay("1\n2\n3", "a\nb\nc\nd", 1, 3)); got != "b\nc\nd" {
+		t.Errorf("got %q, want the popup's last three rows", got)
+	}
+}

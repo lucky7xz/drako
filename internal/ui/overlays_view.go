@@ -42,15 +42,20 @@ func (m Model) renderSizeOverlay(reqW, reqH int) string {
 // overlay draws popup centered over base, a finished w×h frame, leaving the
 // rest of base visible around it. The renderer shows only the last h lines of
 // a taller frame (bubbletea drops lines from the top), so those are the ones
-// kept and centered on. Each covered line is cut around the popup with the
-// ANSI-aware truncations, which keep the style codes on either side; a reset
-// at both seams stops a color from running into or out of the popup.
+// kept and centered on — and a popup taller than h keeps its last h lines the
+// same way, so its way out (the hint and the border) stays on screen. Each
+// covered line is cut around the popup with the ANSI-aware truncations, which
+// keep the style codes on either side; a reset at both seams stops a color
+// from running into or out of the popup.
 func overlay(base, popup string, w, h int) string {
 	lines := strings.Split(base, "\n")
 	if len(lines) > h {
 		lines = lines[len(lines)-h:]
 	}
 	popLines := strings.Split(popup, "\n")
+	if len(popLines) > h {
+		popLines = popLines[len(popLines)-h:]
+	}
 	popW := lipgloss.Width(popup)
 	top := max(0, (h-len(popLines))/2)
 	left := max(0, (w-popW)/2)
@@ -98,46 +103,7 @@ func padLinesTo(raw []string, width int, bgFill lipgloss.Style) []string {
 	return lines
 }
 
-func (m Model) viewDropdownMode() string {
-	// Render the base grid view
-	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config, m.styles.HeaderArt)
-	header := ""
-	if layout.ShowHeader {
-		header = m.styles.renderHeaderArt(m.spinner.View())
-	}
-
-	var footer string
-	if layout.ShowFooter {
-		footer = m.renderCombinedFooter()
-	}
-
-	grid := m.renderGrid(gridRowBudget(m.termHeight, header, footer))
-	mainContent := lipgloss.JoinVertical(lipgloss.Center, header, grid)
-
-	finalContent := lipgloss.JoinVertical(
-		lipgloss.Center,
-		mainContent,
-		footer,
-	)
-
-	// Render dropdown popup
-	dropdownPopup := m.renderDropdownPopup()
-
-	// Place the dropdown in the center of the screen — it's a small floating
-	// overlay, not part of the header/grid/footer width cascade.
-	popupOverlay := lipgloss.Place(m.termWidth, m.termHeight,
-		lipgloss.Center, lipgloss.Center,
-		dropdownPopup,
-	)
-
-	return appStyle.Render(
-		lipgloss.Place(m.termWidth, m.termHeight,
-			lipgloss.Center, lipgloss.Center,
-			finalContent+"\n"+popupOverlay,
-		),
-	)
-}
-
+// renderDropdownPopup is the open folder's items, floated over the grid.
 func (m Model) renderDropdownPopup() string {
 	// Ensure every segment renders with the popup background to avoid black gaps
 	bg := m.styles.DropdownPopup.GetBackground()
@@ -172,40 +138,10 @@ func (m Model) renderDropdownPopup() string {
 	return m.styles.DropdownPopup.Render(content)
 }
 
-// viewLayoutDialog draws the grid with the layout overlay on top. It replaces
-// the dropdown popup when the batch came from a folder, so one framed box is
+// renderLayoutPopup is the batch layout dialog, floated over the grid. It takes
+// the dropdown's place when the batch came from a folder, so one framed box is
 // on screen at a time and the dialog looks the same from either entry point.
-func (m Model) viewLayoutDialog() string {
-	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config, m.styles.HeaderArt)
-	header := ""
-	if layout.ShowHeader {
-		header = m.styles.renderHeaderArt(m.spinner.View())
-	}
-	var footer string
-	if layout.ShowFooter {
-		footer = m.renderCombinedFooter()
-	}
-
-	grid := m.renderGrid(gridRowBudget(m.termHeight, header, footer))
-	finalContent := lipgloss.JoinVertical(lipgloss.Center,
-		lipgloss.JoinVertical(lipgloss.Center, header, grid),
-		footer,
-	)
-
-	popup := lipgloss.Place(m.termWidth, m.termHeight,
-		lipgloss.Center, lipgloss.Center,
-		m.renderLayoutPopup(),
-	)
-
-	return appStyle.Render(
-		lipgloss.Place(m.termWidth, m.termHeight,
-			lipgloss.Center, lipgloss.Center,
-			finalContent+"\n"+popup,
-		),
-	)
-}
-
-// renderLayoutPopup draws the fields as a row of grid cells — the same
+// It draws the fields as a row of grid cells — the same
 // ┌──[A]──┐ header over the same retro-bordered box the grid uses — so the
 // dialog reads as drako rather than as a form. The focused field's header rule
 // turns double, which shows focus without relying on colour.
@@ -251,8 +187,8 @@ func (m Model) renderLayoutPopup() string {
 }
 
 // The lock screen never runs CalculateLayout — no header, grid or help line to
-// hide — so it budgets its own width. The heights count usable rows, not
-// terminal rows: appStyle's margins sit outside Place.
+// hide — so it budgets its own width. The heights count usable rows: the
+// terminal less appStyle's margin.
 const (
 	lockBoxChrome   = 10 // Padding(_, 4) both sides plus the border
 	lockRoomyHeight = 23 // below this the spacers go, then the padding
@@ -297,8 +233,9 @@ func (m Model) viewLockedMode() string {
 	progressLabel := fit(m.styles.Help.Render(fmt.Sprintf("%d / %d pumps", m.lock.progress, goal)))
 	quitHint := fit(m.styles.Help.Render("Press Ctrl+C to quit"))
 
-	roomy := m.termHeight >= lockRoomyHeight
-	tight := m.termHeight < lockTightHeight
+	usable := m.termHeight - appStyle.GetVerticalMargins()
+	roomy := usable >= lockRoomyHeight
+	tight := usable < lockTightHeight
 
 	rows := []string{lockIcon, title}
 	if !tight {
@@ -327,23 +264,13 @@ func (m Model) viewLockedMode() string {
 		Align(lipgloss.Center).
 		Render(content)
 
+	inner := m.termWidth - appStyle.GetHorizontalMargins()
 	footer := lipgloss.NewStyle().
-		Width(m.termWidth).
+		Width(inner).
 		Align(lipgloss.Center).
-		Render(truncateText(m.renderFooter(), m.termWidth))
+		Render(truncateText(m.renderFooter(), inner))
 
-	body := lipgloss.JoinVertical(
-		lipgloss.Center,
-		box,
-		footer,
-	)
-
-	return appStyle.Render(
-		lipgloss.Place(m.termWidth, m.termHeight,
-			lipgloss.Center, lipgloss.Center,
-			body,
-		),
-	)
+	return m.frame(lipgloss.JoinVertical(lipgloss.Center, box, footer))
 }
 
 // spaced puts a blank line between each row, and one above the first.
@@ -359,16 +286,18 @@ func spaced(rows []string) []string {
 // explain overlay. The actual height is clamped down to fit small terminals.
 const infoViewportRows = 18
 
-// infoWrapWidth is the wrap width for explain-popup content.
+// The explain popup's last line, plain and while the script scrolls.
+const (
+	infoHelp       = "Press y to copy command/details to clipboard • any key to close"
+	infoScrollHelp = "PgUp/PgDn scroll • y copy • any other key to close"
+)
+
+// infoWrapWidth is the wrap width for explain-popup content: what is left of
+// the terminal once the popup's frame, the value's padding and the scrollbar
+// have their columns, so the popup always fits on screen. Popups float over
+// the full terminal, so appStyle's margin is not theirs to keep clear.
 func (m Model) infoWrapWidth() int {
-	w := m.termWidth - 10
-	if w > 80 {
-		w = 80
-	}
-	if w < 20 {
-		w = 20
-	}
-	return w
+	return max(1, min(80, m.termWidth-m.styles.DropdownPopup.GetHorizontalFrameSize()-4))
 }
 
 // infoScrollMetrics returns the wrapped script lines, the clamped viewport
@@ -397,15 +326,12 @@ func (m Model) infoScrollMetrics() (valueLines []string, viewportH, maxOffset in
 	if len(d.Meta) > 0 {
 		pinned += 1 + len(d.Meta)
 	}
-	pinned += 2 // blank spacer + help line
-
-	headerH := 0
-	if CalculateLayout(m.termWidth, m.termHeight, m.Config, m.styles.HeaderArt).ShowHeader {
-		headerH = lipgloss.Height(m.styles.renderHeaderArt(m.spinner.View()))
-	}
+	// blank spacer + the help line, which wraps on a narrow terminal; count
+	// the longer of its two forms, since which one shows depends on this.
+	pinned += 1 + max(len(WrapText(infoHelp, ww)), len(WrapText(infoScrollHelp, ww)))
 
 	const chrome = 8 // popup border + padding + margin, plus a little slack
-	budget := m.termHeight - headerH - pinned - chrome
+	budget := m.termHeight - pinned - chrome
 
 	viewportH = infoViewportRows
 	if viewportH > budget {
@@ -456,13 +382,9 @@ func scrollbarColumn(total, offset, viewportH int, thumb, track lipgloss.Style) 
 	return cells
 }
 
-func (m Model) viewInfoMode() string {
-	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config, m.styles.HeaderArt)
-	header := ""
-	if layout.ShowHeader {
-		header = m.styles.renderHeaderArt(m.spinner.View())
-	}
-
+// renderInfoPopup is the explain popup (and the profile notes that share it),
+// floated over the screen it was opened from.
+func (m Model) renderInfoPopup() string {
 	// Build info lines with same background rules to avoid black gaps
 	bg := m.styles.DropdownPopup.GetBackground()
 	bgFill := lipgloss.NewStyle().Background(bg)
@@ -475,7 +397,7 @@ func (m Model) viewInfoMode() string {
 
 	// Safety check if activeDetail is nil (should not happen in infoMode ideally)
 	if m.activeDetail == nil {
-		return appStyle.Render(lipgloss.Place(m.termWidth, m.termHeight, lipgloss.Center, lipgloss.Center, "Error: No detail state"))
+		return m.styles.DropdownPopup.Render("Error: No detail state")
 	}
 
 	valueLines, viewportH, maxOffset := m.infoScrollMetrics()
@@ -486,7 +408,7 @@ func (m Model) viewInfoMode() string {
 	// head: title + value label, pinned above the script.
 	var head []string
 	if strings.TrimSpace(m.activeDetail.Title) != "" {
-		head = append(head, titleStyleLocal.Render(m.activeDetail.Title))
+		head = append(head, titleStyleLocal.Render(truncateText(m.activeDetail.Title, wrapWidth)))
 	}
 	hasValue := strings.TrimSpace(m.activeDetail.Value) != ""
 	if hasValue {
@@ -510,15 +432,18 @@ func (m Model) viewInfoMode() string {
 	if len(m.activeDetail.Meta) > 0 {
 		tail = append(tail, "")
 		for _, meta := range m.activeDetail.Meta {
-			tail = append(tail, labelStyle.Render(meta.Label+": ")+valueStyle.Render(meta.Value))
+			value := truncateLeft(meta.Value, max(1, wrapWidth-lipgloss.Width(meta.Label)-2))
+			tail = append(tail, labelStyle.Render(meta.Label+": ")+valueStyle.Render(value))
 		}
 	}
 	tail = append(tail, "")
-	helpText := "Press y to copy command/details to clipboard • any key to close"
+	helpText := infoHelp
 	if scrollable {
-		helpText = "PgUp/PgDn scroll • y copy • any other key to close"
+		helpText = infoScrollHelp
 	}
-	tail = append(tail, m.styles.Help.Render(helpText))
+	for _, ln := range WrapText(helpText, wrapWidth) {
+		tail = append(tail, m.styles.Help.Render(ln))
+	}
 
 	// Only real command values get shell highlighting; error/profile overlays
 	// (KeyLabel "Error"/"Profile") keep plain rendering so paths and TOML errors
@@ -581,7 +506,5 @@ func (m Model) viewInfoMode() string {
 
 	lines := padLinesToWidth(raw, bgFill)
 
-	popup := m.styles.DropdownPopup.Render(lipgloss.JoinVertical(lipgloss.Left, lines...))
-	content := lipgloss.JoinVertical(lipgloss.Center, header, popup)
-	return appStyle.Render(lipgloss.Place(m.termWidth, m.termHeight, lipgloss.Center, lipgloss.Center, content))
+	return m.styles.DropdownPopup.Render(lipgloss.JoinVertical(lipgloss.Left, lines...))
 }
