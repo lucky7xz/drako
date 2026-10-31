@@ -347,6 +347,42 @@ elif command -v xbps-install >/dev/null; then sudo xbps-install -S micro
 else echo "❓ No known package manager found — install micro with your distro's own tool."
 fi
 """, macos = "brew install micro", windows = "winget install -e --id zyedidia.micro" }, auto_close_execution = false },
+    { name = "Install Flatpak", description = "Installs Flatpak and adds Flathub, the big shared shelf of Linux apps. Flatpak apps carry their own libraries and run sandboxed, so the same app works the same on any distro. Restart once afterwards so new apps show up in your menu.", command = { linux_immutable = '''flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo && echo "✅ Flathub is ready."''', linux_debian = '''sudo apt install flatpak && flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo && echo "✅ Flatpak and Flathub are ready. Restart your computer to finish the setup."''', linux_arch = '''sudo pacman -S flatpak && flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo && echo "✅ Flatpak and Flathub are ready. Restart your computer to finish the setup."''', linux_fedora = '''sudo dnf install flatpak && flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo && echo "✅ Flatpak and Flathub are ready. Restart your computer to finish the setup."''', linux_suse = '''sudo zypper install flatpak && flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo && echo "✅ Flatpak and Flathub are ready. Restart your computer to finish the setup."''', linux_void = '''sudo xbps-install -S flatpak && flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo && echo "✅ Flatpak and Flathub are ready. Restart your computer to finish the setup."''', linux_nixos = '''
+# NixOS turns Flatpak on in the system config, not with a package install.
+echo "❄️ On NixOS, Flatpak is enabled in your system config. Add this to"
+echo "   /etc/nixos/configuration.nix (or your flake's NixOS module):"
+echo
+echo "     services.flatpak.enable = true;"
+echo
+echo "Then rebuild and add Flathub:"
+echo
+echo "     sudo nixos-rebuild switch"
+echo "     flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo"
+echo
+echo "Restart your computer to finish the setup."
+''', linux_generic = """
+if command -v apt >/dev/null; then sudo apt install flatpak
+elif command -v dnf >/dev/null; then sudo dnf install flatpak
+elif command -v pacman >/dev/null; then sudo pacman -S flatpak
+elif command -v zypper >/dev/null; then sudo zypper install flatpak
+elif command -v xbps-install >/dev/null; then sudo xbps-install -S flatpak
+elif command -v apk >/dev/null; then sudo apk add flatpak
+else echo "❓ No known package manager found — install flatpak with your distro's own tool."; exit 1
+fi || exit 1
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || exit 1
+echo "✅ Flatpak and Flathub are ready. Restart your computer to finish the setup."
+""", macos = "echo 'Flatpak is Linux-only. On macOS, Homebrew fills that role.'", windows = "Write-Host 'Flatpak is Linux-only. On Windows, winget fills that role.'" }, auto_close_execution = false },
+    { name = "Install Bazaar", description = "Bazaar is an app store for Flathub: browse, read what permissions an app asks for, queue a few installs at once. Flathub's own setup guide recommends it. Needs Flatpak and Flathub first (the cell above). Bazzite already ships it.", command = { linux_generic = '''
+if ! command -v flatpak >/dev/null; then
+    echo "❌ flatpak is not installed. Run 'Install Flatpak' in Cell [C-0] first."
+    exit 1
+fi
+if ! flatpak remotes --columns=name | grep -qx flathub; then
+    echo "❌ Flathub is not set up. Run 'Install Flatpak' in Cell [C-0] first."
+    exit 1
+fi
+flatpak install flathub io.github.kolunmi.Bazaar
+''', macos = "echo 'Bazaar is a Flathub store for Linux only.'", windows = "Write-Host 'Bazaar is a Flathub store for Linux only.'" }, auto_close_execution = false },
 
     { name = "🃏 Summon '101 Series' Command Deck", description = "Pulls the 101 deck from the remote archives into your inventory. New space to explore.", command = { linux_generic = "drako summon https://github.com/lucky7xz/101-deck.git", macos = "drako summon https://github.com/lucky7xz/101-deck.git", windows = "drako summon https://github.com/lucky7xz/101-deck.git" }, auto_close_execution = false },
 
