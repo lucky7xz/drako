@@ -27,10 +27,19 @@ jobs:
       - run: go vet ./...
       - run: go test ./...
 
+      # Hand-written notes for this tag, if it has any, go above GoReleaser's
+      # changelog: .github/release-notes/<tag>.md (e.g. v0.4.3.md). One file
+      # per tag, so last release's notes can never ride along on this one.
+      - name: Release notes header
+        id: notes
+        run: |
+          f=".github/release-notes/${GITHUB_REF_NAME}.md"
+          if [ -f "$f" ]; then echo "args=--release-header $f" >> "$GITHUB_OUTPUT"; fi
+
       - uses: goreleaser/goreleaser-action@v6
         with:
           version: '~> v2'      # matches `version: 2` in .goreleaser.yaml
-          args: release --clean
+          args: release --clean ${{ steps.notes.outputs.args }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
