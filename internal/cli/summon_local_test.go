@@ -211,3 +211,66 @@ func TestSummonLocalFolderRefusesTheConfigDir(t *testing.T) {
 		t.Error("the inventory deck was changed")
 	}
 }
+
+// A deck that is a link to the very file being summoned is already in place;
+// copying it onto itself would truncate the source before reading it.
+func TestSummonLeavesALinkedDeckAlone(t *testing.T) {
+	s, dir := localSummoner(t)
+	writeAll(t, dir, map[string]string{"deck.profile.toml": validDeck})
+	src := filepath.Join(dir, "deck.profile.toml")
+	if err := os.Symlink(src, filepath.Join(s.ConfigDir, "deck.profile.toml")); err != nil {
+		t.Skip("symlinks unavailable:", err)
+	}
+	if err := s.Summon(dir); err != nil {
+		t.Fatalf("Summon: %v", err)
+	}
+	if got, _ := os.ReadFile(src); string(got) != validDeck {
+		t.Errorf("summon changed the deck's own source file to %q", got)
+	}
+	if info, err := os.Lstat(filepath.Join(s.ConfigDir, "deck.profile.toml")); err != nil || info.Mode()&os.ModeSymlink == 0 {
+		t.Errorf("the equipped link was replaced; it already was the deck (%v)", err)
+	}
+}
+
+// Replacing a deck replaces its entry in the config dir; a deck that is a link
+// to some other file is swapped for the new deck, never written through.
+func TestSummonReplacesALinkInsteadOfWritingThroughIt(t *testing.T) {
+	s, dir := localSummoner(t)
+	elsewhere := filepath.Join(t.TempDir(), "elsewhere.profile.toml")
+	writeAll(t, filepath.Dir(elsewhere), map[string]string{"elsewhere.profile.toml": "keep me"})
+	if err := os.Symlink(elsewhere, filepath.Join(s.ConfigDir, "deck.profile.toml")); err != nil {
+		t.Skip("symlinks unavailable:", err)
+	}
+	writeAll(t, dir, map[string]string{"deck.profile.toml": validDeck + "# v2\n"})
+	if err := s.Summon(dir); err != nil {
+		t.Fatalf("Summon: %v", err)
+	}
+	if got, _ := os.ReadFile(elsewhere); string(got) != "keep me" {
+		t.Errorf("summon wrote through the link into %s: %q", elsewhere, got)
+	}
+	deck := filepath.Join(s.ConfigDir, "deck.profile.toml")
+	if info, err := os.Lstat(deck); err != nil || !info.Mode().IsRegular() {
+		t.Fatalf("the equipped deck should now be a plain file: %v %v", info, err)
+	}
+	if got, _ := os.ReadFile(deck); !strings.Contains(string(got), "# v2") {
+		t.Error("the equipped deck was not replaced")
+	}
+}
+
+// The prompt says in words where a deck lands, so one "y" never replaces an
+// equipped deck without saying so.
+func TestSummonSaysWhereADeckLands(t *testing.T) {
+	cfg := t.TempDir()
+	inv := filepath.Join(cfg, "inventory")
+	writeAll(t, cfg, map[string]string{"core.profile.toml": validDeck, "inventory/st.profile.toml": validDeck})
+	for _, tt := range []struct{ dst, want string }{
+		{filepath.Join(cfg, "core.profile.toml"), "replaces your equipped core.profile.toml"},
+		{filepath.Join(inv, "st.profile.toml"), "replaces st.profile.toml in the inventory"},
+		{filepath.Join(cfg, "new.profile.toml"), "equipped"},
+		{filepath.Join(inv, "new.profile.toml"), "inventory (9 decks are equipped)"},
+	} {
+		if got := destinationLabel(cfg, tt.dst); got != tt.want {
+			t.Errorf("%s: %q, want %q", tt.dst, got, tt.want)
+		}
+	}
+}

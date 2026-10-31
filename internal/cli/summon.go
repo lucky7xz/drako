@@ -122,11 +122,8 @@ func (s *Summoner) Summon(sourceURL string) error {
 	}
 	fmt.Printf("\nYou are about to download a profile:\n")
 	fmt.Printf("  Source: %s\n", sourceURL)
-	fmt.Printf("  Destination: %s\n", dstPath)
-
-	if _, err := os.Stat(dstPath); err == nil {
-		fmt.Printf("  ⚠️  Warning: %s already exists and will be overwritten\n", filepath.Base(dstPath))
-	}
+	fmt.Printf("  Destination: %s\n", destinationLabel(s.ConfigDir, dstPath))
+	fmt.Printf("  Path: %s\n", dstPath)
 	fmt.Println()
 
 	if s.SHA256 == "" {
@@ -169,6 +166,35 @@ func placeFor(configDir, file string) (string, error) {
 		return filepath.Join(configDir, file), nil
 	}
 	return filepath.Join(inventoryDir, file), nil
+}
+
+// destinationLabel says in words where a summoned deck lands, for the prompt:
+// over the deck you already have, equipped or stashed, or as a new deck —
+// equipped, or in the inventory once MaxEquipped are.
+func destinationLabel(configDir, dstPath string) string {
+	name := filepath.Base(dstPath)
+	stashed := filepath.Dir(dstPath) != filepath.Clean(configDir)
+	if _, err := os.Lstat(dstPath); err == nil {
+		if stashed {
+			return "replaces " + name + " in the inventory"
+		}
+		return "replaces your equipped " + name
+	}
+	if stashed {
+		return fmt.Sprintf("inventory (%d decks are equipped)", profiles.MaxEquipped)
+	}
+	return "equipped"
+}
+
+// sameFile reports whether a and b are one file on disk: the deck in the
+// config dir is a link to the very file being summoned.
+func sameFile(a, b string) bool {
+	ai, err := os.Stat(a)
+	if err != nil {
+		return false
+	}
+	bi, err := os.Stat(b)
+	return err == nil && os.SameFile(ai, bi)
 }
 
 // summonOutcome classifies what happened to one candidate file.
@@ -376,10 +402,7 @@ func (s *Summoner) summonRepoProfile(srcPath, tempDir string) (summonOutcome, er
 	// Ask for confirmation (include assets plan if any)
 	fmt.Printf("  File: %s\n", dstName)
 	fmt.Printf("  Size: %d bytes (%.1f KB)\n", size, float64(size)/1024)
-	fmt.Printf("  Destination: %s\n", filepath.Dir(dstPath))
-	if _, err := os.Stat(dstPath); err == nil {
-		fmt.Printf("  ⚠️  Warning: Will overwrite existing file\n")
-	}
+	fmt.Printf("  Destination: %s\n", destinationLabel(s.ConfigDir, dstPath))
 	profileName := strings.TrimSuffix(filepath.Base(dstPath), ".profile.toml")
 	if len(assets) > 0 {
 		printAssetsPlan(tempDir, filepath.Dir(srcPath), assets, profileName)
@@ -390,10 +413,14 @@ func (s *Summoner) summonRepoProfile(srcPath, tempDir string) (summonOutcome, er
 		return outcomeCancelled, nil
 	}
 
-	if err := copyFile(srcPath, dstPath); err != nil {
+	if sameFile(srcPath, dstPath) {
+		// The deck is a link to this very file: it is already in place.
+		fmt.Printf("✓ Already in place: %s\n", dstName)
+	} else if err := copyFile(srcPath, dstPath); err != nil {
 		return outcomeFailed, fmt.Errorf("failed to copy %s: %w", dstName, err)
+	} else {
+		fmt.Printf("✓ Summoned: %s\n", dstName)
 	}
-	fmt.Printf("✓ Summoned: %s\n", dstName)
 
 	// Handle assets (git-only feature)
 	if len(assets) > 0 {

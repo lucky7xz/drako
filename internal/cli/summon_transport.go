@@ -167,7 +167,11 @@ func (d *HTTPDownloader) DownloadFile(sourceURL, dstPath string) error {
 	return nil
 }
 
-// copyFile copies src to dst (os.Rename might fail across partitions)
+// copyFile copies src to dst through a temp file in dst's folder, then renames
+// it into place (the copy, not a rename of src, because src may be on another
+// partition). An interrupted copy never leaves half a file, and a dst that is a
+// link is replaced rather than written through: os.Create would follow it, and
+// truncate src before reading it when the link points back at src.
 func copyFile(src, dst string) error {
 	in, err := os.Open(src)
 	if err != nil {
@@ -175,16 +179,23 @@ func copyFile(src, dst string) error {
 	}
 	defer in.Close()
 
-	out, err := os.Create(dst)
+	tmp, err := os.CreateTemp(filepath.Dir(dst), "."+filepath.Base(dst)+".*")
 	if err != nil {
 		return err
 	}
-	defer out.Close()
-
-	if _, err := io.Copy(out, in); err != nil {
+	defer os.Remove(tmp.Name()) // a no-op once renamed
+	if _, err := io.Copy(tmp, in); err != nil {
+		tmp.Close()
 		return err
 	}
-	return nil
+	if err := tmp.Chmod(0o644); err != nil { // CreateTemp makes 0600; decks are shared files
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmp.Name(), dst)
 }
 
 // extractFilenameFromURL extracts a filename from a URL
