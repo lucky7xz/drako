@@ -230,7 +230,7 @@ func (m Model) sheetWidth() int {
 
 // sheetMetrics returns the sheet's rows, how many fit on screen, and the
 // largest scroll offset. The view and the scroll keys both call it, so their
-// numbers agree — the infoScrollMetrics pattern.
+// numbers agree — the explainLayout pattern.
 func (m Model) sheetMetrics() (lines []string, viewportH, maxOffset int) {
 	lines = m.sheetLines(m.sheetWidth())
 	frame := m.styles.DropdownPopup.GetVerticalFrameSize() + 4 // + title, two spacers, hint

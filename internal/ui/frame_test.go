@@ -194,3 +194,42 @@ func TestView_ExplainFitsANarrowTerminal(t *testing.T) {
 		t.Errorf("the path lost its end:\n%s", ansi.Strip(out))
 	}
 }
+
+// A popup is just its box: it floats over the screen, so a margin around it
+// would only blank a ring of whatever the screen shows there.
+func TestPopupsAreJustTheirBox(t *testing.T) {
+	all := screens(t, 3, 110, 45)
+	sheet := sendKeys(t, sheetModel(110, 45), keyRunes("?"))
+	for name, popup := range map[string]string{
+		"dropdown":      all["dropdown"].renderDropdownPopup(),
+		"layout dialog": all["layout dialog"].renderLayoutPopup(),
+		"explain":       all["explain"].renderInfoPopup(),
+		"specs":         all["specs"].renderSpecsPopup(),
+		"key sheet":     sheet.renderKeySheet(),
+	} {
+		lines := strings.Split(ansi.Strip(popup), "\n")
+		first, last := lines[0], lines[len(lines)-1]
+		if !strings.HasPrefix(first, "┏") || !strings.HasPrefix(last, "┗") {
+			t.Errorf("%s: the box does not start at its edges:\n%q\n…\n%q", name, first, last)
+		}
+	}
+}
+
+// However much explain has to say, its popup never outgrows the screen: the
+// script window gets whatever the pinned rows leave.
+func TestExplainNeverTallerThanTheScreen(t *testing.T) {
+	for _, size := range [][2]int{{60, 24}, {80, 30}, {30, 30}} {
+		w, h := size[0], size[1]
+		m := makeScrollTestModel(1, 1, w, h)
+		m.Config.ApplyDefaults()
+		m.mode, m.previousMode = infoMode, gridMode
+		m.activeDetail = &DetailState{
+			Title: "a cell", KeyLabel: "Command", Value: scriptOf(60),
+			Description: "Does a thing, and explains at some length why it does it that way.",
+			Meta:        []DetailMeta{{Label: "Address", Value: "core:A0"}, {Label: "CWD", Value: "/home/user/somewhere"}},
+		}
+		if got := lipgloss.Height(m.renderInfoPopup()); got > h {
+			t.Errorf("%dx%d: explain is %d rows tall", w, h, got)
+		}
+	}
+}

@@ -394,12 +394,12 @@ func (m Model) stagedSummary(p specPlan) string {
 // message — moving onto a spec with a longer name, or one carrying a warning —
 // resizes the border around it, and the box appears to shake as you navigate.
 //
-// specPopupRows is how many rows the box spends on everything that is not a
-// spec line: DropdownPopup's border, padding and margin (2 each), the title and
-// the blank under it, the blank above the footer, the two reserved verdict
-// lines, and the key hints.
+// specPopupRows is how many rows the box spends inside its frame on everything
+// that is not a spec line: the title and the blank under it, the blank above
+// the footer, the two reserved verdict lines, and the key hints. The frame
+// itself is read off DropdownPopup.
 const (
-	specPopupChrome  = 12
+	specPopupRows    = 6
 	specPopupWidth   = 60 // content columns, before border/padding
 	specPopupFloor   = 8  // last resort, so something still renders
 	specVerdictLines = 2  // reserved, so a wrapped warning cannot change the height
@@ -409,15 +409,16 @@ const (
 const noVerb = specVerb(-1)
 
 // specContentWidth is the box's inner width: fixed, and only ever narrowed to
-// fit a small terminal. It does not depend on the rows, so the border stays put
-// while the cursor moves.
+// fit a small terminal — the box floats over the whole terminal, so all of it
+// but the box's own frame is room. It does not depend on the rows, so the
+// border stays put while the cursor moves.
 //
 // The floor is a last resort, applied only after the terminal has had its say.
 // A minimum that outranks the available width is not a minimum, it is an
 // overflow: the box would claim room the terminal does not have and lose its
 // right border off the edge of the screen.
-func specContentWidth(termWidth int) int {
-	fits := termWidth - LayoutSideMargin - 6 // border, padding and margin
+func (m Model) specContentWidth() int {
+	fits := m.termWidth - m.styles.DropdownPopup.GetHorizontalFrameSize()
 	return max(specPopupFloor, min(specPopupWidth, fits))
 }
 
@@ -478,7 +479,7 @@ func (m Model) renderSpecsPopup() string {
 	dim := item.Foreground(m.styles.Help.GetForeground())
 	cursor := m.styles.SelectedCursor.Background(bg)
 
-	width := specContentWidth(m.termWidth)
+	width := m.specContentWidth()
 	// A row is "  " gutter + Item's one column of padding each side.
 	rowText := width - 4
 
@@ -546,7 +547,7 @@ func (m Model) renderSpecsPopup() string {
 	}
 
 	// Window the lines when the popup would outgrow the terminal.
-	budget := m.termHeight - specPopupChrome
+	budget := m.termHeight - m.styles.DropdownPopup.GetVerticalFrameSize() - specPopupRows
 	if visible := visibleCount(budget, 1, len(lines), 1); visible < len(lines) {
 		win := window(cursorLine, len(lines), visible)
 		lines = append([]string{}, lines[win.start:win.end]...)

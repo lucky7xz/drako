@@ -300,52 +300,73 @@ func (m Model) infoWrapWidth() int {
 	return max(1, min(80, m.termWidth-m.styles.DropdownPopup.GetHorizontalFrameSize()-4))
 }
 
-// infoScrollMetrics returns the wrapped script lines, the clamped viewport
-// height, and the max scroll offset for the current explain overlay. The view
-// and the PgUp/PgDn handler both call it so their numbers stay in sync.
-func (m Model) infoScrollMetrics() (valueLines []string, viewportH, maxOffset int) {
-	if m.activeDetail == nil {
-		return nil, 0, 0
-	}
-	ww := m.infoWrapWidth()
-	valueLines = WrapScript(m.activeDetail.Value, ww)
+// explainLayout is the explain popup laid out for the current terminal: the
+// styled rows pinned above and below the script, the script wrapped, and how
+// much of it fits. Built once per use, the view draws it and PgUp/PgDn page
+// through it, so the numbers they work from cannot disagree.
+type explainLayout struct {
+	head, tail []string // styled rows above and below the script
+	script     []string // the script, wrapped; nil without a value
+	viewportH  int      // script rows on screen at once
+	maxOffset  int
+	scrollable bool
+}
 
-	// Count the pinned (non-script) rows exactly as viewInfoMode lays them out,
-	// so the viewport clamp matches what actually reaches the screen.
+// explainLayout lays out the current activeDetail, which must be set.
+func (m Model) explainLayout() explainLayout {
 	d := m.activeDetail
-	pinned := 0
+	ww := m.infoWrapWidth()
+	bg := m.styles.DropdownPopup.GetBackground()
+	label := m.styles.Help.Background(bg)
+	value := m.styles.Item.Background(bg)
+
+	var l explainLayout
 	if strings.TrimSpace(d.Title) != "" {
-		pinned++
+		l.head = append(l.head, m.styles.Title.Background(bg).Render(truncateText(d.Title, ww)))
 	}
 	if strings.TrimSpace(d.Value) != "" {
-		pinned += 2 // blank spacer + the "Command:" label
+		name := "Value:"
+		if d.KeyLabel != "" {
+			name = d.KeyLabel + ":"
+		}
+		l.head = append(l.head, "", label.Render(name))
+		l.script = WrapScript(d.Value, ww)
 	}
 	if strings.TrimSpace(d.Description) != "" {
-		pinned += 2 + len(WrapText(d.Description, ww))
+		l.tail = append(l.tail, "", label.Render("Description:"))
+		for _, ln := range WrapText(d.Description, ww) {
+			l.tail = append(l.tail, value.Render(ln))
+		}
 	}
 	if len(d.Meta) > 0 {
-		pinned += 1 + len(d.Meta)
-	}
-	// blank spacer + the help line, which wraps on a narrow terminal; count
-	// the longer of its two forms, since which one shows depends on this.
-	pinned += 1 + max(len(WrapText(infoHelp, ww)), len(WrapText(infoScrollHelp, ww)))
-
-	const chrome = 8 // popup border + padding + margin, plus a little slack
-	budget := m.termHeight - pinned - chrome
-
-	viewportH = infoViewportRows
-	if viewportH > budget {
-		viewportH = budget
-	}
-	if viewportH < 3 {
-		viewportH = 3
+		l.tail = append(l.tail, "")
+		for _, meta := range d.Meta {
+			v := truncateLeft(meta.Value, max(1, ww-lipgloss.Width(meta.Label)-2))
+			l.tail = append(l.tail, label.Render(meta.Label+": ")+value.Render(v))
+		}
 	}
 
-	maxOffset = len(valueLines) - viewportH
-	if maxOffset < 0 {
-		maxOffset = 0
+	// The last pinned rows are a blank and the help line. Which help shows
+	// depends on whether the script scrolls, which depends on the room the
+	// help leaves — so the room is counted for the longer of the two.
+	plain, scrolling := WrapText(infoHelp, ww), WrapText(infoScrollHelp, ww)
+	pinned := len(l.head) + len(l.tail) + 1 + max(len(plain), len(scrolling))
+	room := m.termHeight - m.styles.DropdownPopup.GetVerticalFrameSize() - pinned
+	l.viewportH = max(3, min(infoViewportRows, room))
+	l.maxOffset = max(0, len(l.script)-l.viewportH)
+	// The error queue renders its (short) Value in full and steers every key,
+	// so only the plain explain overlay gets a scrollable, windowed script.
+	l.scrollable = !m.profile.errorQueueActive && len(l.script) > l.viewportH
+
+	help := plain
+	if l.scrollable {
+		help = scrolling
 	}
-	return valueLines, viewportH, maxOffset
+	l.tail = append(l.tail, "")
+	for _, ln := range help {
+		l.tail = append(l.tail, m.styles.Help.Render(ln))
+	}
+	return l
 }
 
 // scrollbarColumn returns viewportH cells — a █ thumb over a ░ track — for a
@@ -385,65 +406,16 @@ func scrollbarColumn(total, offset, viewportH int, thumb, track lipgloss.Style) 
 // renderInfoPopup is the explain popup (and the profile notes that share it),
 // floated over the screen it was opened from.
 func (m Model) renderInfoPopup() string {
-	// Build info lines with same background rules to avoid black gaps
-	bg := m.styles.DropdownPopup.GetBackground()
-	bgFill := lipgloss.NewStyle().Background(bg)
-	titleStyleLocal := m.styles.Title.Background(bg)
-	labelStyle := m.styles.Help.Background(bg)
-	valueStyle := m.styles.Item.Background(bg)
-
-	// Wrap width for info popup content
-	wrapWidth := m.infoWrapWidth()
-
 	// Safety check if activeDetail is nil (should not happen in infoMode ideally)
 	if m.activeDetail == nil {
 		return m.styles.DropdownPopup.Render("Error: No detail state")
 	}
+	l := m.explainLayout()
 
-	valueLines, viewportH, maxOffset := m.infoScrollMetrics()
-	// The error queue renders its (short) Value in full and steers every key,
-	// so only the plain explain overlay gets a scrollable, windowed script.
-	scrollable := !m.profile.errorQueueActive && len(valueLines) > viewportH
-
-	// head: title + value label, pinned above the script.
-	var head []string
-	if strings.TrimSpace(m.activeDetail.Title) != "" {
-		head = append(head, titleStyleLocal.Render(truncateText(m.activeDetail.Title, wrapWidth)))
-	}
-	hasValue := strings.TrimSpace(m.activeDetail.Value) != ""
-	if hasValue {
-		head = append(head, "")
-		label := "Value:"
-		if m.activeDetail.KeyLabel != "" {
-			label = m.activeDetail.KeyLabel + ":"
-		}
-		head = append(head, labelStyle.Render(label))
-	}
-
-	// tail: description, meta, help line, pinned below the script.
-	var tail []string
-	if strings.TrimSpace(m.activeDetail.Description) != "" {
-		tail = append(tail, "")
-		tail = append(tail, labelStyle.Render("Description:"))
-		for _, ln := range WrapText(m.activeDetail.Description, wrapWidth) {
-			tail = append(tail, valueStyle.Render(ln))
-		}
-	}
-	if len(m.activeDetail.Meta) > 0 {
-		tail = append(tail, "")
-		for _, meta := range m.activeDetail.Meta {
-			value := truncateLeft(meta.Value, max(1, wrapWidth-lipgloss.Width(meta.Label)-2))
-			tail = append(tail, labelStyle.Render(meta.Label+": ")+valueStyle.Render(value))
-		}
-	}
-	tail = append(tail, "")
-	helpText := infoHelp
-	if scrollable {
-		helpText = infoScrollHelp
-	}
-	for _, ln := range WrapText(helpText, wrapWidth) {
-		tail = append(tail, m.styles.Help.Render(ln))
-	}
+	// Every segment carries the popup background, to avoid black gaps.
+	bg := m.styles.DropdownPopup.GetBackground()
+	bgFill := lipgloss.NewStyle().Background(bg)
+	valueStyle := m.styles.Item.Background(bg)
 
 	// Only real command values get shell highlighting; error/profile overlays
 	// (KeyLabel "Error"/"Profile") keep plain rendering so paths and TOML errors
@@ -456,55 +428,36 @@ func (m Model) renderInfoPopup() string {
 		return valueStyle.Render(ln)
 	}
 
-	// value/script block: windowed with a scrollbar when it overflows.
+	// The script: in full, or windowed with a scrollbar when it overflows.
 	var valueRows []string
-	if hasValue && scrollable {
-		offset := m.activeDetail.ScrollOffset
-		if offset < 0 {
-			offset = 0
+	if !l.scrollable {
+		for _, ln := range l.script {
+			valueRows = append(valueRows, renderVal(ln))
 		}
-		if offset > maxOffset {
-			offset = maxOffset
-		}
-		window := valueLines[offset : offset+viewportH]
+	} else {
+		offset := min(max(m.activeDetail.ScrollOffset, 0), l.maxOffset)
 
 		// Widen the script block to the widest pinned line so the scrollbar
 		// lands at the popup's right edge rather than mid-content.
 		blockW := 0
-		for _, ln := range valueLines {
-			if w := lipgloss.Width(ln); w > blockW {
-				blockW = w
-			}
+		for _, ln := range l.script {
+			blockW = max(blockW, lipgloss.Width(ln))
 		}
-		for _, ln := range append(append([]string{}, head...), tail...) {
-			if w := lipgloss.Width(ln) - 2; w > blockW {
-				blockW = w
-			}
+		for _, ln := range append(append([]string{}, l.head...), l.tail...) {
+			blockW = max(blockW, lipgloss.Width(ln)-2)
 		}
 
 		// Bar cells must be padding-free (valueStyle carries Item's Padding(0,1),
 		// which would widen thumb rows and stagger the column). bgFill sets only
 		// the background.
-		thumbStyle := bgFill.Bold(true)
-		trackStyle := bgFill.Foreground(hlComment)
-		bars := scrollbarColumn(len(valueLines), offset, viewportH, thumbStyle, trackStyle)
-		for i, ln := range window {
-			pad := blockW - lipgloss.Width(ln)
-			if pad < 0 {
-				pad = 0
-			}
+		bars := scrollbarColumn(len(l.script), offset, l.viewportH, bgFill.Bold(true), bgFill.Foreground(hlComment))
+		for i, ln := range l.script[offset : offset+l.viewportH] {
+			pad := max(0, blockW-lipgloss.Width(ln))
 			valueRows = append(valueRows,
 				renderVal(ln)+bgFill.Render(strings.Repeat(" ", pad)+" ")+bars[i])
 		}
-	} else if hasValue {
-		for _, ln := range valueLines {
-			valueRows = append(valueRows, renderVal(ln))
-		}
 	}
 
-	raw := append(append(append([]string{}, head...), valueRows...), tail...)
-
-	lines := padLinesToWidth(raw, bgFill)
-
-	return m.styles.DropdownPopup.Render(lipgloss.JoinVertical(lipgloss.Left, lines...))
+	raw := append(append(append([]string{}, l.head...), valueRows...), l.tail...)
+	return m.styles.DropdownPopup.Render(lipgloss.JoinVertical(lipgloss.Left, padLinesToWidth(raw, bgFill)...))
 }

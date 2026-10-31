@@ -18,7 +18,7 @@ func scriptOf(n int) string {
 	return strings.Join(lines, "\n")
 }
 
-func TestInfoScrollMetrics_ClampsAndOffset(t *testing.T) {
+func TestExplainLayout_ClampsAndOffset(t *testing.T) {
 	m := Model{
 		mode:       infoMode,
 		termWidth:  100,
@@ -29,36 +29,36 @@ func TestInfoScrollMetrics_ClampsAndOffset(t *testing.T) {
 			Value:    scriptOf(50),
 		},
 	}
-	valueLines, viewportH, maxOffset := m.infoScrollMetrics()
-	if len(valueLines) != 50 {
-		t.Fatalf("valueLines = %d, want 50", len(valueLines))
+	l := m.explainLayout()
+	if len(l.script) != 50 {
+		t.Fatalf("script = %d lines, want 50", len(l.script))
 	}
-	if viewportH != infoViewportRows {
-		t.Errorf("viewportH = %d, want %d on a tall terminal", viewportH, infoViewportRows)
+	if l.viewportH != infoViewportRows {
+		t.Errorf("viewportH = %d, want %d on a tall terminal", l.viewportH, infoViewportRows)
 	}
-	if want := 50 - infoViewportRows; maxOffset != want {
-		t.Errorf("maxOffset = %d, want %d", maxOffset, want)
+	if want := 50 - infoViewportRows; l.maxOffset != want {
+		t.Errorf("maxOffset = %d, want %d", l.maxOffset, want)
 	}
 }
 
-func TestInfoScrollMetrics_ShortFits(t *testing.T) {
+func TestExplainLayout_ShortFits(t *testing.T) {
 	m := Model{
 		termWidth:    100,
 		termHeight:   60,
 		activeDetail: &DetailState{Value: scriptOf(5)},
 	}
-	if _, _, maxOffset := m.infoScrollMetrics(); maxOffset != 0 {
-		t.Errorf("maxOffset = %d, want 0 for a short script", maxOffset)
+	if l := m.explainLayout(); l.maxOffset != 0 {
+		t.Errorf("maxOffset = %d, want 0 for a short script", l.maxOffset)
 	}
 }
 
-func TestInfoScrollMetrics_ClampsToSmallTerminal(t *testing.T) {
+func TestExplainLayout_ClampsToSmallTerminal(t *testing.T) {
 	m := Model{
 		termWidth:    100,
 		termHeight:   16,
 		activeDetail: &DetailState{Value: scriptOf(50)},
 	}
-	_, viewportH, _ := m.infoScrollMetrics()
+	viewportH := m.explainLayout().viewportH
 	if viewportH >= infoViewportRows {
 		t.Errorf("viewportH = %d, want it clamped below %d on a short terminal", viewportH, infoViewportRows)
 	}
@@ -75,7 +75,8 @@ func TestUpdateInfoMode_Paging(t *testing.T) {
 		termHeight:   60,
 		activeDetail: &DetailState{Value: scriptOf(50)},
 	}
-	_, viewportH, maxOffset := m.infoScrollMetrics()
+	l := m.explainLayout()
+	viewportH, maxOffset := l.viewportH, l.maxOffset
 
 	// One PgDn advances by (viewportH-1) and keeps the overlay open.
 	tm, _ := m.updateInfoMode(tea.KeyMsg{Type: tea.KeyPgDown})
@@ -157,14 +158,13 @@ func TestScrollbarColumn_ThumbPosition(t *testing.T) {
 
 // The explain popup shows the command as it will run: indentation and
 // repeated spaces are part of the script, not prose to reflow.
-func TestInfoScrollMetrics_KeepsScriptWhitespace(t *testing.T) {
+func TestExplainLayout_KeepsScriptWhitespace(t *testing.T) {
 	script := "if true; then\n    printf '%s    %s\\n' a b\nfi"
 	m := Model{
 		mode: infoMode, termWidth: 100, termHeight: 60,
 		activeDetail: &DetailState{Title: "T", KeyLabel: "Command", Value: script},
 	}
-	lines, _, _ := m.infoScrollMetrics()
-	if got := strings.Join(lines, "\n"); got != script {
+	if got := strings.Join(m.explainLayout().script, "\n"); got != script {
 		t.Errorf("popup shows\n%s\nwant\n%s", got, script)
 	}
 }

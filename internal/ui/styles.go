@@ -266,13 +266,14 @@ func BuildStyles(cfg config.Config) Styles {
 		PaddingTop(3).
 		Align(lipgloss.Center)
 
+	// Every popup floats over a screen (overlay), so it is just its box: a
+	// margin would only blank a ring of whatever the screen shows around it.
 	s.DropdownPopup = lipgloss.NewStyle().
 		Border(lipgloss.ThickBorder()).
 		BorderForeground(lipgloss.Color(ui.DropdownBorder)).
 		Background(lipgloss.Color(ui.DropdownBG)).
 		Foreground(lipgloss.Color(ui.DropdownFG)).
 		Padding(1, 2).
-		Margin(1).
 		Bold(true)
 
 	return s
