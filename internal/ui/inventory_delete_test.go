@@ -337,7 +337,7 @@ func TestInventoryDelete_CtrlCStillQuits(t *testing.T) {
 
 	m = sendTop(t, m, keyType(tea.KeyDelete), tea.KeyMsg{Type: tea.KeyCtrlC})
 
-	if !m.Quitting {
+	if !m.quitting {
 		t.Error("ctrl+c must still quit while a prompt is armed")
 	}
 }

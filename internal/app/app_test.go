@@ -79,7 +79,7 @@ func TestBatchCommands_KeepOpen(t *testing.T) {
 		}},
 	}}
 	sels := []launch.Selection{{Cell: "plain"}, {Cell: "stay"}, {Cell: "debug"}, {Cell: "folder", Item: 1}, {Cell: "folder", Item: 2}}
-	cmds := batchCommands(cfg, sels, "work")
+	cmds := batchCommands(plansFor(cfg, sels))
 	if len(cmds) != len(sels) {
 		t.Fatalf("got %d cells for %d marks", len(cmds), len(sels))
 	}
@@ -99,8 +99,16 @@ func TestBatchCommands_SkipsNothingToRun(t *testing.T) {
 		{Name: "blank", Command: "   "},
 	}}
 	sels := []launch.Selection{{Cell: "empty"}, {Cell: "real"}, {Cell: "blank"}, {Cell: "gone"}}
-	cmds := batchCommands(cfg, sels, "work")
+	cmds := batchCommands(plansFor(cfg, sels))
 	if len(cmds) != 1 || cmds[0].Name != "real" {
 		t.Fatalf("got %+v, want only the cell with a command", cmds)
 	}
+}
+
+func plansFor(cfg config.Config, sels []launch.Selection) []launch.Plan {
+	plans := make([]launch.Plan, len(sels))
+	for i, sel := range sels {
+		plans[i] = launch.For(cfg, sel, "work")
+	}
+	return plans
 }

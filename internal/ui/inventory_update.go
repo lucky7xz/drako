@@ -190,7 +190,7 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m = m.presentNextBrokenProfile() // Return to next error or grid
 		return m, nil
 	case Matches(m.Config.Keys, msg, "ctrl+c"):
-		m.Quitting = true
+		m.quitting = true
 		return m, tea.Quit
 
 	// Navigation
@@ -334,7 +334,7 @@ func (m Model) updatePendingDelete(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyCtrlC:
-		m.Quitting = true
+		m.quitting = true
 		return m, tea.Quit
 
 	case tea.KeyBackspace:

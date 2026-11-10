@@ -132,16 +132,16 @@ func TestSessionOnAnEmptyGrid(t *testing.T) {
 // after that gate in app.go, and must not be able to undo it.
 func TestRestoreNeverRevivesAQuittingModel(t *testing.T) {
 	m := sessionModel(t)
-	m.Quitting = true
-	m.ExitCode = 1
+	m.quitting = true
+	m.exitCode = 1
 
 	m.Restore(Session{Cell: "bandwidth", Profile: "core"})
 
-	if !m.Quitting {
+	if !m.quitting {
 		t.Error("Restore cleared Quitting — a session glassroot ended could be revived")
 	}
-	if m.ExitCode != 1 {
-		t.Errorf("Restore changed ExitCode to %d, want 1", m.ExitCode)
+	if m.exitCode != 1 {
+		t.Errorf("Restore changed ExitCode to %d, want 1", m.exitCode)
 	}
 }
 
@@ -193,12 +193,12 @@ func TestSessionIgnoresAProfileThatVanished(t *testing.T) {
 // but that ordering is one line in another package, so pin the behaviour here
 // too — Restore on this model must be inert in every field.
 func TestRestoreIsInertOnAGlassrootRejection(t *testing.T) {
-	m := Model{Quitting: true, ExitCode: 1, GlassrootMode: true}
+	m := Model{quitting: true, exitCode: 1, GlassrootMode: true}
 
 	m.Restore(Session{Cell: "bandwidth", Profile: "beta"})
 
-	if !m.Quitting || m.ExitCode != 1 {
-		t.Errorf("Quitting=%v ExitCode=%d, want true/1 untouched", m.Quitting, m.ExitCode)
+	if !m.quitting || m.exitCode != 1 {
+		t.Errorf("Quitting=%v ExitCode=%d, want true/1 untouched", m.quitting, m.exitCode)
 	}
 	if m.gridNav.cursorRow != 0 || m.gridNav.cursorCol != 0 {
 		t.Errorf("cursor moved to %d,%d on an empty grid",

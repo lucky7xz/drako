@@ -13,7 +13,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/cli"
-	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/core"
 	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/multiplex"
@@ -99,9 +98,9 @@ func Run() int {
 		// from manual Chdir or from internal logic
 
 		initial := ui.InitialModel(glassrootMode, session)
-		if initial.Quitting {
+		if out := initial.Outcome(); out.Action == ui.Quit {
 			// e.g. glassroot with a broken profile: fail before the TUI starts
-			return initial.ExitCode
+			return out.ExitCode
 		}
 
 		// Watch only after the first InitialModel: on a first launch it writes
@@ -136,31 +135,28 @@ func Run() int {
 		}
 		session = state.Session()
 
-		if state.Quitting {
-			return state.ExitCode
-		}
+		switch out := state.Outcome(); out.Action {
+		case ui.Quit:
+			return out.ExitCode
 
-		if len(state.SelectedBatch) > 0 {
-			runBatch(state)
+		case ui.Batch:
+			runBatch(out)
 			clearScreen()
-			continue
-		}
 
-		if state.Selected.Cell != "" {
+		case ui.Run:
 			// Internal "drako …" cells are dispatched here, at the layer that
 			// may wire cli and core together; everything else runs via core.
-			name := state.Selected.Name(state.Config)
+			plan := out.Plans[0]
 			switch {
-			case strings.HasPrefix(name, "drako purge"):
-				if runInternalPurge(name) {
+			case strings.HasPrefix(plan.Name, "drako purge"):
+				if runInternalPurge(plan.Name) {
 					return 0 // successful purge ends the session
 				}
-			case strings.HasPrefix(name, "drako open"):
-				cli.HandleOpenCommand(name)
+			case strings.HasPrefix(plan.Name, "drako open"):
+				cli.HandleOpenCommand(plan.Name)
 			default:
-				core.RunCommand(launch.For(state.Config, state.Selected, state.ActiveProfileName()))
+				core.RunCommand(plan)
 			}
-
 			clearScreen()
 		}
 	}
@@ -182,7 +178,7 @@ func clearScreen() {
 // runBatch launches every marked cell together in a multiplexer. The heavy
 // lifting (layout, quoting, which backend) lives in the multiplex package;
 // this is resolution and handoff, mirroring the single-run dispatch.
-func runBatch(state ui.Model) {
+func runBatch(out ui.Outcome) {
 	// Neither multiplexer drako drives has a Windows build worth shipping on.
 	if runtime.GOOS == "windows" {
 		fmt.Println("Batch launch needs tmux or herdr and is not available on Windows yet.")
@@ -190,12 +186,12 @@ func runBatch(state ui.Model) {
 		return
 	}
 
-	cmds := batchCommands(state.Config, state.SelectedBatch, state.ActiveProfileName())
+	cmds := batchCommands(out.Plans)
 	if len(cmds) == 0 {
 		return
 	}
 
-	backend, err := multiplex.Resolve(state.Config.BatchForceTmux, multiplex.OSEnv())
+	backend, err := multiplex.Resolve(out.ForceTmux, multiplex.OSEnv())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		core.Pause("\nPress any key to return to the application.")
@@ -212,8 +208,8 @@ func runBatch(state ui.Model) {
 	session := "drako-" + strings.TrimPrefix(filepath.Base(scriptDir), "drako-batch-")
 	// The layout chosen in the dialog; the default when there was none (a single
 	// cell) or a mark no longer resolved above.
-	tabs := state.SelectedTabs
-	if len(tabs) == 0 || len(cmds) != len(state.SelectedBatch) {
+	tabs := out.Tabs
+	if len(tabs) == 0 || len(cmds) != len(out.Plans) {
 		tabs = multiplex.Distribute(len(cmds), multiplex.MinTabs(len(cmds)))
 	}
 	for _, c := range cmds {
@@ -238,12 +234,11 @@ func runBatch(state ui.Model) {
 	}
 }
 
-// batchCommands turns the marked entries into cells to launch; an entry with
+// batchCommands turns the marked entries' plans into cells to launch; one with
 // nothing to run (gone from the config, or no command) is logged and left out.
-func batchCommands(cfg config.Config, sels []launch.Selection, profile string) []multiplex.Command {
+func batchCommands(plans []launch.Plan) []multiplex.Command {
 	var cmds []multiplex.Command
-	for _, sel := range sels {
-		plan := launch.For(cfg, sel, profile)
+	for _, plan := range plans {
 		if !plan.Runnable() {
 			log.Printf("batch: skipping %q (nothing to run)", plan.Name)
 			continue

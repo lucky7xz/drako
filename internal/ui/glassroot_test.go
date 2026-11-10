@@ -91,8 +91,8 @@ func TestGlassrootFailQuitsWithExitCode(t *testing.T) {
 	m := glassrootModel(true)
 	got, cmd := m.failGlassroot()
 
-	if !got.Quitting || got.ExitCode != 1 {
-		t.Errorf("Quitting=%v ExitCode=%d, want true/1", got.Quitting, got.ExitCode)
+	if !got.quitting || got.exitCode != 1 {
+		t.Errorf("Quitting=%v ExitCode=%d, want true/1", got.quitting, got.exitCode)
 	}
 	if cmd == nil {
 		t.Fatal("expected tea.Quit command")

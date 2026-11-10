@@ -29,8 +29,8 @@ func (m Model) beginLaunch() (tea.Model, tea.Cmd) {
 // launchBatch hands the marked cells and their layout to the app and quits;
 // the TUI relaunches once the batch is done.
 func (m Model) launchBatch() (tea.Model, tea.Cmd) {
-	m.SelectedBatch = slices.Clone(m.batch.marked)
-	m.SelectedTabs = slices.Clone(m.batch.tabs)
+	m.selectedBatch = slices.Clone(m.batch.marked)
+	m.selectedTabs = slices.Clone(m.batch.tabs)
 	return m, tea.Quit
 }
 

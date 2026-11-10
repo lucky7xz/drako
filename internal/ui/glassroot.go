@@ -61,9 +61,9 @@ func glassrootRejectsBundle(b config.ConfigBundle) bool {
 // failGlassroot ends the session silently with exit code 1. Glassroot never
 // shows rescue mode or config internals on a broken profile; it quits through
 // the normal bubbletea shutdown so the terminal is restored and the host can
-// read Quitting/ExitCode off the final model.
+// read it from the final model's Outcome.
 func (m Model) failGlassroot() (Model, tea.Cmd) {
-	m.Quitting = true
-	m.ExitCode = 1
+	m.quitting = true
+	m.exitCode = 1
 	return m, tea.Quit
 }

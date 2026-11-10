@@ -145,7 +145,7 @@ func TestDroppedConfigProfileIsExplainedOnce(t *testing.T) {
 func TestAfterEditInGlassrootRejectsAnEmptyBundle(t *testing.T) {
 	dir := twoDecks(t)
 	m := InitialModel(true, Session{})
-	if m.Quitting {
+	if m.quitting {
 		t.Fatal("setup: two good decks should start a glassroot session")
 	}
 	equipped, _ := filepath.Glob(filepath.Join(dir, "*.profile.toml"))
@@ -156,8 +156,8 @@ func TestAfterEditInGlassrootRejectsAnEmptyBundle(t *testing.T) {
 	}
 
 	next, _ := m.afterEdit(editorFinishedMsg{path: filepath.Join(dir, "alpha.profile.toml")})
-	if got := next.(Model); !got.Quitting || got.ExitCode != 1 {
-		t.Errorf("glassroot kept running on the rescue grid (quitting=%v, first cell %q)", got.Quitting, got.Config.Commands[0].Name)
+	if got := next.(Model); !got.quitting || got.exitCode != 1 {
+		t.Errorf("glassroot kept running on the rescue grid (quitting=%v, first cell %q)", got.quitting, got.Config.Commands[0].Name)
 	}
 }
 

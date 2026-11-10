@@ -93,8 +93,8 @@ func TestBatchLaunchCollectsInSelectionOrder(t *testing.T) {
 	m, _ = pressBatch(t, m, tea.KeyMsg{Type: tea.KeyEnter})
 	m, cmd := pressBatch(t, m, tea.KeyMsg{Type: tea.KeyEnter})
 	want := []launch.Selection{{Cell: "two"}, {Cell: "one"}}
-	if !slices.Equal(m.SelectedBatch, want) {
-		t.Fatalf("SelectedBatch = %v, want %v", m.SelectedBatch, want)
+	if !slices.Equal(m.selectedBatch, want) {
+		t.Fatalf("SelectedBatch = %v, want %v", m.selectedBatch, want)
 	}
 	if cmd == nil {
 		t.Fatal("launch must quit the TUI to hand the terminal over")
@@ -102,7 +102,7 @@ func TestBatchLaunchCollectsInSelectionOrder(t *testing.T) {
 	if _, ok := cmd().(tea.QuitMsg); !ok {
 		t.Fatalf("launch cmd = %T, want tea.QuitMsg", cmd())
 	}
-	if m.Quitting {
+	if m.quitting {
 		t.Error("batch launch relaunches the TUI afterwards — Quitting must stay false")
 	}
 }
@@ -111,7 +111,7 @@ func TestBatchLaunchWithNothingMarked(t *testing.T) {
 	m := batchTestModel()
 
 	m, _ = pressBatch(t, m, tea.KeyMsg{Type: tea.KeyEnter})
-	if len(m.SelectedBatch) != 0 {
+	if len(m.selectedBatch) != 0 {
 		t.Fatal("enter with zero marks must not launch")
 	}
 	if m.profile.statusMessage == "" {

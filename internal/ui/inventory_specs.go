@@ -325,7 +325,7 @@ func (m Model) updateSpecsOverlay(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	switch {
 	case Matches(m.Config.Keys, msg, "ctrl+c"):
-		m.Quitting = true
+		m.quitting = true
 		return m, tea.Quit
 
 	// Tab both opens and closes: the overlay is a place you step into and

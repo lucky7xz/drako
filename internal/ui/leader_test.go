@@ -85,7 +85,7 @@ func TestLeaderMismatchIsSwallowed(t *testing.T) {
 	m = press(t, m, keyRunes("m"))
 	// "q" would normally quit — inside a pending sequence it must be inert.
 	m = press(t, m, keyRunes("q"))
-	if m.Quitting {
+	if m.quitting {
 		t.Fatal("unmatched continuation must be swallowed, not act")
 	}
 	if m.leader.pending {

@@ -99,13 +99,15 @@ type profileState struct {
 }
 
 type Model struct {
-	Selected      launch.Selection   // what to run once the TUI quits (read by app.go)
-	SelectedBatch []launch.Selection // entries for a batch launch (read by app.go after quit)
-	SelectedTabs  []int              // how those entries split into tabs, chosen in the dialog (nil: default)
-	Quitting      bool
-	ExitCode      int // process exit code the host should use once the TUI is down
+	// What the host is asked to do once the TUI quits; read through Outcome.
+	selected      launch.Selection   // the entry to run
+	selectedBatch []launch.Selection // entries for a batch launch
+	selectedTabs  []int              // how those entries split into tabs, chosen in the dialog (nil: default)
+	quitting      bool
+	exitCode      int // process exit code the host should use once the TUI is down
+
 	GlassrootMode bool
-	Config        config.Config // effective config (read by app.go after quit)
+	Config        config.Config // effective config
 
 	mode         navMode
 	previousMode navMode
@@ -448,8 +450,7 @@ func (p profileState) activeName() string {
 }
 
 // ActiveProfileName is the name of the currently active profile, or "" when
-// no profiles are loaded. The app layer exports it to spawned commands as
-// DRAKO_PROFILE.
+// no profiles are loaded. Spawned commands see it as DRAKO_PROFILE.
 func (m Model) ActiveProfileName() string {
 	if m.profile.rescue {
 		return ""
@@ -500,7 +501,7 @@ func (m Model) Session() Session {
 // The profile goes first. Switching one replaces the grid, so a cursor set
 // before the switch would index into a grid that no longer exists.
 //
-// Restore never touches Quitting or ExitCode. InitialModel calls it *after* the
+// Restore never touches quitting or exitCode. InitialModel calls it *after* the
 // glassroot gate, so that a session glassroot decided to end cannot be
 // revived by a carried value.
 //
@@ -554,13 +555,13 @@ func InitialModel(glassrootMode bool, carried Session) Model {
 		// No config directory means nothing to run from; hand the host a
 		// model that is already done and let app.Run exit with the code.
 		fmt.Fprintf(os.Stderr, "drako: %v\n", err)
-		return Model{Quitting: true, ExitCode: 1, GlassrootMode: glassrootMode}
+		return Model{quitting: true, exitCode: 1, GlassrootMode: glassrootMode}
 	}
 
 	if glassrootMode && glassrootRejectsBundle(bundle) {
 		// Glassroot never exposes TOML contents or Rescue Mode. Hand the host
 		// a model that is already done; app.Run exits before starting the TUI.
-		return Model{Quitting: true, ExitCode: 1, GlassrootMode: true}
+		return Model{quitting: true, exitCode: 1, GlassrootMode: true}
 	}
 
 	s := newSpinner()

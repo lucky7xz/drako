@@ -60,7 +60,7 @@ func TestDialog_EnterOpensItOnTheDefaultLayout(t *testing.T) {
 	if !slices.Equal(m.batch.tabs, []int{4, 2}) {
 		t.Fatalf("six cells should open on [4 2], got %v", m.batch.tabs)
 	}
-	if len(m.SelectedBatch) != 0 {
+	if len(m.selectedBatch) != 0 {
 		t.Error("opening the dialog must not launch yet")
 	}
 }
@@ -71,8 +71,8 @@ func TestDialog_SkippedWhenThereIsNoChoice(t *testing.T) {
 	if m.batch.tabs != nil {
 		t.Errorf("a single cell needs no dialog, got %v", m.batch.tabs)
 	}
-	if !slices.Equal(m.SelectedBatch, []launch.Selection{{Cell: "c1"}}) {
-		t.Errorf("a single cell must launch straight away, got %v", m.SelectedBatch)
+	if !slices.Equal(m.selectedBatch, []launch.Selection{{Cell: "c1"}}) {
+		t.Errorf("a single cell must launch straight away, got %v", m.selectedBatch)
 	}
 }
 
@@ -176,11 +176,11 @@ func TestDialog_EnterLaunchesWithTheChosenLayout(t *testing.T) {
 	m, _ = pressDialog(t, m, keyUp) // [2 2 2]
 
 	m, cmd := pressDialog(t, m, keyEnter)
-	if !slices.Equal(m.SelectedBatch, []launch.Selection{{Cell: "c1"}, {Cell: "c2"}, {Cell: "c3"}, {Cell: "c4"}, {Cell: "c5"}, {Cell: "c6"}}) {
-		t.Fatalf("launch must carry the marked cells, got %v", m.SelectedBatch)
+	if !slices.Equal(m.selectedBatch, []launch.Selection{{Cell: "c1"}, {Cell: "c2"}, {Cell: "c3"}, {Cell: "c4"}, {Cell: "c5"}, {Cell: "c6"}}) {
+		t.Fatalf("launch must carry the marked cells, got %v", m.selectedBatch)
 	}
-	if !slices.Equal(m.SelectedTabs, []int{2, 2, 2}) {
-		t.Fatalf("launch must carry the chosen layout, got %v", m.SelectedTabs)
+	if !slices.Equal(m.selectedTabs, []int{2, 2, 2}) {
+		t.Fatalf("launch must carry the chosen layout, got %v", m.selectedTabs)
 	}
 	if cmd == nil {
 		t.Fatal("launch must quit the TUI")

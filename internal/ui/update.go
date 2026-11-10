@@ -127,7 +127,7 @@ func (m Model) handleMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Global Emergency Exit: Ctrl+C should always quit (except in Locked Mode, handled below)
 		if key == "ctrl+c" {
-			m.Quitting = true
+			m.quitting = true
 			return m, tea.Quit
 		}
 
@@ -323,7 +323,7 @@ func (m Model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.dropdown.items = nil
 		return m, nil
 	case Matches(m.Config.Keys, msg, "ctrl+c"):
-		m.Quitting = true
+		m.quitting = true
 		return m, tea.Quit
 	case IsUp(m.Config.Keys, msg):
 		if m.dropdown.selectedIdx > 0 {
@@ -357,7 +357,7 @@ func (m Model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case IsConfirm(m.Config.Keys, msg):
 		// Execute the selected dropdown item
 		if m.dropdown.selectedIdx >= 0 && m.dropdown.selectedIdx < len(m.dropdown.items) {
-			m.Selected = launch.Selection{Cell: m.dropdownCell(), Item: m.dropdown.selectedIdx + 1}
+			m.selected = launch.Selection{Cell: m.dropdownCell(), Item: m.dropdown.selectedIdx + 1}
 			return m, tea.Quit
 		}
 	}
@@ -480,7 +480,7 @@ func (m Model) updateLockedMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	// Allow Ctrl+C to quit even when locked
 	if key == "ctrl+c" {
-		m.Quitting = true
+		m.quitting = true
 		return m, tea.Quit
 	}
 

@@ -156,8 +156,8 @@ func TestDropdownMarksTellSameNamedItemsApart(t *testing.T) {
 		t.Errorf("only the second Logs may carry the mark:\n%s", out)
 	}
 	m, _ = pressDropdown(t, m, tea.KeyMsg{Type: tea.KeyEnter})
-	if want := []launch.Selection{{Cell: "folder", Item: 2}}; !slices.Equal(m.SelectedBatch, want) {
-		t.Errorf("SelectedBatch = %v, want %v", m.SelectedBatch, want)
+	if want := []launch.Selection{{Cell: "folder", Item: 2}}; !slices.Equal(m.selectedBatch, want) {
+		t.Errorf("SelectedBatch = %v, want %v", m.selectedBatch, want)
 	}
 }
 
@@ -192,8 +192,8 @@ func TestDropdownLaunchCollectsSelectionOrder(t *testing.T) {
 	m, _ = pressDropdown(t, m, tea.KeyMsg{Type: tea.KeyEnter})
 	m, cmd := pressDropdown(t, m, tea.KeyMsg{Type: tea.KeyEnter})
 	want := []launch.Selection{{Cell: "folder", Item: 2}, {Cell: "folder", Item: 1}}
-	if !slices.Equal(m.SelectedBatch, want) {
-		t.Fatalf("SelectedBatch = %v, want %v (selection order)", m.SelectedBatch, want)
+	if !slices.Equal(m.selectedBatch, want) {
+		t.Fatalf("SelectedBatch = %v, want %v (selection order)", m.selectedBatch, want)
 	}
 	if cmd == nil {
 		t.Fatal("launch must quit the TUI")
@@ -201,7 +201,7 @@ func TestDropdownLaunchCollectsSelectionOrder(t *testing.T) {
 	if _, ok := cmd().(tea.QuitMsg); !ok {
 		t.Fatalf("cmd = %T, want QuitMsg", cmd())
 	}
-	if m.Quitting {
+	if m.quitting {
 		t.Error("Quitting must stay false for a relaunch")
 	}
 }
@@ -210,7 +210,7 @@ func TestDropdownLaunchWithNothingMarkedDoesNotRunItem(t *testing.T) {
 	m := markingModel(t)
 
 	m, _ = pressDropdown(t, m, tea.KeyMsg{Type: tea.KeyEnter})
-	if m.Selected != (launch.Selection{}) || len(m.SelectedBatch) != 0 {
+	if m.selected != (launch.Selection{}) || len(m.selectedBatch) != 0 {
 		t.Fatal("enter with zero marks must neither launch nor run the selected item")
 	}
 	if m.profile.statusMessage == "" {

@@ -31,7 +31,7 @@ func TestDropdownChoiceRunsTheItemFromItsOwnFolder(t *testing.T) {
 	next, _ := m.updateGridMode(tea.KeyMsg{Type: tea.KeyEnter})
 	next, _ = next.(Model).updateDropdownMode(tea.KeyMsg{Type: tea.KeyEnter})
 
-	sel := next.(Model).Selected
+	sel := next.(Model).selected
 	_, item, ok := sel.Resolve(m.Config)
 	if !ok || item == nil || item.Command != "docker ps" {
 		t.Errorf("docker → Status (%+v) resolves to %+v, want docker ps", sel, item)
@@ -43,7 +43,7 @@ func TestGridCellRunsItselfNotAFolderItemOfTheSameName(t *testing.T) {
 	m.gridNav.cursorCol = 2 // Logs cell
 	next, _ := m.updateGridMode(tea.KeyMsg{Type: tea.KeyEnter})
 
-	cell, item, ok := next.(Model).Selected.Resolve(m.Config)
+	cell, item, ok := next.(Model).selected.Resolve(m.Config)
 	if !ok || item != nil || cell.Command != "journalctl -f" {
 		t.Errorf("Logs cell resolves to %+v / %+v, want the cell itself", cell, item)
 	}

@@ -32,7 +32,7 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	switch {
 	case IsQuit(m.Config.Keys, msg):
-		m.Quitting = true
+		m.quitting = true
 		return m, tea.Quit
 
 	// Glassroot Cases - handled in update.go
@@ -114,7 +114,7 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				}
 			}
 			// Single command, execute normally
-			m.Selected = launch.Selection{Cell: selectedChoice}
+			m.selected = launch.Selection{Cell: selectedChoice}
 			return m, tea.Quit
 		}
 	}
