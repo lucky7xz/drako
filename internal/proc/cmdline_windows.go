@@ -1,4 +1,4 @@
-package core
+package proc
 
 import (
 	"os/exec"

@@ -3,8 +3,9 @@ package multiplex
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
+
+	"github.com/lucky7xz/drako/internal/proc"
 )
 
 // Tmux launches a batch through tmux. Its plan is built whole before anything
@@ -46,10 +47,10 @@ func describeStep(step []string) string {
 	return strings.Join(verbs, "; ")
 }
 
-// execStep runs one tmux invocation (test seam, like core's commandFn). Every
+// execStep runs one tmux invocation (a test seam). Every
 // step shares drako's environment, so attach finds the server setup started.
 var execStep = func(argv []string, attach bool) error {
-	cmd := exec.Command(argv[0], argv[1:]...)
+	cmd := proc.Tmux.Command(argv[1:]...) // argv[0] is always tmux: Plan writes every step
 	if attach {
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout

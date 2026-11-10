@@ -112,3 +112,20 @@ func plansFor(cfg config.Config, sels []launch.Selection) []launch.Plan {
 	}
 	return plans
 }
+
+// A plan with nothing to run says so and waits for a key. That it starts
+// nothing is proc's promise (TestNothingToRunIsRefused).
+func TestRunPlan_NothingToRunPauses(t *testing.T) {
+	old := pauseFn
+	defer func() { pauseFn = old }()
+
+	cfg := config.Config{Commands: []config.Command{{Name: "test", Command: ""}, {Name: "blank", Command: "   "}}}
+	for _, sel := range []launch.Selection{{Cell: "test"}, {Cell: "blank"}, {Cell: "gone"}} {
+		paused := false
+		pauseFn = func(string) { paused = true }
+		runPlan(launch.For(cfg, sel, ""))
+		if !paused {
+			t.Errorf("%s: expected a pause", sel.Cell)
+		}
+	}
+}

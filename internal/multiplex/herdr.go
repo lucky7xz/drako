@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/lucky7xz/drako/internal/proc"
 )
 
 // A pane's shell is still in its login profile when the pane appears, and may
@@ -175,7 +176,7 @@ func (h *Herdr) create(args ...string) (string, error) {
 // tmux's execStep. herdr reports failures as JSON on stderr with exit 1, so
 // that is what a caller wants to see.
 var herdrExec = func(argv []string) ([]byte, error) {
-	cmd := exec.Command(argv[0], argv[1:]...)
+	cmd := proc.Herdr.Command(argv[1:]...) // argv[0] is always herdr
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	out, err := cmd.Output()

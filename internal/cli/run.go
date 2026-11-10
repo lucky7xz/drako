@@ -6,10 +6,12 @@ package cli
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/core"
 	"github.com/lucky7xz/drako/internal/launch"
+	"github.com/lucky7xz/drako/internal/proc"
 )
 
 // exitRunFailed is drako run's own failure code, kept apart from the
@@ -39,7 +41,14 @@ func HandleRunCommand(args []string) int {
 		return exitRunFailed
 	}
 
-	code, err := core.RunForExit(launch.Shell(cfg.DefaultShell, t.name(), t.command(), t.p.Name))
+	plan := launch.Shell(cfg.DefaultShell, t.name(), t.command(), t.p.Name)
+	if !plan.Runnable() {
+		fmt.Fprintf(os.Stderr, "drako run: %q has no command for this platform\n", plan.Name)
+		return exitRunFailed
+	}
+	core.LogExecution(plan.Name, strings.Join(plan.Argv, " "))
+
+	code, err := proc.Replace(plan)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "drako run: %v\n", err)
 		return exitRunFailed

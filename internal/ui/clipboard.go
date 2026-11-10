@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"runtime"
 	"strings"
+
+	"github.com/lucky7xz/drako/internal/proc"
 )
 
 // CopyToClipboard attempts to copy text to clipboard using various methods
@@ -32,42 +33,39 @@ func CopyToClipboard(s string) {
 func tryPlatformClipboard(s string) bool {
 	switch runtime.GOOS {
 	case "linux":
-		cmd, args := getLinuxClipboardCommand()
-		if cmd != "" {
-			return tryCommand(s, cmd, args...)
+		if tool, args, ok := linuxClipboardTool(); ok {
+			return tryTool(s, tool, args...)
 		}
 	case "darwin":
-		return tryCommand(s, "pbcopy")
+		return tryTool(s, proc.Pbcopy)
 	case "windows":
 		// Try PowerShell first, then clip.exe
 		if tryPowerShellClipboard(s) {
 			return true
 		}
-		return tryCommand(s, "clip.exe")
+		return tryTool(s, proc.ClipExe)
 	}
 	return false
 }
 
-// getLinuxClipboardCommand returns the appropriate clipboard command for Linux systems
-func getLinuxClipboardCommand() (string, []string) {
+// linuxClipboardTool picks the clipboard program for this Linux session, with
+// the arguments that make it read the text from its input.
+func linuxClipboardTool() (proc.Tool, []string, bool) {
 	// Check for Wayland first
-	if isWayland() {
-		if _, err := exec.LookPath("wl-copy"); err == nil {
-			return "wl-copy", []string{}
-		}
+	if isWayland() && proc.WlCopy.Found() {
+		return proc.WlCopy, nil, true
 	}
 
 	// Check for X11 clipboard utilities
-	if _, err := exec.LookPath("xclip"); err == nil {
-		return "xclip", []string{"-selection", "clipboard"}
+	if proc.Xclip.Found() {
+		return proc.Xclip, []string{"-selection", "clipboard"}, true
 	}
-
-	if _, err := exec.LookPath("xsel"); err == nil {
-		return "xsel", []string{"--clipboard", "--input"}
+	if proc.Xsel.Found() {
+		return proc.Xsel, []string{"--clipboard", "--input"}, true
 	}
 
 	// No clipboard utility found
-	return "", []string{}
+	return proc.Tool{}, nil, false
 }
 
 // isWayland checks if we are running under Wayland
@@ -104,25 +102,24 @@ func tryOSC52(s string) bool {
 	return true
 }
 
-// tryCommand attempts to copy text using an external command
-func tryCommand(s string, name string, args ...string) bool {
-	// Check if command exists
-	if _, err := exec.LookPath(name); err != nil {
+// tryTool attempts to copy text by feeding it to a clipboard program.
+func tryTool(s string, tool proc.Tool, args ...string) bool {
+	if !tool.Found() {
 		return false
 	}
 
 	// Execute command with text as input
-	cmd := exec.Command(name, args...)
+	cmd := tool.Command(args...)
 	cmd.Stdin = strings.NewReader(s)
 
 	// Run command and return success status
 	err := cmd.Run()
 	if err != nil {
-		log.Printf("Clipboard command failed: %s %v, error: %v", name, args, err)
+		log.Printf("Clipboard command failed: %s %v, error: %v", tool, args, err)
 		return false
 	}
 
-	log.Printf("Successfully copied to clipboard using: %s %v", name, args)
+	log.Printf("Successfully copied to clipboard using: %s %v", tool, args)
 	return true
 }
 
@@ -132,7 +129,7 @@ func tryPowerShellClipboard(s string) bool {
 		return false
 	}
 
-	cmd := exec.Command("powershell.exe", powerShellClipboardArgs(s)...)
+	cmd := proc.PowerShell.Command(powerShellClipboardArgs(s)...)
 	err := cmd.Run()
 	return err == nil
 }

@@ -3,10 +3,11 @@ package cli
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/lucky7xz/drako/internal/proc"
 )
 
 // OpenPath expands the path and opens it using the OS default application.
@@ -34,18 +35,13 @@ func OpenPath(target string) error {
 
 // openNative opens the specified URL, file, or directory using the OS default application.
 func openNative(target string) error {
-	var cmd *exec.Cmd
-
+	cmd := proc.XdgOpen.Command(target)
 	switch runtime.GOOS {
-	case "linux":
-		cmd = exec.Command("xdg-open", target)
 	case "windows":
 		// Windows 'start' via cmd /c is reliable
-		cmd = exec.Command("cmd", "/c", "start", "", target)
+		cmd = proc.Cmd.Command("/c", "start", "", target)
 	case "darwin":
-		cmd = exec.Command("open", target)
-	default:
-		cmd = exec.Command("xdg-open", target)
+		cmd = proc.Open.Command(target)
 	}
 
 	if err := cmd.Start(); err != nil {

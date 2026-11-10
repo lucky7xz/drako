@@ -1,4 +1,4 @@
-package core
+package proc
 
 import (
 	"errors"
@@ -8,7 +8,6 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/launch"
 )
 
@@ -24,32 +23,40 @@ func TestCommand_CarriesArgvAndEnv(t *testing.T) {
 	}
 }
 
-func TestRunCommand_ConfigMatchButEmptyCommand(t *testing.T) {
-	oldPause, oldCmd := pauseFn, commandFn
-	defer func() { pauseFn, commandFn = oldPause, oldCmd }()
-
-	var paused bool
-	gotArgs := []string{}
-	pauseFn = func(string) { paused = true }
-	commandFn = func(name string, args ...string) *exec.Cmd {
-		gotArgs = append([]string{name}, args...)
-		return exec.Command("echo")
+// A plan with nothing to run is refused, never handed to the system.
+func TestNothingToRunIsRefused(t *testing.T) {
+	plan := launch.Shell("sh", "blank", "   ", "")
+	if err := Run(plan); !errors.Is(err, errNothingToRun) {
+		t.Errorf("Run = %v, want errNothingToRun", err)
 	}
+	if out, err := Capture(plan); !errors.Is(err, errNothingToRun) || out != nil {
+		t.Errorf("Capture = %q, %v, want nothing and errNothingToRun", out, err)
+	}
+}
 
-	for _, sel := range []launch.Selection{{Cell: "test"}, {Cell: "blank"}, {Cell: "gone"}} {
-		paused, gotArgs = false, nil
-		cfg := config.Config{
-			Commands: []config.Command{{Name: "test", Command: ""}, {Name: "blank", Command: "   "}},
-		}
-		RunCommand(launch.For(cfg, sel, ""))
+// debug_execution: both streams come back, in order, and nothing is lost when
+// the command fails.
+func TestCapture(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("needs sh")
+	}
+	out, err := Capture(launch.Shell("sh", "c", "echo out; echo err >&2; exit 3", "work"))
+	var exitErr *exec.ExitError
+	if !errors.As(err, &exitErr) || exitErr.ExitCode() != 3 {
+		t.Errorf("want the command's exit 3, got %v", err)
+	}
+	if string(out) != "out\nerr\n" {
+		t.Errorf("captured %q, want both streams", out)
+	}
+}
 
-		// Says so and pauses, but runs nothing.
-		if !paused {
-			t.Errorf("%s: expected pause call", sel.Cell)
-		}
-		if len(gotArgs) > 0 {
-			t.Errorf("%s: expected no command execution, got %v", sel.Cell, gotArgs)
-		}
+func TestToolCommand(t *testing.T) {
+	cmd := Git.Command("clone", "--", "url", "dir")
+	if want := []string{"git", "clone", "--", "url", "dir"}; !slices.Equal(cmd.Args, want) {
+		t.Errorf("args=%v, want %v", cmd.Args, want)
+	}
+	if (Tool{}).Found() {
+		t.Error("the zero Tool names no program and must not be found")
 	}
 }
 

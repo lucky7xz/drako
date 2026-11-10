@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -17,6 +16,7 @@ import (
 	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/multiplex"
 	"github.com/lucky7xz/drako/internal/paths"
+	"github.com/lucky7xz/drako/internal/proc"
 	"github.com/lucky7xz/drako/internal/ui"
 )
 
@@ -145,7 +145,7 @@ func Run() int {
 
 		case ui.Run:
 			// Internal "drako …" cells are dispatched here, at the layer that
-			// may wire cli and core together; everything else runs via core.
+			// may wire cli and proc together; everything else is an ordinary run.
 			plan := out.Plans[0]
 			switch {
 			case strings.HasPrefix(plan.Name, "drako purge"):
@@ -155,7 +155,7 @@ func Run() int {
 			case strings.HasPrefix(plan.Name, "drako open"):
 				cli.HandleOpenCommand(plan.Name)
 			default:
-				core.RunCommand(plan)
+				runPlan(plan)
 			}
 			clearScreen()
 		}
@@ -165,11 +165,9 @@ func Run() int {
 // clearScreen resets the terminal between a finished command and the TUI
 // relaunch. Windows has no `clear`; `cls` is a cmd built-in.
 func clearScreen() {
-	var cmd *exec.Cmd
+	cmd := proc.Clear.Command()
 	if runtime.GOOS == "windows" {
-		cmd = exec.Command("cmd", "/c", "cls")
-	} else {
-		cmd = exec.Command("clear")
+		cmd = proc.Cmd.Command("/c", "cls")
 	}
 	cmd.Stdout = os.Stdout
 	_ = cmd.Run()
@@ -182,7 +180,7 @@ func runBatch(out ui.Outcome) {
 	// Neither multiplexer drako drives has a Windows build worth shipping on.
 	if runtime.GOOS == "windows" {
 		fmt.Println("Batch launch needs tmux or herdr and is not available on Windows yet.")
-		core.Pause("\nPress any key to return to the application.")
+		pause("\nPress any key to return to the application.")
 		return
 	}
 
@@ -194,14 +192,14 @@ func runBatch(out ui.Outcome) {
 	backend, err := multiplex.Resolve(out.ForceTmux, multiplex.OSEnv())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
-		core.Pause("\nPress any key to return to the application.")
+		pause("\nPress any key to return to the application.")
 		return
 	}
 
 	scriptDir, err := os.MkdirTemp("", "drako-batch-*")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "batch launch failed: %v\n", err)
-		core.Pause("\nPress any key to return to drako.")
+		pause("\nPress any key to return to drako.")
 		return
 	}
 	// The temp dir's random suffix keeps two batches started together apart.
@@ -224,13 +222,13 @@ func runBatch(out ui.Outcome) {
 	// after creating it; its cells may be running, so say how to get back.
 	left := false
 	if tmux, ok := backend.(*multiplex.Tmux); ok && !tmux.Inside {
-		left = exec.Command("tmux", "has-session", "-t", "="+session).Run() == nil // "=": exact name, no prefix match
+		left = proc.Tmux.Command("has-session", "-t", "="+session).Run() == nil // "=": exact name, no prefix match
 	}
 	if left {
 		fmt.Printf("\nBatch session still running: tmux attach -t %s\n", session)
 	}
 	if err != nil || left {
-		core.Pause("\nPress any key to return to drako.")
+		pause("\nPress any key to return to drako.")
 	}
 }
 
@@ -271,11 +269,11 @@ func runInternalPurge(command string) bool {
 		} else {
 			fmt.Printf("\nInternal Purge Error: %v\n", err)
 		}
-		core.Pause("\nPress any key...")
+		pause("\nPress any key...")
 		return false
 	}
 	fmt.Printf("\npress any key to exit...")
-	core.Pause("")
+	pause("")
 	return true
 }
 

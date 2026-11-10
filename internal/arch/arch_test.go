@@ -57,23 +57,6 @@ const internal = "github.com/lucky7xz/drako/internal/"
 // "package/file.go what". The list may only shrink: a refactoring step that
 // moves an effect to its home deletes the lines it has made untrue.
 var knownExceptions = []string{
-	// start processes
-	"app/app.go os/exec",
-	"cli/open.go os/exec",
-	"cli/summon_transport.go os/exec",
-	"core/cmdline_other.go os/exec",
-	"core/cmdline_windows.go os/exec",
-	"core/cmdline_windows.go syscall",
-	"core/commands.go os/exec",
-	"core/commands.go syscall",
-	"core/runforexit.go os/exec",
-	"core/runforexit.go syscall",
-	"multiplex/herdr.go os/exec",
-	"multiplex/resolve.go os/exec",
-	"multiplex/tmux.go os/exec",
-	"ui/clipboard.go os/exec",
-	"ui/editor.go os/exec",
-
 	// use the network
 	"cli/summon_transport.go net/http",
 	"core/network.go net",
@@ -85,9 +68,7 @@ var knownExceptions = []string{
 	"config/pivot.go os",
 	"config/platform.go os",
 	"config/themes.go os",
-	"core/commands.go os",
 	"core/logging.go os",
-	"core/runforexit.go os",
 	"multiplex/backend.go os",
 	"multiplex/herdr.go os",
 	"multiplex/resolve.go os",

@@ -1,4 +1,4 @@
-package core
+package proc
 
 import (
 	"errors"
@@ -7,22 +7,21 @@ import (
 	"os/exec"
 	"os/signal"
 	"runtime"
-	"strings"
 	"syscall"
 
 	"github.com/lucky7xz/drako/internal/launch"
 )
 
-// RunForExit is RunCommand without the TUI. Outside Windows the command
-// replaces drako, so every signal reaches it and its exit status is drako
-// run's; it returns only to say why the command never started.
-func RunForExit(plan launch.Plan) (int, error) {
+// Replace runs plan's command in drako's place, the way drako run needs it.
+// Outside Windows the command replaces the drako process, so every signal
+// reaches it and its exit status is drako's; Replace returns only to say why
+// the command never started.
+func Replace(plan launch.Plan) (int, error) {
 	name := plan.Name
 	if !plan.Runnable() {
-		return 0, fmt.Errorf("%q has no command for this platform", name)
+		return 0, fmt.Errorf("could not run %q: %w", name, errNothingToRun)
 	}
 	cmd := command(plan, launch.Env(os.Environ(), plan.Profile))
-	LogExecution(name, strings.Join(cmd.Args, " "))
 
 	if runtime.GOOS == "windows" {
 		return waitForExit(cmd, name)

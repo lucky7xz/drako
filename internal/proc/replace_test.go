@@ -1,4 +1,4 @@
-package core
+package proc
 
 import (
 	"errors"
@@ -8,7 +8,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -16,11 +15,11 @@ import (
 	"github.com/lucky7xz/drako/internal/launch"
 )
 
-// The test binary doubles as drako run: RunForExit may replace the process
+// The test binary doubles as drako run: Replace may replace the process
 // with the command, so tests run it in a child (startRun) that lands here.
 func TestMain(m *testing.M) {
 	if command, ok := os.LookupEnv("DRAKO_TEST_RUN"); ok {
-		code, err := RunForExit(launch.Shell("sh", os.Getenv("DRAKO_TEST_NAME"), command, os.Getenv("DRAKO_TEST_PROFILE")))
+		code, err := Replace(launch.Shell("sh", os.Getenv("DRAKO_TEST_NAME"), command, os.Getenv("DRAKO_TEST_PROFILE")))
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(125)
@@ -39,7 +38,7 @@ func runExitDir(t *testing.T) string {
 	return filepath.Join(tmp, "drako")
 }
 
-// startRun starts a child test process that runs command through RunForExit.
+// startRun starts a child test process that runs command through Replace.
 func startRun(t *testing.T, name, command, profile string) *exec.Cmd {
 	t.Helper()
 	cmd := exec.Command(os.Args[0])
@@ -70,7 +69,7 @@ func runStatus(t *testing.T, name, command, profile string) int {
 	return exitStatus(t, startRun(t, name, command, profile))
 }
 
-func TestRunForExitPropagatesExitCode(t *testing.T) {
+func TestReplacePropagatesExitCode(t *testing.T) {
 	runExitDir(t)
 	for cmd, want := range map[string]int{"true": 0, "exit 3": 3, "exit 255": 255, "false": 1} {
 		if got := runStatus(t, "c", cmd, "core"); got != want {
@@ -81,7 +80,7 @@ func TestRunForExitPropagatesExitCode(t *testing.T) {
 
 // A command killed by a signal ends drako run the same way, so a shell
 // reports 128+N.
-func TestRunForExitSignalIs128PlusN(t *testing.T) {
+func TestReplaceSignalIs128PlusN(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("no POSIX signals on Windows")
 	}
@@ -95,7 +94,7 @@ func TestRunForExitSignalIs128PlusN(t *testing.T) {
 
 // A signal sent to drako run reaches the command, as if drako were not there:
 // INT too, which scripts and agents send to the one process they started.
-func TestRunForExitSignalsReachTheCommand(t *testing.T) {
+func TestReplaceSignalsReachTheCommand(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("no POSIX signals on Windows")
 	}
@@ -127,7 +126,7 @@ func TestRunForExitSignalsReachTheCommand(t *testing.T) {
 	}
 }
 
-func TestRunForExitEmptyCommandErrors(t *testing.T) {
+func TestReplaceEmptyCommandErrors(t *testing.T) {
 	runExitDir(t)
 	for _, cmd := range []string{"", "   "} {
 		if got := runStatus(t, "ghost", cmd, "core"); got != 125 {
@@ -136,7 +135,7 @@ func TestRunForExitEmptyCommandErrors(t *testing.T) {
 	}
 }
 
-func TestRunForExitRunsTheGivenCommand(t *testing.T) {
+func TestReplaceRunsTheGivenCommand(t *testing.T) {
 	dir := runExitDir(t)
 	out := filepath.Join(dir, "..", "ran.txt")
 	if got := runStatus(t, "writer", "printf hi > '"+out+"'", "core"); got != 0 {
@@ -147,31 +146,17 @@ func TestRunForExitRunsTheGivenCommand(t *testing.T) {
 	}
 }
 
-func TestRunForExitSetsProfileEnv(t *testing.T) {
+func TestReplaceSetsProfileEnv(t *testing.T) {
 	runExitDir(t)
 	if got := runStatus(t, "env", `test "$DRAKO_PROFILE" = "work"`, "work"); got != 0 {
 		t.Errorf("child must see DRAKO_PROFILE=work: exit status %d", got)
 	}
 }
 
-func TestRunForExitInheritsTheEnvironment(t *testing.T) {
+func TestReplaceInheritsTheEnvironment(t *testing.T) {
 	runExitDir(t)
 	t.Setenv("DRAKO_TEST_INHERITED", "yes")
 	if got := runStatus(t, "env", `test "$DRAKO_TEST_INHERITED" = "yes"`, "core"); got != 0 {
 		t.Errorf("the child must inherit drako's environment: exit status %d", got)
-	}
-}
-
-func TestRunForExitLogsHistory(t *testing.T) {
-	dir := runExitDir(t)
-	if got := runStatus(t, "🔄 Logged Cell", "true", "core"); got != 0 {
-		t.Fatalf("exit status %d, want 0", got)
-	}
-	b, err := os.ReadFile(filepath.Join(dir, "history.log"))
-	if err != nil {
-		t.Fatalf("history.log not written: %v", err)
-	}
-	if !strings.Contains(string(b), "🔄 Logged Cell") {
-		t.Errorf("history.log lacks the cell name:\n%s", b)
 	}
 }

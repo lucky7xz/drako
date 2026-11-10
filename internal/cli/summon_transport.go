@@ -10,10 +10,11 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/lucky7xz/drako/internal/proc"
 )
 
 // isGitURL checks if the URL points to a git repository.
@@ -73,7 +74,7 @@ func warnIfNoSSHKeys() {
 var gitHeadFn = gitHead
 
 func gitHead(dir string) (string, error) {
-	out, err := exec.Command("git", "-C", dir, "rev-parse", "HEAD").Output()
+	out, err := proc.Git.Command("-C", dir, "rev-parse", "HEAD").Output()
 	if err != nil {
 		return "", fmt.Errorf("could not resolve the cloned HEAD commit: %w", err)
 	}
@@ -84,18 +85,18 @@ func gitHead(dir string) (string, error) {
 var gitCheckoutFn = gitCheckout
 
 func gitCheckout(dir, rev string) error {
-	out, err := exec.Command("git", "-C", dir, "-c", "advice.detachedHead=false", "checkout", "-q", "--detach", rev).CombinedOutput()
+	out, err := proc.Git.Command("-C", dir, "-c", "advice.detachedHead=false", "checkout", "-q", "--detach", rev).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("pinned commit %s is not in the repository: %w\n%s", rev, err, strings.TrimSpace(string(out)))
 	}
 	return nil
 }
 
-// GitCloner implements RepoCloner using exec.Command
+// GitCloner implements RepoCloner by running git
 type GitCloner struct{}
 
 func (c *GitCloner) CheckGitAvailable() error {
-	cmd := exec.Command("git", "--version")
+	cmd := proc.Git.Command("--version")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("git is not installed or not in PATH")
 	}
@@ -105,7 +106,7 @@ func (c *GitCloner) CheckGitAvailable() error {
 func (c *GitCloner) CloneRepo(url, destDir string) error {
 	fmt.Printf("Cloning repository...\n")
 	// Use -- to prevent argument injection if repoURL starts with a hyphen
-	cmd := exec.Command("git", "clone", "--", url, destDir)
+	cmd := proc.Git.Command("clone", "--", url, destDir)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {

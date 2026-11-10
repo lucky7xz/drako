@@ -3,8 +3,9 @@ package multiplex
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
+
+	"github.com/lucky7xz/drako/internal/proc"
 )
 
 // The names the backends answer to, and the binaries they need on PATH.
@@ -31,7 +32,7 @@ func OSEnv() Env {
 	e := Env{
 		Tmux:     os.Getenv("TMUX"),
 		Herdr:    os.Getenv("HERDR_ENV"),
-		LookPath: exec.LookPath,
+		LookPath: proc.LookPath,
 	}
 	if e.insideTmux() && e.insideHerdr() {
 		e.InTmuxPane = ttyIsTmuxPane()
@@ -45,7 +46,7 @@ func ttyIsTmuxPane() bool {
 	if err != nil {
 		return false
 	}
-	out, err := exec.Command(tmuxMux, "list-panes", "-a", "-F", "#{pane_tty}").Output()
+	out, err := proc.Tmux.Command("list-panes", "-a", "-F", "#{pane_tty}").Output()
 	if err != nil {
 		return false
 	}
