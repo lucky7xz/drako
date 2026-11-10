@@ -9,7 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/lucky7xz/drako/internal/config"
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/muesli/termenv"
 )
 
@@ -36,7 +36,7 @@ func screens(t *testing.T, cols, w, h int) map[string]Model {
 	out["dropdown"] = dropdown
 
 	layout := grid(batchMode)
-	layout.batch.marked = []core.Selection{{Cell: "R0C0"}, {Cell: "R0C1"}}
+	layout.batch.marked = []launch.Selection{{Cell: "R0C0"}, {Cell: "R0C1"}}
 	layout.batch.tabs = []int{2}
 	out["layout dialog"] = layout
 

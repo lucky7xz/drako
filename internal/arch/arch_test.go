@@ -45,6 +45,14 @@ var rules = []rule{
 	},
 }
 
+// pure packages hold values and decisions only: none of them appears in a
+// rule's allowed list, and of drako's own packages they may import only
+// each other.
+var pure = []string{"profile", "settings", "equip", "launch"}
+
+// internal is the import path prefix of drako's own packages.
+const internal = "github.com/lucky7xz/drako/internal/"
+
 // knownExceptions is every place the code breaks a rule today, as
 // "package/file.go what". The list may only shrink: a refactoring step that
 // moves an effect to its home deletes the lines it has made untrue.
@@ -58,7 +66,6 @@ var knownExceptions = []string{
 	"core/cmdline_windows.go syscall",
 	"core/commands.go os/exec",
 	"core/commands.go syscall",
-	"core/execplan.go os/exec",
 	"core/runforexit.go os/exec",
 	"core/runforexit.go syscall",
 	"multiplex/herdr.go os/exec",
@@ -89,6 +96,10 @@ var knownExceptions = []string{
 	"profiles/move.go os",
 	"profiles/profiles.go os",
 	"profiles/trash.go os",
+
+	// a pure package importing one that is not
+	"launch/plan.go github.com/lucky7xz/drako/internal/config",
+	"launch/selection.go github.com/lucky7xz/drako/internal/config",
 }
 
 func TestPackagesKeepToTheirCapabilities(t *testing.T) {
@@ -96,7 +107,7 @@ func TestPackagesKeepToTheirCapabilities(t *testing.T) {
 
 	for _, v := range found {
 		if !slices.Contains(knownExceptions, v) {
-			t.Errorf("new violation: %q\n\tThis effect belongs in one of the packages its rule allows; move it there.", v)
+			t.Errorf("new violation: %q\n\tThe rules at the top of this file say which package this belongs in.", v)
 		}
 	}
 	for _, e := range knownExceptions {
@@ -125,13 +136,28 @@ func violations(t *testing.T, root string) []string {
 		rel = filepath.ToSlash(rel)
 		pkg, _, _ := strings.Cut(rel, "/")
 
-		for _, use := range uses(t, path) {
-			for _, r := range rules {
-				if !slices.Contains(r.imports, use) && !slices.Contains(r.calls, use) {
-					continue
+		imports, calls := uses(t, path)
+		if slices.Contains(pure, pkg) {
+			for _, imp := range imports {
+				dep, ours := strings.CutPrefix(imp, internal)
+				dep, _, _ = strings.Cut(dep, "/")
+				if ours && !slices.Contains(pure, dep) {
+					out = append(out, rel+" "+imp)
 				}
-				if !slices.Contains(r.allowed, pkg) {
-					out = append(out, rel+" "+use)
+			}
+		}
+		for _, r := range rules {
+			if slices.Contains(r.allowed, pkg) {
+				continue
+			}
+			for _, imp := range imports {
+				if slices.Contains(r.imports, imp) {
+					out = append(out, rel+" "+imp)
+				}
+			}
+			for _, call := range calls {
+				if slices.Contains(r.calls, call) {
+					out = append(out, rel+" "+call)
 				}
 			}
 		}
@@ -144,24 +170,23 @@ func violations(t *testing.T, root string) []string {
 	return slices.Compact(out)
 }
 
-// uses is what one file reaches for: each import path, and each
-// "importpath.Name" it mentions. Build tags are ignored on purpose, so
-// files for other operating systems are held to the same rules.
-func uses(t *testing.T, path string) []string {
+// uses is what one file reaches for: its import paths, and every
+// "importpath.Name" it mentions. Build tags are ignored on purpose, so files
+// for other operating systems are held to the same rules.
+func uses(t *testing.T, path string) (imports, calls []string) {
 	t.Helper()
 	file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	var out []string
 	local := map[string]string{} // name in this file -> import path
 	for _, imp := range file.Imports {
 		importPath, err := strconv.Unquote(imp.Path.Value)
 		if err != nil {
 			t.Fatal(err)
 		}
-		out = append(out, importPath)
+		imports = append(imports, importPath)
 		name := importPath[strings.LastIndex(importPath, "/")+1:]
 		if imp.Name != nil {
 			name = imp.Name.Name
@@ -174,9 +199,9 @@ func uses(t *testing.T, path string) []string {
 			return true
 		}
 		if x, ok := sel.X.(*ast.Ident); ok && local[x.Name] != "" {
-			out = append(out, local[x.Name]+"."+sel.Sel.Name)
+			calls = append(calls, local[x.Name]+"."+sel.Sel.Name)
 		}
 		return true
 	})
-	return out
+	return imports, calls
 }

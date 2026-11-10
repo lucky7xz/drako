@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/launch"
 )
 
 func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -113,7 +114,7 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				}
 			}
 			// Single command, execute normally
-			m.Selected = core.Selection{Cell: selectedChoice}
+			m.Selected = launch.Selection{Cell: selectedChoice}
 			return m, tea.Quit
 		}
 	}

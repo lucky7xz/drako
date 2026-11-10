@@ -8,7 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/lucky7xz/drako/internal/config"
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/launch"
 )
 
 // dialogModel: a 3x3 grid of runnable cells, n of them already marked and the
@@ -71,7 +71,7 @@ func TestDialog_SkippedWhenThereIsNoChoice(t *testing.T) {
 	if m.batch.tabs != nil {
 		t.Errorf("a single cell needs no dialog, got %v", m.batch.tabs)
 	}
-	if !slices.Equal(m.SelectedBatch, []core.Selection{{Cell: "c1"}}) {
+	if !slices.Equal(m.SelectedBatch, []launch.Selection{{Cell: "c1"}}) {
 		t.Errorf("a single cell must launch straight away, got %v", m.SelectedBatch)
 	}
 }
@@ -176,7 +176,7 @@ func TestDialog_EnterLaunchesWithTheChosenLayout(t *testing.T) {
 	m, _ = pressDialog(t, m, keyUp) // [2 2 2]
 
 	m, cmd := pressDialog(t, m, keyEnter)
-	if !slices.Equal(m.SelectedBatch, []core.Selection{{Cell: "c1"}, {Cell: "c2"}, {Cell: "c3"}, {Cell: "c4"}, {Cell: "c5"}, {Cell: "c6"}}) {
+	if !slices.Equal(m.SelectedBatch, []launch.Selection{{Cell: "c1"}, {Cell: "c2"}, {Cell: "c3"}, {Cell: "c4"}, {Cell: "c5"}, {Cell: "c6"}}) {
 		t.Fatalf("launch must carry the marked cells, got %v", m.SelectedBatch)
 	}
 	if !slices.Equal(m.SelectedTabs, []int{2, 2, 2}) {

@@ -96,7 +96,7 @@ func TestScriptName_IsPathAndShellSafe(t *testing.T) {
 	}
 }
 
-// A cell runs exactly the command line a single run would (core.ShellArgv): no
+// A cell runs exactly the command line a single run would (launch.ShellArgv): no
 // login flag added for sh or fish, and pwsh is not swapped for bash.
 func TestBuildScript_RunsTheGivenCommandLine(t *testing.T) {
 	for _, argv := range [][]string{

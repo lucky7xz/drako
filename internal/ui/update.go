@@ -12,6 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/launch"
 )
 
 func (m Model) Init() tea.Cmd {
@@ -356,7 +357,7 @@ func (m Model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case IsConfirm(m.Config.Keys, msg):
 		// Execute the selected dropdown item
 		if m.dropdown.selectedIdx >= 0 && m.dropdown.selectedIdx < len(m.dropdown.items) {
-			m.Selected = core.Selection{Cell: m.dropdownCell(), Item: m.dropdown.selectedIdx + 1}
+			m.Selected = launch.Selection{Cell: m.dropdownCell(), Item: m.dropdown.selectedIdx + 1}
 			return m, tea.Quit
 		}
 	}

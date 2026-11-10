@@ -11,7 +11,7 @@ const MaxCommands = 9
 // Command is one grid cell to launch.
 type Command struct {
 	Name     string   // cell name — becomes the window name and script name
-	Argv     []string // the command line, as a single run would use it (core.ShellArgv)
+	Argv     []string // the command line, as a single run would use it (launch.ShellArgv)
 	KeepOpen bool     // pause after success too (auto_close_execution = false, debug_execution)
 	Profile  string   // the active deck, exported as DRAKO_PROFILE like a single run
 }

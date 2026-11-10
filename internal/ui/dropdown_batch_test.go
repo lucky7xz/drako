@@ -8,7 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/lucky7xz/drako/internal/config"
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/launch"
 )
 
 // dropdownTestModel: one folder cell open in dropdown mode — two runnable
@@ -106,11 +106,11 @@ func TestDropdownMarkToggle(t *testing.T) {
 	m := markingModel(t)
 
 	m, _ = pressDropdown(t, m, spaceKey)
-	if m.batch.mark(core.Selection{Cell: "folder", Item: 1}) != 1 {
+	if m.batch.mark(launch.Selection{Cell: "folder", Item: 1}) != 1 {
 		t.Fatal("space must mark the selected item")
 	}
 	m, _ = pressDropdown(t, m, spaceKey)
-	if m.batch.mark(core.Selection{Cell: "folder", Item: 1}) != 0 {
+	if m.batch.mark(launch.Selection{Cell: "folder", Item: 1}) != 0 {
 		t.Fatal("space again must unmark")
 	}
 }
@@ -120,7 +120,7 @@ func TestDropdownBareItemNotMarkable(t *testing.T) {
 	m.dropdown.selectedIdx = 2 // "bare"
 
 	m, _ = pressDropdown(t, m, spaceKey)
-	if m.batch.mark(core.Selection{Cell: "folder", Item: 3}) != 0 {
+	if m.batch.mark(launch.Selection{Cell: "folder", Item: 3}) != 0 {
 		t.Fatal("items without a command must not be markable")
 	}
 }
@@ -156,7 +156,7 @@ func TestDropdownMarksTellSameNamedItemsApart(t *testing.T) {
 		t.Errorf("only the second Logs may carry the mark:\n%s", out)
 	}
 	m, _ = pressDropdown(t, m, tea.KeyMsg{Type: tea.KeyEnter})
-	if want := []core.Selection{{Cell: "folder", Item: 2}}; !slices.Equal(m.SelectedBatch, want) {
+	if want := []launch.Selection{{Cell: "folder", Item: 2}}; !slices.Equal(m.SelectedBatch, want) {
 		t.Errorf("SelectedBatch = %v, want %v", m.SelectedBatch, want)
 	}
 }
@@ -191,7 +191,7 @@ func TestDropdownLaunchCollectsSelectionOrder(t *testing.T) {
 	// Enter opens the layout dialog; a second Enter accepts it and launches.
 	m, _ = pressDropdown(t, m, tea.KeyMsg{Type: tea.KeyEnter})
 	m, cmd := pressDropdown(t, m, tea.KeyMsg{Type: tea.KeyEnter})
-	want := []core.Selection{{Cell: "folder", Item: 2}, {Cell: "folder", Item: 1}}
+	want := []launch.Selection{{Cell: "folder", Item: 2}, {Cell: "folder", Item: 1}}
 	if !slices.Equal(m.SelectedBatch, want) {
 		t.Fatalf("SelectedBatch = %v, want %v (selection order)", m.SelectedBatch, want)
 	}
@@ -210,7 +210,7 @@ func TestDropdownLaunchWithNothingMarkedDoesNotRunItem(t *testing.T) {
 	m := markingModel(t)
 
 	m, _ = pressDropdown(t, m, tea.KeyMsg{Type: tea.KeyEnter})
-	if m.Selected != (core.Selection{}) || len(m.SelectedBatch) != 0 {
+	if m.Selected != (launch.Selection{}) || len(m.SelectedBatch) != 0 {
 		t.Fatal("enter with zero marks must neither launch nor run the selected item")
 	}
 	if m.profile.statusMessage == "" {
@@ -220,7 +220,7 @@ func TestDropdownLaunchWithNothingMarkedDoesNotRunItem(t *testing.T) {
 
 func TestDropdownEscExitsMarkingKeepsDropdown(t *testing.T) {
 	m := markingModel(t)
-	m.batch.marked = []core.Selection{{Cell: "folder", Item: 1}}
+	m.batch.marked = []launch.Selection{{Cell: "folder", Item: 1}}
 
 	m, _ = pressDropdown(t, m, tea.KeyMsg{Type: tea.KeyEsc})
 	if m.batch.dropdown || len(m.batch.marked) != 0 {

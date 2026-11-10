@@ -1,4 +1,4 @@
-package core
+package launch
 
 import (
 	"slices"
@@ -6,8 +6,8 @@ import (
 )
 
 // Commands inherit drako's whole environment; only DRAKO_PROFILE is added.
-func TestCommandEnv_KeepsTheInheritedEnvironment(t *testing.T) {
-	env := CommandEnv([]string{"PATH=/usr/bin", "SECRET=hunter2"}, "work")
+func TestEnv_KeepsTheInheritedEnvironment(t *testing.T) {
+	env := Env([]string{"PATH=/usr/bin", "SECRET=hunter2"}, "work")
 	for _, want := range []string{"PATH=/usr/bin", "SECRET=hunter2", "DRAKO_PROFILE=work"} {
 		if !slices.Contains(env, want) {
 			t.Errorf("env %v is missing %s", env, want)
@@ -15,9 +15,9 @@ func TestCommandEnv_KeepsTheInheritedEnvironment(t *testing.T) {
 	}
 }
 
-func TestCommandEnv_StaleProfileReplaced(t *testing.T) {
+func TestEnv_StaleProfileReplaced(t *testing.T) {
 	base := []string{"DRAKO_PROFILE=old", "PATH=/usr/bin"}
-	env := CommandEnv(base, "new")
+	env := Env(base, "new")
 	if slices.Contains(env, "DRAKO_PROFILE=old") {
 		t.Errorf("stale inherited DRAKO_PROFILE must be replaced, got %v", env)
 	}
@@ -32,9 +32,9 @@ func TestCommandEnv_StaleProfileReplaced(t *testing.T) {
 	}
 }
 
-func TestCommandEnv_NoProfileKeepsInherited(t *testing.T) {
+func TestEnv_NoProfileKeepsInherited(t *testing.T) {
 	base := []string{"DRAKO_PROFILE=external", "PATH=/usr/bin"}
-	env := CommandEnv(base, "")
+	env := Env(base, "")
 	if !slices.Contains(env, "DRAKO_PROFILE=external") {
 		t.Errorf("without an active profile, an externally set value passes through, got %v", env)
 	}

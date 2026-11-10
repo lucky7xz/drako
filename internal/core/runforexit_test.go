@@ -13,14 +13,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/launch"
 )
 
 // The test binary doubles as drako run: RunForExit may replace the process
 // with the command, so tests run it in a child (startRun) that lands here.
 func TestMain(m *testing.M) {
 	if command, ok := os.LookupEnv("DRAKO_TEST_RUN"); ok {
-		code, err := RunForExit(shCfg, os.Getenv("DRAKO_TEST_NAME"), command, os.Getenv("DRAKO_TEST_PROFILE"))
+		code, err := RunForExit(launch.Shell("sh", os.Getenv("DRAKO_TEST_NAME"), command, os.Getenv("DRAKO_TEST_PROFILE")))
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(125)
@@ -38,8 +38,6 @@ func runExitDir(t *testing.T) string {
 	t.Setenv("HOME", tmp)
 	return filepath.Join(tmp, "drako")
 }
-
-var shCfg = config.Config{DefaultShell: "sh"}
 
 // startRun starts a child test process that runs command through RunForExit.
 func startRun(t *testing.T, name, command, profile string) *exec.Cmd {

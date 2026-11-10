@@ -15,6 +15,7 @@ import (
 	"github.com/lucky7xz/drako/internal/cli"
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/multiplex"
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/ui"
@@ -157,7 +158,7 @@ func Run() int {
 			case strings.HasPrefix(name, "drako open"):
 				cli.HandleOpenCommand(name)
 			default:
-				core.RunCommand(state.Config, state.Selected, state.ActiveProfileName())
+				core.RunCommand(launch.For(state.Config, state.Selected, state.ActiveProfileName()))
 			}
 
 			clearScreen()
@@ -237,33 +238,22 @@ func runBatch(state ui.Model) {
 	}
 }
 
-// batchCommands turns the marked entries into cells to launch; an entry that
-// no longer resolves, or has no command, is logged and left out.
-func batchCommands(cfg config.Config, sels []core.Selection, profile string) []multiplex.Command {
+// batchCommands turns the marked entries into cells to launch; an entry with
+// nothing to run (gone from the config, or no command) is logged and left out.
+func batchCommands(cfg config.Config, sels []launch.Selection, profile string) []multiplex.Command {
 	var cmds []multiplex.Command
 	for _, sel := range sels {
-		name := sel.Name(cfg)
-		parent, item, found := sel.Resolve(cfg)
-		if !found {
-			log.Printf("batch: skipping %q (not found)", name)
-			continue
-		}
-		// A name resolves to either a grid cell or a dropdown item; both
-		// launch the same way, from their own command string and flags.
-		command, autoClosePtr, debugPtr := parent.Command, parent.AutoCloseExecution, parent.DebugExecution
-		if item != nil {
-			command, autoClosePtr, debugPtr = item.Command, item.AutoCloseExecution, item.DebugExecution
-		}
-		if command == "" {
-			log.Printf("batch: skipping %q (no command)", name)
+		plan := launch.For(cfg, sel, profile)
+		if !plan.Runnable() {
+			log.Printf("batch: skipping %q (nothing to run)", plan.Name)
 			continue
 		}
 		cmds = append(cmds, multiplex.Command{
-			Name: name,
-			Argv: core.ShellArgv(cfg.DefaultShell, command),
+			Name: plan.Name,
+			Argv: plan.Argv,
 			// A debug run always pauses; a pane already shows the output, so it just stays.
-			KeepOpen: (autoClosePtr != nil && !*autoClosePtr) || (debugPtr != nil && *debugPtr),
-			Profile:  profile,
+			KeepOpen: !plan.AutoClose || plan.Debug,
+			Profile:  plan.Profile,
 		})
 	}
 	return cmds

@@ -7,7 +7,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucky7xz/drako/internal/config"
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/multiplex"
 )
 
@@ -60,7 +60,7 @@ func (m Model) layoutFieldWidth() int {
 var markGlyphs = []string{"①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨"}
 
 // markGlyph is the prefix for sel: its position when marked, ○ when not.
-func (b batchState) markGlyph(sel core.Selection) string {
+func (b batchState) markGlyph(sel launch.Selection) string {
 	if i := b.mark(sel); i > 0 {
 		return markGlyphs[i-1] + " "
 	}
@@ -73,7 +73,7 @@ func (m Model) itemMarkPrefix(i int, item config.CommandItem) string {
 	if !m.batch.dropdown || item.Command == "" {
 		return ""
 	}
-	return m.batch.markGlyph(core.Selection{Cell: m.dropdownCell(), Item: i + 1})
+	return m.batch.markGlyph(launch.Selection{Cell: m.dropdownCell(), Item: i + 1})
 }
 
 // batchCellPrefix returns the mark prefix for a cell, and nothing for cells a
@@ -82,5 +82,5 @@ func (m Model) batchCellPrefix(name string) string {
 	if m.mode != batchMode || name == "" || !m.markable(name) {
 		return ""
 	}
-	return m.batch.markGlyph(core.Selection{Cell: name})
+	return m.batch.markGlyph(launch.Selection{Cell: name})
 }

@@ -1,10 +1,10 @@
-package core
+package launch
 
 import "strings"
 
-// CommandEnv is base with DRAKO_PROFILE set to the active profile, so scripts can
+// Env is base with DRAKO_PROFILE set to the active profile, so scripts can
 // rely on it; with no active profile an inherited value passes through.
-func CommandEnv(base []string, activeProfile string) []string {
+func Env(base []string, activeProfile string) []string {
 	if activeProfile == "" {
 		return base
 	}

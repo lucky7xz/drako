@@ -10,18 +10,18 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/launch"
 )
 
 // RunForExit is RunCommand without the TUI. Outside Windows the command
 // replaces drako, so every signal reaches it and its exit status is drako
 // run's; it returns only to say why the command never started.
-func RunForExit(cfg config.Config, name, commandStr, activeProfile string) (int, error) {
-	if strings.TrimSpace(commandStr) == "" {
+func RunForExit(plan launch.Plan) (int, error) {
+	name := plan.Name
+	if !plan.Runnable() {
 		return 0, fmt.Errorf("%q has no command for this platform", name)
 	}
-	plan := execPlan{kind: planShell, shell: cfg.DefaultShell, commandStr: commandStr}
-	cmd := assembleCmd(plan, CommandEnv(os.Environ(), activeProfile))
+	cmd := command(plan, launch.Env(os.Environ(), plan.Profile))
 	LogExecution(name, strings.Join(cmd.Args, " "))
 
 	if runtime.GOOS == "windows" {

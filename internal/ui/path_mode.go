@@ -39,7 +39,7 @@ func InitPathModel(startPath string) PathModel {
 
 // collapseHome rewrites a path under home to start with "~"; anything else,
 // and an empty home, comes back unchanged. sep is a parameter so Windows stays
-// testable from Linux, like core.fallbackShell's goos.
+// testable from Linux, like launch.fallbackShell's goos.
 func collapseHome(path, home string, sep rune) string {
 	if home == "" {
 		return path

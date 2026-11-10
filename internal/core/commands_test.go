@@ -4,86 +4,23 @@ import (
 	"errors"
 	"os/exec"
 	"runtime"
+	"slices"
 	"syscall"
 	"testing"
 
 	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/launch"
 )
 
-func TestSelectionResolve(t *testing.T) {
-	cfg := config.Config{
-		Commands: []config.Command{
-			{Name: "A", Command: "echo A"},
-			{Name: "B", Items: []config.CommandItem{{Name: "Same", Command: "echo B1"}}},
-			{Name: "C", Items: []config.CommandItem{{Name: "Same", Command: "echo C1"}}},
-			{Name: "Same", Command: "echo cell"},
-		},
+func TestCommand_CarriesArgvAndEnv(t *testing.T) {
+	plan := launch.Plan{Argv: []string{"sh", "-c", "echo hi"}}
+	env := []string{"PATH=/usr/bin", "DRAKO_PROFILE=work"}
+	cmd := command(plan, env)
+	if !slices.Equal(cmd.Args, plan.Argv) {
+		t.Errorf("args=%v, want the plan's %v", cmd.Args, plan.Argv)
 	}
-	tests := []struct {
-		name string
-		sel  Selection
-		want string // the resolved command, "" for no match
-	}{
-		{"cell", Selection{Cell: "A"}, "echo A"},
-		{"item in its own folder", Selection{Cell: "C", Item: 1}, "echo C1"},
-		{"cell sharing an item's name", Selection{Cell: "Same"}, "echo cell"},
-		{"item past the folder's end", Selection{Cell: "B", Item: 2}, ""},
-		{"no such cell", Selection{Cell: "X"}, ""},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			cell, item, ok := tc.sel.Resolve(cfg)
-			got := ""
-			if ok {
-				got = cell.Command
-				if item != nil {
-					got = item.Command
-				}
-			}
-			if got != tc.want {
-				t.Errorf("Resolve(%+v) = %q, want %q", tc.sel, got, tc.want)
-			}
-		})
-	}
-}
-
-func TestBuildShellCmd(t *testing.T) {
-	tests := []struct {
-		shell    string
-		wantArgs []string
-	}{
-		{"bash", []string{"bash", "-lc", "echo hi"}},
-		{"sh", []string{"sh", "-c", "echo hi"}},
-		{"zsh", []string{"zsh", "-lc", "echo hi"}},
-		{"fish", []string{"fish", "-c", "echo hi"}},
-		{"pwsh", []string{"pwsh", "-NoLogo", "-NoProfile", "-Command", "echo hi"}},
-		{"powershell", []string{"powershell", "-NoLogo", "-NoProfile", "-Command", "echo hi"}},
-		{"powershell.exe", []string{"powershell", "-NoLogo", "-NoProfile", "-Command", "echo hi"}},
-		{"cmd", []string{"cmd", "/C", "echo hi"}},
-	}
-	for _, tc := range tests {
-		t.Run(tc.shell, func(t *testing.T) {
-			got := buildShellCmd(tc.shell, "echo hi")
-			if len(got.Args) != len(tc.wantArgs) {
-				t.Fatalf("args=%v, want %v", got.Args, tc.wantArgs)
-			}
-			for i := range tc.wantArgs {
-				if got.Args[i] != tc.wantArgs[i] {
-					t.Fatalf("args=%v, want %v", got.Args, tc.wantArgs)
-				}
-			}
-		})
-	}
-}
-
-func TestFallbackShell(t *testing.T) {
-	if got := fallbackShell("windows"); got != "powershell" {
-		t.Fatalf("windows fallback=%q, want powershell", got)
-	}
-	for _, goos := range []string{"linux", "darwin", "freebsd"} {
-		if got := fallbackShell(goos); got != "bash" {
-			t.Fatalf("%s fallback=%q, want bash", goos, got)
-		}
+	if len(cmd.Env) != 2 || cmd.Env[1] != "DRAKO_PROFILE=work" {
+		t.Errorf("the command env must be attached before any run mode, got %v", cmd.Env)
 	}
 }
 
@@ -99,12 +36,12 @@ func TestRunCommand_ConfigMatchButEmptyCommand(t *testing.T) {
 		return exec.Command("echo")
 	}
 
-	for _, sel := range []Selection{{Cell: "test"}, {Cell: "blank"}, {Cell: "gone"}} {
+	for _, sel := range []launch.Selection{{Cell: "test"}, {Cell: "blank"}, {Cell: "gone"}} {
 		paused, gotArgs = false, nil
 		cfg := config.Config{
 			Commands: []config.Command{{Name: "test", Command: ""}, {Name: "blank", Command: "   "}},
 		}
-		RunCommand(cfg, sel, "")
+		RunCommand(launch.For(cfg, sel, ""))
 
 		// Says so and pauses, but runs nothing.
 		if !paused {

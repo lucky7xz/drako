@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/lucky7xz/drako/internal/config"
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/launch"
 )
 
 func TestCwdFileArg(t *testing.T) {
@@ -78,7 +78,7 @@ func TestBatchCommands_KeepOpen(t *testing.T) {
 			{Name: "loud", Command: "ls", DebugExecution: &yes},
 		}},
 	}}
-	sels := []core.Selection{{Cell: "plain"}, {Cell: "stay"}, {Cell: "debug"}, {Cell: "folder", Item: 1}, {Cell: "folder", Item: 2}}
+	sels := []launch.Selection{{Cell: "plain"}, {Cell: "stay"}, {Cell: "debug"}, {Cell: "folder", Item: 1}, {Cell: "folder", Item: 2}}
 	cmds := batchCommands(cfg, sels, "work")
 	if len(cmds) != len(sels) {
 		t.Fatalf("got %d cells for %d marks", len(cmds), len(sels))
@@ -87,5 +87,20 @@ func TestBatchCommands_KeepOpen(t *testing.T) {
 		if cmds[i].KeepOpen != want {
 			t.Errorf("%s: KeepOpen = %v, want %v", cmds[i].Name, cmds[i].KeepOpen, want)
 		}
+	}
+}
+
+// A marked entry with nothing to run is left out by the same rule a single run
+// uses: gone from the config, no command, or a command of only spaces.
+func TestBatchCommands_SkipsNothingToRun(t *testing.T) {
+	cfg := config.Config{Commands: []config.Command{
+		{Name: "real", Command: "ls"},
+		{Name: "empty"},
+		{Name: "blank", Command: "   "},
+	}}
+	sels := []launch.Selection{{Cell: "empty"}, {Cell: "real"}, {Cell: "blank"}, {Cell: "gone"}}
+	cmds := batchCommands(cfg, sels, "work")
+	if len(cmds) != 1 || cmds[0].Name != "real" {
+		t.Fatalf("got %+v, want only the cell with a command", cmds)
 	}
 }

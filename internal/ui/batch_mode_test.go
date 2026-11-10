@@ -8,7 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/lucky7xz/drako/internal/config"
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/launch"
 )
 
 // batchTestModel: 2x2 grid — "one" (a0) and "two" (b0) are runnable, "folder"
@@ -45,11 +45,11 @@ func TestBatchMarkToggle(t *testing.T) {
 	m := batchTestModel()
 
 	m, _ = pressBatch(t, m, spaceKey)
-	if m.batch.mark(core.Selection{Cell: "one"}) != 1 {
+	if m.batch.mark(launch.Selection{Cell: "one"}) != 1 {
 		t.Fatal("space must mark the cursor cell")
 	}
 	m, _ = pressBatch(t, m, spaceKey)
-	if m.batch.mark(core.Selection{Cell: "one"}) != 0 {
+	if m.batch.mark(launch.Selection{Cell: "one"}) != 0 {
 		t.Fatal("space again must unmark")
 	}
 }
@@ -59,7 +59,7 @@ func TestBatchFolderCellNotMarkable(t *testing.T) {
 	m.gridNav.cursorRow, m.gridNav.cursorCol = 1, 0 // "folder"
 
 	m, _ = pressBatch(t, m, spaceKey)
-	if m.batch.mark(core.Selection{Cell: "folder"}) != 0 {
+	if m.batch.mark(launch.Selection{Cell: "folder"}) != 0 {
 		t.Fatal("cells without a direct command must not be markable")
 	}
 	if m.profile.statusMessage == "" {
@@ -72,7 +72,7 @@ func TestBatchCapAtNine(t *testing.T) {
 	m.batch.marked = cellMarks("c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8", "c9")
 
 	m, _ = pressBatch(t, m, spaceKey)
-	if m.batch.mark(core.Selection{Cell: "one"}) != 0 {
+	if m.batch.mark(launch.Selection{Cell: "one"}) != 0 {
 		t.Fatal("the tenth mark must be refused")
 	}
 	if !strings.Contains(m.profile.statusMessage, "9") {
@@ -92,7 +92,7 @@ func TestBatchLaunchCollectsInSelectionOrder(t *testing.T) {
 	// Enter opens the layout dialog; a second Enter accepts it and launches.
 	m, _ = pressBatch(t, m, tea.KeyMsg{Type: tea.KeyEnter})
 	m, cmd := pressBatch(t, m, tea.KeyMsg{Type: tea.KeyEnter})
-	want := []core.Selection{{Cell: "two"}, {Cell: "one"}}
+	want := []launch.Selection{{Cell: "two"}, {Cell: "one"}}
 	if !slices.Equal(m.SelectedBatch, want) {
 		t.Fatalf("SelectedBatch = %v, want %v", m.SelectedBatch, want)
 	}
@@ -166,7 +166,7 @@ func TestBatchQuickNavJumps(t *testing.T) {
 
 	// The jump composes with marking: space marks the cell we jumped to.
 	m, _ = pressBatch(t, m, spaceKey)
-	if m.batch.mark(core.Selection{Cell: "two"}) == 0 {
+	if m.batch.mark(launch.Selection{Cell: "two"}) == 0 {
 		t.Error("space after a quick-nav jump should mark the target cell")
 	}
 }
@@ -200,10 +200,10 @@ func TestBatchViewShowsUnmarkedGlyph(t *testing.T) {
 }
 
 // cellMarks is a grid mark set, one entry per cell name.
-func cellMarks(names ...string) []core.Selection {
-	out := make([]core.Selection, len(names))
+func cellMarks(names ...string) []launch.Selection {
+	out := make([]launch.Selection, len(names))
 	for i, n := range names {
-		out[i] = core.Selection{Cell: n}
+		out[i] = launch.Selection{Cell: n}
 	}
 	return out
 }

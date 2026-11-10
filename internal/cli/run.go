@@ -9,6 +9,7 @@ import (
 
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/launch"
 )
 
 // exitRunFailed is drako run's own failure code, kept apart from the
@@ -38,7 +39,7 @@ func HandleRunCommand(args []string) int {
 		return exitRunFailed
 	}
 
-	code, err := core.RunForExit(cfg, t.name(), t.command(), t.p.Name)
+	code, err := core.RunForExit(launch.Shell(cfg.DefaultShell, t.name(), t.command(), t.p.Name))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "drako run: %v\n", err)
 		return exitRunFailed

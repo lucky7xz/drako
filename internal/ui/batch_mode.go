@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/multiplex"
 )
 
@@ -20,7 +20,7 @@ var resolveBackend = multiplex.Resolve
 type batchState struct {
 	// marked holds the marked cells or folder items in marking order — the
 	// launch order, which decides how cells group into tabs.
-	marked []core.Selection
+	marked []launch.Selection
 	// dropdown scopes the mark set to the open folder's items: an inside
 	// batch never mixes with grid cells, and vice versa.
 	dropdown bool
@@ -36,13 +36,13 @@ type batchState struct {
 func (b batchState) choosing() bool { return b.tabs != nil }
 
 // mark is sel's 1-based position in the mark set, or 0 when unmarked.
-func (b batchState) mark(sel core.Selection) int {
+func (b batchState) mark(sel launch.Selection) int {
 	return slices.Index(b.marked, sel) + 1
 }
 
 // toggle adds sel to the mark set or drops it, keeping the rest in order. It
 // builds a new slice, so a copied Model never shares its marks.
-func (b *batchState) toggle(sel core.Selection) {
+func (b *batchState) toggle(sel launch.Selection) {
 	if i := slices.Index(b.marked, sel); i >= 0 {
 		b.marked = slices.Delete(slices.Clone(b.marked), i, i+1)
 		return
@@ -101,7 +101,7 @@ func (m Model) updateDropdownMarking(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) 
 			return m, m.setProfileStatus("Item not batchable", false), true
 		}
 		// By position: two items in a folder may share a name.
-		sel := core.Selection{Cell: m.dropdownCell(), Item: m.dropdown.selectedIdx + 1}
+		sel := launch.Selection{Cell: m.dropdownCell(), Item: m.dropdown.selectedIdx + 1}
 		if m.batch.mark(sel) == 0 && len(m.batch.marked) >= multiplex.MaxCommands {
 			return m, m.setProfileStatus("Batch is full (9 max)", false), true
 		}
@@ -119,7 +119,7 @@ func (m Model) updateDropdownMarking(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) 
 // direct, non-empty command. Folder (dropdown) cells and platform-empty cells
 // stay out in v1.
 func (m Model) markable(name string) bool {
-	cell, _, found := core.Selection{Cell: name}.Resolve(m.Config)
+	cell, _, found := launch.Selection{Cell: name}.Resolve(m.Config)
 	return found && cell.Command != "" && len(cell.Items) == 0
 }
 
@@ -152,7 +152,7 @@ func (m Model) updateBatchMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if name == "" || !m.markable(name) {
 			return m, m.setProfileStatus("Cell not batchable", false)
 		}
-		sel := core.Selection{Cell: name}
+		sel := launch.Selection{Cell: name}
 		if m.batch.mark(sel) == 0 && len(m.batch.marked) >= multiplex.MaxCommands {
 			return m, m.setProfileStatus("Batch is full (9 max)", false)
 		}

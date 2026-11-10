@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profiles"
 )
@@ -98,9 +99,9 @@ type profileState struct {
 }
 
 type Model struct {
-	Selected      core.Selection   // what to run once the TUI quits (read by app.go)
-	SelectedBatch []core.Selection // entries for a batch launch (read by app.go after quit)
-	SelectedTabs  []int            // how those entries split into tabs, chosen in the dialog (nil: default)
+	Selected      launch.Selection   // what to run once the TUI quits (read by app.go)
+	SelectedBatch []launch.Selection // entries for a batch launch (read by app.go after quit)
+	SelectedTabs  []int              // how those entries split into tabs, chosen in the dialog (nil: default)
 	Quitting      bool
 	ExitCode      int // process exit code the host should use once the TUI is down
 	GlassrootMode bool
