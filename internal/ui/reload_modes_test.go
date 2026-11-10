@@ -10,7 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/lucky7xz/drako/internal/config"
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/equip"
 )
 
 // Trashing an equipped profile renames a root .toml, so a reload follows. It
@@ -20,7 +20,7 @@ func TestReloadKeepsTheInventoryOpen(t *testing.T) {
 	cfg.ApplyDefaults()
 	m := Model{Config: cfg, styles: BuildStyles(cfg), mode: inventoryMode,
 		inventory: inventoryModel{
-			State:  core.NewInventoryState([]string{"b.profile.toml", "a.profile.toml"}, nil, 9),
+			State:  equip.NewInventoryState([]string{"b.profile.toml", "a.profile.toml"}, nil, 9),
 			status: "Trashed c → trash/", statusOK: true,
 		}}
 
@@ -53,10 +53,10 @@ func openInventory(t *testing.T) (Model, string) {
 func TestWatcherRefreshesTheOpenInventory(t *testing.T) {
 	m, dir := openInventory(t)
 	st := m.inventory.State
-	if err := st.PickUpItem(core.ListVisible, 0); err != nil { // stage a stash
+	if err := st.PickUpItem(equip.ListVisible, 0); err != nil { // stage a stash
 		t.Fatal(err)
 	}
-	if err := st.PlaceItem(core.ListInventory, 0); err != nil {
+	if err := st.PlaceItem(equip.ListInventory, 0); err != nil {
 		t.Fatal(err)
 	}
 	staged := slices.Clone(st.Visible)
@@ -98,10 +98,10 @@ func TestWatcherLeavesAnUpToDateInventory(t *testing.T) {
 func TestEditKeepsStagedMoves(t *testing.T) {
 	m, dir := openInventory(t)
 	st := m.inventory.State
-	if err := st.PickUpItem(core.ListVisible, 0); err != nil { // stage a stash
+	if err := st.PickUpItem(equip.ListVisible, 0); err != nil { // stage a stash
 		t.Fatal(err)
 	}
-	if err := st.PlaceItem(core.ListInventory, 0); err != nil {
+	if err := st.PlaceItem(equip.ListInventory, 0); err != nil {
 		t.Fatal(err)
 	}
 	staged := slices.Clone(st.Visible)
@@ -128,10 +128,10 @@ func TestOwnTrashKeepsStagedMoves(t *testing.T) {
 	}
 	m = m.refreshInventory() // core, extra, zz
 	st := m.inventory.State
-	if err := st.PickUpItem(core.ListVisible, 2); err != nil { // stage a stash of zz
+	if err := st.PickUpItem(equip.ListVisible, 2); err != nil { // stage a stash of zz
 		t.Fatal(err)
 	}
-	if err := st.PlaceItem(core.ListInventory, 0); err != nil {
+	if err := st.PlaceItem(equip.ListInventory, 0); err != nil {
 		t.Fatal(err)
 	}
 	m.inventory.cursor = 1 // extra

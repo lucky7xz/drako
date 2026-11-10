@@ -1,4 +1,4 @@
-package core
+package host
 
 import (
 	"testing"

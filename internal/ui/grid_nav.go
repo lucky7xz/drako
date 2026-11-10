@@ -1,7 +1,7 @@
-package core
+package ui
 
-// FindLastPopulatedCol returns the index of the last column that has any content in any row.
-func FindLastPopulatedCol(grid [][]string) int {
+// findLastPopulatedCol returns the index of the last column that has any content in any row.
+func findLastPopulatedCol(grid [][]string) int {
 	lastCol := -1
 	if len(grid) == 0 {
 		return lastCol
@@ -16,8 +16,8 @@ func FindLastPopulatedCol(grid [][]string) int {
 	return lastCol
 }
 
-// FindLastPopulatedRow returns the index of the last row in the specified column that has content.
-func FindLastPopulatedRow(grid [][]string, col int) int {
+// findLastPopulatedRow returns the index of the last row in the specified column that has content.
+func findLastPopulatedRow(grid [][]string, col int) int {
 	lastRow := -1
 	if len(grid) == 0 || col < 0 {
 		return lastRow
@@ -32,8 +32,8 @@ func FindLastPopulatedRow(grid [][]string, col int) int {
 	return lastRow
 }
 
-// FindFirstPopulatedRow returns the index of the first row in the specified column that has content.
-func FindFirstPopulatedRow(grid [][]string, col int) int {
+// findFirstPopulatedRow returns the index of the first row in the specified column that has content.
+func findFirstPopulatedRow(grid [][]string, col int) int {
 	if len(grid) == 0 || col < 0 {
 		return 0
 	}

@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/lucky7xz/drako/internal/config"
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/profiles"
 )
 
@@ -32,7 +32,7 @@ func makeInventoryTestModel(n, cursor, focusedList, termW, termH int) Model {
 		styles:     BuildStyles(cfg),
 		gridNav:    gridNav{grid: [][]string{{"a", "b"}, {"c", "d"}}},
 		inventory: inventoryModel{
-			State:       core.NewInventoryState(nil, namesN(n), profiles.MaxEquipped),
+			State:       equip.NewInventoryState(nil, namesN(n), profiles.MaxEquipped),
 			cursor:      cursor,
 			focusedList: focusedList,
 		},
@@ -57,7 +57,7 @@ func makeInventoryTestModelBothLists(equippedN, inventoryN, cursor, focusedList,
 		styles:     BuildStyles(cfg),
 		gridNav:    gridNav{grid: [][]string{{"a", "b"}, {"c", "d"}}},
 		inventory: inventoryModel{
-			State:       core.NewInventoryState(equippedNames, namesN(inventoryN), profiles.MaxEquipped),
+			State:       equip.NewInventoryState(equippedNames, namesN(inventoryN), profiles.MaxEquipped),
 			cursor:      cursor,
 			focusedList: focusedList,
 		},
@@ -142,7 +142,7 @@ func TestViewInventoryMode_FewProfilesNoBlankLinePadding(t *testing.T) {
 }
 
 func TestViewInventoryMode_EquippedScrollsWhenFocusedAndLarge(t *testing.T) {
-	m := makeInventoryTestModelBothLists(30, 0, 25, core.ListVisible, 80, 24)
+	m := makeInventoryTestModelBothLists(30, 0, 25, equip.ListVisible, 80, 24)
 	output := m.View()
 
 	if !strings.Contains(output, "▾") && !strings.Contains(output, "▴") {
@@ -156,7 +156,7 @@ func TestViewInventoryMode_EquippedScrollsWhenFocusedAndLarge(t *testing.T) {
 func TestViewInventoryMode_EquippedCappedWhenUnfocusedAndLarge(t *testing.T) {
 	// Inventory is focused (gets priority); Equipped has plenty of items but
 	// isn't focused, so it must be capped rather than pushing Inventory out.
-	m := makeInventoryTestModelBothLists(30, 1, 0, core.ListInventory, 80, 24)
+	m := makeInventoryTestModelBothLists(30, 1, 0, equip.ListInventory, 80, 24)
 	output := m.View()
 
 	if !strings.Contains(output, "▾") {
@@ -173,7 +173,7 @@ func TestViewInventoryMode_EquippedCappedWhenUnfocusedAndLarge(t *testing.T) {
 func TestViewInventoryMode_InventoryCappedWhenUnfocusedAndEquippedIsFocused(t *testing.T) {
 	// Roles swapped from the case above: proves the split follows focus,
 	// not a hardcoded list.
-	m := makeInventoryTestModelBothLists(1, 30, 0, core.ListVisible, 80, 24)
+	m := makeInventoryTestModelBothLists(1, 30, 0, equip.ListVisible, 80, 24)
 	output := m.View()
 
 	if !strings.Contains(output, "▾") {

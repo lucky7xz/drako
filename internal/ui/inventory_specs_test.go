@@ -11,7 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucky7xz/drako/internal/config"
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profiles"
 )
@@ -59,8 +59,8 @@ func specsInventoryModel(t *testing.T, equipped, stashed []string, specs map[str
 		Config:     config.Config{Keys: keys},
 		styles:     BuildStyles(config.Config{Keys: keys}),
 		inventory: inventoryModel{
-			State:       core.NewInventoryState(vis, inv, profiles.MaxEquipped),
-			focusedList: core.ListVisible,
+			State:       equip.NewInventoryState(vis, inv, profiles.MaxEquipped),
+			focusedList: equip.ListVisible,
 		},
 	}
 	return m, dir
@@ -148,7 +148,7 @@ func TestSpecsOverlay_TabRefusesWhileHolding(t *testing.T) {
 	m, _ := specsInventoryModel(t, []string{"eq"}, []string{"st"}, map[string]string{
 		"dev": specList("st"),
 	})
-	if err := m.inventory.State.PickUpItem(core.ListVisible, 0); err != nil {
+	if err := m.inventory.State.PickUpItem(equip.ListVisible, 0); err != nil {
 		t.Fatal(err)
 	}
 

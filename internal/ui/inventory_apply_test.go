@@ -8,7 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/config"
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/paths"
 )
 
@@ -21,11 +21,11 @@ func TestApplyUsesArrangementAtPressTime(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	inv := inventoryModel{State: core.NewInventoryState(
+	inv := inventoryModel{State: equip.NewInventoryState(
 		[]string{"alpha.profile.toml", "beta.profile.toml"}, nil, 9)}
 
 	cmd := ApplyInventoryChangesCmd(dir, inv)
-	if err := inv.State.PickUpItem(core.ListVisible, 1); err != nil { // user lifts beta
+	if err := inv.State.PickUpItem(equip.ListVisible, 1); err != nil { // user lifts beta
 		t.Fatal(err)
 	}
 	if msg := cmd(); msg != (reloadProfilesMsg{}) {
@@ -50,9 +50,9 @@ func TestApplyRefusedWhileHolding(t *testing.T) {
 	cfg.ApplyDefaults()
 	m := Model{Config: cfg, styles: BuildStyles(cfg), mode: inventoryMode,
 		profile: profileState{configDir: dir},
-		inventory: inventoryModel{State: core.NewInventoryState(
+		inventory: inventoryModel{State: equip.NewInventoryState(
 			[]string{"alpha.profile.toml", "beta.profile.toml"}, nil, 9)}}
-	if err := m.inventory.State.PickUpItem(core.ListVisible, 1); err != nil { // lift beta
+	if err := m.inventory.State.PickUpItem(equip.ListVisible, 1); err != nil { // lift beta
 		t.Fatal(err)
 	}
 	m.inventory.focusedList = focusApply

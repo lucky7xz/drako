@@ -10,7 +10,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/config"
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profiles"
 )
@@ -27,17 +27,17 @@ func (e inventoryErrorMsg) Error() string { return e.err.Error() }
 // them. The first two are core's list IDs, since focusedList is passed straight
 // to GetList; the buttons continue the same run of numbers.
 const (
-	focusApply  = core.ListInventory + 1
+	focusApply  = equip.ListInventory + 1
 	focusRescue = focusApply + 1
 	focusLast   = focusRescue
 )
 
 // inventoryModel holds the state for the inventory management TUI.
 type inventoryModel struct {
-	State *core.InventoryState
+	State *equip.InventoryState
 
 	cursor      int    // Position in the current list
-	focusedList int    // one of core.ListVisible/ListInventory, focusApply, focusRescue
+	focusedList int    // one of equip.ListVisible/ListInventory, focusApply, focusRescue
 	status      string // Feedback message for the user
 	// statusOK marks status as a confirmation rather than a refusal. The line
 	// used to carry only rejections, so it was unconditionally red; staging a
@@ -91,7 +91,7 @@ func InitInventoryModel(configDir string) inventoryModel {
 	visible := profiles.Order(profiles.Files(equipped), pf.EquippedOrder)
 	inventory := profiles.Files(stashed)
 
-	state := core.NewInventoryState(visible, inventory, profiles.MaxEquipped)
+	state := equip.NewInventoryState(visible, inventory, profiles.MaxEquipped)
 
 	return inventoryModel{State: state, seen: [2][]string{slices.Clone(visible), slices.Clone(inventory)}}
 }
@@ -112,7 +112,7 @@ func (m Model) lockedRefusal() string {
 // selectedFile finds where the highlighted deck really is: staged moves leave
 // files in place, so it may differ from its list. rel is relative to configDir.
 func (inv inventoryModel) selectedFile(configDir string) (rel, name string, ok bool) {
-	if inv.focusedList != core.ListVisible && inv.focusedList != core.ListInventory {
+	if inv.focusedList != equip.ListVisible && inv.focusedList != equip.ListInventory {
 		return "", "", false
 	}
 	listPtr, err := inv.State.GetList(inv.focusedList)

@@ -11,7 +11,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/config"
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/host"
 	"github.com/lucky7xz/drako/internal/launch"
 )
 
@@ -26,7 +26,7 @@ func (m Model) Init() tea.Cmd {
 
 func checkNetworkStatusCmd() tea.Cmd {
 	return func() tea.Msg {
-		status := core.CheckNetworkStatus()
+		status := host.CheckNetworkStatus()
 		return networkStatusMsg{online: status.Online, counters: status.Counters, t: status.Time, err: status.Err}
 	}
 }
@@ -203,7 +203,7 @@ func (m Model) handleMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case !ok:
 				m.net.traffic = m.styles.ThemeName.Render("---")
 			default:
-				m.net.traffic = m.styles.ThemeName.Render(fmt.Sprintf("↓ %s ↑ %s", core.FormatTraffic(recvBps), core.FormatTraffic(sentBps)))
+				m.net.traffic = m.styles.ThemeName.Render(fmt.Sprintf("↓ %s ↑ %s", host.FormatTraffic(recvBps), host.FormatTraffic(sentBps)))
 				if sentBps > 2*1024 || recvBps > 2*1024 {
 					isActive = true
 				}
@@ -484,7 +484,7 @@ func (m Model) updateLockedMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 
-	dir := core.PumpDirectionForKey(key)
+	dir := pumpDirectionForKey(key)
 	if dir == 0 {
 		return m, nil
 	}
@@ -543,7 +543,7 @@ func (m Model) handleProfileCycle(direction int) (tea.Model, tea.Cmd) {
 	// Only try up to 'total' times.
 	// Start from 1 to avoid re-selecting the current profile immediately.
 	for i := 1; i <= total; i++ {
-		target := core.CalculateNextProfileIndex(current, direction*i, total)
+		target := calculateNextProfileIndex(current, direction*i, total)
 
 		nextModel, ok := m.switchToProfileIndex(target)
 		if ok {

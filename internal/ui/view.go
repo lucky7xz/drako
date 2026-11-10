@@ -5,7 +5,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/host"
 	"github.com/muesli/termenv"
 )
 
@@ -159,7 +159,7 @@ func (m Model) renderNetworkBar(availWidth int) string {
 	statusText := fmt.Sprintf("STATUS: %s", m.net.online)
 	themeName := m.styles.ThemeName.Render(m.Config.Theme)
 	if profile := lipgloss.ColorProfile(); profile != termenv.TrueColor {
-		themeName += m.styles.ThemeName.Render(" (" + core.ColorProfileName(profile) + ")")
+		themeName += m.styles.ThemeName.Render(" (" + host.ColorProfileName(profile) + ")")
 	}
 	themeText := "THEME: " + themeName
 	sep := m.styles.Help.Render(" | ")

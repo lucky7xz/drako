@@ -7,7 +7,6 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/lucky7xz/drako/internal/core"
 	"github.com/lucky7xz/drako/internal/launch"
 )
 
@@ -131,7 +130,7 @@ func (m Model) quickNav(targetIndex int) (tea.Model, tea.Cmd) {
 	if m.gridNav.navPending {
 		// Second press: choose a row within the already-selected column.
 		m.gridNav.navPending = false
-		lastRow := core.FindLastPopulatedRow(m.gridNav.grid, m.gridNav.cursorCol)
+		lastRow := findLastPopulatedRow(m.gridNav.grid, m.gridNav.cursorCol)
 		m.gridNav.cursorRow = max(0, min(targetIndex, lastRow)) // an empty column's last row is -1
 
 		m.gridNav.flashActive = true
@@ -147,12 +146,12 @@ func (m Model) quickNav(targetIndex int) (tea.Model, tea.Cmd) {
 	// showing alongside the new column highlight.
 	m.gridNav.flashActive = false
 
-	targetCol := min(targetIndex, core.FindLastPopulatedCol(m.gridNav.grid))
+	targetCol := min(targetIndex, findLastPopulatedCol(m.gridNav.grid))
 	if targetCol < 0 {
 		return m, nil
 	}
 	m.gridNav.cursorCol = targetCol
-	m.gridNav.cursorRow = core.FindFirstPopulatedRow(m.gridNav.grid, targetCol)
+	m.gridNav.cursorRow = findFirstPopulatedRow(m.gridNav.grid, targetCol)
 	m.gridNav.navPending = true
 	m.gridNav.navSeq++
 	seq := m.gridNav.navSeq

@@ -5,7 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/config"
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/equip"
 )
 
 // The Rescue button shows the rescue grid, so nothing may still claim the deck
@@ -15,7 +15,7 @@ func TestRescueButtonLeavesNoActiveProfile(t *testing.T) {
 	cfg.ApplyDefaults()
 	m := Model{Config: cfg, styles: BuildStyles(cfg), mode: inventoryMode,
 		profile: profileState{profiles: []config.ProfileInfo{{Name: "alpha"}, {Name: "beta"}}},
-		inventory: inventoryModel{State: core.NewInventoryState(
+		inventory: inventoryModel{State: equip.NewInventoryState(
 			[]string{"alpha.profile.toml", "beta.profile.toml"}, nil, 9), focusedList: focusRescue}}
 
 	next, _ := m.updateInventoryMode(tea.KeyMsg{Type: tea.KeyEnter})

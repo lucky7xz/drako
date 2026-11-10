@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/paths"
 )
 
@@ -149,7 +149,7 @@ func TestInventoryDelete_Guards(t *testing.T) {
 
 	t.Run("a held item blocks it", func(t *testing.T) {
 		m, _ := editInventoryModel(t)
-		if err := m.inventory.State.PickUpItem(core.ListVisible, 0); err != nil {
+		if err := m.inventory.State.PickUpItem(equip.ListVisible, 0); err != nil {
 			t.Fatal(err)
 		}
 
@@ -195,14 +195,14 @@ func TestInventoryDelete_ResolvesStagedItemToRealPath(t *testing.T) {
 	m, dir := editInventoryModel(t)
 
 	// Drag the stashed profile into the equipped list without applying.
-	m.inventory.focusedList = core.ListInventory
-	if err := m.inventory.State.PickUpItem(core.ListInventory, 0); err != nil {
+	m.inventory.focusedList = equip.ListInventory
+	if err := m.inventory.State.PickUpItem(equip.ListInventory, 0); err != nil {
 		t.Fatal(err)
 	}
-	if err := m.inventory.State.PlaceItem(core.ListVisible, 1); err != nil {
+	if err := m.inventory.State.PlaceItem(equip.ListVisible, 1); err != nil {
 		t.Fatal(err)
 	}
-	m.inventory.focusedList = core.ListVisible
+	m.inventory.focusedList = equip.ListVisible
 	m.inventory.cursor = 1
 
 	m = send(t, m, keyType(tea.KeyDelete), keyRune("st"), keyType(tea.KeyEnter))

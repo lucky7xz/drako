@@ -11,7 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucky7xz/drako/internal/config"
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/host"
 	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profiles"
@@ -68,7 +68,7 @@ type lockState struct {
 type netStatus struct {
 	online  string
 	traffic string
-	meter   core.TrafficMeter
+	meter   host.TrafficMeter
 }
 
 // profileState is the profile lifecycle: the discovered profiles, the active
@@ -567,7 +567,7 @@ func InitialModel(glassrootMode bool, carried Session) Model {
 	s := newSpinner()
 	m := Model{
 		net: netStatus{
-			meter:   core.TrafficMeter{WindowSeconds: 7.5},
+			meter:   host.TrafficMeter{WindowSeconds: 7.5},
 			online:  "checking...",
 			traffic: "calculating...",
 		},

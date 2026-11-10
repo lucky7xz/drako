@@ -1,4 +1,4 @@
-package core
+package ui
 
 import "testing"
 
@@ -22,8 +22,8 @@ func TestCalculateNextProfileIndex(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := CalculateNextProfileIndex(tt.current, tt.direction, tt.total); got != tt.expected {
-				t.Errorf("CalculateNextProfileIndex(%d, %d, %d) = %d, want %d",
+			if got := calculateNextProfileIndex(tt.current, tt.direction, tt.total); got != tt.expected {
+				t.Errorf("calculateNextProfileIndex(%d, %d, %d) = %d, want %d",
 					tt.current, tt.direction, tt.total, got, tt.expected)
 			}
 		})

@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/lucky7xz/drako/internal/config"
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/profiles"
 )
 
@@ -36,7 +36,7 @@ func createTestModelForView(mode navMode) Model {
 		gridNav:    gridNav{grid: grid},
 		// Inventory model needed for inventory mode
 		inventory: inventoryModel{
-			State: core.NewInventoryState(
+			State: equip.NewInventoryState(
 				[]string{"A.profile.toml"},
 				[]string{"B.profile.toml"},
 				profiles.MaxEquipped,

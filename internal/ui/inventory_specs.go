@@ -35,7 +35,7 @@ import (
 
 // specVerb is one of the three things a spec file can be used for. They are
 // not three operations: each one only computes a different argument for
-// core.InventoryState.Arrange, and the arrangement is staged either way.
+// equip.InventoryState.Arrange, and the arrangement is staged either way.
 type specVerb int
 
 const (

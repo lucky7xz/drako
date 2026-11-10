@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/lucky7xz/drako/internal/config"
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/profiles"
 )
 
@@ -28,8 +28,8 @@ func editInventoryModel(t *testing.T) (Model, string) {
 		profile: profileState{configDir: dir},
 		Config:  config.Config{Keys: config.InputConfig{EditFile: "e", Delete: "delete", Lock: "r"}},
 		inventory: inventoryModel{
-			State:       core.NewInventoryState([]string{"eq.profile.toml"}, []string{"st.profile.toml"}, profiles.MaxEquipped),
-			focusedList: core.ListVisible,
+			State:       equip.NewInventoryState([]string{"eq.profile.toml"}, []string{"st.profile.toml"}, profiles.MaxEquipped),
+			focusedList: equip.ListVisible,
 		},
 	}
 	return m, dir
@@ -48,7 +48,7 @@ func TestInventoryEditGuards(t *testing.T) {
 
 	t.Run("held item blocks editing", func(t *testing.T) {
 		m, _ := editInventoryModel(t)
-		if err := m.inventory.State.PickUpItem(core.ListVisible, 0); err != nil {
+		if err := m.inventory.State.PickUpItem(equip.ListVisible, 0); err != nil {
 			t.Fatal(err)
 		}
 		tm, cmd := m.updateInventoryMode(keyRune("e"))
@@ -74,13 +74,13 @@ func TestInventoryEditGuards(t *testing.T) {
 	t.Run("a staged deck opens from where it sits", func(t *testing.T) {
 		m, _ := editInventoryModel(t)
 		t.Setenv("VISUAL", "true")
-		if err := m.inventory.State.PickUpItem(core.ListInventory, 0); err != nil {
+		if err := m.inventory.State.PickUpItem(equip.ListInventory, 0); err != nil {
 			t.Fatal(err)
 		}
-		if err := m.inventory.State.PlaceItem(core.ListVisible, 1); err != nil {
+		if err := m.inventory.State.PlaceItem(equip.ListVisible, 1); err != nil {
 			t.Fatal(err)
 		}
-		m.inventory.focusedList, m.inventory.cursor = core.ListVisible, 1
+		m.inventory.focusedList, m.inventory.cursor = equip.ListVisible, 1
 		tm, cmd := m.updateInventoryMode(keyRune("e"))
 		if cmd == nil {
 			t.Fatalf("expected an editor command, status = %q", tm.(Model).inventory.status)
@@ -103,7 +103,7 @@ func TestSelectedFile(t *testing.T) {
 	if rel, _, ok := m.inventory.selectedFile(dir); !ok || rel != "eq.profile.toml" {
 		t.Errorf("equipped path = %q (%v)", rel, ok)
 	}
-	m.inventory.focusedList = core.ListInventory
+	m.inventory.focusedList = equip.ListInventory
 	if rel, _, ok := m.inventory.selectedFile(dir); !ok || rel != filepath.Join("inventory", "st.profile.toml") {
 		t.Errorf("inventory path = %q (%v)", rel, ok)
 	}

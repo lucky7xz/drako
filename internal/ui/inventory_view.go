@@ -6,7 +6,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucky7xz/drako/internal/config"
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/profiles"
 )
 
@@ -29,9 +29,9 @@ func (m Model) viewInventoryMode(hint string) string {
 
 	title := m.styles.InventoryTitle.Render("Inventory Management")
 
-	visiblePtr, _ := m.inventory.State.GetList(core.ListVisible)
+	visiblePtr, _ := m.inventory.State.GetList(equip.ListVisible)
 	visible := *visiblePtr
-	inventoryPtr, _ := m.inventory.State.GetList(core.ListInventory)
+	inventoryPtr, _ := m.inventory.State.GetList(equip.ListInventory)
 	inventory := *inventoryPtr
 
 	// The count is of the staged list, so the budget updates while arranging.
@@ -112,14 +112,14 @@ func (m Model) viewInventoryMode(hint string) string {
 
 	equippedBudget, inventoryBudget := secondaryBudget, secondaryBudget
 	switch m.inventory.focusedList {
-	case core.ListVisible:
+	case equip.ListVisible:
 		equippedBudget = fixedBudget - secondaryBudget
-	case core.ListInventory:
+	case equip.ListInventory:
 		inventoryBudget = fixedBudget - secondaryBudget
 	}
 
-	equippedGrid := m.renderInventoryGrid(visible, core.ListVisible, equippedBudget)
-	inventoryGrid := m.renderInventoryGrid(inventory, core.ListInventory, inventoryBudget)
+	equippedGrid := m.renderInventoryGrid(visible, equip.ListVisible, equippedBudget)
+	inventoryGrid := m.renderInventoryGrid(inventory, equip.ListInventory, inventoryBudget)
 
 	var sections []string
 	if layout.ShowHeader {

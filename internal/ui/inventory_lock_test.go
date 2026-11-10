@@ -8,7 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/config"
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/equip"
 )
 
 // Stashing the locked profile would leave pivot.toml aimed at something no
@@ -18,7 +18,7 @@ import (
 func TestInventoryLock_RefusesToLiftTheLockedProfile(t *testing.T) {
 	m, _ := editInventoryModel(t)
 	m.profile.pivotName = "eq"
-	m.inventory.focusedList = core.ListVisible
+	m.inventory.focusedList = equip.ListVisible
 
 	m = sendTop(t, m, keyType(tea.KeySpace))
 
@@ -40,7 +40,7 @@ func TestInventoryLock_RefusesToLiftTheLockedProfile(t *testing.T) {
 func TestInventoryLock_UnlockedProfileStillLifts(t *testing.T) {
 	m, _ := editInventoryModel(t)
 	m.profile.pivotName = "something-else"
-	m.inventory.focusedList = core.ListVisible
+	m.inventory.focusedList = equip.ListVisible
 
 	m = sendTop(t, m, keyType(tea.KeySpace))
 

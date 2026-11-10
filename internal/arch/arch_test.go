@@ -59,7 +59,6 @@ const internal = "github.com/lucky7xz/drako/internal/"
 var knownExceptions = []string{
 	// use the network
 	"cli/summon_transport.go net/http",
-	"core/network.go net",
 
 	// touch files
 	"config/bootstrap.go os",

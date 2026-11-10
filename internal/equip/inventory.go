@@ -1,4 +1,7 @@
-package core
+// Package equip holds the rules for arranging profiles: which are equipped,
+// which are stashed, and what may move where. It only decides; moving files
+// is the caller's job.
+package equip
 
 import (
 	"errors"

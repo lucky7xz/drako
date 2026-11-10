@@ -5,7 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/config"
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/profiles"
 )
 
@@ -65,7 +65,7 @@ func TestUpdateGridMode_Navigation(t *testing.T) {
 }
 
 func createTestInventoryModel() Model {
-	state := core.NewInventoryState(
+	state := equip.NewInventoryState(
 		[]string{"a.profile.toml", "b.profile.toml"}, // Visible
 		[]string{"c.profile.toml", "d.profile.toml"}, // Inventory
 		profiles.MaxEquipped,

@@ -1,4 +1,4 @@
-package core
+package ui
 
 import "testing"
 
@@ -17,8 +17,8 @@ func TestFindLastPopulatedCol(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := FindLastPopulatedCol(tt.grid); got != tt.expected {
-				t.Errorf("FindLastPopulatedCol() = %v, want %v", got, tt.expected)
+			if got := findLastPopulatedCol(tt.grid); got != tt.expected {
+				t.Errorf("findLastPopulatedCol() = %v, want %v", got, tt.expected)
 			}
 		})
 	}
@@ -40,8 +40,8 @@ func TestFindLastPopulatedRow(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := FindLastPopulatedRow(tt.grid, tt.col); got != tt.expected {
-				t.Errorf("FindLastPopulatedRow() = %v, want %v", got, tt.expected)
+			if got := findLastPopulatedRow(tt.grid, tt.col); got != tt.expected {
+				t.Errorf("findLastPopulatedRow() = %v, want %v", got, tt.expected)
 			}
 		})
 	}
@@ -62,8 +62,8 @@ func TestFindFirstPopulatedRow(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := FindFirstPopulatedRow(tt.grid, tt.col); got != tt.expected {
-				t.Errorf("FindFirstPopulatedRow() = %v, want %v", got, tt.expected)
+			if got := findFirstPopulatedRow(tt.grid, tt.col); got != tt.expected {
+				t.Errorf("findFirstPopulatedRow() = %v, want %v", got, tt.expected)
 			}
 		})
 	}

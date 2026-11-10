@@ -1,4 +1,6 @@
-package core
+// Package host reads facts about the machine and terminal drako runs on:
+// whether it is online, how much traffic flows, what colours the terminal shows.
+package host
 
 import (
 	"fmt"

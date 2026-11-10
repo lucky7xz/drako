@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/host"
 	"github.com/muesli/termenv"
 )
 
@@ -14,7 +14,7 @@ import (
 func HandleCheckTerminalCommand(args []string) int {
 	profile := lipgloss.ColorProfile()
 
-	fmt.Printf("Detected color profile: %s\n", core.ColorProfileName(profile))
+	fmt.Printf("Detected color profile: %s\n", host.ColorProfileName(profile))
 	if profile == termenv.TrueColor {
 		fmt.Println("✓ Full color — drako's theme colors render as authored.")
 	} else {
