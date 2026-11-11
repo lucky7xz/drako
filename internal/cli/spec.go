@@ -11,7 +11,6 @@ import (
 
 	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/lair"
-	"github.com/lucky7xz/drako/internal/paths"
 )
 
 // unlockIfLocked clears the pivot lock when it points at name, and says so.
@@ -44,12 +43,12 @@ func HandleSpecCommand(args []string) int {
 		return 1
 	}
 
-	configDir, err := paths.ConfigDir()
+	configDir, err := lair.ConfigDir()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
 		return 1
 	}
-	specsDir := paths.SpecsDir(configDir)
+	specsDir := lair.SpecsDir(configDir)
 
 	if args[2] == "list" {
 		if err := ListSpecs(configDir, os.Stdout); err != nil {
@@ -115,13 +114,13 @@ func HandleStashCommand(args []string) int {
 
 	specName := args[2]
 
-	configDir, err := paths.ConfigDir()
+	configDir, err := lair.ConfigDir()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
 		return 1
 	}
 
-	specsDir := paths.SpecsDir(configDir)
+	specsDir := lair.SpecsDir(configDir)
 	specPath, err := resolveSpecPath(specsDir, specName)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Spec not found: %s\n", specName)
@@ -150,7 +149,7 @@ func HandleStripCommand(args []string) int {
 		return 1
 	}
 
-	configDir, err := paths.ConfigDir()
+	configDir, err := lair.ConfigDir()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
 		return 1
@@ -170,7 +169,7 @@ func HandleStripCommand(args []string) int {
 // The name shown is the filename with the .spec.toml suffix removed — exactly
 // what "drako spec <name>" expects.
 func ListSpecs(configDir string, out io.Writer) error {
-	specsDir := paths.SpecsDir(configDir)
+	specsDir := lair.SpecsDir(configDir)
 	specs, err := lair.DiscoverSpecs(configDir)
 	if err != nil {
 		return err

@@ -11,7 +11,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/lair"
-	"github.com/lucky7xz/drako/internal/paths"
 )
 
 // reloadProfilesMsg signals the app to reload the configuration.
@@ -67,7 +66,7 @@ type pendingDelete struct {
 
 // InitInventoryModel creates the initial state for the inventory TUI.
 func InitInventoryModel(configDir string) inventoryModel {
-	inventoryDir := paths.InventoryDir(configDir)
+	inventoryDir := lair.InventoryDir(configDir)
 
 	if err := os.MkdirAll(inventoryDir, 0755); err != nil {
 		log.Printf("could not create inventory directory: %v", err)
@@ -124,7 +123,7 @@ func (inv inventoryModel) selectedFile(configDir string) (rel, name string, ok b
 	if _, err := os.Stat(filepath.Join(configDir, file)); err == nil {
 		return file, name, true
 	}
-	stashed := filepath.Join(paths.InventoryDir(configDir), file)
+	stashed := filepath.Join(lair.InventoryDir(configDir), file)
 	if _, err := os.Stat(stashed); err != nil {
 		return "", "", false
 	}

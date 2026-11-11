@@ -6,7 +6,6 @@ import (
 	"io/fs"
 	"log"
 
-	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/settings"
 )
 
@@ -25,7 +24,7 @@ func buildThemes(configDir string) map[string]settings.DracoThemeConfig {
 	}
 
 	if configDir != "" {
-		userPath := paths.ThemesFile(configDir)
+		userPath := ThemesFile(configDir)
 		if data, err := readThemes(configDir); err == nil {
 			settings.MergeThemes(themes, data, userPath)
 		} else if !errors.Is(err, fs.ErrNotExist) {
@@ -44,13 +43,13 @@ func readThemes(configDir string) ([]byte, error) {
 		return nil, err
 	}
 	defer l.Close()
-	return l.read(paths.ThemesFileName)
+	return l.read(ThemesFileName)
 }
 
 // GetTheme returns the named palette, or dracula. The layers are read on every
 // call, so an edited themes.toml applies on the next reload.
 func GetTheme(name string) settings.DracoThemeConfig {
-	configDir, err := paths.ConfigDir()
+	configDir, err := ConfigDir()
 	if err != nil {
 		log.Printf("themes: no config dir, using built-in themes only: %v", err)
 		configDir = ""

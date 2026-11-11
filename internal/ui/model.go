@@ -14,7 +14,6 @@ import (
 	"github.com/lucky7xz/drako/internal/host"
 	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/launch"
-	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profile"
 	"github.com/lucky7xz/drako/internal/settings"
 )
@@ -180,7 +179,7 @@ func (m *Model) applyConfig(cfg settings.Config) {
 
 // enterRescue swaps in the rescue grid without forgetting which deck it replaced.
 func (m *Model) enterRescue() {
-	configDir, _ := paths.ConfigDir() // resolution already succeeded by the time rescue can run
+	configDir, _ := lair.ConfigDir() // resolution already succeeded by the time rescue can run
 	cfg := settings.RescueConfig(configDir)
 	cfg.ApplyDefaults()
 	m.applyConfig(cfg)
@@ -361,7 +360,7 @@ func (m Model) presentNextBrokenProfile() Model {
 	}
 
 	desc := "This profile has an error and was hidden from selection.\n\n"
-	if e.Name == paths.ConfigFileName {
+	if e.Name == lair.ConfigFileName {
 		// Specific message for the main config
 		desc = "If your config.toml is invalid, **Rescue Mode** can be helpful.\n" +
 			"**Warning:** Default keybindings are in effect. Your custom keys may not work (since the config.toml which stores them is invalid).\n\n" +

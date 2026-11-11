@@ -3,8 +3,6 @@ package lair
 import (
 	"os"
 	"testing"
-
-	"github.com/lucky7xz/drako/internal/paths"
 )
 
 func TestDeletePivotProfile_LockOnlyFileIsRemoved(t *testing.T) {
@@ -15,7 +13,7 @@ func TestDeletePivotProfile_LockOnlyFileIsRemoved(t *testing.T) {
 	if err := DeletePivotProfile(dir); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(paths.PivotFile(dir)); !os.IsNotExist(err) {
+	if _, err := os.Stat(PivotFile(dir)); !os.IsNotExist(err) {
 		t.Error("clearing the only thing in pivot.toml should remove the file")
 	}
 }
@@ -33,13 +31,13 @@ func TestDeletePivotProfile_MissingFileIsFine(t *testing.T) {
 func TestWritePivotLocked_KeepsAnUnreadableFile(t *testing.T) {
 	dir := t.TempDir()
 	broken := "equipped_order = [\"b\", \"a\"\n"
-	if err := os.WriteFile(paths.PivotFile(dir), []byte(broken), 0o644); err != nil {
+	if err := os.WriteFile(PivotFile(dir), []byte(broken), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := WritePivotLocked(dir, "work"); err == nil {
 		t.Error("writing over an unreadable pivot.toml should fail, not replace it")
 	}
-	if b, _ := os.ReadFile(paths.PivotFile(dir)); string(b) != broken {
+	if b, _ := os.ReadFile(PivotFile(dir)); string(b) != broken {
 		t.Errorf("pivot.toml was rewritten to %q", b)
 	}
 }

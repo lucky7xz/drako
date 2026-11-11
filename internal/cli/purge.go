@@ -14,7 +14,6 @@ import (
 
 	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/lair"
-	"github.com/lucky7xz/drako/internal/paths"
 )
 
 // ErrPurgeCancelled reports that the user declined or picked nothing.
@@ -35,9 +34,9 @@ type PurgeOptions struct {
 func resetCore(configDir string) []error {
 	var failed []error
 	if _, err := lair.WriteSettingsTemplate(configDir); err != nil {
-		failed = append(failed, fmt.Errorf("could not write a fresh %s: %w", paths.ConfigFileName, err))
+		failed = append(failed, fmt.Errorf("could not write a fresh %s: %w", lair.ConfigFileName, err))
 	} else {
-		fmt.Printf("  ✓ Wrote a fresh %s\n", paths.ConfigFileName)
+		fmt.Printf("  ✓ Wrote a fresh %s\n", lair.ConfigFileName)
 	}
 	if restored, err := lair.RestoreCoreProfile(configDir); err != nil {
 		failed = append(failed, fmt.Errorf("could not restore core.profile.toml: %w", err))
@@ -67,10 +66,10 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 	// Case 1: Reset Core Config (config.toml)
 	if opts.TargetConfig {
 		log.Printf("Purging Core config (config.toml)")
-		if err := lair.MoveToTrash(configDir, paths.ConfigFileName); err != nil {
-			failed = append(failed, fmt.Errorf("could not move %s to trash: %w", paths.ConfigFileName, err))
+		if err := lair.MoveToTrash(configDir, lair.ConfigFileName); err != nil {
+			failed = append(failed, fmt.Errorf("could not move %s to trash: %w", lair.ConfigFileName, err))
 		} else {
-			fmt.Printf("  ✓ Moved %s to trash\n", paths.ConfigFileName)
+			fmt.Printf("  ✓ Moved %s to trash\n", lair.ConfigFileName)
 			failed = append(failed, resetCore(configDir)...)
 		}
 	}
@@ -78,7 +77,7 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 	// Case 2: Purge Logs
 	if opts.TargetLogs {
 		log.Printf("Purging Logs (Permanent Delete)")
-		for _, path := range paths.LogFiles(configDir) {
+		for _, path := range lair.LogFiles(configDir) {
 			name := filepath.Base(path)
 			// Permanent deletion as requested
 			if err := os.Remove(path); err != nil {
@@ -150,7 +149,7 @@ func ExecutePurge(args []string) error {
 	if err != nil {
 		return err
 	}
-	configDir, err := paths.ConfigDir()
+	configDir, err := lair.ConfigDir()
 	if err != nil {
 		return fmt.Errorf("could not get config dir: %w", err)
 	}

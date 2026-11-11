@@ -79,7 +79,6 @@ var knownExceptions = []string{
 	"multiplex/herdr.go os",
 	"multiplex/resolve.go os",
 	"multiplex/tmux.go os",
-	"paths/paths.go os",
 
 	// open a file by path instead of through the lair's root
 	"lair/files.go os.ReadFile", // read: follows a file the user linked out of the folder

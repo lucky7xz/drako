@@ -8,7 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/equip"
-	"github.com/lucky7xz/drako/internal/paths"
+	"github.com/lucky7xz/drako/internal/lair"
 )
 
 func keyType(t tea.KeyType) tea.KeyMsg { return tea.KeyMsg{Type: t} }
@@ -26,7 +26,7 @@ func send(t *testing.T, m Model, msgs ...tea.KeyMsg) Model {
 // trashed lists the files sitting in the config dir's trash.
 func trashed(t *testing.T, dir string) []string {
 	t.Helper()
-	entries, err := os.ReadDir(paths.TrashDir(dir))
+	entries, err := os.ReadDir(lair.TrashDir(dir))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -207,7 +207,7 @@ func TestInventoryDelete_ResolvesStagedItemToRealPath(t *testing.T) {
 
 	m = send(t, m, keyType(tea.KeyDelete), keyRune("st"), keyType(tea.KeyEnter))
 
-	stashed := filepath.Join(paths.InventoryDir(dir), "st.profile.toml")
+	stashed := filepath.Join(lair.InventoryDir(dir), "st.profile.toml")
 	if _, err := os.Stat(stashed); !os.IsNotExist(err) {
 		t.Error("the file should be trashed from where it really is, inventory/")
 	}

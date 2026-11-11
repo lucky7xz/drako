@@ -11,7 +11,7 @@ import (
 	"sort"
 
 	"github.com/lucky7xz/drako/internal/equip"
-	"github.com/lucky7xz/drako/internal/paths"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/profile"
 	"github.com/lucky7xz/drako/internal/settings"
 )
@@ -42,15 +42,15 @@ func HandleCheckCommand(args []string) int {
 // arguments means config.toml, the equipped dir and the inventory.
 func checkTargets(args []string) ([]string, error) {
 	if len(args) == 0 {
-		configDir, err := paths.ConfigDir()
+		configDir, err := lair.ConfigDir()
 		if err != nil {
 			return nil, fmt.Errorf("could not get config dir: %v", err)
 		}
-		if _, err := os.Stat(paths.ConfigFile(configDir)); err == nil {
-			args = append(args, paths.ConfigFile(configDir))
+		if _, err := os.Stat(lair.ConfigFile(configDir)); err == nil {
+			args = append(args, lair.ConfigFile(configDir))
 		}
 		// A default dir that doesn't exist yet has nothing to check.
-		for _, d := range []string{configDir, paths.InventoryDir(configDir)} {
+		for _, d := range []string{configDir, lair.InventoryDir(configDir)} {
 			if _, err := os.Stat(d); !errors.Is(err, fs.ErrNotExist) {
 				args = append(args, d)
 			}
@@ -87,7 +87,7 @@ func runChecks(out io.Writer, files []string) int {
 		switch {
 		case err != nil:
 			findings = []profile.Finding{{Level: "error", Msg: fmt.Sprintf("cannot read file: %v", err)}}
-		case filepath.Base(f) == paths.ConfigFileName:
+		case filepath.Base(f) == lair.ConfigFileName:
 			findings = settings.Lint(src)
 		default:
 			findings = profile.Lint(src)
@@ -126,7 +126,7 @@ func runChecks(out io.Writer, files []string) int {
 func nameClashes(files []string) map[string][]string {
 	byNorm := map[string][]string{}
 	for _, f := range files {
-		if base := filepath.Base(f); base != paths.ConfigFileName {
+		if base := filepath.Base(f); base != lair.ConfigFileName {
 			n := equip.NormalizeName(base)
 			byNorm[n] = append(byNorm[n], f)
 		}

@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/lucky7xz/drako/internal/equip"
-	"github.com/lucky7xz/drako/internal/paths"
 )
 
 // This file lists and moves profile files. It deliberately does no TOML
@@ -21,9 +20,9 @@ import (
 func folder(loc equip.Location) string {
 	switch loc {
 	case equip.Inventory:
-		return paths.InventoryDirName
+		return InventoryDirName
 	case equip.Trash:
-		return paths.TrashDirName
+		return TrashDirName
 	default:
 		return "."
 	}

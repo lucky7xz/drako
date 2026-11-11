@@ -1,6 +1,7 @@
-// Package paths is the one place that knows where drako's files live; it only
+package lair
+
+// This file is the one place that knows where drako's files live; it only
 // computes strings. Never build a path to a well-known location by hand.
-package paths
 
 import (
 	"fmt"

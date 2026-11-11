@@ -1,4 +1,4 @@
-package paths
+package lair
 
 import (
 	"path/filepath"

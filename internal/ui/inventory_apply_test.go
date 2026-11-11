@@ -8,7 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/equip"
-	"github.com/lucky7xz/drako/internal/paths"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/settings"
 )
 
@@ -101,7 +101,7 @@ func TestApplyReportsAnUnsavedOrder(t *testing.T) {
 	if m.mode != inventoryMode || m.inventory.err != nil {
 		t.Fatalf("i did not open the inventory: mode = %v, err = %v", m.mode, m.inventory.err)
 	}
-	if err := os.WriteFile(paths.PivotFile(m.profile.configDir), []byte("locked = [\n"), 0o644); err != nil {
+	if err := os.WriteFile(lair.PivotFile(m.profile.configDir), []byte("locked = [\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	m.inventory.focusedList = focusApply

@@ -15,7 +15,6 @@ import (
 	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/multiplex"
-	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/proc"
 	"github.com/lucky7xz/drako/internal/ui"
 )
@@ -59,7 +58,7 @@ func Run() int {
 	// =======================================
 
 	// Proceed with TUI mode
-	configDir, err := paths.ConfigDir()
+	configDir, err := lair.ConfigDir()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
 		return 1

@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/lucky7xz/drako/internal/host"
-	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profile"
 	"github.com/lucky7xz/drako/internal/settings"
 )
@@ -21,9 +20,9 @@ import (
 // from profile overlays.
 func (l *Lair) loadBaseConfig() (settings.Config, []ProfileParseError) {
 	configDir := l.dir
-	configPath := paths.ConfigFile(configDir)
+	configPath := ConfigFile(configDir)
 
-	if _, err := l.stat(paths.ConfigFileName); errors.Is(err, fs.ErrNotExist) {
+	if _, err := l.stat(ConfigFileName); errors.Is(err, fs.ErrNotExist) {
 		// Bootstrap failed to produce a config file; run on rescue and write the
 		// settings template so the next run starts from something valid.
 		if _, err := l.writeSettingsTemplate(); err != nil {
@@ -33,11 +32,11 @@ func (l *Lair) loadBaseConfig() (settings.Config, []ProfileParseError) {
 	}
 
 	log.Printf("Loading config from: %s", configPath)
-	configBytes, err := l.read(paths.ConfigFileName)
+	configBytes, err := l.read(ConfigFileName)
 	if err != nil {
 		log.Printf("could not read config file: %v", err)
 		return settings.RescueConfig(configDir), []ProfileParseError{{
-			Name: paths.ConfigFileName,
+			Name: ConfigFileName,
 			Path: configPath,
 			Err:  fmt.Sprintf("Could not read config: %v", err),
 		}}
@@ -47,7 +46,7 @@ func (l *Lair) loadBaseConfig() (settings.Config, []ProfileParseError) {
 	if err != nil {
 		log.Printf("could not decode config file: %v", err)
 		return settings.RescueConfig(configDir), []ProfileParseError{{
-			Name: paths.ConfigFileName,
+			Name: ConfigFileName,
 			Path: configPath,
 			Err:  fmt.Sprintf("SYNTAX ERROR: %v", err),
 		}}
@@ -83,7 +82,7 @@ func ReloadConfig(sessionProfile string) (ConfigBundle, error) {
 }
 
 func loadConfig(sessionProfile string) (ConfigBundle, error) {
-	configDir, err := paths.ConfigDir()
+	configDir, err := ConfigDir()
 	if err != nil {
 		return ConfigBundle{}, fmt.Errorf("could not resolve a config directory: %w", err)
 	}
@@ -97,7 +96,7 @@ func loadConfig(sessionProfile string) (ConfigBundle, error) {
 	defer l.Close()
 
 	// First run: if config file is missing, copy embedded bootstrap assets
-	if _, statErr := l.stat(paths.ConfigFileName); errors.Is(statErr, fs.ErrNotExist) {
+	if _, statErr := l.stat(ConfigFileName); errors.Is(statErr, fs.ErrNotExist) {
 		log.Printf("bootstrap: restoring missing embedded files into %s", configDir)
 		if restored, err := l.restoreBootstrap(); err != nil {
 			log.Printf("warning: bootstrap copy failed: %v", err)

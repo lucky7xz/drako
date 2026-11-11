@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/lucky7xz/drako/internal/paths"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/profile"
 )
 
@@ -66,7 +66,7 @@ func copyAssetsList(configDir, repoRoot, profileDir string, assets []string, pro
 		}
 		// Destination is the assets/ directory + profile name + original relative path
 		// e.g. ~/.config/drako/assets/my-profile/script.sh
-		dst := filepath.Join(paths.AssetsDir(configDir, profileName), cleanRel)
+		dst := filepath.Join(lair.AssetsDir(configDir, profileName), cleanRel)
 
 		info, statErr := os.Stat(src)
 		if statErr != nil {

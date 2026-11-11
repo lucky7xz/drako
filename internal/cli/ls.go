@@ -14,7 +14,6 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 	"github.com/lucky7xz/drako/internal/lair"
-	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profile"
 	"golang.org/x/term"
 )
@@ -38,7 +37,7 @@ const (
 // this short-lived CLI process.
 func quietLogs() {
 	log.SetOutput(io.Discard)
-	configDir, err := paths.ConfigDir()
+	configDir, err := lair.ConfigDir()
 	if err != nil {
 		return
 	}

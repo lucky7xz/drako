@@ -11,7 +11,6 @@ import (
 
 	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/launch"
-	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/proc"
 	"github.com/lucky7xz/drako/internal/profile"
 	"github.com/lucky7xz/drako/internal/settings"
@@ -62,7 +61,7 @@ func HandleRunCommand(args []string) int {
 // logRun appends the run to history.log before the command takes over. Like
 // every history line it is best-effort: a failure is logged, never fatal.
 func logRun(plan launch.Plan) {
-	configDir, err := paths.ConfigDir()
+	configDir, err := lair.ConfigDir()
 	if err != nil {
 		log.Printf("logging error: could not get config dir: %v", err)
 		return

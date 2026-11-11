@@ -7,8 +7,6 @@ import (
 	"log"
 	"path/filepath"
 	"strings"
-
-	"github.com/lucky7xz/drako/internal/paths"
 )
 
 //go:embed all:bootstrap
@@ -71,7 +69,7 @@ func (l *Lair) restoreBootstrap() ([]string, error) {
 	if wrote, err := l.writeSettingsTemplate(); err != nil {
 		return restored, err
 	} else if wrote {
-		restored = append(restored, paths.ConfigFileName)
+		restored = append(restored, ConfigFileName)
 		log.Printf("bootstrap: generated config.toml")
 	}
 
@@ -150,7 +148,7 @@ func (l *Lair) writeSettingsTemplate() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return l.writeNew(paths.ConfigFileName, settings)
+	return l.writeNew(ConfigFileName, settings)
 }
 
 func (l *Lair) restoreCoreProfile() (bool, error) {
@@ -171,7 +169,7 @@ func (l *Lair) profileDeckPresent(base string) bool {
 	if _, err := l.stat(base); err == nil {
 		return true // equipped
 	}
-	if _, err := l.stat(filepath.Join(paths.InventoryDirName, base)); err == nil {
+	if _, err := l.stat(filepath.Join(InventoryDirName, base)); err == nil {
 		return true // stashed
 	}
 	return false

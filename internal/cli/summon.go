@@ -20,7 +20,6 @@ import (
 
 	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/lair"
-	"github.com/lucky7xz/drako/internal/paths"
 )
 
 // FileDownloader defines the interface for downloading a file
@@ -66,7 +65,7 @@ func NewSummoner(configDir string) *Summoner {
 
 // Summon executes the summoning logic
 func (s *Summoner) Summon(sourceURL string) error {
-	inventoryDir := paths.InventoryDir(s.ConfigDir)
+	inventoryDir := lair.InventoryDir(s.ConfigDir)
 	if err := os.MkdirAll(inventoryDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create inventory directory: %w", err)
 	}
@@ -145,7 +144,7 @@ func (s *Summoner) Summon(sourceURL string) error {
 // else equipped while fewer than MaxEquipped are; else the inventory. It reads
 // the disk each time, so decks summoned earlier in the same run count.
 func placeFor(configDir, file string) (string, error) {
-	inventoryDir := paths.InventoryDir(configDir)
+	inventoryDir := lair.InventoryDir(configDir)
 	equipped, err := lair.List(configDir, equip.Equipped)
 	if err != nil {
 		return "", err
@@ -301,7 +300,7 @@ func (s *Summoner) summonFromDir(root, source string) error {
 
 	// 2. Process Spec Files
 	if len(specFiles) > 0 {
-		specsDir := paths.SpecsDir(s.ConfigDir)
+		specsDir := lair.SpecsDir(s.ConfigDir)
 		if err := os.MkdirAll(specsDir, 0o755); err != nil {
 			fmt.Printf("⚠️  Failed to create specs directory: %v\n", err)
 		} else {

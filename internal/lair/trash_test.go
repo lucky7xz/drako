@@ -4,8 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/lucky7xz/drako/internal/paths"
 )
 
 func TestMoveToTrash_TimestampsIntoTrash(t *testing.T) {
@@ -22,7 +20,7 @@ func TestMoveToTrash_TimestampsIntoTrash(t *testing.T) {
 	if _, err := os.Stat(src); !os.IsNotExist(err) {
 		t.Errorf("source should be gone, stat err = %v", err)
 	}
-	matches, _ := filepath.Glob(filepath.Join(paths.TrashDir(cfg), "config.toml.*"))
+	matches, _ := filepath.Glob(filepath.Join(TrashDir(cfg), "config.toml.*"))
 	if len(matches) != 1 {
 		t.Errorf("expected 1 timestamped trash file, got %v", matches)
 	}

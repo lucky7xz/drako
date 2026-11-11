@@ -9,7 +9,6 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/lucky7xz/drako/internal/equip"
-	"github.com/lucky7xz/drako/internal/paths"
 )
 
 // specFile is the on-disk shape of a *.spec.toml: a named set of profiles to
@@ -43,7 +42,7 @@ func LoadSpec(configDir, file string) ([]string, error) {
 }
 
 func (l *Lair) loadSpec(file string) ([]string, error) {
-	data, err := l.read(filepath.Join(paths.SpecsDirName, file))
+	data, err := l.read(filepath.Join(SpecsDirName, file))
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +73,7 @@ func DiscoverSpecs(configDir string) ([]SpecInfo, error) {
 	defer l.Close()
 
 	// Specs are not normalized, so Norm == Name.
-	entries, err := l.list(paths.SpecsDirName, equip.SpecSuffix, func(s string) string { return s })
+	entries, err := l.list(SpecsDirName, equip.SpecSuffix, func(s string) string { return s })
 	if err != nil {
 		return nil, fmt.Errorf("could not read specs dir: %w", err)
 	}

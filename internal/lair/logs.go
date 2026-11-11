@@ -5,8 +5,6 @@ import (
 	"log"
 	"os"
 	"time"
-
-	"github.com/lucky7xz/drako/internal/paths"
 )
 
 // logCap is the size past which a log is rotated to its archive.
@@ -15,18 +13,18 @@ const logCap = 1024 * 1024
 // OpenLog opens drako.log for appending, rotating it first once it passes 1 MB.
 // The TUI and every CLI command log through it.
 func (l *Lair) OpenLog() (*os.File, error) {
-	l.rotate(paths.LogFileName, paths.LogArchiveName, logCap)
-	return l.root.OpenFile(paths.LogFileName, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o600)
+	l.rotate(LogFileName, LogArchiveName, logCap)
+	return l.root.OpenFile(LogFileName, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o600)
 }
 
 // LogExecution appends one command run to history.log:
 // "[timestamp] <selected> (exec: <what actually ran>)". Best-effort — logging
 // failures are logged themselves but never stop an execution.
 func (l *Lair) LogExecution(selected, executed string) {
-	l.rotate(paths.HistoryFileName, paths.HistoryArchiveName, logCap)
+	l.rotate(HistoryFileName, HistoryArchiveName, logCap)
 
 	// Full command lines can hold secrets: owner-only, like shell history.
-	f, err := l.root.OpenFile(paths.HistoryFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+	f, err := l.root.OpenFile(HistoryFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		log.Printf("logging error: could not open history.log: %v", err)
 		return

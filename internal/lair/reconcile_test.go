@@ -8,12 +8,11 @@ import (
 	"testing"
 
 	"github.com/lucky7xz/drako/internal/equip"
-	"github.com/lucky7xz/drako/internal/paths"
 )
 
 func TestReconcile_AppliesMovesOnDisk(t *testing.T) {
 	cfg := t.TempDir()
-	inv := paths.InventoryDir(cfg)
+	inv := InventoryDir(cfg)
 	if err := os.MkdirAll(inv, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +44,7 @@ func TestReconcile_AppliesMovesOnDisk(t *testing.T) {
 // equipped than the plan was allowed to end with.
 func TestReconcile_FailedStashNeverExceedsTheCap(t *testing.T) {
 	cfg := t.TempDir()
-	inv := paths.InventoryDir(cfg)
+	inv := InventoryDir(cfg)
 	for _, f := range profileFiles("eq", equip.MaxEquipped) {
 		mustWrite(t, filepath.Join(cfg, f))
 	}
@@ -66,7 +65,7 @@ func TestReconcile_FailedStashNeverExceedsTheCap(t *testing.T) {
 
 func TestReconcile_OverCapMovesNothing(t *testing.T) {
 	cfg := t.TempDir()
-	inv := paths.InventoryDir(cfg)
+	inv := InventoryDir(cfg)
 	if err := os.MkdirAll(inv, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +91,7 @@ func TestReconcile_OverCapMovesNothing(t *testing.T) {
 // The spec CLI equips over the cap once the user has confirmed it.
 func TestReconcileOverCap_EquipsPastTheCap(t *testing.T) {
 	cfg := t.TempDir()
-	inv := paths.InventoryDir(cfg)
+	inv := InventoryDir(cfg)
 	if err := os.MkdirAll(inv, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +119,7 @@ func TestReconcileOverCap_EquipsPastTheCap(t *testing.T) {
 
 func TestPlannedEquippedCount(t *testing.T) {
 	cfg := t.TempDir()
-	inv := paths.InventoryDir(cfg)
+	inv := InventoryDir(cfg)
 	if err := os.MkdirAll(inv, 0o755); err != nil {
 		t.Fatal(err)
 	}

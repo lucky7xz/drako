@@ -6,12 +6,11 @@ import (
 	"testing"
 
 	"github.com/lucky7xz/drako/internal/equip"
-	"github.com/lucky7xz/drako/internal/paths"
 )
 
 func TestMove_InventoryToEquipped(t *testing.T) {
 	cfg := t.TempDir()
-	invDir := paths.InventoryDir(cfg)
+	invDir := InventoryDir(cfg)
 	if err := os.MkdirAll(invDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -44,14 +43,14 @@ func TestMove_EquippedToTrash_CreatesDestDir(t *testing.T) {
 		t.Fatalf("Move: %v", err)
 	}
 
-	if _, err := os.Stat(filepath.Join(paths.TrashDir(cfg), "old.profile.toml")); err != nil {
+	if _, err := os.Stat(filepath.Join(TrashDir(cfg), "old.profile.toml")); err != nil {
 		t.Errorf("expected file in trash, stat err = %v", err)
 	}
 }
 
 func TestMove_RefusesToOverwriteExisting(t *testing.T) {
 	cfg := t.TempDir()
-	inv := paths.InventoryDir(cfg)
+	inv := InventoryDir(cfg)
 	if err := os.MkdirAll(inv, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +92,7 @@ func TestMove_RelativeLinkKeepsItsTarget(t *testing.T) {
 	if err := Move(cfg, "git.profile.toml", equip.Equipped, equip.Inventory); err != nil {
 		t.Fatalf("stash: %v", err)
 	}
-	if got, err := os.ReadFile(filepath.Join(paths.InventoryDir(cfg), "git.profile.toml")); string(got) != "x = 1\n" {
+	if got, err := os.ReadFile(filepath.Join(InventoryDir(cfg), "git.profile.toml")); string(got) != "x = 1\n" {
 		t.Errorf("stashed link reads %q, %v; want the dotfiles deck", got, err)
 	}
 	if err := Move(cfg, "git.profile.toml", equip.Inventory, equip.Equipped); err != nil {
@@ -106,7 +105,7 @@ func TestMove_RelativeLinkKeepsItsTarget(t *testing.T) {
 
 func TestMove_RefusesToReplaceABrokenLink(t *testing.T) {
 	cfg := t.TempDir()
-	inv := paths.InventoryDir(cfg)
+	inv := InventoryDir(cfg)
 	if err := os.MkdirAll(inv, 0o755); err != nil {
 		t.Fatal(err)
 	}

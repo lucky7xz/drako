@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/lucky7xz/drako/internal/lair" // drako.chronyx.xyz
-	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/version"
 )
 
@@ -101,7 +100,7 @@ func HandleSummonCommand(args []string) int {
 		return 1
 	}
 
-	configDir, err := paths.ConfigDir()
+	configDir, err := lair.ConfigDir()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
 		return 1
@@ -209,7 +208,7 @@ func PrintSummonUsage() {
 // cell. Returns the process exit code.
 func HandleRestoreBootstrapCommand() int {
 	quietLogs() // keep the internal bootstrap log lines out of the user's terminal
-	configDir, err := paths.ConfigDir()
+	configDir, err := lair.ConfigDir()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
 		return 1

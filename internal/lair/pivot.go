@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/lucky7xz/drako/internal/paths"
 )
 
 // pivotFile persists TUI state that must survive restarts: which profile is
@@ -74,7 +73,7 @@ func DeletePivotProfile(configDir string) error {
 		return err
 	}
 	if len(pf.EquippedOrder) == 0 {
-		return l.remove(paths.PivotFileName)
+		return l.remove(PivotFileName)
 	}
 	pf.Locked = ""
 	return l.writePivot(pf)
@@ -83,7 +82,7 @@ func DeletePivotProfile(configDir string) error {
 // readPivot loads pivot.toml; a missing file is an empty pivot.
 func (l *Lair) readPivot() (pivotFile, error) {
 	var pf pivotFile
-	data, err := l.read(paths.PivotFileName)
+	data, err := l.read(PivotFileName)
 	if errors.Is(err, fs.ErrNotExist) {
 		return pivotFile{}, nil
 	}
@@ -102,7 +101,7 @@ func (l *Lair) writePivot(pf pivotFile) error {
 	if err := toml.NewEncoder(&buf).Encode(pf); err != nil {
 		return err
 	}
-	return l.replace(paths.PivotFileName, buf.Bytes())
+	return l.replace(PivotFileName, buf.Bytes())
 }
 
 // lockProfile records name as the locked profile, preserving the equipped order.

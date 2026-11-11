@@ -11,7 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucky7xz/drako/internal/equip"
-	"github.com/lucky7xz/drako/internal/paths"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/settings"
 	"github.com/lucky7xz/drako/internal/version"
 )
@@ -38,13 +38,13 @@ func specsInventoryModel(t *testing.T, equipped, stashed []string, specs map[str
 	}
 	for _, n := range stashed {
 		file := n + equip.ProfileSuffix
-		if err := os.WriteFile(filepath.Join(paths.InventoryDir(dir), file), []byte(valid), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(lair.InventoryDir(dir), file), []byte(valid), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		inv = append(inv, file)
 	}
 	for name, body := range specs {
-		if err := os.WriteFile(filepath.Join(paths.SpecsDir(dir), name+equip.SpecSuffix), []byte(body), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(lair.SpecsDir(dir), name+equip.SpecSuffix), []byte(body), 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -352,7 +352,7 @@ func TestSpecsOverlay_EquipTouchesNoFiles(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, "eq.profile.toml")); err != nil {
 		t.Error("the equipped file must still be where it was")
 	}
-	if _, err := os.Stat(filepath.Join(paths.InventoryDir(dir), "st.profile.toml")); err != nil {
+	if _, err := os.Stat(filepath.Join(lair.InventoryDir(dir), "st.profile.toml")); err != nil {
 		t.Error("the stashed file must still be where it was")
 	}
 }
