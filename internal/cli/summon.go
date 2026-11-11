@@ -16,7 +16,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/lucky7xz/drako/internal/equip"
@@ -141,12 +140,10 @@ func (s *Summoner) Summon(sourceURL string) error {
 	return s.summonFromHTTP(sourceURL, dstPath)
 }
 
-// placeFor says where the summoned deck named file lands: over the copy you
-// already have, equipped or in the inventory, so there is never a second one;
-// else equipped while fewer than MaxEquipped are; else the inventory. It reads
-// the disk each time, so decks summoned earlier in the same run count.
+// placeFor says where the summoned deck named file lands, as a path: see
+// equip.Place for the rule. It reads the disk each time, so decks summoned
+// earlier in the same run count.
 func placeFor(configDir, file string) (string, error) {
-	inventoryDir := lair.InventoryDir(configDir)
 	equipped, err := lair.List(configDir, equip.Equipped)
 	if err != nil {
 		return "", err
@@ -155,19 +152,8 @@ func placeFor(configDir, file string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	norm := equip.NormalizeName(file)
-	same := func(e equip.Entry) bool { return e.Norm == norm }
-	if i := slices.IndexFunc(equipped, same); i >= 0 {
-		return filepath.Join(configDir, equipped[i].File), nil
-	}
-	if i := slices.IndexFunc(stashed, same); i >= 0 {
-		return filepath.Join(inventoryDir, stashed[i].File), nil
-	}
-	if len(equipped) < equip.MaxEquipped {
-		return filepath.Join(configDir, file), nil
-	}
-	return filepath.Join(inventoryDir, file), nil
+	loc, name := equip.Place(equipped, stashed, file)
+	return filepath.Join(lair.LocationDir(configDir, loc), name), nil
 }
 
 // destinationLabel says in words where a summoned deck lands, for the prompt:

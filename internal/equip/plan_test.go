@@ -122,3 +122,35 @@ func TestCheckCap(t *testing.T) {
 		})
 	}
 }
+
+func TestPlace(t *testing.T) {
+	entry := func(file string) Entry {
+		return Entry{File: file, Norm: NormalizeName(file)}
+	}
+	full := make([]Entry, MaxEquipped)
+	for i := range full {
+		full[i] = entry(fmt.Sprintf("e%d.profile.toml", i))
+	}
+	cases := []struct {
+		name              string
+		equipped, stashed []Entry
+		file              string
+		wantLoc           Location
+		wantName          string
+	}{
+		{"new, room left: equipped", []Entry{entry("a.profile.toml")}, nil, "b.profile.toml", Equipped, "b.profile.toml"},
+		{"new, nine equipped: inventory", full, nil, "b.profile.toml", Inventory, "b.profile.toml"},
+		{"already equipped: replaced in place, even when full", full, nil, "e3.profile.toml", Equipped, "e3.profile.toml"},
+		{"already stashed: replaced in the inventory", nil, []Entry{entry("b.profile.toml")}, "b.profile.toml", Inventory, "b.profile.toml"},
+		{"same deck, other spelling: the existing name is kept", []Entry{entry("Work.profile.toml")}, nil, "work.profile.toml", Equipped, "Work.profile.toml"},
+		{"equipped wins over stashed", []Entry{entry("b.profile.toml")}, []Entry{entry("B.profile.toml")}, "b.profile.toml", Equipped, "b.profile.toml"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			loc, name := Place(tc.equipped, tc.stashed, tc.file)
+			if loc != tc.wantLoc || name != tc.wantName {
+				t.Errorf("Place = %v, %q; want %v, %q", loc, name, tc.wantLoc, tc.wantName)
+			}
+		})
+	}
+}

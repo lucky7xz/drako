@@ -1,6 +1,9 @@
 package equip
 
-import "fmt"
+import (
+	"fmt"
+	"slices"
+)
 
 // Location is one of drako's profile-file locations under the config dir.
 type Location int
@@ -83,4 +86,23 @@ func PlanReconcile(equipped, inventory, desired []string) []Move {
 		}
 	}
 	return moves
+}
+
+// Place says where an arriving profile called file lands, and under which
+// name: over the copy that is already there, equipped or in the inventory
+// (keeping that copy's spelling), so there is never a second one; else
+// equipped while fewer than MaxEquipped are; else the inventory.
+func Place(equipped, stashed []Entry, file string) (Location, string) {
+	norm := NormalizeName(file)
+	same := func(e Entry) bool { return e.Norm == norm }
+	if i := slices.IndexFunc(equipped, same); i >= 0 {
+		return Equipped, equipped[i].File
+	}
+	if i := slices.IndexFunc(stashed, same); i >= 0 {
+		return Inventory, stashed[i].File
+	}
+	if len(equipped) < MaxEquipped {
+		return Equipped, file
+	}
+	return Inventory, file
 }
