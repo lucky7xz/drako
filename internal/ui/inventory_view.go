@@ -5,9 +5,9 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/profiles"
+	"github.com/lucky7xz/drako/internal/version"
 )
 
 // viewInventoryMode is the inventory screen, its footer carrying hint.
@@ -81,8 +81,8 @@ func (m Model) viewInventoryMode(hint string) string {
 		// Trimmed like the HOST bar: the version shortens, the hint stays.
 		tail := " | " + hint
 		room := max(1, m.termWidth-appStyle.GetHorizontalMargins()-lipgloss.Width(tail))
-		version := truncateText(config.AppName+" | "+config.Version(), room)
-		footer = m.styles.Footer.Render(m.styles.Help.Render(version + tail))
+		label := truncateText(version.AppName+" | "+version.String(), room)
+		footer = m.styles.Footer.Render(m.styles.Help.Render(label + tail))
 	}
 
 	// Everything except the two grids is fixed-height chrome — measure it

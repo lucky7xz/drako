@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profiles"
 )
@@ -23,7 +23,7 @@ import (
 // "inventory/x.profile.toml", and NormalizeName strips suffixes but not
 // directories.
 func unlockIfLocked(configDir, name string) {
-	pf, err := config.ReadPivotProfile(configDir)
+	pf, err := lair.ReadPivotProfile(configDir)
 	if err != nil || pf.Locked == "" {
 		return
 	}
@@ -31,7 +31,7 @@ func unlockIfLocked(configDir, name string) {
 		return
 	}
 	fmt.Printf("  ! Unlocking profile: %s\n", pf.Locked)
-	if err := config.WritePivotLocked(configDir, ""); err != nil {
+	if err := lair.WritePivotLocked(configDir, ""); err != nil {
 		log.Printf("Warning: failed to unlock profile %s: %v", pf.Locked, err)
 	}
 }
@@ -71,7 +71,7 @@ func HandleSpecCommand(args []string) int {
 		return 1
 	}
 
-	specProfiles, err := config.LoadSpec(specPath)
+	specProfiles, err := lair.LoadSpec(specPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to parse spec: %v\n", err)
 		return 1
@@ -128,7 +128,7 @@ func HandleStashCommand(args []string) int {
 		return 1
 	}
 
-	specProfiles, err := config.LoadSpec(specPath)
+	specProfiles, err := lair.LoadSpec(specPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to parse spec: %v\n", err)
 		return 1
@@ -169,7 +169,7 @@ func HandleStripCommand(args []string) int {
 // The name shown is the filename with the .spec.toml suffix removed — exactly
 // what "drako spec <name>" expects.
 func ListSpecs(specsDir string, out io.Writer) error {
-	specs, err := config.DiscoverSpecs(specsDir)
+	specs, err := lair.DiscoverSpecs(specsDir)
 	if err != nil {
 		return err
 	}
@@ -276,17 +276,17 @@ func ApplySpec(configDir string, targetProfiles []string, allowOverCap bool) err
 	if err != nil {
 		return err
 	}
-	return config.WritePivotEquippedOrder(configDir, targetProfiles)
+	return lair.WritePivotEquippedOrder(configDir, targetProfiles)
 }
 
 func StripAllProfiles(configDir string) error {
 	// Read current pivot/lock state; unlock if locked.
-	pf, err := config.ReadPivotProfile(configDir)
+	pf, err := lair.ReadPivotProfile(configDir)
 	if err != nil {
 		log.Printf("Warning: could not read pivot profile: %v", err)
 	}
 	if pf.Locked != "" {
-		if err := config.WritePivotLocked(configDir, ""); err != nil {
+		if err := lair.WritePivotLocked(configDir, ""); err != nil {
 			log.Printf("Warning: failed to unlock profile: %v", err)
 		}
 	}
@@ -301,5 +301,5 @@ func StripAllProfiles(configDir string) error {
 	}
 
 	// Empty pivot order: next launch lands in rescue mode.
-	return config.WritePivotEquippedOrder(configDir, nil)
+	return lair.WritePivotEquippedOrder(configDir, nil)
 }

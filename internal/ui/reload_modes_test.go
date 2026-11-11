@@ -9,8 +9,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/equip"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/settings"
 )
 
@@ -25,7 +25,7 @@ func TestReloadKeepsTheInventoryOpen(t *testing.T) {
 			status: "Trashed c → trash/", statusOK: true,
 		}}
 
-	m = m.applyReloadedBundle(config.ConfigBundle{Config: cfg})
+	m = m.applyReloadedBundle(lair.ConfigBundle{Config: cfg})
 
 	if m.mode != inventoryMode {
 		t.Fatalf("a clean reload left the inventory, mode = %v", m.mode)

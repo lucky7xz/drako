@@ -47,7 +47,7 @@ go list -deps -f '{{with .Module}}{{.Path}}	{{.Version}}	{{.Dir}}{{end}}' . |
 # Embedded assets are compiled into the binary by //go:embed, so their notices
 # have to travel with it just as the module licences above do. Each file states
 # its own in leading # lines.
-scales="internal/config/bootstrap/scales"
+scales="internal/lair/bootstrap/scales"
 if [ -d "$scales" ]; then
 	{
 		echo
@@ -65,7 +65,7 @@ if [ -d "$scales" ]; then
 		fi
 		{
 			echo
-			echo "### ${f#internal/config/bootstrap/}"
+			echo "### ${f#internal/lair/bootstrap/}"
 			echo
 			echo '```'
 			echo "$notice"

@@ -9,7 +9,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/paths"
@@ -33,7 +32,7 @@ func HandleRunCommand(args []string) int {
 	}
 
 	quietLogs()
-	bundle, err := config.LoadConfig()
+	bundle, err := lair.LoadConfig()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "drako run: %v\n", err)
 		return exitRunFailed
@@ -79,7 +78,7 @@ func logRun(plan launch.Plan) {
 
 // resolveRun resolves a reference to its target and the config the TUI would
 // run it with, refusing anything that isn't a single runnable, safe target.
-func resolveRun(bundle config.ConfigBundle, ref string) (t cellTarget, cfg settings.Config, err error) {
+func resolveRun(bundle lair.ConfigBundle, ref string) (t cellTarget, cfg settings.Config, err error) {
 	if t, err = lookupCell(bundle, ref); err != nil {
 		return t, cfg, err
 	}

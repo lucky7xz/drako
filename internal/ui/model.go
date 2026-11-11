@@ -10,8 +10,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/host"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profile"
@@ -78,7 +78,7 @@ type netStatus struct {
 // error queue.
 type profileState struct {
 	base               settings.Config
-	profiles           []config.ProfileInfo
+	profiles           []lair.ProfileInfo
 	activeIndex        int
 	rescue             bool // the rescue grid is showing; activeIndex is the deck to go back to
 	configDir          string
@@ -88,7 +88,7 @@ type profileState struct {
 	statusPositive     bool
 	nextTimerID        int
 	statusClearTimerID int
-	pendingErrors      []config.ProfileParseError
+	pendingErrors      []lair.ProfileParseError
 	errorQueueActive   bool
 	acknowledged       map[string]bool
 	// pendingDroppedProfile defers presentDroppedProfileNote's mode change
@@ -187,7 +187,7 @@ func (m *Model) enterRescue() {
 	m.profile.rescue = true
 }
 
-func (m *Model) applyBundle(bundle config.ConfigBundle) {
+func (m *Model) applyBundle(bundle lair.ConfigBundle) {
 	m.profile.base = bundle.Base
 	profiles := bundle.Profiles
 	m.profile.profiles = profiles
@@ -217,7 +217,7 @@ func (m *Model) applyBundle(bundle config.ConfigBundle) {
 // pruneAcknowledged forgets an acknowledgment once its file is no longer
 // reported broken, so a later re-break is shown again instead of being
 // mistaken for the same still-open error.
-func (m *Model) pruneAcknowledged(broken []config.ProfileParseError) {
+func (m *Model) pruneAcknowledged(broken []lair.ProfileParseError) {
 	stillBroken := make(map[string]bool, len(broken))
 	for _, e := range broken {
 		stillBroken[e.Path] = true
@@ -230,8 +230,8 @@ func (m *Model) pruneAcknowledged(broken []config.ProfileParseError) {
 }
 
 // notShown is the part of broken whose notice hasn't been shown yet.
-func (p profileState) notShown(broken []config.ProfileParseError) []config.ProfileParseError {
-	var rest []config.ProfileParseError
+func (p profileState) notShown(broken []lair.ProfileParseError) []lair.ProfileParseError {
+	var rest []lair.ProfileParseError
 	for _, e := range broken {
 		if !p.acknowledged[e.Path] {
 			rest = append(rest, e)
@@ -250,7 +250,7 @@ func (m Model) protectsMode() bool {
 // applyReloadedBundle applies a reload and shows any broken/dropped-profile
 // notice. presentNextBrokenProfile/presentDroppedProfileNote defer instead
 // of presenting while protectsMode() is true.
-func (m Model) applyReloadedBundle(bundle config.ConfigBundle) Model {
+func (m Model) applyReloadedBundle(bundle lair.ConfigBundle) Model {
 	m.applyBundle(bundle)
 	if len(bundle.Broken) > 0 {
 		if bundle.DroppedProfile != "" && bundle.DroppedProfile != m.profile.droppedNoted {
@@ -553,7 +553,7 @@ func InitialModel(glassrootMode bool, carried Session) Model {
 		path = "could not get path"
 	}
 
-	bundle, err := config.LoadConfig()
+	bundle, err := lair.LoadConfig()
 	if err != nil {
 		// No config directory means nothing to run from; hand the host a
 		// model that is already done and let app.Run exit with the code.
@@ -649,14 +649,14 @@ func (m *Model) toggleProfileLock() tea.Cmd {
 	var messageCmd tea.Cmd
 
 	if m.profile.locked && normPivot == normCurrent && m.profile.pivotName != "" {
-		err = config.DeletePivotProfile(m.profile.configDir)
+		err = lair.DeletePivotProfile(m.profile.configDir)
 		if err == nil {
 			m.profile.locked = false
 			m.profile.pivotName = ""
 			messageCmd = m.setProfileStatus("Pivot cleared", false)
 		}
 	} else {
-		err = config.WritePivotLocked(m.profile.configDir, currentName)
+		err = lair.WritePivotLocked(m.profile.configDir, currentName)
 		if err == nil {
 			m.profile.locked = true
 			m.profile.pivotName = currentName

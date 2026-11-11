@@ -7,8 +7,8 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/equip"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/profile"
 	"github.com/lucky7xz/drako/internal/profiles"
 	"github.com/lucky7xz/drako/internal/settings"
@@ -46,7 +46,7 @@ func createTestModelForView(mode navMode) Model {
 			focusedList: 0,
 		},
 		profile: profileState{
-			profiles: []config.ProfileInfo{
+			profiles: []lair.ProfileInfo{
 				{Name: "Core"},
 			},
 		},
@@ -101,7 +101,7 @@ func makeScrollTestModel(cols, rows, termW, termH int) Model {
 		Config:     cfg,
 		styles:     BuildStyles(cfg), // real styles: cell height must be measured honestly
 		gridNav:    gridNav{grid: grid},
-		profile:    profileState{profiles: []config.ProfileInfo{{Name: "Core"}}},
+		profile:    profileState{profiles: []lair.ProfileInfo{{Name: "Core"}}},
 	}
 }
 
@@ -231,7 +231,7 @@ func TestView_WideCellsStillRenderNarrow(t *testing.T) {
 		Config:     cfg,
 		styles:     BuildStyles(cfg),
 		gridNav:    gridNav{grid: grid},
-		profile:    profileState{profiles: []config.ProfileInfo{{Name: "Core"}}},
+		profile:    profileState{profiles: []lair.ProfileInfo{{Name: "Core"}}},
 	}
 	output := m.View()
 	if strings.Contains(output, "Terminal too small") {
@@ -265,7 +265,7 @@ func TestView_LongTextCompressesNotBlocks(t *testing.T) {
 		Config:     cfg,
 		styles:     BuildStyles(cfg),
 		gridNav:    gridNav{grid: grid},
-		profile:    profileState{profiles: []config.ProfileInfo{{Name: "Core"}}},
+		profile:    profileState{profiles: []lair.ProfileInfo{{Name: "Core"}}},
 	}
 
 	if _, reqW, _ := m.belowMinimum(); reqW != 32 {
@@ -471,7 +471,7 @@ func TestRenderProfileCounter(t *testing.T) {
 			m := Model{
 				Config:  cfg,
 				styles:  BuildStyles(cfg),
-				profile: profileState{profiles: make([]config.ProfileInfo, tc.total), activeIndex: tc.activeIndex},
+				profile: profileState{profiles: make([]lair.ProfileInfo, tc.total), activeIndex: tc.activeIndex},
 			}
 			got := strings.TrimSpace(ansi.Strip(m.renderProfileCounter()))
 			if got != tc.want {

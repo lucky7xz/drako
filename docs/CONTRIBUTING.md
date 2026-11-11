@@ -40,7 +40,7 @@ run it anywhere — that freedom is the license, and it stays.
 As of now, drako takes ideas, not patches. Since that leaves good ideas
 unmentioned, people who contribute a lot to this project should at least
 receive a proof token of their contribution.
-[`scales/`](../internal/config/bootstrap/scales/) is the staging area for
+[`scales/`](../internal/lair/bootstrap/scales/) is the staging area for
 those tokens. Those who make it there have made significant contributions
 to drako, either through good design arguments or valuable bootstrap
 assets (or both).

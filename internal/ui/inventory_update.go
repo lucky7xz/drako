@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/equip"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profiles"
 )
@@ -87,7 +87,7 @@ func InitInventoryModel(configDir string) inventoryModel {
 	}
 
 	// Equipped decks in the grid's order; an unreadable pivot.toml means none saved.
-	pf, _ := config.ReadPivotProfile(configDir)
+	pf, _ := lair.ReadPivotProfile(configDir)
 	visible := profiles.Order(profiles.Files(equipped), pf.EquippedOrder)
 	inventory := profiles.Files(stashed)
 
@@ -150,7 +150,7 @@ func ApplyInventoryChangesCmd(configDir string, m inventoryModel) tea.Cmd {
 		}
 
 		// Persist the visible order into pivot.toml as equipped_order.
-		if err := config.WritePivotEquippedOrder(configDir, desired); err != nil {
+		if err := lair.WritePivotEquippedOrder(configDir, desired); err != nil {
 			return inventoryErrorMsg{err: fmt.Errorf("could not save the deck order: pivot.toml: %w", err)}
 		}
 

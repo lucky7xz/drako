@@ -61,11 +61,6 @@ var knownExceptions = []string{
 	"cli/summon_transport.go net/http",
 
 	// touch files
-	"config/bootstrap.go os",
-	"config/discover.go os",
-	"config/load.go os",
-	"config/pivot.go os",
-	"config/themes.go os",
 	"multiplex/backend.go os",
 	"multiplex/herdr.go os",
 	"multiplex/resolve.go os",

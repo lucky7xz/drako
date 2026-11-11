@@ -1,4 +1,4 @@
-package config
+package lair
 
 import (
 	"io/fs"

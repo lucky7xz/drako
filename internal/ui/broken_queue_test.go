@@ -7,20 +7,20 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/profile"
 	"github.com/lucky7xz/drako/internal/settings"
 )
 
-func brokenErr(name string) config.ProfileParseError {
-	return config.ProfileParseError{
+func brokenErr(name string) lair.ProfileParseError {
+	return lair.ProfileParseError{
 		Name: name,
 		Path: "/tmp/" + name + ".profile.toml",
 		Err:  "SYNTAX ERROR: boom",
 	}
 }
 
-func queueModel(errs ...config.ProfileParseError) Model {
+func queueModel(errs ...lair.ProfileParseError) Model {
 	base := settings.Config{X: 1, Y: 1}
 	base.ApplyDefaults()
 	return Model{
@@ -129,9 +129,9 @@ func TestApplyBundleClearsAcknowledgedOnceFixed(t *testing.T) {
 
 	base := settings.Config{X: 1, Y: 1}
 	base.ApplyDefaults()
-	m.applyBundle(config.ConfigBundle{Base: base, Config: base}) // Broken is empty: alpha is fixed
+	m.applyBundle(lair.ConfigBundle{Base: base, Config: base}) // Broken is empty: alpha is fixed
 
-	m.profile.pendingErrors = []config.ProfileParseError{brokenErr("alpha")}
+	m.profile.pendingErrors = []lair.ProfileParseError{brokenErr("alpha")}
 	m = m.presentNextBrokenProfile()
 
 	if m.activeDetail == nil || !strings.Contains(m.activeDetail.Title, "alpha") {
@@ -146,10 +146,10 @@ func TestApplyBundleAdoptsBundleState(t *testing.T) {
 	effective.Commands = []profile.Command{{Name: "noop", Command: "true", Row: 0, Col: "a"}}
 
 	var m Model
-	m.applyBundle(config.ConfigBundle{
+	m.applyBundle(lair.ConfigBundle{
 		Base:        base,
 		Config:      effective,
-		Profiles:    []config.ProfileInfo{{Name: "alpha"}, {Name: "work"}},
+		Profiles:    []lair.ProfileInfo{{Name: "alpha"}, {Name: "work"}},
 		ActiveIndex: 1,
 		ConfigDir:   "/tmp/cfg",
 		LockedName:  "work",
@@ -171,10 +171,10 @@ func TestApplyBundleClampsBadActiveIndex(t *testing.T) {
 	base.ApplyDefaults()
 
 	var m Model
-	m.applyBundle(config.ConfigBundle{
+	m.applyBundle(lair.ConfigBundle{
 		Base:        base,
 		Config:      base,
-		Profiles:    []config.ProfileInfo{{Name: "only"}},
+		Profiles:    []lair.ProfileInfo{{Name: "only"}},
 		ActiveIndex: 7,
 	})
 
@@ -214,7 +214,7 @@ func TestCleanReloadEndsTheErrorQueue(t *testing.T) {
 	m.Config, m.gridNav.grid = cfg, profile.BuildGrid(cfg.X, cfg.Y, cfg.Commands)
 	m = m.presentNextBrokenProfile()
 
-	m = m.applyReloadedBundle(config.ConfigBundle{Config: cfg})
+	m = m.applyReloadedBundle(lair.ConfigBundle{Config: cfg})
 	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("e")}) // explain "hi"
 	next, _ = next.(Model).Update(tea.KeyMsg{Type: tea.KeyEnter})           // close it
 	m = next.(Model)
@@ -251,7 +251,7 @@ func freshConfigDir(t *testing.T) (dir string) {
 	t.Helper()
 	xdg := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", xdg)
-	if _, err := config.LoadConfig(); err != nil {
+	if _, err := lair.LoadConfig(); err != nil {
 		t.Fatal(err)
 	}
 	return filepath.Join(xdg, "drako")
@@ -265,7 +265,7 @@ func pinnedWorkDeck(t *testing.T) (dir string) {
 	if err := os.WriteFile(filepath.Join(dir, "work.profile.toml"), []byte(deck), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := config.WritePivotLocked(dir, "work"); err != nil {
+	if err := lair.WritePivotLocked(dir, "work"); err != nil {
 		t.Fatal(err)
 	}
 	return dir

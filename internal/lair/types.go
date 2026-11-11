@@ -1,4 +1,4 @@
-package config
+package lair
 
 import (
 	"github.com/lucky7xz/drako/internal/profile"

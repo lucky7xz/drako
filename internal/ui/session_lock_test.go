@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/profile"
 	"github.com/lucky7xz/drako/internal/settings"
 )
@@ -135,8 +135,8 @@ func TestApplyReloadedBundle_BrokenProfileStaysLockedUntilUnlock(t *testing.T) {
 	m.mode = lockedMode
 	m.profile.acknowledged = map[string]bool{}
 
-	broken := config.ProfileParseError{Name: "work", Path: "/tmp/work.profile.toml", Err: "boom"}
-	m = m.applyReloadedBundle(config.ConfigBundle{Broken: []config.ProfileParseError{broken}})
+	broken := lair.ProfileParseError{Name: "work", Path: "/tmp/work.profile.toml", Err: "boom"}
+	m = m.applyReloadedBundle(lair.ConfigBundle{Broken: []lair.ProfileParseError{broken}})
 
 	if m.mode != lockedMode {
 		t.Fatalf("a broken-profile reload must not leave lockedMode, got %v", m.mode)
@@ -156,7 +156,7 @@ func TestApplyReloadedBundle_DroppedProfileStaysLockedUntilUnlock(t *testing.T) 
 	m := lockTestModel(t)
 	m.mode = lockedMode
 
-	m = m.applyReloadedBundle(config.ConfigBundle{DroppedProfile: "work"})
+	m = m.applyReloadedBundle(lair.ConfigBundle{DroppedProfile: "work"})
 
 	if m.mode != lockedMode {
 		t.Fatalf("a dropped-profile reload must not leave lockedMode, got %v", m.mode)
@@ -194,7 +194,7 @@ func TestApplyReloadedBundle_CleanReloadStaysLocked(t *testing.T) {
 	m := lockTestModel(t)
 	m.mode = lockedMode
 
-	m = m.applyReloadedBundle(config.ConfigBundle{})
+	m = m.applyReloadedBundle(lair.ConfigBundle{})
 	if m.mode != lockedMode {
 		t.Fatalf("a clean reload must not leave lockedMode, got %v", m.mode)
 	}
@@ -213,8 +213,8 @@ func TestApplyReloadedBundle_DefersWhileCapturingText(t *testing.T) {
 		t.Fatal("fixture should be capturing text")
 	}
 
-	broken := config.ProfileParseError{Name: "work", Path: "/tmp/work.profile.toml", Err: "boom"}
-	m = m.applyReloadedBundle(config.ConfigBundle{Broken: []config.ProfileParseError{broken}})
+	broken := lair.ProfileParseError{Name: "work", Path: "/tmp/work.profile.toml", Err: "boom"}
+	m = m.applyReloadedBundle(lair.ConfigBundle{Broken: []lair.ProfileParseError{broken}})
 	if m.mode != inventoryMode || m.inventory.pending == nil {
 		t.Fatalf("a broken-profile reload must not interrupt the delete prompt, mode=%v pending=%v", m.mode, m.inventory.pending)
 	}
@@ -267,7 +267,7 @@ func TestUnlockAfterReloadLeavesTheStaleDropdown(t *testing.T) {
 	}
 	m = m.enterLockedMode()
 
-	m = m.applyReloadedBundle(config.ConfigBundle{Config: folder("wipe", "rm -rf ./build")})
+	m = m.applyReloadedBundle(lair.ConfigBundle{Config: folder("wipe", "rm -rf ./build")})
 	m = pumpUnlock(t, m)
 
 	if m.mode == dropdownMode {

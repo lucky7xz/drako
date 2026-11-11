@@ -7,7 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profiles"
 )
@@ -166,7 +166,7 @@ func (m Model) lockedFile() string {
 // It decides nothing about what is allowed and says nothing in English. Those
 // are planVerdict's job, from the facts recorded here.
 func (m Model) buildSpecPlans() []specPlan {
-	specs, err := config.DiscoverSpecs(paths.SpecsDir(m.profile.configDir))
+	specs, err := lair.DiscoverSpecs(paths.SpecsDir(m.profile.configDir))
 	if err != nil {
 		// A directory we cannot read yields no specs; strip still works.
 		specs = nil

@@ -10,11 +10,11 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profiles"
 	"github.com/lucky7xz/drako/internal/settings"
+	"github.com/lucky7xz/drako/internal/version"
 )
 
 // specsInventoryModel builds an inventory sitting on a real config dir: the
@@ -507,7 +507,7 @@ func TestSpecsPopup_RendersEveryGroup(t *testing.T) {
 	}
 	// The inventory stays underneath — the picker is an overlay, not a screen.
 	// It covers the lists; the inventory's footer below it still shows.
-	if !strings.Contains(out, config.AppName) {
+	if !strings.Contains(out, version.AppName) {
 		t.Error("the inventory should still be visible behind the popup")
 	}
 }

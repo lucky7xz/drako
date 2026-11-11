@@ -10,8 +10,8 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/host"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/settings"
 )
@@ -66,7 +66,7 @@ func (m Model) handleMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case reloadProfilesMsg:
-		bundle, err := config.ReloadConfig(m.profile.sessionProfile)
+		bundle, err := lair.ReloadConfig(m.profile.sessionProfile)
 		if err != nil {
 			log.Printf("config reload failed: %v", err)
 			return m, m.setProfileStatus("Config reload failed", false)
@@ -85,7 +85,7 @@ func (m Model) handleMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ConfigChangedMsg:
 		// Config file changed on disk, reload everything
 		log.Printf("Config file change detected: %s", msg.Path)
-		bundle, err := config.ReloadConfig(m.profile.sessionProfile)
+		bundle, err := lair.ReloadConfig(m.profile.sessionProfile)
 		if err != nil {
 			log.Printf("config reload failed: %v", err)
 			return m, m.setProfileStatus("Config reload failed", false)
@@ -430,7 +430,7 @@ func (m Model) afterEdit(msg editorFinishedMsg) (tea.Model, tea.Cmd) {
 	}
 
 	// The edit may have changed any equipped profile — reload the bundle.
-	bundle, err := config.ReloadConfig(m.profile.sessionProfile)
+	bundle, err := lair.ReloadConfig(m.profile.sessionProfile)
 	if err != nil {
 		m.inventory.status = "Reload failed: " + err.Error()
 		if !m.protectsMode() {
@@ -449,7 +449,7 @@ func (m Model) afterEdit(msg editorFinishedMsg) (tea.Model, tea.Cmd) {
 	}
 
 	name := filepath.Base(msg.path)
-	if err := config.CheckProfileFile(msg.path); err != nil {
+	if err := lair.CheckProfileFile(msg.path); err != nil {
 		m.inventory.status = fmt.Sprintf("⚠️ %s has errors: %v", name, err)
 	} else {
 		m.inventory.status, m.inventory.statusOK = "✓ Saved: "+name, true

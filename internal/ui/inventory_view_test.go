@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/equip"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/profiles"
 	"github.com/lucky7xz/drako/internal/settings"
 )
@@ -37,7 +37,7 @@ func makeInventoryTestModel(n, cursor, focusedList, termW, termH int) Model {
 			cursor:      cursor,
 			focusedList: focusedList,
 		},
-		profile: profileState{profiles: []config.ProfileInfo{{Name: "Core"}}},
+		profile: profileState{profiles: []lair.ProfileInfo{{Name: "Core"}}},
 	}
 }
 
@@ -62,7 +62,7 @@ func makeInventoryTestModelBothLists(equippedN, inventoryN, cursor, focusedList,
 			cursor:      cursor,
 			focusedList: focusedList,
 		},
-		profile: profileState{profiles: []config.ProfileInfo{{Name: "Core"}}},
+		profile: profileState{profiles: []lair.ProfileInfo{{Name: "Core"}}},
 	}
 }
 

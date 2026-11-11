@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/settings"
 )
 
@@ -108,15 +108,15 @@ func TestGlassrootFailQuitsWithExitCode(t *testing.T) {
 func TestGlassrootRejectsBundle(t *testing.T) {
 	cases := []struct {
 		name   string
-		bundle config.ConfigBundle
+		bundle lair.ConfigBundle
 		want   bool
 	}{
-		{"healthy", config.ConfigBundle{Profiles: []config.ProfileInfo{{Name: "kiosk"}}}, false},
-		{"broken profile", config.ConfigBundle{
-			Profiles: []config.ProfileInfo{{Name: "kiosk"}},
-			Broken:   []config.ProfileParseError{{Name: "bad"}},
+		{"healthy", lair.ConfigBundle{Profiles: []lair.ProfileInfo{{Name: "kiosk"}}}, false},
+		{"broken profile", lair.ConfigBundle{
+			Profiles: []lair.ProfileInfo{{Name: "kiosk"}},
+			Broken:   []lair.ProfileParseError{{Name: "bad"}},
 		}, true},
-		{"zero profiles (rescue grid)", config.ConfigBundle{}, true},
+		{"zero profiles (rescue grid)", lair.ConfigBundle{}, true},
 	}
 	for _, tc := range cases {
 		if got := glassrootRejectsBundle(tc.bundle); got != tc.want {

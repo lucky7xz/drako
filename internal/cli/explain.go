@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/profile"
 	profilepkg "github.com/lucky7xz/drako/internal/profiles"
 )
@@ -27,7 +27,7 @@ func HandleExplainCommand(args []string) int {
 	}
 
 	quietLogs()
-	bundle, err := config.LoadConfig()
+	bundle, err := lair.LoadConfig()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "drako: %v\n", err)
 		return 1
@@ -53,7 +53,7 @@ func HandleExplainCommand(args []string) int {
 
 // cellTarget is what a [profile:]<addr>[.item] reference points at.
 type cellTarget struct {
-	p      config.ProfileInfo
+	p      lair.ProfileInfo
 	cmd    *profile.Command
 	item   *profile.CommandItem // nil unless the reference names an item
 	addr   string               // the cell's address, or the item's
@@ -76,7 +76,7 @@ func (t cellTarget) command() string {
 
 // lookupCell resolves a reference against the equipped profiles; explain and
 // run both go through it so they agree on what an address means.
-func lookupCell(bundle config.ConfigBundle, ref string) (cellTarget, error) {
+func lookupCell(bundle lair.ConfigBundle, ref string) (cellTarget, error) {
 	profileName, addr, itemIdx, err := parseCellRef(ref)
 	if err != nil {
 		return cellTarget{}, err
@@ -107,7 +107,7 @@ func lookupCell(bundle config.ConfigBundle, ref string) (cellTarget, error) {
 
 // explainCell resolves one [profile:]address reference against the equipped
 // profiles and writes its key-value block.
-func explainCell(out io.Writer, bundle config.ConfigBundle, ref string) error {
+func explainCell(out io.Writer, bundle lair.ConfigBundle, ref string) error {
 	t, err := lookupCell(bundle, ref)
 	if err != nil {
 		return err
@@ -161,9 +161,9 @@ func explainCell(out io.Writer, bundle config.ConfigBundle, ref string) error {
 
 // pickProfile selects the active profile ("" qualifier) or matches an
 // equipped one by normalized name — the same normalization the loader uses.
-func pickProfile(bundle config.ConfigBundle, name string) (config.ProfileInfo, error) {
+func pickProfile(bundle lair.ConfigBundle, name string) (lair.ProfileInfo, error) {
 	if len(bundle.Profiles) == 0 {
-		return config.ProfileInfo{}, fmt.Errorf("no equipped profiles")
+		return lair.ProfileInfo{}, fmt.Errorf("no equipped profiles")
 	}
 	if name == "" {
 		idx := bundle.ActiveIndex
@@ -182,7 +182,7 @@ func pickProfile(bundle config.ConfigBundle, name string) (config.ProfileInfo, e
 	for i, p := range bundle.Profiles {
 		names[i] = p.Name
 	}
-	return config.ProfileInfo{}, fmt.Errorf("no equipped profile %q (equipped: %s)", name, strings.Join(names, ", "))
+	return lair.ProfileInfo{}, fmt.Errorf("no equipped profile %q (equipped: %s)", name, strings.Join(names, ", "))
 }
 
 func commandOrNone(s string) string {

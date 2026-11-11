@@ -5,13 +5,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/lair"
 )
 
 // lockedName returns pivot.toml's current lock, "" when there is none.
 func lockedName(t *testing.T, dir string) string {
 	t.Helper()
-	pf, err := config.ReadPivotProfile(dir)
+	pf, err := lair.ReadPivotProfile(dir)
 	if err != nil {
 		t.Fatalf("ReadPivotProfile: %v", err)
 	}
@@ -20,7 +20,7 @@ func lockedName(t *testing.T, dir string) string {
 
 func lock(t *testing.T, dir, name string) {
 	t.Helper()
-	if err := config.WritePivotLocked(dir, name); err != nil {
+	if err := lair.WritePivotLocked(dir, name); err != nil {
 		t.Fatalf("WritePivotLocked: %v", err)
 	}
 }

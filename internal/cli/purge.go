@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profiles"
 )
@@ -34,12 +34,12 @@ type PurgeOptions struct {
 // It must not leave config.toml missing: that is a first run, restoring every deck.
 func resetCore(configDir string) []error {
 	var failed []error
-	if _, err := config.WriteSettingsTemplate(configDir); err != nil {
+	if _, err := lair.WriteSettingsTemplate(configDir); err != nil {
 		failed = append(failed, fmt.Errorf("could not write a fresh %s: %w", paths.ConfigFileName, err))
 	} else {
 		fmt.Printf("  ✓ Wrote a fresh %s\n", paths.ConfigFileName)
 	}
-	if restored, err := config.RestoreCoreProfile(configDir); err != nil {
+	if restored, err := lair.RestoreCoreProfile(configDir); err != nil {
 		failed = append(failed, fmt.Errorf("could not restore core.profile.toml: %w", err))
 	} else if restored {
 		fmt.Println("  ✓ Restored core.profile.toml")

@@ -6,16 +6,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/profile"
 )
 
 func falsePtr() *bool { b := false; return &b }
 
-func explainBundle() config.ConfigBundle {
-	return config.ConfigBundle{
+func explainBundle() lair.ConfigBundle {
+	return lair.ConfigBundle{
 		ActiveIndex: 0,
-		Profiles: []config.ProfileInfo{
+		Profiles: []lair.ProfileInfo{
 			{Name: "core", Profile: profile.File{X: 2, Y: 2, Commands: []profile.Command{
 				{Name: "Update", Command: "sudo apt update", Col: "a", Row: 0, Description: "refresh packages"},
 				{Name: "Maint", Col: "a", Row: 1, Description: "housekeeping folder", Items: []profile.CommandItem{

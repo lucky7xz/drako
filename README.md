@@ -535,7 +535,7 @@ drako is developed with heavy AI assistance — code, research, and docs. The co
 
 ## 📜 License
 
-The core Drako engine is released under the [GNU Affero General Public License v3.0](LICENCE). Bootstrap assets are released under the [MIT license](internal/config/bootstrap/LICENSE-MIT).
+The core Drako engine is released under the [GNU Affero General Public License v3.0](LICENCE). Bootstrap assets are released under the [MIT license](internal/lair/bootstrap/LICENSE-MIT).
 
 ## 🔗 Resources
 

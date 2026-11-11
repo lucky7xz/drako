@@ -7,7 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/profile"
 	"github.com/lucky7xz/drako/internal/settings"
@@ -287,7 +287,7 @@ func TestReloadClosesLayoutDialog(t *testing.T) {
 		t.Fatal("setup: layout dialog should be open")
 	}
 
-	m = m.applyReloadedBundle(config.ConfigBundle{Config: m.Config})
+	m = m.applyReloadedBundle(lair.ConfigBundle{Config: m.Config})
 
 	if m.mode != gridMode {
 		t.Fatalf("mode = %v, want gridMode", m.mode)

@@ -6,8 +6,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/lucky7xz/drako/internal/config" // drako.chronyx.xyz
+	"github.com/lucky7xz/drako/internal/lair" // drako.chronyx.xyz
 	"github.com/lucky7xz/drako/internal/paths"
+	"github.com/lucky7xz/drako/internal/version"
 )
 
 // HandleCLI checks if the program was invoked with CLI arguments (not TUI
@@ -49,7 +50,7 @@ func HandleCLI(args []string) (handled bool, code int) {
 	case "open", "--open":
 		return true, HandleOpenCLI(args)
 	case "version", "--version", "-v":
-		fmt.Printf("%s %s\n", config.AppName, config.Version())
+		fmt.Printf("%s %s\n", version.AppName, version.String())
 		return true, 0
 	case "help", "--help", "-h":
 		PrintUsage()
@@ -63,7 +64,7 @@ func HandleCLI(args []string) (handled bool, code int) {
 }
 
 func PrintUsage() {
-	fmt.Printf("%s %s\n", config.AppName, config.Version())
+	fmt.Printf("%s %s\n", version.AppName, version.String())
 	fmt.Printf("Usage: drako <command> [arguments]\n\n")
 	table(os.Stdout, []string{"Command", "Description"}, [][]string{
 		{"ls", "List equipped decks and their cell addresses"},
@@ -213,7 +214,7 @@ func HandleRestoreBootstrapCommand() int {
 		fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
 		return 1
 	}
-	restored, err := config.RestoreBootstrap(configDir)
+	restored, err := lair.RestoreBootstrap(configDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "restore-bootstrap failed: %v\n", err)
 		return 1

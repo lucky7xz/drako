@@ -10,14 +10,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/profile"
 )
 
-func runBundle() config.ConfigBundle {
-	return config.ConfigBundle{
+func runBundle() lair.ConfigBundle {
+	return lair.ConfigBundle{
 		ActiveIndex: 0,
-		Profiles: []config.ProfileInfo{
+		Profiles: []lair.ProfileInfo{
 			{Name: "core", Profile: profile.File{X: 3, Y: 3, Commands: []profile.Command{
 				{Name: "Hello", Command: "echo hi", Col: "a", Row: 0},
 				{Name: "🚨 Nuke", Command: "rm -rf /tmp/x", Col: "a", Row: 1, Danger: true},

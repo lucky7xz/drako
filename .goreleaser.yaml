@@ -26,7 +26,7 @@ builds:
     mod_timestamp: "{{ .CommitTimestamp }}"
     ldflags:
       - -s -w                  # strip debug info for smaller binaries
-      - -X github.com/lucky7xz/drako/internal/config.version={{ .Tag }}
+      - -X github.com/lucky7xz/drako/internal/version.version={{ .Tag }}
     goos:
       - linux
       - darwin

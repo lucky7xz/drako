@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/x/ansi"
-	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profile"
@@ -70,7 +69,7 @@ func HandleLsCommand(args []string) int {
 
 	quietLogs()
 
-	bundle, err := config.LoadConfig()
+	bundle, err := lair.LoadConfig()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "drako: %v\n", err)
 		return 1
@@ -106,7 +105,7 @@ func oneLine(s string, width int) string {
 // renderLs writes the equipped-deck listing, fitted to width terminal cells:
 // the description column shrinks to the remaining space and is dropped
 // entirely when a useful width can't be met.
-func renderLs(out io.Writer, bundle config.ConfigBundle, width int) {
+func renderLs(out io.Writer, bundle lair.ConfigBundle, width int) {
 	if len(bundle.Profiles) == 0 {
 		fmt.Fprintln(out, "No equipped profiles.")
 	}

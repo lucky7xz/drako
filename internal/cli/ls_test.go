@@ -6,14 +6,14 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/profile"
 )
 
-func lsBundle() config.ConfigBundle {
-	return config.ConfigBundle{
+func lsBundle() lair.ConfigBundle {
+	return lair.ConfigBundle{
 		ActiveIndex: 1,
-		Profiles: []config.ProfileInfo{
+		Profiles: []lair.ProfileInfo{
 			{
 				Name: "core",
 				Profile: profile.File{X: 2, Y: 2, Commands: []profile.Command{
@@ -28,7 +28,7 @@ func lsBundle() config.ConfigBundle {
 				Profile: profile.File{X: 1, Y: 1, Commands: []profile.Command{{Name: "Solo", Col: "A", Row: 0, Description: "d"}}},
 			},
 		},
-		Broken: []config.ProfileParseError{{Name: "busted", Err: "invalid TOML: something"}},
+		Broken: []lair.ProfileParseError{{Name: "busted", Err: "invalid TOML: something"}},
 	}
 }
 
@@ -66,7 +66,7 @@ func TestRenderLs(t *testing.T) {
 
 func TestRenderLsEmpty(t *testing.T) {
 	var sb strings.Builder
-	renderLs(&sb, config.ConfigBundle{}, 200)
+	renderLs(&sb, lair.ConfigBundle{}, 200)
 	if !strings.Contains(sb.String(), "No equipped profiles") {
 		t.Errorf("empty bundle output = %q", sb.String())
 	}
@@ -74,9 +74,9 @@ func TestRenderLsEmpty(t *testing.T) {
 
 // wideBundle exercises the width fitting: long emoji names, a 100-cell
 // description, and a broken-profile footer with a long error.
-func wideBundle() config.ConfigBundle {
-	return config.ConfigBundle{
-		Profiles: []config.ProfileInfo{{
+func wideBundle() lair.ConfigBundle {
+	return lair.ConfigBundle{
+		Profiles: []lair.ProfileInfo{{
 			Name: "core",
 			Profile: profile.File{X: 2, Y: 2, Commands: []profile.Command{
 				{Name: "⬆️ System Update With A Very Long Cell Name Indeed", Col: "A", Row: 0,
@@ -85,7 +85,7 @@ func wideBundle() config.ConfigBundle {
 					Description: strings.Repeat("more words here ", 10)},
 			}},
 		}},
-		Broken: []config.ProfileParseError{{Name: "busted", Err: strings.Repeat("broken toml ", 20)}},
+		Broken: []lair.ProfileParseError{{Name: "busted", Err: strings.Repeat("broken toml ", 20)}},
 	}
 }
 

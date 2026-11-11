@@ -8,9 +8,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/profile"
+	"github.com/lucky7xz/drako/internal/version"
 	"github.com/muesli/termenv"
 )
 
@@ -99,7 +99,7 @@ func TestView_PopupsFloatOverTheScreen(t *testing.T) {
 	// The picker covers the middle of the inventory; the inventory's own
 	// footer below it is what shows the screen is still there.
 	out := ansi.Strip(all["specs"].View())
-	for _, s := range []string{"Specs Found", config.AppName} {
+	for _, s := range []string{"Specs Found", version.AppName} {
 		if !strings.Contains(out, s) {
 			t.Errorf("specs: %q is not on screen:\n%s", s, out)
 		}

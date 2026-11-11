@@ -3,7 +3,7 @@ package ui
 import (
 	"testing"
 
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/profile"
 	"github.com/lucky7xz/drako/internal/settings"
 )
@@ -104,7 +104,7 @@ func addressModel() Model {
 		mode:    gridMode,
 		Config:  cfg,
 		gridNav: gridNav{grid: profile.BuildGrid(cfg.X, cfg.Y, cfg.Commands)},
-		profile: profileState{profiles: []config.ProfileInfo{
+		profile: profileState{profiles: []lair.ProfileInfo{
 			{Name: "core", Profile: profile.File{X: 2, Y: 1, Commands: cmds}},
 		}},
 	}

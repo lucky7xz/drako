@@ -3,7 +3,7 @@ package ui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/lair"
 )
 
 // Glassroot is drako's kiosk lockdown (--glassroot): the session may only see
@@ -54,7 +54,7 @@ func (m Model) allowBatch() bool {
 // glassrootRejectsBundle reports whether a freshly loaded bundle must not be
 // shown in a glassroot session: broken profiles expose TOML details, and zero
 // equipped profiles would land in the rescue grid (config-editing cells).
-func glassrootRejectsBundle(b config.ConfigBundle) bool {
+func glassrootRejectsBundle(b lair.ConfigBundle) bool {
 	return len(b.Broken) > 0 || len(b.Profiles) == 0
 }
 

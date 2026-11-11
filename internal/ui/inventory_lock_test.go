@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/equip"
+	"github.com/lucky7xz/drako/internal/lair"
 )
 
 // Stashing the locked profile would leave pivot.toml aimed at something no
@@ -72,7 +72,7 @@ func TestInventoryLock_RKeyIsGridOnly(t *testing.T) {
 		m, dir := editInventoryModel(t)
 		m.mode = gridMode
 		m.gridNav = gridNav{grid: [][]string{{"A"}}}
-		m.profile.profiles = []config.ProfileInfo{{Name: "eq"}}
+		m.profile.profiles = []lair.ProfileInfo{{Name: "eq"}}
 
 		m = sendTop(t, m, keyRune("r"))
 

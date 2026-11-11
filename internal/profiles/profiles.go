@@ -4,7 +4,7 @@
 // It deliberately does no TOML parsing: the file-moving commands (stash,
 // apply, strip, purge) must see every matching file, including profiles that
 // fail to parse. Parsing and validation is the heavier job of
-// config.DiscoverProfiles.
+// lair.DiscoverProfiles.
 package profiles
 
 import (

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/settings"
 )
 
@@ -29,7 +29,7 @@ func luminance(r, g, b uint64) float64 {
 // unrelated color — otherwise a locked cell can clash with the cursor.
 func TestLockedFGIsADarkerShadeOfAccent(t *testing.T) {
 	for _, name := range []string{"dracula", "jade", "nord", "everforest", "orasaka", "dracula2", "viper"} {
-		theme := config.GetTheme(name)
+		theme := lair.GetTheme(name)
 		ui := settings.MapThemeToUI(theme)
 
 		ar, ag, ab := hexChannels(t, ui.CursorFG)
@@ -45,7 +45,7 @@ func TestLockedFGIsADarkerShadeOfAccent(t *testing.T) {
 // onto the right style — which the old side-effecting applyThemeStyles couldn't.
 func TestBuildStylesMapsThemeRolesToStyles(t *testing.T) {
 	cfg := settings.Config{Theme: "dracula"}
-	ui := settings.MapThemeToUI(config.GetTheme(cfg.Theme))
+	ui := settings.MapThemeToUI(lair.GetTheme(cfg.Theme))
 	s := BuildStyles(cfg)
 
 	cases := []struct {

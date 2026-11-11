@@ -1,4 +1,5 @@
-package config
+// Package version says which build of drako is running.
+package version
 
 import "runtime/debug"
 
@@ -7,18 +8,18 @@ const AppName = "lucky7xz/drako"
 
 // version is stamped into release binaries at build time via -ldflags:
 //
-//	-ldflags "-X github.com/lucky7xz/drako/internal/config.version=v1.2.3"
+//	-ldflags "-X github.com/lucky7xz/drako/internal/version.version=v1.2.3"
 //
-// It is empty for other builds; Version() then derives the value from the
+// It is empty for other builds; String then derives the value from the
 // embedded module info or falls back to "dev".
 var version = ""
 
-// Version returns the running build's version string:
+// String returns the running build's version string:
 //   - release binaries: the tag stamped in at build time (ldflags)
 //   - `go install <module>@vX.Y.Z`: the tag, from the embedded module info
 //   - local builds from the repo: "dev+<short-commit>[-dirty]"
 //   - anything else: "dev"
-func Version() string {
+func String() string {
 	if version != "" {
 		return version
 	}

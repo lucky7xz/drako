@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/settings"
 )
 
@@ -90,9 +90,9 @@ type Styles struct {
 const warnAmber = lipgloss.Color("#FFA500")
 
 // BuildStyles resolves a config into a concrete Styles value. It touches no
-// globals; the palette comes from config.GetTheme, which reads themes.toml.
+// globals; the palette comes from lair.GetTheme, which reads themes.toml.
 func BuildStyles(cfg settings.Config) Styles {
-	theme := config.GetTheme(cfg.Theme)
+	theme := lair.GetTheme(cfg.Theme)
 	ui := settings.MapThemeToUI(theme)
 
 	var s Styles

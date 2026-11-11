@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/profile"
 	"github.com/lucky7xz/drako/internal/settings"
 )
@@ -14,13 +14,13 @@ import (
 func switchTestModel(t *testing.T) Model {
 	t.Helper()
 	dir := t.TempDir()
-	var infos []config.ProfileInfo
+	var infos []lair.ProfileInfo
 	for _, name := range []string{"alpha", "beta"} {
 		path := filepath.Join(dir, name+".profile.toml")
 		if err := os.WriteFile(path, []byte("x = 1\ny = 1\n"), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		infos = append(infos, config.ProfileInfo{Name: name, Path: path, Profile: profile.File{X: 1, Y: 1}})
+		infos = append(infos, lair.ProfileInfo{Name: name, Path: path, Profile: profile.File{X: 1, Y: 1}})
 	}
 	base := settings.Config{X: 1, Y: 1}
 	base.ApplyDefaults()
