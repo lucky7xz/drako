@@ -50,7 +50,7 @@ func knownVariantKeys() []string {
 // loaderFindings reports what the profile loader itself rejects, so check never
 // passes a deck the TUI would show as broken.
 func loaderFindings(src []byte) []Finding {
-	_, problems, err := DecodeProfile(src)
+	_, problems, err := DecodeProfile(src, nil) // the loader's verdict does not depend on the platform
 	if err != nil {
 		return []Finding{errorf("%v", err)}
 	}

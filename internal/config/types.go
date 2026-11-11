@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"sync"
 )
 
 // CommandItem represents a single item in a command dropdown
@@ -105,7 +104,8 @@ type ConfigBundle struct {
 
 // ── Platform-variant commands ────────────────────────────────────────
 // A command (on a cell or a dropdown item) is either a plain string or a
-// table of platform variants, resolved once at decode time:
+// table of platform variants. Decoding keeps it as written; DecodeProfile
+// then picks the text for the platform it is given:
 //
 //   command = "echo same everywhere"
 //   command = { linux_debian = "apt ...", linux_arch = "pacman ...", macos = "brew ..." }
@@ -119,47 +119,65 @@ type ConfigBundle struct {
 // configured") and a note naming the available variants is appended to the
 // description.
 
-// runtimeTargetsFn resolves the platform keys, once per process (the host cannot
-// change under us); a var so tests can pin them.
-var runtimeTargetsFn = sync.OnceValue(detectRuntimeTargets)
+// commandText is a command as written in a profile: plain text, or one text
+// per platform.
+type commandText struct {
+	plain    string
+	variants map[string]string // nil for the plain form
+}
 
-// resolveCommandField turns a decoded TOML command value into a string.
-func resolveCommandField(v any) (cmd string, note string, err error) {
+// parseCommandText reads a decoded TOML command value.
+func parseCommandText(v any) (commandText, error) {
 	switch t := v.(type) {
 	case nil:
-		return "", "", nil
+		return commandText{}, nil
 	case string:
-		return t, "", nil
+		return commandText{plain: t}, nil
 	case map[string]any:
 		variants := make(map[string]string, len(t))
-		keys := make([]string, 0, len(t))
 		for k, raw := range t {
 			s, ok := raw.(string)
 			if !ok {
-				return "", "", fmt.Errorf("command variant %q must be a string", k)
+				return commandText{}, fmt.Errorf("command variant %q must be a string", k)
 			}
 			variants[k] = s
-			keys = append(keys, k)
 		}
-		targets := runtimeTargetsFn()
-		for _, target := range targets {
-			if c, ok := variants[target]; ok {
-				return c, "", nil
-			}
-		}
-		// The last target is the base platform, so it decides whether the
-		// generic Linux fallback applies.
-		base := targets[len(targets)-1]
-		if c, ok := variants["linux_generic"]; ok && strings.HasPrefix(base, "linux_") {
-			return c, "", nil
-		}
-		sort.Strings(keys)
-		// Name the most specific key: that is the one an author should add.
-		return "", fmt.Sprintf("[no command variant for this platform (%s); available: %s]",
-			targets[0], strings.Join(keys, ", ")), nil
+		return commandText{variants: variants}, nil
 	default:
-		return "", "", fmt.Errorf("command must be a string or a table of platform variants, got %T", v)
+		return commandText{}, fmt.Errorf("command must be a string or a table of platform variants, got %T", v)
 	}
+}
+
+// pick chooses the text for targets, the platform's variant keys, most
+// specific first. A table with no variant for them yields no command and a
+// note saying so. With no targets at all nothing is picked and nothing noted:
+// enough for callers that only validate.
+func (c commandText) pick(targets []string) (cmd string, note string) {
+	if c.variants == nil {
+		return c.plain, ""
+	}
+	if len(targets) == 0 {
+		return "", ""
+	}
+	for _, target := range targets {
+		if v, ok := c.variants[target]; ok {
+			return v, ""
+		}
+	}
+	// The last target is the base platform, so it decides whether the
+	// generic Linux fallback applies.
+	base := targets[len(targets)-1]
+	if v, ok := c.variants["linux_generic"]; ok && strings.HasPrefix(base, "linux_") {
+		return v, ""
+	}
+	keys := make([]string, 0, len(c.variants))
+	for k := range c.variants {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	// Name the most specific key: that is the one an author should add.
+	return "", fmt.Sprintf("[no command variant for this platform (%s); available: %s]",
+		targets[0], strings.Join(keys, ", "))
 }
 
 // appendNote attaches a resolution note to a description.
@@ -201,27 +219,78 @@ func tomlBoolPtr(m map[string]any, key string) *bool {
 	return nil
 }
 
+// rawProfile is a profile as written, before a platform is chosen. Keep its
+// fields in sync with ProfileFile.
+type rawProfile struct {
+	X         int          `toml:"x"`
+	Y         int          `toml:"y"`
+	Theme     string       `toml:"theme"`
+	HeaderArt *string      `toml:"header_art"`
+	Shell     *string      `toml:"shell"`
+	Assets    *[]string    `toml:"assets"`
+	Commands  []rawCommand `toml:"commands"`
+}
+
+// resolve picks every command's text for targets.
+func (r rawProfile) resolve(targets []string) ProfileFile {
+	pf := ProfileFile{X: r.X, Y: r.Y, Theme: r.Theme, HeaderArt: r.HeaderArt, Shell: r.Shell, Assets: r.Assets}
+	for _, c := range r.Commands {
+		pf.Commands = append(pf.Commands, c.resolve(targets))
+	}
+	return pf
+}
+
+// rawCommand is a cell as written: everything but its command text and its
+// items' sits in cell already.
+type rawCommand struct {
+	cell  Command
+	text  commandText
+	items []rawItem
+}
+
+// rawItem is a dropdown item as written.
+type rawItem struct {
+	item CommandItem
+	text commandText
+}
+
+// resolve picks the cell's command text, and each item's, for targets.
+func (c rawCommand) resolve(targets []string) Command {
+	cell := c.cell
+	var note string
+	cell.Command, note = c.text.pick(targets)
+	cell.Description = appendNote(cell.Description, note)
+	for _, ri := range c.items {
+		item := ri.item
+		item.Command, note = ri.text.pick(targets)
+		item.Description = appendNote(item.Description, note)
+		cell.Items = append(cell.Items, item)
+	}
+	return cell
+}
+
 // UnmarshalTOML decodes a command table manually so the command field can
 // be polymorphic. Keep the field list in sync with the Command struct.
-func (c *Command) UnmarshalTOML(v any) error {
+func (c *rawCommand) UnmarshalTOML(v any) error {
 	m, ok := v.(map[string]any)
 	if !ok {
 		return fmt.Errorf("command entry must be a table")
 	}
-	c.Name = tomlStr(m, "name")
-	c.Description = tomlStr(m, "description")
-	c.Row = tomlInt(m, "row")
-	c.Col = tomlStr(m, "col")
-	c.AutoCloseExecution = tomlBoolPtr(m, "auto_close_execution")
-	c.DebugExecution = tomlBoolPtr(m, "debug_execution")
-	c.Danger = tomlDanger(m)
-
-	cmd, note, err := resolveCommandField(m["command"])
-	if err != nil {
-		return fmt.Errorf("command %q: %w", c.Name, err)
+	c.cell = Command{
+		Name:               tomlStr(m, "name"),
+		Description:        tomlStr(m, "description"),
+		Row:                tomlInt(m, "row"),
+		Col:                tomlStr(m, "col"),
+		AutoCloseExecution: tomlBoolPtr(m, "auto_close_execution"),
+		DebugExecution:     tomlBoolPtr(m, "debug_execution"),
+		Danger:             tomlDanger(m),
 	}
-	c.Command = cmd
-	c.Description = appendNote(c.Description, note)
+
+	text, err := parseCommandText(m["command"])
+	if err != nil {
+		return fmt.Errorf("command %q: %w", c.cell.Name, err)
+	}
+	c.text = text
 
 	// Inline arrays arrive as []any, [[commands.items]] headers as []map[string]any.
 	var rawItems []any
@@ -233,10 +302,11 @@ func (c *Command) UnmarshalTOML(v any) error {
 			rawItems = append(rawItems, im)
 		}
 	}
+	c.items = nil
 	for _, ri := range rawItems {
 		im, ok := ri.(map[string]any)
 		if !ok {
-			return fmt.Errorf("command %q: items must be tables", c.Name)
+			return fmt.Errorf("command %q: items must be tables", c.cell.Name)
 		}
 		item := CommandItem{
 			Name:               tomlStr(im, "name"),
@@ -245,13 +315,11 @@ func (c *Command) UnmarshalTOML(v any) error {
 			DebugExecution:     tomlBoolPtr(im, "debug_execution"),
 			Danger:             tomlDanger(im),
 		}
-		icmd, inote, err := resolveCommandField(im["command"])
+		itext, err := parseCommandText(im["command"])
 		if err != nil {
-			return fmt.Errorf("command %q, item %q: %w", c.Name, item.Name, err)
+			return fmt.Errorf("command %q, item %q: %w", c.cell.Name, item.Name, err)
 		}
-		item.Command = icmd
-		item.Description = appendNote(item.Description, inote)
-		c.Items = append(c.Items, item)
+		c.items = append(c.items, rawItem{item: item, text: itext})
 	}
 	return nil
 }

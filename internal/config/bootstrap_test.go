@@ -3,8 +3,6 @@ package config
 import (
 	"strings"
 	"testing"
-
-	"github.com/BurntSushi/toml"
 )
 
 // The embedded core deck must fully resolve on every platform drako ships
@@ -27,8 +25,8 @@ func TestEmbeddedCoreDeckResolvesEverywhere(t *testing.T) {
 	for _, target := range targets {
 		t.Run(target, func(t *testing.T) {
 			pinPlatform(t, target)
-			var p ProfileFile
-			if _, err := toml.Decode(string(deck), &p); err != nil {
+			p, err := decodeFor(string(deck))
+			if err != nil {
 				t.Fatalf("core deck does not parse: %v", err)
 			}
 			if len(p.Commands) == 0 {

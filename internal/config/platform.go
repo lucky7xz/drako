@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"slices"
 	"strings"
+	"sync"
 )
 
 // Platform detection for per-platform command variants: which variant key
@@ -44,6 +45,10 @@ func isImmutable() bool {
 	}
 	return false
 }
+
+// runtimeTargets is detectRuntimeTargets, asked once per process: the host
+// cannot change under us.
+var runtimeTargets = sync.OnceValue(detectRuntimeTargets)
 
 // detectRuntimeTargets lists the variant keys to try, most specific first.
 // An immutable host prepends linux_immutable: brew replaces its package

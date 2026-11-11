@@ -7,6 +7,10 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
+// pinned is the platform chain decodeProfile resolves for; nil means the
+// machine the tests run on.
+var pinned []string
+
 func pinPlatform(t *testing.T, target string) {
 	t.Helper()
 	pinPlatformChain(t, target)
@@ -16,15 +20,28 @@ func pinPlatform(t *testing.T, target string) {
 // what an immutable host produces (linux_immutable, then its base distro).
 func pinPlatformChain(t *testing.T, targets ...string) {
 	t.Helper()
-	orig := runtimeTargetsFn
-	runtimeTargetsFn = func() []string { return targets }
-	t.Cleanup(func() { runtimeTargetsFn = orig })
+	orig := pinned
+	pinned = targets
+	t.Cleanup(func() { pinned = orig })
+}
+
+// decodeFor decodes src for the pinned platform, without validating it.
+func decodeFor(src string) (ProfileFile, error) {
+	targets := pinned
+	if targets == nil {
+		targets = detectRuntimeTargets()
+	}
+	var written rawProfile
+	if _, err := toml.Decode(src, &written); err != nil {
+		return ProfileFile{}, err
+	}
+	return written.resolve(targets), nil
 }
 
 func decodeProfile(t *testing.T, src string) ProfileFile {
 	t.Helper()
-	var p ProfileFile
-	if _, err := toml.Decode(src, &p); err != nil {
+	p, err := decodeFor(src)
+	if err != nil {
 		t.Fatalf("decode: %v", err)
 	}
 	return p
@@ -150,8 +167,7 @@ command = "echo hi"
 
 func TestVariantErrors(t *testing.T) {
 	pinPlatform(t, "linux_arch")
-	var p ProfileFile
-	if _, err := toml.Decode(`
+	if _, err := decodeFor(`
 x = 1
 y = 1
 [[commands]]
@@ -159,11 +175,11 @@ name = "bad"
 command = { linux_arch = 42 }
 col = "A"
 row = 0
-`, &p); err == nil || !strings.Contains(err.Error(), "must be a string") {
+`); err == nil || !strings.Contains(err.Error(), "must be a string") {
 		t.Errorf("non-string variant accepted: %v", err)
 	}
 
-	if _, err := toml.Decode(`
+	if _, err := decodeFor(`
 x = 1
 y = 1
 [[commands]]
@@ -171,7 +187,7 @@ name = "worse"
 command = 42
 col = "A"
 row = 0
-`, &p); err == nil {
+`); err == nil {
 		t.Error("numeric command accepted")
 	}
 }
@@ -197,5 +213,38 @@ debug_execution = true
 		c.AutoCloseExecution == nil || *c.AutoCloseExecution ||
 		c.DebugExecution == nil || !*c.DebugExecution {
 		t.Errorf("field parity broken: %+v", c)
+	}
+}
+
+// The platform is an argument of decoding, not something decoding finds out:
+// the same text gives each platform its own command, and a caller that only
+// validates passes none and gets no command and no note.
+func TestDecodeProfileTakesThePlatform(t *testing.T) {
+	src := []byte(`
+x = 1
+y = 1
+[[commands]]
+name = "pkg"
+col = "A"
+row = 0
+description = "install"
+command = { linux_arch = "pacman -S x", macos = "brew install x" }
+`)
+	for targets, want := range map[string]string{"linux_arch": "pacman -S x", "macos": "brew install x"} {
+		pf, problems, err := DecodeProfile(src, []string{targets})
+		if err != nil || len(problems) > 0 {
+			t.Fatalf("%s: %v %v", targets, err, problems)
+		}
+		if got := pf.Commands[0].Command; got != want {
+			t.Errorf("%s: command %q, want %q", targets, got, want)
+		}
+	}
+
+	pf, problems, err := DecodeProfile(src, nil)
+	if err != nil || len(problems) > 0 {
+		t.Fatalf("no platform: %v %v", err, problems)
+	}
+	if c := pf.Commands[0]; c.Command != "" || c.Description != "install" {
+		t.Errorf("no platform: got command %q, description %q; want nothing picked and nothing noted", c.Command, c.Description)
 	}
 }

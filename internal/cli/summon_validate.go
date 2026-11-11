@@ -81,7 +81,7 @@ func validateProfileFile(path string) (config.ProfileFile, error) {
 		return profile, fmt.Errorf("failed to read file: %w", err)
 	}
 
-	profile, problems, err := config.DecodeProfile(data)
+	profile, problems, err := config.DecodeProfile(data, nil) // validating only: no platform needed
 	if err != nil {
 		return profile, fmt.Errorf("invalid TOML format: %w", err)
 	}

@@ -30,7 +30,7 @@ func CheckProfileFile(path string) error {
 	if err != nil {
 		return fmt.Errorf("could not read file: %w", err)
 	}
-	_, problems, err := DecodeProfile(data)
+	_, problems, err := DecodeProfile(data, nil) // validating only: no platform needed
 	if err != nil {
 		return fmt.Errorf("invalid TOML: %w", err)
 	}
@@ -41,12 +41,16 @@ func CheckProfileFile(path string) error {
 }
 
 // DecodeProfile decodes a profile file the way the loader does: err is a TOML
-// error, problems what ValidateProfileFile rejects.
-func DecodeProfile(raw []byte) (pf ProfileFile, problems []string, err error) {
-	meta, err := toml.Decode(string(raw), &pf)
+// error, problems what ValidateProfileFile rejects. targets are the platform's
+// variant keys, most specific first; each command becomes the text written
+// for them. A caller that only validates passes nil.
+func DecodeProfile(raw []byte, targets []string) (pf ProfileFile, problems []string, err error) {
+	var written rawProfile
+	meta, err := toml.Decode(string(raw), &written)
 	if err != nil {
-		return pf, nil, err
+		return ProfileFile{}, nil, err
 	}
+	pf = written.resolve(targets)
 	_, problems = ValidateProfileFile(pf, raw, meta)
 	return pf, problems, nil
 }
@@ -117,8 +121,9 @@ func findKeyLine(raw []byte, key string) int {
 
 // DiscoverProfilesWithErrors scans configDir for *.profile.toml files and
 // returns the parseable profiles (sorted by name) plus a parse-error entry
-// for every file that could not be loaded or fails validation.
-func DiscoverProfilesWithErrors(configDir string) ([]ProfileInfo, []ProfileParseError) {
+// for every file that could not be loaded or fails validation. Commands are
+// resolved for targets, the platform's variant keys.
+func DiscoverProfilesWithErrors(configDir string, targets []string) ([]ProfileInfo, []ProfileParseError) {
 	profiles := []ProfileInfo{}
 
 	entries, err := os.ReadDir(configDir)
@@ -146,7 +151,7 @@ func DiscoverProfilesWithErrors(configDir string) ([]ProfileInfo, []ProfileParse
 			continue
 		}
 
-		profileFile, problems, err := DecodeProfile(raw)
+		profileFile, problems, err := DecodeProfile(raw, targets)
 		if err != nil {
 			log.Printf("Failed to parse profile %s: %v", entry.Name(), err)
 			broken = append(broken, ProfileParseError{Name: profileName, Path: fullPath, Err: err.Error()})

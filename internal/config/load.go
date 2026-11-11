@@ -123,7 +123,7 @@ func loadConfig(sessionProfile string) (ConfigBundle, error) {
 		log.Printf("Error: Base config is invalid: %v", err)
 	}
 
-	profiles, profileErrors := DiscoverProfilesWithErrors(configDir)
+	profiles, profileErrors := DiscoverProfilesWithErrors(configDir, runtimeTargets())
 	broken = append(broken, profileErrors...)
 
 	profiles = reorderByPivot(profiles, pf.EquippedOrder)
