@@ -3,6 +3,7 @@ package app
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -74,20 +75,20 @@ func Run() int {
 	// =======================================
 	// Logging setup
 
-	f, err := home.OpenLog()
-	if err != nil {
-		// NOTE: cli.go treats this as a non-fatal warning and continues;
-		// reconcile (warn vs exit) in a follow-up.
-		fmt.Fprintf(os.Stderr, "could not open log file: %v\n", err)
-		return 1
-	}
-	defer f.Close()
-	log.SetOutput(f)
-
 	// Each lap throws the model away so a launched command gets a clean
 	// terminal, so where the cursor was has to be handed forward explicitly.
 	// The zero value restores nothing, which is what the first lap wants.
 	var session ui.Session
+
+	// A log that cannot be opened is no reason to lock the user out: run
+	// without one, as the CLI does, and say so on screen.
+	if f, err := home.OpenLog(); err != nil {
+		log.SetOutput(io.Discard)
+		session.Notices = append(session.Notices, noLogNotice(lair.LogFile(configDir), err))
+	} else {
+		defer f.Close()
+		log.SetOutput(f)
+	}
 
 	// One watcher for the process; between laps InitialModel re-reads the config.
 	var current atomic.Pointer[tea.Program]
@@ -162,6 +163,21 @@ func Run() int {
 			}
 			clearScreen()
 		}
+	}
+}
+
+// noLogNotice is what the user is told when drako runs without its log.
+func noLogNotice(path string, err error) ui.DetailState {
+	return ui.DetailState{
+		Title:    "Running without a log",
+		KeyLabel: "Reason",
+		Value:    err.Error(),
+		Description: "drako could not open its log file, so nothing is logged in this " +
+			"session. Everything else works as usual.\n\n" +
+			"A common cause: the log file is a link that leaves drako's folder. " +
+			"drako does not write through links.\n\n" +
+			"Press any key to dismiss.",
+		Meta: []ui.DetailMeta{{Label: "Log file", Value: path}},
 	}
 }
 

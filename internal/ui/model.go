@@ -5,6 +5,7 @@ import (
 	"log"
 	"maps"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -130,6 +131,8 @@ type Model struct {
 	sheet     *sheetState // the key sheet; nil while closed
 
 	activeDetail *DetailState // Single source of truth for detail view
+
+	notices []DetailState // from the host, each shown once (see Session.Notices)
 }
 
 // clampCursor pulls the cursor back inside the grid bounds after the grid
@@ -300,6 +303,24 @@ func (m Model) presentDeferredIfSafe() Model {
 		m.profile.pendingDroppedProfile = ""
 		return m.presentDroppedProfileNote(name)
 	}
+	if m.mode != infoMode { // a popup already up keeps the screen
+		return m.presentNextNotice()
+	}
+	return m
+}
+
+// presentNextNotice shows the oldest notice from the host as a popup, once.
+// With none left, or while the mode is protected, it changes nothing.
+func (m Model) presentNextNotice() Model {
+	if len(m.notices) == 0 || m.protectsMode() {
+		return m
+	}
+	notice := m.notices[0]
+	m.notices = m.notices[1:]
+	m.previousMode = m.mode
+	m.profile.errorQueueActive = false
+	m.activeDetail = &notice
+	m.mode = infoMode
 	return m
 }
 
@@ -478,8 +499,11 @@ func (p profileState) deckName() string {
 // profile, or the command you ran switched one. Following the name lands you on
 // the cell you actually ran, wherever it moved to.
 type Session struct {
-	Cell         string
-	Profile      string
+	Cell    string
+	Profile string
+	// Notices are things the host wants the user told once, oldest first:
+	// each is shown as a popup and then forgotten.
+	Notices      []DetailState
 	acknowledged map[string]bool // broken-profile errors already shown
 	droppedNoted string          // dropped profile already explained
 }
@@ -488,6 +512,7 @@ type Session struct {
 // has been re-read.
 func (m Model) Session() Session {
 	s := Session{Profile: m.profile.deckName(), acknowledged: maps.Clone(m.profile.acknowledged), droppedNoted: m.profile.droppedNoted}
+	s.Notices = slices.Clone(m.notices) // not shown yet: carried to the next lap
 
 	row, col := m.gridNav.cursorRow, m.gridNav.cursorCol
 	if row >= 0 && row < len(m.gridNav.grid) && col >= 0 && col < len(m.gridNav.grid[row]) {
@@ -596,6 +621,9 @@ func InitialModel(glassrootMode bool, carried Session) Model {
 		m.profile.droppedNoted = carried.droppedNoted
 	}
 	m.Restore(carried)
+	if !glassrootMode { // a glassroot visitor is told nothing about the host
+		m.notices = slices.Clone(carried.Notices)
+	}
 
 	if len(bundle.Broken) > 0 {
 		m.profile.pendingErrors = append(m.profile.pendingErrors, bundle.Broken...)
@@ -608,6 +636,8 @@ func InitialModel(glassrootMode bool, carried Session) Model {
 		// Relaunched after the active profile was deleted out from under us:
 		// explain the rescue drop instead of showing a bare rescue grid.
 		m = m.presentDroppedProfileNote(bundle.DroppedProfile)
+	} else {
+		m = m.presentNextNotice()
 	}
 
 	return m

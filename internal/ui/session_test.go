@@ -3,6 +3,8 @@ package ui
 import (
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/lucky7xz/drako/internal/profile"
 	"github.com/lucky7xz/drako/internal/settings"
 )
@@ -208,5 +210,30 @@ func TestRestoreIsInertOnAGlassrootRejection(t *testing.T) {
 	if m.profile.sessionProfile != "" {
 		t.Errorf("sessionProfile = %q — a profile was switched with none loaded",
 			m.profile.sessionProfile)
+	}
+}
+
+// A notice from the host is shown once as a popup, survives a lap it was not
+// shown in, and is never shown to a glassroot visitor.
+func TestHostNoticesAreShownOnce(t *testing.T) {
+	notice := DetailState{Title: "Running without a log", KeyLabel: "Reason", Value: "nope"}
+
+	m := Model{mode: gridMode, notices: []DetailState{notice}}
+	m = m.presentNextNotice()
+	if m.mode != infoMode || m.activeDetail == nil || m.activeDetail.Title != notice.Title {
+		t.Fatalf("notice not shown: mode %v, detail %+v", m.mode, m.activeDetail)
+	}
+	if len(m.notices) != 0 || len(m.Session().Notices) != 0 {
+		t.Error("a shown notice must be forgotten")
+	}
+	next, _ := m.updateInfoMode(tea.KeyMsg{Type: tea.KeyEnter})
+	if got := next.(Model); got.mode != gridMode || got.activeDetail != nil {
+		t.Errorf("any key should dismiss it back to the grid, got mode %v", got.mode)
+	}
+
+	locked := Model{mode: lockedMode, notices: []DetailState{notice}}
+	locked = locked.presentNextNotice()
+	if locked.mode != lockedMode || len(locked.Session().Notices) != 1 {
+		t.Error("a locked screen keeps its mode; the notice waits and is carried on")
 	}
 }
