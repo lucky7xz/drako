@@ -66,7 +66,6 @@ func copyAssetsList(configDir, repoRoot, profileDir string, assets []string, pro
 		}
 		// Destination is the assets/ directory + profile name + original relative path
 		// e.g. ~/.config/drako/assets/my-profile/script.sh
-		dst := filepath.Join(lair.AssetsDir(configDir, profileName), cleanRel)
 
 		info, statErr := os.Stat(src)
 		if statErr != nil {
@@ -75,7 +74,7 @@ func copyAssetsList(configDir, repoRoot, profileDir string, assets []string, pro
 			continue
 		}
 		if info.IsDir() {
-			c, s, m, _ := copyDirWithLimits(src, dst, &fileCount, &totalBytes)
+			c, s, m, _ := copyDirWithLimits(src, configDir, profileName, cleanRel, &fileCount, &totalBytes)
 			copied += c
 			skipped += s
 			missing += m
@@ -90,13 +89,8 @@ func copyAssetsList(configDir, repoRoot, profileDir string, assets []string, pro
 		if info.Size() > assetWarnSizeBytes {
 			fmt.Printf("  ⚠️  Large asset: %s (%.1f MB)\n", rel, float64(info.Size())/(1024*1024))
 		}
-		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-			log.Printf("assets: mkdir failed for %s: %v", dst, err)
-			skipped++
-			continue
-		}
-		if err := copyFile(src, dst); err != nil {
-			log.Printf("assets: copy failed %s -> %s: %v", src, dst, err)
+		if err := installAsset(configDir, profileName, cleanRel, src); err != nil {
+			log.Printf("assets: copy failed %s -> %s: %v", src, filepath.Join(lair.AssetsDir(configDir, profileName), cleanRel), err)
 			skipped++
 			continue
 		}
@@ -191,8 +185,20 @@ func cleanAssetRel(rel string) (string, bool) {
 	return filepath.Clean(rel), true
 }
 
-// copyDirWithLimits recursively copies files from srcDir to dstDir with size/count limits
-func copyDirWithLimits(srcDir, dstDir string, fileCount *int, totalBytes *int64) (int, int, int, int64) {
+// installAsset hands the asset file at src to lair, for the profile's assets
+// folder under the name rel.
+func installAsset(configDir, profileName, rel, src string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	return lair.InstallAsset(configDir, profileName, rel, in)
+}
+
+// copyDirWithLimits recursively copies the files of srcDir, with size/count
+// limits, into the profile's assets folder under the name base.
+func copyDirWithLimits(srcDir, configDir, profileName, base string, fileCount *int, totalBytes *int64) (int, int, int, int64) {
 	copied := 0
 	skipped := 0
 	missing := 0
@@ -222,15 +228,10 @@ func copyDirWithLimits(srcDir, dstDir string, fileCount *int, totalBytes *int64)
 			skipped++
 			return nil
 		}
-		dst := filepath.Join(dstDir, rel)
 		if info.Size() > assetWarnSizeBytes {
 			fmt.Printf("  ⚠️  Large asset file: %s (%.1f MB)\n", rel, float64(info.Size())/(1024*1024))
 		}
-		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-			skipped++
-			return nil
-		}
-		if err := copyFile(path, dst); err != nil {
+		if err := installAsset(configDir, profileName, filepath.Join(base, rel), path); err != nil {
 			skipped++
 			return nil
 		}

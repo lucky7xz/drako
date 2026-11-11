@@ -65,8 +65,7 @@ func NewSummoner(configDir string) *Summoner {
 
 // Summon executes the summoning logic
 func (s *Summoner) Summon(sourceURL string) error {
-	inventoryDir := lair.InventoryDir(s.ConfigDir)
-	if err := os.MkdirAll(inventoryDir, 0o755); err != nil {
+	if err := lair.MakeInventory(s.ConfigDir); err != nil {
 		return fmt.Errorf("failed to create inventory directory: %w", err)
 	}
 
@@ -186,6 +185,31 @@ func destinationLabel(configDir, dstPath string) string {
 	return "equipped"
 }
 
+// installProfile hands the profile at srcPath to lair, which puts it where
+// dstPath says: equipped (the config dir itself) or the inventory.
+func installProfile(configDir, srcPath, dstPath string) error {
+	in, err := os.Open(srcPath)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	loc := equip.Equipped
+	if filepath.Dir(dstPath) != filepath.Clean(configDir) {
+		loc = equip.Inventory
+	}
+	return lair.InstallProfile(configDir, loc, filepath.Base(dstPath), in)
+}
+
+// installSpec hands the spec at srcPath to lair under the name file.
+func installSpec(configDir, srcPath, file string) error {
+	in, err := os.Open(srcPath)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	return lair.InstallSpec(configDir, file, in)
+}
+
 // sameFile reports whether a and b are one file on disk: the deck in the
 // config dir is a link to the very file being summoned.
 func sameFile(a, b string) bool {
@@ -301,7 +325,7 @@ func (s *Summoner) summonFromDir(root, source string) error {
 	// 2. Process Spec Files
 	if len(specFiles) > 0 {
 		specsDir := lair.SpecsDir(s.ConfigDir)
-		if err := os.MkdirAll(specsDir, 0o755); err != nil {
+		if err := lair.MakeSpecs(s.ConfigDir); err != nil {
 			fmt.Printf("⚠️  Failed to create specs directory: %v\n", err)
 		} else {
 			fmt.Printf("\nProcessing spec files...\n")
@@ -416,7 +440,7 @@ func (s *Summoner) summonRepoProfile(srcPath, tempDir string) (summonOutcome, er
 	if sameFile(srcPath, dstPath) {
 		// The deck is a link to this very file: it is already in place.
 		fmt.Printf("✓ Already in place: %s\n", dstName)
-	} else if err := copyFile(srcPath, dstPath); err != nil {
+	} else if err := installProfile(s.ConfigDir, srcPath, dstPath); err != nil {
 		return outcomeFailed, fmt.Errorf("failed to copy %s: %w", dstName, err)
 	} else {
 		fmt.Printf("✓ Summoned: %s\n", dstName)
@@ -493,7 +517,7 @@ func (s *Summoner) summonRepoSpec(srcPath, specsDir string) summonOutcome {
 		return outcomeCancelled
 	}
 
-	if err := copyFile(srcPath, dstPath); err != nil {
+	if err := installSpec(s.ConfigDir, srcPath, dstName); err != nil {
 		fmt.Printf("Failed to copy %s: %v\n", dstName, err)
 		return outcomeFailed
 	}
@@ -538,7 +562,7 @@ func (s *Summoner) summonFromHTTP(sourceURL, dstPath string) error {
 
 	// Move temp file to final destination
 	// We need to copy/move it manually since it's cross-device potentially (tmp vs home)
-	if err := copyFile(tempPath, dstPath); err != nil {
+	if err := installProfile(s.ConfigDir, tempPath, dstPath); err != nil {
 		return fmt.Errorf("failed to finalize file: %w", err)
 	}
 

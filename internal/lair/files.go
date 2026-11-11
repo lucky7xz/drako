@@ -1,9 +1,11 @@
 package lair
 
 import (
+	"bytes"
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -90,17 +92,23 @@ func (l *Lair) writeNew(name string, data []byte) (bool, error) {
 	return err == nil, err
 }
 
-// replace puts data in name through a temp file and a rename, so a crash
-// mid-write never leaves name truncated. A name that was a link becomes a
-// plain file; what the link pointed at is not touched.
+// replace puts data in name; see replaceFrom.
 func (l *Lair) replace(name string, data []byte) error {
-	tmp := "." + strings.TrimSuffix(name, filepath.Ext(name)) + "-" + rand.Text() + ".tmp"
+	return l.replaceFrom(name, bytes.NewReader(data))
+}
+
+// replaceFrom puts what r holds in name through a temp file next to it and a
+// rename, so a crash mid-write never leaves name truncated. A name that was a
+// link becomes a plain file; what the link pointed at is not touched.
+func (l *Lair) replaceFrom(name string, r io.Reader) error {
+	base := filepath.Base(name)
+	tmp := filepath.Join(filepath.Dir(name), "."+strings.TrimSuffix(base, filepath.Ext(base))+"-"+rand.Text()+".tmp")
 	f, err := l.root.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return l.explain(name, err)
 	}
 	defer l.root.Remove(tmp) // gone after the rename; cleans up on failure
-	if _, err := f.Write(data); err != nil {
+	if _, err := io.Copy(f, r); err != nil {
 		f.Close()
 		return err
 	}
@@ -111,7 +119,7 @@ func (l *Lair) replace(name string, data []byte) error {
 	if err := f.Close(); err != nil {
 		return err
 	}
-	return l.root.Rename(tmp, name)
+	return l.explain(name, l.root.Rename(tmp, name))
 }
 
 // remove deletes name; one already gone is fine.
