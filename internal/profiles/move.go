@@ -5,24 +5,16 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/paths"
 )
 
-// Location is one of drako's profile-file locations under the config dir.
-type Location int
-
-const (
-	Equipped  Location = iota // config dir root: profiles the TUI loads
-	Inventory                 // …/inventory: stashed profiles
-	Trash                     // …/trash: purged profiles
-)
-
-// Dir returns the on-disk directory for the location under configDir.
-func (l Location) Dir(configDir string) string {
+// locationDir returns the on-disk directory for the location under configDir.
+func locationDir(l equip.Location, configDir string) string {
 	switch l {
-	case Inventory:
+	case equip.Inventory:
 		return paths.InventoryDir(configDir)
-	case Trash:
+	case equip.Trash:
 		return paths.TrashDir(configDir)
 	default:
 		return configDir
@@ -31,9 +23,9 @@ func (l Location) Dir(configDir string) string {
 
 // Move relocates file (a bare filename) from one location to another under
 // configDir.
-func Move(configDir, file string, from, to Location) error {
-	src := filepath.Join(from.Dir(configDir), file)
-	dstDir := to.Dir(configDir)
+func Move(configDir, file string, from, to equip.Location) error {
+	src := filepath.Join(locationDir(from, configDir), file)
+	dstDir := locationDir(to, configDir)
 	dst := filepath.Join(dstDir, file)
 	if _, err := os.Lstat(dst); err == nil {
 		return fmt.Errorf("destination already exists: %s", dst)

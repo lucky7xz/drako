@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/paths"
 )
 
@@ -19,7 +20,7 @@ func TestMove_InventoryToEquipped(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Move(cfg, "git.profile.toml", Inventory, Equipped); err != nil {
+	if err := Move(cfg, "git.profile.toml", equip.Inventory, equip.Equipped); err != nil {
 		t.Fatalf("Move: %v", err)
 	}
 
@@ -38,8 +39,8 @@ func TestMove_EquippedToTrash_CreatesDestDir(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Trash dir does not exist yet; Move must create it.
-	if err := Move(cfg, "old.profile.toml", Equipped, Trash); err != nil {
+	// equip.Trash dir does not exist yet; Move must create it.
+	if err := Move(cfg, "old.profile.toml", equip.Equipped, equip.Trash); err != nil {
 		t.Fatalf("Move: %v", err)
 	}
 
@@ -62,7 +63,7 @@ func TestMove_RefusesToOverwriteExisting(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Move(cfg, "git.profile.toml", Inventory, Equipped); err == nil {
+	if err := Move(cfg, "git.profile.toml", equip.Inventory, equip.Equipped); err == nil {
 		t.Error("expected error moving onto an existing destination, got nil")
 	}
 	// The original equipped file must be untouched.
@@ -89,13 +90,13 @@ func TestMove_RelativeLinkKeepsItsTarget(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Move(cfg, "git.profile.toml", Equipped, Inventory); err != nil {
+	if err := Move(cfg, "git.profile.toml", equip.Equipped, equip.Inventory); err != nil {
 		t.Fatalf("stash: %v", err)
 	}
 	if got, err := os.ReadFile(filepath.Join(paths.InventoryDir(cfg), "git.profile.toml")); string(got) != "x = 1\n" {
 		t.Errorf("stashed link reads %q, %v; want the dotfiles deck", got, err)
 	}
-	if err := Move(cfg, "git.profile.toml", Inventory, Equipped); err != nil {
+	if err := Move(cfg, "git.profile.toml", equip.Inventory, equip.Equipped); err != nil {
 		t.Fatalf("equip: %v", err)
 	}
 	if got, _ := os.Readlink(filepath.Join(cfg, "git.profile.toml")); got != target {
@@ -116,7 +117,7 @@ func TestMove_RefusesToReplaceABrokenLink(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Move(cfg, "git.profile.toml", Equipped, Inventory); err == nil {
+	if err := Move(cfg, "git.profile.toml", equip.Equipped, equip.Inventory); err == nil {
 		t.Error("expected error moving onto a broken link, got nil")
 	}
 	if got, _ := os.Readlink(filepath.Join(inv, "git.profile.toml")); got != "nowhere" {

@@ -12,7 +12,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/paths"
-	"github.com/lucky7xz/drako/internal/profiles"
 	"github.com/lucky7xz/drako/internal/settings"
 	"github.com/lucky7xz/drako/internal/version"
 )
@@ -31,21 +30,21 @@ func specsInventoryModel(t *testing.T, equipped, stashed []string, specs map[str
 
 	var vis, inv []string
 	for _, n := range equipped {
-		file := n + profiles.ProfileSuffix
+		file := n + equip.ProfileSuffix
 		if err := os.WriteFile(filepath.Join(dir, file), []byte(valid), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		vis = append(vis, file)
 	}
 	for _, n := range stashed {
-		file := n + profiles.ProfileSuffix
+		file := n + equip.ProfileSuffix
 		if err := os.WriteFile(filepath.Join(paths.InventoryDir(dir), file), []byte(valid), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		inv = append(inv, file)
 	}
 	for name, body := range specs {
-		if err := os.WriteFile(filepath.Join(paths.SpecsDir(dir), name+profiles.SpecSuffix), []byte(body), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(paths.SpecsDir(dir), name+equip.SpecSuffix), []byte(body), 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -60,7 +59,7 @@ func specsInventoryModel(t *testing.T, equipped, stashed []string, specs map[str
 		Config:     settings.Config{Keys: keys},
 		styles:     BuildStyles(settings.Config{Keys: keys}),
 		inventory: inventoryModel{
-			State:       equip.NewInventoryState(vis, inv, profiles.MaxEquipped),
+			State:       equip.NewInventoryState(vis, inv, equip.MaxEquipped),
 			focusedList: equip.ListVisible,
 		},
 	}
@@ -106,7 +105,7 @@ func selectRow(t *testing.T, m Model, verb specVerb, name string) Model {
 func names(files []string) string {
 	out := make([]string, len(files))
 	for i, f := range files {
-		out[i] = strings.TrimSuffix(f, profiles.ProfileSuffix)
+		out[i] = strings.TrimSuffix(f, equip.ProfileSuffix)
 	}
 	return strings.Join(out, " ")
 }
@@ -282,7 +281,7 @@ func TestSpecsOverlay_VerdictShowsOnSelection(t *testing.T) {
 
 func TestSpecRows_DimsOverCap(t *testing.T) {
 	var many []string
-	for i := range profiles.MaxEquipped + 1 {
+	for i := range equip.MaxEquipped + 1 {
 		many = append(many, string(rune('a'+i)))
 	}
 	m, _ := specsInventoryModel(t, nil, many, map[string]string{
@@ -459,7 +458,7 @@ func TestSpecsOverlay_LockedProfileNeverMoves(t *testing.T) {
 // and has to be refused up front like any other over-cap arrangement.
 func TestSpecRows_LockedDeckCountsAgainstTheCap(t *testing.T) {
 	var full []string
-	for i := range profiles.MaxEquipped {
+	for i := range equip.MaxEquipped {
 		full = append(full, string(rune('a'+i)))
 	}
 	m, _ := specsInventoryModel(t, []string{"locked"}, full, map[string]string{

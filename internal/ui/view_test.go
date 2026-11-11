@@ -10,7 +10,6 @@ import (
 	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/profile"
-	"github.com/lucky7xz/drako/internal/profiles"
 	"github.com/lucky7xz/drako/internal/settings"
 )
 
@@ -41,7 +40,7 @@ func createTestModelForView(mode navMode) Model {
 			State: equip.NewInventoryState(
 				[]string{"A.profile.toml"},
 				[]string{"B.profile.toml"},
-				profiles.MaxEquipped,
+				equip.MaxEquipped,
 			),
 			focusedList: 0,
 		},

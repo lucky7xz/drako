@@ -7,7 +7,6 @@ import (
 
 	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/lair"
-	"github.com/lucky7xz/drako/internal/profiles"
 	"github.com/lucky7xz/drako/internal/settings"
 )
 
@@ -33,7 +32,7 @@ func makeInventoryTestModel(n, cursor, focusedList, termW, termH int) Model {
 		styles:     BuildStyles(cfg),
 		gridNav:    gridNav{grid: [][]string{{"a", "b"}, {"c", "d"}}},
 		inventory: inventoryModel{
-			State:       equip.NewInventoryState(nil, namesN(n), profiles.MaxEquipped),
+			State:       equip.NewInventoryState(nil, namesN(n), equip.MaxEquipped),
 			cursor:      cursor,
 			focusedList: focusedList,
 		},
@@ -58,7 +57,7 @@ func makeInventoryTestModelBothLists(equippedN, inventoryN, cursor, focusedList,
 		styles:     BuildStyles(cfg),
 		gridNav:    gridNav{grid: [][]string{{"a", "b"}, {"c", "d"}}},
 		inventory: inventoryModel{
-			State:       equip.NewInventoryState(equippedNames, namesN(inventoryN), profiles.MaxEquipped),
+			State:       equip.NewInventoryState(equippedNames, namesN(inventoryN), equip.MaxEquipped),
 			cursor:      cursor,
 			focusedList: focusedList,
 		},

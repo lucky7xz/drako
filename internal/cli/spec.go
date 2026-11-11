@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profiles"
@@ -27,7 +28,7 @@ func unlockIfLocked(configDir, name string) {
 	if err != nil || pf.Locked == "" {
 		return
 	}
-	if profiles.NormalizeName(pf.Locked) != profiles.NormalizeName(filepath.Base(name)) {
+	if equip.NormalizeName(pf.Locked) != equip.NormalizeName(filepath.Base(name)) {
 		return
 	}
 	fmt.Printf("  ! Unlocking profile: %s\n", pf.Locked)
@@ -86,9 +87,9 @@ func HandleSpecCommand(args []string) int {
 		fmt.Fprintf(os.Stderr, "failed to inspect spec: %v\n", err)
 		return 1
 	}
-	if planned > profiles.MaxEquipped {
-		fmt.Printf("\n⚠️  This spec equips %d profiles, over drako's limit of %d.\n", planned, profiles.MaxEquipped)
-		fmt.Printf("    Profiles %d-%d will be reachable only by cycling (o / p),\n", profiles.MaxEquipped+1, planned)
+	if planned > equip.MaxEquipped {
+		fmt.Printf("\n⚠️  This spec equips %d profiles, over drako's limit of %d.\n", planned, equip.MaxEquipped)
+		fmt.Printf("    Profiles %d-%d will be reachable only by cycling (o / p),\n", equip.MaxEquipped+1, planned)
 		fmt.Printf("    not by the leader + 1-9 chord.\n\n")
 		if !ConfirmAction("Proceed anyway?") {
 			fmt.Println("Cancelled.")
@@ -102,7 +103,7 @@ func HandleSpecCommand(args []string) int {
 		return 1
 	}
 
-	fmt.Printf("✓ Spec '%s' applied successfully.\n", strings.TrimSuffix(filepath.Base(specPath), profiles.SpecSuffix))
+	fmt.Printf("✓ Spec '%s' applied successfully.\n", strings.TrimSuffix(filepath.Base(specPath), equip.SpecSuffix))
 	return 0
 }
 
@@ -139,7 +140,7 @@ func HandleStashCommand(args []string) int {
 		return 1
 	}
 
-	fmt.Printf("✓ Spec '%s' stashed successfully.\n", strings.TrimSuffix(filepath.Base(specPath), profiles.SpecSuffix))
+	fmt.Printf("✓ Spec '%s' stashed successfully.\n", strings.TrimSuffix(filepath.Base(specPath), equip.SpecSuffix))
 	return 0
 }
 
@@ -197,8 +198,8 @@ func ListSpecs(specsDir string, out io.Writer) error {
 // It returns the full path to the found file, or an error if not found.
 func resolveSpecPath(specsDir, name string) (string, error) {
 	// Force .spec.toml extension
-	if !strings.HasSuffix(name, profiles.SpecSuffix) {
-		name += profiles.SpecSuffix
+	if !strings.HasSuffix(name, equip.SpecSuffix) {
+		name += equip.SpecSuffix
 	}
 
 	specPath := filepath.Join(specsDir, name)
@@ -213,7 +214,7 @@ func StashSpec(configDir string, targetProfiles []string) error {
 	// Normalize target list
 	targetSet := make(map[string]bool)
 	for _, p := range targetProfiles {
-		targetSet[profiles.NormalizeName(p)] = true
+		targetSet[equip.NormalizeName(p)] = true
 	}
 
 	// Scan Visible profiles and move them to Inventory if they are in the target set
@@ -227,7 +228,7 @@ func StashSpec(configDir string, targetProfiles []string) error {
 		if !targetSet[e.Norm] {
 			continue
 		}
-		if err := profiles.Move(configDir, e.File, profiles.Equipped, profiles.Inventory); err != nil {
+		if err := profiles.Move(configDir, e.File, equip.Equipped, equip.Inventory); err != nil {
 			failed = append(failed, fmt.Errorf("could not stash %s: %w", e.Name, err))
 			continue
 		}

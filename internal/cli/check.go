@@ -10,9 +10,9 @@ import (
 	"slices"
 	"sort"
 
+	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profile"
-	"github.com/lucky7xz/drako/internal/profiles"
 	"github.com/lucky7xz/drako/internal/settings"
 )
 
@@ -64,7 +64,7 @@ func checkTargets(args []string) ([]string, error) {
 		case err != nil:
 			return nil, fmt.Errorf("cannot read %s: %v", a, err)
 		case info.IsDir():
-			matches, _ := filepath.Glob(filepath.Join(a, "*"+profiles.ProfileSuffix))
+			matches, _ := filepath.Glob(filepath.Join(a, "*"+equip.ProfileSuffix))
 			files = append(files, matches...)
 		default:
 			files = append(files, a)
@@ -127,14 +127,14 @@ func nameClashes(files []string) map[string][]string {
 	byNorm := map[string][]string{}
 	for _, f := range files {
 		if base := filepath.Base(f); base != paths.ConfigFileName {
-			n := profiles.NormalizeName(base)
+			n := equip.NormalizeName(base)
 			byNorm[n] = append(byNorm[n], f)
 		}
 	}
 	clashes := map[string][]string{}
 	for _, f := range files {
 		base := filepath.Base(f)
-		for _, other := range byNorm[profiles.NormalizeName(base)] {
+		for _, other := range byNorm[equip.NormalizeName(base)] {
 			var msg string
 			switch {
 			case other == f:

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lucky7xz/drako/internal/profiles"
+	"github.com/lucky7xz/drako/internal/equip"
 )
 
 // helpers ---------------------------------------------------------------
@@ -113,7 +113,7 @@ func TestApplySpec_RefusesWhenNothingMatches(t *testing.T) {
 // A deck may legitimately list more profiles than the leader chords address,
 // but only the confirmed path is allowed to apply it.
 func TestApplySpec_OverCapNeedsConsent(t *testing.T) {
-	names := make([]string, profiles.MaxEquipped+3)
+	names := make([]string, equip.MaxEquipped+3)
 	for i := range names {
 		names[i] = fmt.Sprintf("deck%02d", i)
 	}

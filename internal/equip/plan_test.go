@@ -1,0 +1,124 @@
+package equip
+
+import (
+	"fmt"
+	"reflect"
+	"testing"
+)
+
+func TestPlanReconcile_EquipsDesiredFromInventory(t *testing.T) {
+	moves := PlanReconcile(
+		nil,                          // equipped: none
+		[]string{"git.profile.toml"}, // inventory
+		[]string{"git"},              // desired
+	)
+
+	want := []Move{{File: "git.profile.toml", From: Inventory, To: Equipped}}
+	if !reflect.DeepEqual(moves, want) {
+		t.Errorf("got %+v, want %+v", moves, want)
+	}
+}
+
+func TestPlanReconcile_StashesEquippedNotDesired(t *testing.T) {
+	moves := PlanReconcile(
+		[]string{"git.profile.toml", "docker.profile.toml"}, // equipped
+		nil,             // inventory
+		[]string{"git"}, // desired: only git stays
+	)
+
+	want := []Move{{File: "docker.profile.toml", From: Equipped, To: Inventory}}
+	if !reflect.DeepEqual(moves, want) {
+		t.Errorf("got %+v, want %+v", moves, want)
+	}
+}
+
+func TestPlanReconcile_CoreIsOrdinary(t *testing.T) {
+	moves := PlanReconcile(
+		[]string{"core.profile.toml", "git.profile.toml"}, // equipped
+		nil,
+		[]string{"git"}, // desired: git only; core is unlisted → stashed like any deck
+	)
+
+	want := []Move{{File: "core.profile.toml", From: Equipped, To: Inventory}}
+	if !reflect.DeepEqual(moves, want) {
+		t.Errorf("got %+v, want %+v", moves, want)
+	}
+}
+
+// profileFiles/profileNames build n synthetic profiles as on-disk filenames
+// and as the bare references a spec would list.
+func profileFiles(prefix string, n int) []string {
+	out := make([]string, n)
+	for i := range out {
+		out[i] = fmt.Sprintf("%s%d%s", prefix, i, ProfileSuffix)
+	}
+	return out
+}
+
+func profileNames(prefix string, n int) []string {
+	out := make([]string, n)
+	for i := range out {
+		out[i] = fmt.Sprintf("%s%d", prefix, i)
+	}
+	return out
+}
+
+func TestCheckCap(t *testing.T) {
+	cases := []struct {
+		name                         string
+		equipped, inventory, desired []string
+		wantErr                      bool
+	}{
+		{
+			name:      "filling up to the cap is fine",
+			equipped:  profileFiles("eq", 3),
+			inventory: profileFiles("inv", 6),
+			desired:   append(profileNames("eq", 3), profileNames("inv", 6)...),
+		},
+		{
+			name:      "growing past the cap is refused",
+			equipped:  profileFiles("eq", 3),
+			inventory: profileFiles("inv", 9),
+			desired:   append(profileNames("eq", 3), profileNames("inv", 9)...),
+			wantErr:   true,
+		},
+		{
+			// A config from before the cap, or profiles copied in by hand.
+			name:     "an over-cap list may shrink",
+			equipped: profileFiles("eq", 15),
+			desired:  profileNames("eq", 12),
+		},
+		{
+			name:     "an over-cap list may reorder",
+			equipped: profileFiles("eq", 15),
+			desired:  profileNames("eq", 15),
+		},
+		{
+			name:      "an over-cap list may not grow",
+			equipped:  profileFiles("eq", 15),
+			inventory: profileFiles("inv", 1),
+			desired:   append(profileNames("eq", 15), profileNames("inv", 1)...),
+			wantErr:   true,
+		},
+		{
+			// Why the cap counts the plan's outcome rather than len(desired):
+			// a spec may name profiles that exist in neither location.
+			name:     "names matching no file don't count",
+			equipped: profileFiles("eq", 3),
+			desired:  append(profileNames("eq", 3), profileNames("ghost", 9)...),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			moves := PlanReconcile(tc.equipped, tc.inventory, tc.desired)
+			err := CheckCap(len(tc.equipped), moves)
+			if tc.wantErr && err == nil {
+				t.Fatal("expected the cap to refuse this plan")
+			}
+			if !tc.wantErr && err != nil {
+				t.Fatalf("cap refused a valid plan: %v", err)
+			}
+		})
+	}
+}

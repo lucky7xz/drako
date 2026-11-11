@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/lucky7xz/drako/internal/equip"
-	"github.com/lucky7xz/drako/internal/profiles"
 	"github.com/lucky7xz/drako/internal/settings"
 )
 
@@ -28,7 +27,7 @@ func editInventoryModel(t *testing.T) (Model, string) {
 		profile: profileState{configDir: dir},
 		Config:  settings.Config{Keys: settings.InputConfig{EditFile: "e", Delete: "delete", Lock: "r"}},
 		inventory: inventoryModel{
-			State:       equip.NewInventoryState([]string{"eq.profile.toml"}, []string{"st.profile.toml"}, profiles.MaxEquipped),
+			State:       equip.NewInventoryState([]string{"eq.profile.toml"}, []string{"st.profile.toml"}, equip.MaxEquipped),
 			focusedList: equip.ListVisible,
 		},
 	}

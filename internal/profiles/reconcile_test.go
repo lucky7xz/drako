@@ -7,47 +7,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/paths"
 )
-
-func TestPlanReconcile_EquipsDesiredFromInventory(t *testing.T) {
-	moves := planReconcile(
-		nil,                          // equipped: none
-		[]string{"git.profile.toml"}, // inventory
-		[]string{"git"},              // desired
-	)
-
-	want := []move{{File: "git.profile.toml", From: Inventory, To: Equipped}}
-	if !reflect.DeepEqual(moves, want) {
-		t.Errorf("got %+v, want %+v", moves, want)
-	}
-}
-
-func TestPlanReconcile_StashesEquippedNotDesired(t *testing.T) {
-	moves := planReconcile(
-		[]string{"git.profile.toml", "docker.profile.toml"}, // equipped
-		nil,             // inventory
-		[]string{"git"}, // desired: only git stays
-	)
-
-	want := []move{{File: "docker.profile.toml", From: Equipped, To: Inventory}}
-	if !reflect.DeepEqual(moves, want) {
-		t.Errorf("got %+v, want %+v", moves, want)
-	}
-}
-
-func TestPlanReconcile_CoreIsOrdinary(t *testing.T) {
-	moves := planReconcile(
-		[]string{"core.profile.toml", "git.profile.toml"}, // equipped
-		nil,
-		[]string{"git"}, // desired: git only; core is unlisted → stashed like any deck
-	)
-
-	want := []move{{File: "core.profile.toml", From: Equipped, To: Inventory}}
-	if !reflect.DeepEqual(moves, want) {
-		t.Errorf("got %+v, want %+v", moves, want)
-	}
-}
 
 func TestReconcile_AppliesMovesOnDisk(t *testing.T) {
 	cfg := t.TempDir()
@@ -72,7 +34,7 @@ func TestReconcile_AppliesMovesOnDisk(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(res.Equipped, []string{"git"}) {
-		t.Errorf("Equipped = %v, want [git]", res.Equipped)
+		t.Errorf("equip.Equipped = %v, want [git]", res.Equipped)
 	}
 	if !reflect.DeepEqual(res.Stashed, []string{"docker"}) {
 		t.Errorf("Stashed = %v, want [docker]", res.Stashed)
@@ -84,99 +46,21 @@ func TestReconcile_AppliesMovesOnDisk(t *testing.T) {
 func TestReconcile_FailedStashNeverExceedsTheCap(t *testing.T) {
 	cfg := t.TempDir()
 	inv := paths.InventoryDir(cfg)
-	for _, f := range profileFiles("eq", MaxEquipped) {
+	for _, f := range profileFiles("eq", equip.MaxEquipped) {
 		mustWrite(t, filepath.Join(cfg, f))
 	}
 	// A directory where eq0 would land makes its stash fail.
-	if err := os.MkdirAll(filepath.Join(inv, "eq0"+ProfileSuffix), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(inv, "eq0"+equip.ProfileSuffix), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	mustWrite(t, filepath.Join(inv, "new.profile.toml"))
 
-	desired := append(profileNames("eq", MaxEquipped)[1:], "new")
+	desired := append(profileNames("eq", equip.MaxEquipped)[1:], "new")
 	if _, err := Reconcile(cfg, desired); err == nil {
 		t.Fatal("Reconcile should report the failed stash")
 	}
-	if n, _ := List(cfg); len(n) > MaxEquipped {
-		t.Errorf("%d decks equipped after the failure, cap is %d", len(n), MaxEquipped)
-	}
-}
-
-// profileFiles/profileNames build n synthetic profiles as on-disk filenames
-// and as the bare references a spec would list.
-func profileFiles(prefix string, n int) []string {
-	out := make([]string, n)
-	for i := range out {
-		out[i] = fmt.Sprintf("%s%d%s", prefix, i, ProfileSuffix)
-	}
-	return out
-}
-
-func profileNames(prefix string, n int) []string {
-	out := make([]string, n)
-	for i := range out {
-		out[i] = fmt.Sprintf("%s%d", prefix, i)
-	}
-	return out
-}
-
-func TestCheckCap(t *testing.T) {
-	cases := []struct {
-		name                         string
-		equipped, inventory, desired []string
-		wantErr                      bool
-	}{
-		{
-			name:      "filling up to the cap is fine",
-			equipped:  profileFiles("eq", 3),
-			inventory: profileFiles("inv", 6),
-			desired:   append(profileNames("eq", 3), profileNames("inv", 6)...),
-		},
-		{
-			name:      "growing past the cap is refused",
-			equipped:  profileFiles("eq", 3),
-			inventory: profileFiles("inv", 9),
-			desired:   append(profileNames("eq", 3), profileNames("inv", 9)...),
-			wantErr:   true,
-		},
-		{
-			// A config from before the cap, or profiles copied in by hand.
-			name:     "an over-cap list may shrink",
-			equipped: profileFiles("eq", 15),
-			desired:  profileNames("eq", 12),
-		},
-		{
-			name:     "an over-cap list may reorder",
-			equipped: profileFiles("eq", 15),
-			desired:  profileNames("eq", 15),
-		},
-		{
-			name:      "an over-cap list may not grow",
-			equipped:  profileFiles("eq", 15),
-			inventory: profileFiles("inv", 1),
-			desired:   append(profileNames("eq", 15), profileNames("inv", 1)...),
-			wantErr:   true,
-		},
-		{
-			// Why the cap counts the plan's outcome rather than len(desired):
-			// a spec may name profiles that exist in neither location.
-			name:     "names matching no file don't count",
-			equipped: profileFiles("eq", 3),
-			desired:  append(profileNames("eq", 3), profileNames("ghost", 9)...),
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			moves := planReconcile(tc.equipped, tc.inventory, tc.desired)
-			err := checkCap(len(tc.equipped), moves)
-			if tc.wantErr && err == nil {
-				t.Fatal("expected the cap to refuse this plan")
-			}
-			if !tc.wantErr && err != nil {
-				t.Fatalf("cap refused a valid plan: %v", err)
-			}
-		})
+	if n, _ := List(cfg); len(n) > equip.MaxEquipped {
+		t.Errorf("%d decks equipped after the failure, cap is %d", len(n), equip.MaxEquipped)
 	}
 }
 
@@ -186,11 +70,11 @@ func TestReconcile_OverCapMovesNothing(t *testing.T) {
 	if err := os.MkdirAll(inv, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	for _, f := range profileFiles("inv", MaxEquipped+1) {
+	for _, f := range profileFiles("inv", equip.MaxEquipped+1) {
 		mustWrite(t, filepath.Join(inv, f))
 	}
 
-	if _, err := Reconcile(cfg, profileNames("inv", MaxEquipped+1)); err == nil {
+	if _, err := Reconcile(cfg, profileNames("inv", equip.MaxEquipped+1)); err == nil {
 		t.Fatal("expected Reconcile to refuse equipping more than the cap")
 	}
 
@@ -212,7 +96,7 @@ func TestReconcileOverCap_EquipsPastTheCap(t *testing.T) {
 	if err := os.MkdirAll(inv, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	want := MaxEquipped + 3
+	want := equip.MaxEquipped + 3
 	for _, f := range profileFiles("inv", want) {
 		mustWrite(t, filepath.Join(inv, f))
 	}
@@ -284,4 +168,22 @@ func mustWrite(t *testing.T, path string) {
 	if err := os.WriteFile(path, []byte("x = 1\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// profileFiles/profileNames build n synthetic profiles as on-disk filenames
+// and as the bare references a spec would list.
+func profileFiles(prefix string, n int) []string {
+	out := make([]string, n)
+	for i := range out {
+		out[i] = fmt.Sprintf("%s%d%s", prefix, i, equip.ProfileSuffix)
+	}
+	return out
+}
+
+func profileNames(prefix string, n int) []string {
+	out := make([]string, n)
+	for i := range out {
+		out[i] = fmt.Sprintf("%s%d", prefix, i)
+	}
+	return out
 }

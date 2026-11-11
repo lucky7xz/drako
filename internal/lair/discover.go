@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/profile"
-	profilepkg "github.com/lucky7xz/drako/internal/profiles"
 )
 
 // CheckProfileFile reports whether the file called name inside configDir
@@ -73,11 +73,11 @@ func (l *Lair) discoverProfiles(targets []string) ([]ProfileInfo, []ProfileParse
 			continue
 		}
 		name := entry.Name()
-		if !strings.HasSuffix(name, profilepkg.ProfileSuffix) {
+		if !strings.HasSuffix(name, equip.ProfileSuffix) {
 			continue
 		}
 		fullPath := filepath.Join(configDir, name)
-		profileName := strings.TrimSuffix(name, profilepkg.ProfileSuffix)
+		profileName := strings.TrimSuffix(name, equip.ProfileSuffix)
 
 		raw, err := l.read(name)
 		if err != nil {

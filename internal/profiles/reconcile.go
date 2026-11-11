@@ -1,30 +1,24 @@
 package profiles
 
 import (
-	"fmt"
 	"strings"
 
+	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/paths"
 )
-
-// Result reports what Reconcile changed, by display name (suffix trimmed).
-type Result struct {
-	Equipped []string // equipped from the inventory
-	Stashed  []string // stashed to the inventory
-}
 
 // Reconcile arranges profile files under configDir so that exactly the desired
 // profiles are equipped: it equips desired
 // profiles from the inventory and stashes equipped profiles not in desired.
-// The result may not exceed MaxEquipped; see ReconcileOverCap.
-func Reconcile(configDir string, desired []string) (Result, error) {
+// The result may not exceed equip.MaxEquipped; see ReconcileOverCap.
+func Reconcile(configDir string, desired []string) (equip.Result, error) {
 	return reconcile(configDir, desired, true)
 }
 
-// ReconcileOverCap is Reconcile without the MaxEquipped ceiling, for callers
+// ReconcileOverCap is Reconcile without the equip.MaxEquipped ceiling, for callers
 // that have taken explicit consent from the user — today only the spec CLI's
 // confirmed path. Prefer Reconcile everywhere else.
-func ReconcileOverCap(configDir string, desired []string) (Result, error) {
+func ReconcileOverCap(configDir string, desired []string) (equip.Result, error) {
 	return reconcile(configDir, desired, false)
 }
 
@@ -37,8 +31,8 @@ func PlannedEquippedCount(configDir string, desired []string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	moves := planReconcile(Files(equipped), Files(inventory), desired)
-	return finalCount(len(equipped), moves), nil
+	moves := equip.PlanReconcile(equip.Files(equipped), equip.Files(inventory), desired)
+	return equip.FinalCount(len(equipped), moves), nil
 }
 
 // Unmatched returns the names in desired that match no profile file in
@@ -54,14 +48,14 @@ func Unmatched(configDir string, desired []string) ([]string, error) {
 	}
 	var missing []string
 	for _, d := range desired {
-		if !have[NormalizeName(d)] {
+		if !have[equip.NormalizeName(d)] {
 			missing = append(missing, d)
 		}
 	}
 	return missing, nil
 }
 
-func listBothLocations(configDir string) (equipped, inventory []Entry, err error) {
+func listBothLocations(configDir string) (equipped, inventory []equip.Entry, err error) {
 	equipped, err = List(configDir)
 	if err != nil {
 		return nil, nil, err
@@ -73,98 +67,30 @@ func listBothLocations(configDir string) (equipped, inventory []Entry, err error
 	return equipped, inventory, nil
 }
 
-func reconcile(configDir string, desired []string, enforceCap bool) (Result, error) {
+func reconcile(configDir string, desired []string, enforceCap bool) (equip.Result, error) {
 	equipped, inventory, err := listBothLocations(configDir)
 	if err != nil {
-		return Result{}, err
+		return equip.Result{}, err
 	}
 
-	moves := planReconcile(Files(equipped), Files(inventory), desired)
+	moves := equip.PlanReconcile(equip.Files(equipped), equip.Files(inventory), desired)
 	if enforceCap {
-		if err := checkCap(len(equipped), moves); err != nil {
-			return Result{}, err
+		if err := equip.CheckCap(len(equipped), moves); err != nil {
+			return equip.Result{}, err
 		}
 	}
 
-	var res Result
+	var res equip.Result
 	for _, m := range moves {
 		if err := Move(configDir, m.File, m.From, m.To); err != nil {
 			return res, err
 		}
-		name := strings.TrimSuffix(m.File, ProfileSuffix)
-		if m.To == Equipped {
+		name := strings.TrimSuffix(m.File, equip.ProfileSuffix)
+		if m.To == equip.Equipped {
 			res.Equipped = append(res.Equipped, name)
 		} else {
 			res.Stashed = append(res.Stashed, name)
 		}
 	}
 	return res, nil
-}
-
-// finalCount reports the equipped total a plan would leave behind. Counting
-// the plan's outcome rather than len(desired) keeps names that match no file
-// in either location from inflating the total.
-func finalCount(equipped int, moves []move) int {
-	final := equipped
-	for _, m := range moves {
-		if m.To == Equipped {
-			final++
-		} else {
-			final--
-		}
-	}
-	return final
-}
-
-// checkCap rejects a plan that would push the equipped count past MaxEquipped.
-// The rule is monotonic rather than an invariant: someone already over the cap
-// (profiles copied in by hand, a config predating the cap, or a confirmed
-// over-cap spec) can still reorder and stash — only growth is refused, so the
-// overflow drains but never returns.
-func checkCap(equipped int, moves []move) error {
-	if final := finalCount(equipped, moves); final > MaxEquipped && final > equipped {
-		return fmt.Errorf("at most %d profiles equipped (got %d); stash some first", MaxEquipped, final)
-	}
-	return nil
-}
-
-// Files extracts the on-disk filenames from a slice of entries.
-func Files(entries []Entry) []string {
-	names := make([]string, len(entries))
-	for i, e := range entries {
-		names[i] = e.File
-	}
-	return names
-}
-
-// move is one file relocation between locations.
-type move struct {
-	File string
-	From Location
-	To   Location
-}
-
-// planReconcile computes the moves needed so that exactly the desired profiles
-// are equipped. equipped and inventory are the current filenames in each
-// location; desired is a list of profile references (any form NormalizeName
-// accepts). It performs no I/O. Stashes come first, so a run that stops
-// partway never has more decks equipped than at its start or its end.
-func planReconcile(equipped, inventory, desired []string) []move {
-	want := make(map[string]bool, len(desired))
-	for _, d := range desired {
-		want[NormalizeName(d)] = true
-	}
-
-	var moves []move
-	for _, file := range equipped {
-		if !want[NormalizeName(file)] {
-			moves = append(moves, move{File: file, From: Equipped, To: Inventory})
-		}
-	}
-	for _, file := range inventory {
-		if want[NormalizeName(file)] {
-			moves = append(moves, move{File: file, From: Inventory, To: Equipped})
-		}
-	}
-	return moves
 }

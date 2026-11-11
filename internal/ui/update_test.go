@@ -5,7 +5,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/equip"
-	"github.com/lucky7xz/drako/internal/profiles"
 	"github.com/lucky7xz/drako/internal/settings"
 )
 
@@ -68,7 +67,7 @@ func createTestInventoryModel() Model {
 	state := equip.NewInventoryState(
 		[]string{"a.profile.toml", "b.profile.toml"}, // Visible
 		[]string{"c.profile.toml", "d.profile.toml"}, // Inventory
-		profiles.MaxEquipped,
+		equip.MaxEquipped,
 	)
 	m := Model{
 		mode: inventoryMode,

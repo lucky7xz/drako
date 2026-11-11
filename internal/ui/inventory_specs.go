@@ -7,9 +7,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/paths"
-	"github.com/lucky7xz/drako/internal/profiles"
 )
 
 // This file owns the spec-function picker end to end: what a spec function is,
@@ -152,7 +152,7 @@ func (m Model) lockedFile() string {
 		return ""
 	}
 	for _, f := range m.inventory.State.Visible {
-		if m.isLockedProfile(strings.TrimSuffix(f, profiles.ProfileSuffix)) {
+		if m.isLockedProfile(strings.TrimSuffix(f, equip.ProfileSuffix)) {
 			return f
 		}
 	}
@@ -177,7 +177,7 @@ func (m Model) buildSpecPlans() []specPlan {
 	// bare "git" finds "git.profile.toml" wherever it currently sits.
 	byName := make(map[string]string, len(state.Visible)+len(state.Inventory))
 	for _, f := range append(append([]string{}, state.Visible...), state.Inventory...) {
-		byName[profiles.NormalizeName(strings.TrimSuffix(f, profiles.ProfileSuffix))] = f
+		byName[equip.NormalizeName(strings.TrimSuffix(f, equip.ProfileSuffix))] = f
 	}
 
 	var equipPlans, stashPlans []specPlan
@@ -217,7 +217,7 @@ func (m Model) buildSpecPlans() []specPlan {
 // reporting the names that match nothing.
 func resolveSpec(want []string, byName map[string]string) (files, missing []string) {
 	for _, p := range want {
-		if f, ok := byName[profiles.NormalizeName(p)]; ok {
+		if f, ok := byName[equip.NormalizeName(p)]; ok {
 			files = append(files, f)
 		} else {
 			missing = append(missing, p)
@@ -384,7 +384,7 @@ func (m Model) stagedSummary(p specPlan) string {
 		msg += fmt.Sprintf(" Skipped %s (not installed).", summarizeNames(p.missing))
 	}
 	if locked := m.lockedFile(); locked != "" {
-		msg += fmt.Sprintf(" Kept %s (locked).", strings.TrimSuffix(locked, profiles.ProfileSuffix))
+		msg += fmt.Sprintf(" Kept %s (locked).", strings.TrimSuffix(locked, equip.ProfileSuffix))
 	}
 	return msg + " Apply to commit."
 }

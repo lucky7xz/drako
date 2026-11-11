@@ -10,9 +10,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/profile"
-	profilepkg "github.com/lucky7xz/drako/internal/profiles"
 )
 
 // HandleExplainCommand processes 'drako explain [profile:]<addr> ...'.
@@ -172,9 +172,9 @@ func pickProfile(bundle lair.ConfigBundle, name string) (lair.ProfileInfo, error
 		}
 		return bundle.Profiles[idx], nil
 	}
-	target := profilepkg.NormalizeName(name)
+	target := equip.NormalizeName(name)
 	for _, p := range bundle.Profiles {
-		if profilepkg.NormalizeName(p.Name) == target {
+		if equip.NormalizeName(p.Name) == target {
 			return p, nil
 		}
 	}

@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/lucky7xz/drako/internal/equip"
 )
 
 // MoveToTrash moves file (validated to stay inside configDir) into the trash dir
@@ -29,7 +31,7 @@ func MoveToTrash(configDir, file string) error {
 		return err
 	}
 
-	trashDir := Trash.Dir(configDir)
+	trashDir := locationDir(equip.Trash, configDir)
 	if err := os.MkdirAll(trashDir, 0o755); err != nil {
 		return err
 	}

@@ -6,7 +6,6 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucky7xz/drako/internal/equip"
-	"github.com/lucky7xz/drako/internal/profiles"
 	"github.com/lucky7xz/drako/internal/version"
 )
 
@@ -35,8 +34,8 @@ func (m Model) viewInventoryMode(hint string) string {
 	inventory := *inventoryPtr
 
 	// The count is of the staged list, so the budget updates while arranging.
-	equippedLabel := fmt.Sprintf("Equipped Items (%d/%d)", len(visible), profiles.MaxEquipped)
-	if len(visible) > profiles.MaxEquipped {
+	equippedLabel := fmt.Sprintf("Equipped Items (%d/%d)", len(visible), equip.MaxEquipped)
+	if len(visible) > equip.MaxEquipped {
 		equippedLabel += " ⚠"
 	}
 	equippedHeader := m.styles.ListHeader.Render(equippedLabel)
@@ -163,7 +162,7 @@ func (m Model) renderInventoryGrid(items []string, listID, rowBudget int) string
 	} else {
 		for i, p := range items {
 			selected := isFocused && i == m.inventory.cursor
-			locked := m.isLockedProfile(strings.TrimSuffix(p, profiles.ProfileSuffix))
+			locked := m.isLockedProfile(strings.TrimSuffix(p, equip.ProfileSuffix))
 
 			style := m.styles.Cell
 			switch {

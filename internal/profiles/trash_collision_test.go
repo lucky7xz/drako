@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/lucky7xz/drako/internal/equip"
 )
 
 // Two decks with the same file name (equipped and stashed) trashed within the
@@ -21,7 +23,7 @@ func TestMoveToTrashNeverOverwrites(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	entries, err := os.ReadDir(Trash.Dir(dir))
+	entries, err := os.ReadDir(locationDir(equip.Trash, dir))
 	if err != nil {
 		t.Fatal(err)
 	}

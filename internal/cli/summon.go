@@ -18,6 +18,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profiles"
 )
@@ -88,7 +89,7 @@ func (s *Summoner) Summon(sourceURL string) error {
 
 		fmt.Printf("\nYou are about to clone a git repository:\n")
 		fmt.Printf("  Source: %s\n", sourceURL)
-		fmt.Printf("  Destination: %s (equipped; inventory/ once %d are equipped)\n", s.ConfigDir, profiles.MaxEquipped)
+		fmt.Printf("  Destination: %s (equipped; inventory/ once %d are equipped)\n", s.ConfigDir, equip.MaxEquipped)
 		fmt.Printf("  Action: Find and copy the .profile.toml files at its top level\n\n")
 
 		if s.Rev == "" {
@@ -154,15 +155,15 @@ func placeFor(configDir, file string) (string, error) {
 		return "", err
 	}
 
-	norm := profiles.NormalizeName(file)
-	same := func(e profiles.Entry) bool { return e.Norm == norm }
+	norm := equip.NormalizeName(file)
+	same := func(e equip.Entry) bool { return e.Norm == norm }
 	if i := slices.IndexFunc(equipped, same); i >= 0 {
 		return filepath.Join(configDir, equipped[i].File), nil
 	}
 	if i := slices.IndexFunc(stashed, same); i >= 0 {
 		return filepath.Join(inventoryDir, stashed[i].File), nil
 	}
-	if len(equipped) < profiles.MaxEquipped {
+	if len(equipped) < equip.MaxEquipped {
 		return filepath.Join(configDir, file), nil
 	}
 	return filepath.Join(inventoryDir, file), nil
@@ -181,7 +182,7 @@ func destinationLabel(configDir, dstPath string) string {
 		return "replaces your equipped " + name
 	}
 	if stashed {
-		return fmt.Sprintf("inventory (%d decks are equipped)", profiles.MaxEquipped)
+		return fmt.Sprintf("inventory (%d decks are equipped)", equip.MaxEquipped)
 	}
 	return "equipped"
 }
@@ -259,7 +260,7 @@ func (s *Summoner) summonFromFolder(dir string) error {
 
 	fmt.Printf("\nYou are about to summon from a folder:\n")
 	fmt.Printf("  Source: %s\n", root)
-	fmt.Printf("  Destination: %s (equipped; inventory/ once %d are equipped)\n", s.ConfigDir, profiles.MaxEquipped)
+	fmt.Printf("  Destination: %s (equipped; inventory/ once %d are equipped)\n", s.ConfigDir, equip.MaxEquipped)
 	return s.summonFromDir(root, root)
 }
 

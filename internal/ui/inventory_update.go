@@ -88,10 +88,10 @@ func InitInventoryModel(configDir string) inventoryModel {
 
 	// Equipped decks in the grid's order; an unreadable pivot.toml means none saved.
 	pf, _ := lair.ReadPivotProfile(configDir)
-	visible := profiles.Order(profiles.Files(equipped), pf.EquippedOrder)
-	inventory := profiles.Files(stashed)
+	visible := equip.Order(equip.Files(equipped), pf.EquippedOrder)
+	inventory := equip.Files(stashed)
 
-	state := equip.NewInventoryState(visible, inventory, profiles.MaxEquipped)
+	state := equip.NewInventoryState(visible, inventory, equip.MaxEquipped)
 
 	return inventoryModel{State: state, seen: [2][]string{slices.Clone(visible), slices.Clone(inventory)}}
 }
@@ -101,7 +101,7 @@ func InitInventoryModel(configDir string) inventoryModel {
 // both refuse and send the user to the grid to break the lock themselves.
 func (m Model) isLockedProfile(name string) bool {
 	return m.profile.pivotName != "" &&
-		profiles.NormalizeName(m.profile.pivotName) == profiles.NormalizeName(name)
+		equip.NormalizeName(m.profile.pivotName) == equip.NormalizeName(name)
 }
 
 // lockedRefusal is the message both guards show, naming the configured key.
@@ -120,7 +120,7 @@ func (inv inventoryModel) selectedFile(configDir string) (rel, name string, ok b
 		return "", "", false
 	}
 	file := (*listPtr)[inv.cursor]
-	name = strings.TrimSuffix(file, profiles.ProfileSuffix)
+	name = strings.TrimSuffix(file, equip.ProfileSuffix)
 
 	if _, err := os.Stat(filepath.Join(configDir, file)); err == nil {
 		return file, name, true
@@ -141,7 +141,7 @@ func (inv inventoryModel) selectedFile(configDir string) (rel, name string, ok b
 func ApplyInventoryChangesCmd(configDir string, m inventoryModel) tea.Cmd {
 	desired := make([]string, 0, len(m.State.Visible))
 	for _, v := range m.State.Visible {
-		desired = append(desired, strings.TrimSuffix(v, profiles.ProfileSuffix))
+		desired = append(desired, strings.TrimSuffix(v, equip.ProfileSuffix))
 	}
 	return func() tea.Msg {
 		// Equip/stash files to match the arrangement (core stays protected).
@@ -285,7 +285,7 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			// which drops the next launch into the rescue grid.
 			if listPtr, err := inv.State.GetList(inv.focusedList); err == nil &&
 				inv.cursor >= 0 && inv.cursor < len(*listPtr) &&
-				m.isLockedProfile(strings.TrimSuffix((*listPtr)[inv.cursor], profiles.ProfileSuffix)) {
+				m.isLockedProfile(strings.TrimSuffix((*listPtr)[inv.cursor], equip.ProfileSuffix)) {
 				inv.status = m.lockedRefusal()
 				return m, nil
 			}
@@ -346,7 +346,7 @@ func (m Model) updatePendingDelete(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyEnter:
 		inv.pending = nil
-		if profiles.NormalizeName(pd.typed) != profiles.NormalizeName(pd.name) {
+		if equip.NormalizeName(pd.typed) != equip.NormalizeName(pd.name) {
 			inv.status = "Name doesn't match — nothing deleted"
 			return m, nil
 		}

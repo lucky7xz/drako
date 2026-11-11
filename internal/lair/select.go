@@ -5,8 +5,8 @@ import (
 	"log"
 	"strings"
 
+	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/profile"
-	profilepkg "github.com/lucky7xz/drako/internal/profiles"
 	"github.com/lucky7xz/drako/internal/settings"
 )
 
@@ -14,7 +14,7 @@ import (
 // pure function: same inputs, same choice, no filesystem.
 
 // reorderByPivot arranges profiles in the pivot's equipped order, the same
-// profiles.Order the inventory uses, so the two never disagree.
+// equip.Order the inventory uses, so the two never disagree.
 func reorderByPivot(profiles []ProfileInfo, order []string) []ProfileInfo {
 	byName := make(map[string]ProfileInfo, len(profiles))
 	names := make([]string, len(profiles))
@@ -22,7 +22,7 @@ func reorderByPivot(profiles []ProfileInfo, order []string) []ProfileInfo {
 		byName[p.Name], names[i] = p, p.Name
 	}
 	out := make([]ProfileInfo, 0, len(profiles))
-	for _, n := range profilepkg.Order(names, order) {
+	for _, n := range equip.Order(names, order) {
 		out = append(out, byName[n])
 	}
 	return out
@@ -46,7 +46,7 @@ func resolveRequested(pivotLocked, envProfile, cfgProfile string, available []Pr
 	}
 	unparsable := func(name string) bool {
 		for _, b := range broken {
-			if profilepkg.NormalizeName(b.Name) == profilepkg.NormalizeName(name) {
+			if equip.NormalizeName(b.Name) == equip.NormalizeName(name) {
 				return true
 			}
 		}
@@ -140,12 +140,12 @@ func buildEffective(base settings.Config, profiles []ProfileInfo, activeIndex in
 // request means the first profile; found is false only when a non-empty
 // request matches nothing.
 func selectProfile(profiles []ProfileInfo, requested string) (activeIndex int, found bool) {
-	target := profilepkg.NormalizeName(requested)
+	target := equip.NormalizeName(requested)
 	if target == "" {
 		return 0, true
 	}
 	for i := range profiles {
-		if profilepkg.NormalizeName(profiles[i].Name) == target {
+		if equip.NormalizeName(profiles[i].Name) == target {
 			return i, true
 		}
 	}

@@ -10,12 +10,12 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/host"
 	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profile"
-	"github.com/lucky7xz/drako/internal/profiles"
 	"github.com/lucky7xz/drako/internal/settings"
 )
 
@@ -642,8 +642,8 @@ func (m *Model) toggleProfileLock() tea.Cmd {
 	if currentName == "" {
 		return m.setProfileStatus("Nothing to pin in Rescue Mode", false)
 	}
-	normCurrent := profiles.NormalizeName(currentName)
-	normPivot := profiles.NormalizeName(m.profile.pivotName)
+	normCurrent := equip.NormalizeName(currentName)
+	normPivot := equip.NormalizeName(m.profile.pivotName)
 
 	var err error
 	var messageCmd tea.Cmd

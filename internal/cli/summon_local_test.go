@@ -45,8 +45,8 @@ func placed(s *Summoner, file string) string {
 	return ""
 }
 
-// equip fills s's config root with n decks, e0.profile.toml onwards.
-func equip(t *testing.T, s *Summoner, n int) {
+// equipDecks fills s's config root with n decks, e0.profile.toml onwards.
+func equipDecks(t *testing.T, s *Summoner, n int) {
 	t.Helper()
 	for i := range n {
 		writeAll(t, s.ConfigDir, map[string]string{fmt.Sprintf("e%d.profile.toml", i): validDeck})
@@ -82,7 +82,7 @@ func TestSummonLocalFolderCopiesDeckAndAssets(t *testing.T) {
 // New decks are equipped while there is room; once nine are, the rest wait in the inventory.
 func TestSummonEquipsNewDecksUntilFull(t *testing.T) {
 	s, dir := localSummoner(t)
-	equip(t, s, 8)
+	equipDecks(t, s, 8)
 	writeAll(t, dir, map[string]string{"a.profile.toml": validDeck, "b.profile.toml": validDeck})
 	if err := s.Summon(dir); err != nil {
 		t.Fatalf("Summon: %v", err)
@@ -98,7 +98,7 @@ func TestSummonEquipsNewDecksUntilFull(t *testing.T) {
 // A deck the user declines is never written, so it holds no equipped slot.
 func TestSummonDeclinedDeckTakesNoSlot(t *testing.T) {
 	s, dir := localSummoner(t)
-	equip(t, s, 8)
+	equipDecks(t, s, 8)
 	writeAll(t, dir, map[string]string{"a.profile.toml": validDeck, "b.profile.toml": validDeck})
 	s.UI = &MockUI{ConfirmFunc: func(p string) bool { return !strings.Contains(p, "a.profile.toml") }}
 	if err := s.Summon(dir); err != nil {
@@ -112,7 +112,7 @@ func TestSummonDeclinedDeckTakesNoSlot(t *testing.T) {
 // A deck that is already equipped is replaced there even when equipped is full.
 func TestSummonReplacesEquippedDeckWhenFull(t *testing.T) {
 	s, dir := localSummoner(t)
-	equip(t, s, 9)
+	equipDecks(t, s, 9)
 	writeAll(t, dir, map[string]string{"e3.profile.toml": validDeck + "# v2\n"})
 	if err := s.Summon(dir); err != nil {
 		t.Fatalf("Summon: %v", err)

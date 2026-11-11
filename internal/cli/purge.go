@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profiles"
@@ -205,7 +206,7 @@ func ExecutePurge(args []string) error {
 func purgeFile(configDir, target string) (string, error) {
 	file := target
 	if filepath.Ext(file) != ".toml" {
-		file += profiles.ProfileSuffix
+		file += equip.ProfileSuffix
 	}
 	if _, err := os.Stat(filepath.Join(configDir, file)); err == nil {
 		return file, nil
@@ -216,7 +217,7 @@ func purgeFile(configDir, target string) (string, error) {
 			return "", err
 		}
 		for _, e := range entries {
-			if e.Norm == profiles.NormalizeName(target) {
+			if e.Norm == equip.NormalizeName(target) {
 				return filepath.Rel(configDir, filepath.Join(dir, e.File))
 			}
 		}

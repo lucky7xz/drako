@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/lucky7xz/drako/internal/profiles"
+	"github.com/lucky7xz/drako/internal/equip"
 )
 
 // renderGrid renders the grid into at most budgetLines terminal lines. When
@@ -160,7 +160,7 @@ func (m Model) renderProfileCounter() string {
 	// every profile but only the first MaxEquipped have a 1-9 chord; at zero
 	// there is nothing to switch to and the grid is the rescue fallback.
 	marker := ""
-	if total > profiles.MaxEquipped || total == 0 {
+	if total > equip.MaxEquipped || total == 0 {
 		marker = "⚠ "
 	}
 	counter := fmt.Sprintf("< %d / %d %s>", x, total, marker)
