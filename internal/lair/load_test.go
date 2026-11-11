@@ -383,3 +383,13 @@ func TestLoadBaseConfig_MissingFileGetsSettingsNotRuntimeState(t *testing.T) {
 		t.Errorf("config.toml holds the rescue grid's commands:\n%.300s", b)
 	}
 }
+
+// loadBaseConfig loads the settings of dir the way a full load does.
+func loadBaseConfig(dir string) (settings.Config, []ProfileParseError) {
+	l, err := Create(dir)
+	if err != nil {
+		panic(err)
+	}
+	defer l.Close()
+	return l.loadBaseConfig()
+}

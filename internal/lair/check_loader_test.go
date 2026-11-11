@@ -23,7 +23,7 @@ func TestCheckRejectsWhatTheLoaderRejects(t *testing.T) {
 		if err := os.WriteFile(path, []byte(deck), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		if CheckProfileFile(path) == nil {
+		if CheckProfileFile(filepath.Dir(path), filepath.Base(path)) == nil {
 			t.Fatalf("%s: setup expects the loader to reject this deck", name)
 		}
 		hasError := false

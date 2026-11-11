@@ -449,7 +449,11 @@ func (m Model) afterEdit(msg editorFinishedMsg) (tea.Model, tea.Cmd) {
 	}
 
 	name := filepath.Base(msg.path)
-	if err := lair.CheckProfileFile(msg.path); err != nil {
+	rel, relErr := filepath.Rel(m.profile.configDir, msg.path)
+	if relErr != nil {
+		rel = msg.path // not under the config directory: lair will refuse it
+	}
+	if err := lair.CheckProfileFile(m.profile.configDir, rel); err != nil {
 		m.inventory.status = fmt.Sprintf("⚠️ %s has errors: %v", name, err)
 	} else {
 		m.inventory.status, m.inventory.statusOK = "✓ Saved: "+name, true

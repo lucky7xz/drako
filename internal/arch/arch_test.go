@@ -19,6 +19,7 @@ type rule struct {
 	imports    []string
 	calls      []string // "importpath.Func", for effects hiding in a broad package
 	allowed    []string // packages directly under internal/
+	only       []string // when set, the rule binds just these packages and allows none of them
 }
 
 var rules = []rule{
@@ -38,6 +39,19 @@ var rules = []rule{
 		imports:    []string{"os"},
 		// ui is today's name for tui.
 		allowed: []string{"lair", "summon", "proc", "host", "tui", "ui", "cli", "app"},
+	},
+	{
+		// lair reaches drako's files through its os.Root, so nothing can
+		// leave the config directory. Opening a file by path would step
+		// around that; the few lines that must are knownExceptions.
+		capability: "open a file by path instead of through the lair's root",
+		calls: []string{
+			"os.ReadFile", "os.WriteFile", "os.Open", "os.OpenFile", "os.Create", "os.CreateTemp",
+			"os.Remove", "os.RemoveAll", "os.Rename", "os.Mkdir", "os.MkdirAll", "os.MkdirTemp",
+			"os.ReadDir", "os.Stat", "os.Lstat", "os.Chmod", "os.Symlink", "os.Readlink", "os.Link",
+			"os.Truncate", "os.DirFS", "github.com/BurntSushi/toml.DecodeFile",
+		},
+		only: []string{"lair"},
 	},
 	{
 		capability: "step around Go's memory safety",
@@ -69,6 +83,12 @@ var knownExceptions = []string{
 	"profiles/move.go os",
 	"profiles/profiles.go os",
 	"profiles/trash.go os",
+
+	// open a file by path instead of through the lair's root
+	"lair/files.go os.ReadFile",                          // read: follows a file the user linked out of the folder
+	"lair/files.go os.Stat",                              // stat, read's twin; and explain, to recognise a linked subfolder
+	"lair/lair.go os.MkdirAll",                           // Create: the folder has to exist before it can be opened
+	"lair/spec.go github.com/BurntSushi/toml.DecodeFile", // until specs move behind the root (step 5)
 }
 
 func TestPackagesKeepToTheirCapabilities(t *testing.T) {
@@ -116,7 +136,7 @@ func violations(t *testing.T, root string) []string {
 			}
 		}
 		for _, r := range rules {
-			if slices.Contains(r.allowed, pkg) {
+			if slices.Contains(r.allowed, pkg) || (r.only != nil && !slices.Contains(r.only, pkg)) {
 				continue
 			}
 			for _, imp := range imports {

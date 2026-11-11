@@ -13,18 +13,18 @@ import (
 // Well-known names under the drako config directory. They exist exactly
 // once, in this block.
 const (
-	appDirName       = "drako"
-	inventoryDirName = "inventory"
-	specsDirName     = "specs"
-	assetsDirName    = "assets"
-	trashDirName     = "trash"
-	pivotFileName    = "pivot.toml"
-	themesFileName   = "themes.toml"
+	appDirName    = "drako"
+	specsDirName  = "specs"
+	assetsDirName = "assets"
+	trashDirName  = "trash"
 )
 
 // Names callers use bare, relative to the config directory: the watcher and
-// error reports match ConfigFileName, and lair opens the logs by name.
+// error reports match ConfigFileName, and lair opens its files by name.
 const (
+	InventoryDirName   = "inventory"
+	PivotFileName      = "pivot.toml"
+	ThemesFileName     = "themes.toml"
 	ConfigFileName     = settings.FileName
 	LogFileName        = "drako.log"
 	LogArchiveName     = "drako.log.old"
@@ -50,7 +50,7 @@ func ConfigDir() (string, error) {
 
 // InventoryDir is where stashed (non-equipped) profiles live.
 func InventoryDir(configDir string) string {
-	return filepath.Join(configDir, inventoryDirName)
+	return filepath.Join(configDir, InventoryDirName)
 }
 
 // SpecsDir is where *.spec.toml files (profile bundles) live.
@@ -75,13 +75,13 @@ func ConfigFile(configDir string) string {
 
 // PivotFile records the locked profile and the equipped order.
 func PivotFile(configDir string) string {
-	return filepath.Join(configDir, pivotFileName)
+	return filepath.Join(configDir, PivotFileName)
 }
 
 // ThemesFile holds user-defined theme palettes; when absent, the themes
 // embedded in the binary are used.
 func ThemesFile(configDir string) string {
-	return filepath.Join(configDir, themesFileName)
+	return filepath.Join(configDir, ThemesFileName)
 }
 
 // LogFile is drako's application log.

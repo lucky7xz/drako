@@ -3,7 +3,7 @@ package lair
 import (
 	"bytes"
 	"errors"
-	"os"
+	"io/fs"
 	"strings"
 
 	"github.com/BurntSushi/toml"
@@ -17,13 +17,74 @@ type pivotFile struct {
 	EquippedOrder []string `toml:"equipped_order"`
 }
 
-// ReadPivotProfile loads the pivot file; a missing file is an empty pivot,
-// not an error.
+// ReadPivotProfile loads the pivot file; a missing file, or a config
+// directory that does not exist yet, is an empty pivot, not an error.
 func ReadPivotProfile(configDir string) (pivotFile, error) {
+	l, err := Open(configDir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return pivotFile{}, nil
+	}
+	if err != nil {
+		return pivotFile{}, err
+	}
+	defer l.Close()
+	return l.readPivot()
+}
+
+// WritePivotLocked records name as the locked profile, preserving the equipped
+// order. An unreadable pivot.toml is reported, never replaced.
+func WritePivotLocked(configDir, name string) error {
+	l, err := Create(configDir)
+	if err != nil {
+		return err
+	}
+	defer l.Close()
+	return l.lockProfile(name)
+}
+
+// WritePivotEquippedOrder records the equipped-profile order, preserving the
+// lock. An unreadable pivot.toml is reported, never replaced.
+func WritePivotEquippedOrder(configDir string, order []string) error {
+	l, err := Create(configDir)
+	if err != nil {
+		return err
+	}
+	defer l.Close()
+	pf, err := l.readPivot()
+	if err != nil {
+		return err
+	}
+	pf.EquippedOrder = order
+	return l.writePivot(pf)
+}
+
+// DeletePivotProfile clears the lock, preserving the equipped order. When no
+// order remains, the file itself goes; one already gone is fine.
+func DeletePivotProfile(configDir string) error {
+	l, err := Open(configDir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	defer l.Close()
+	pf, err := l.readPivot()
+	if err != nil {
+		return err
+	}
+	if len(pf.EquippedOrder) == 0 {
+		return l.remove(paths.PivotFileName)
+	}
+	pf.Locked = ""
+	return l.writePivot(pf)
+}
+
+// readPivot loads pivot.toml; a missing file is an empty pivot.
+func (l *Lair) readPivot() (pivotFile, error) {
 	var pf pivotFile
-	path := paths.PivotFile(configDir)
-	data, err := os.ReadFile(path)
-	if errors.Is(err, os.ErrNotExist) {
+	data, err := l.read(paths.PivotFileName)
+	if errors.Is(err, fs.ErrNotExist) {
 		return pivotFile{}, nil
 	}
 	if err != nil {
@@ -35,70 +96,21 @@ func ReadPivotProfile(configDir string) (pivotFile, error) {
 	return pf, nil
 }
 
-// writePivotFile replaces pivot.toml through a temp file and a rename, so a
-// crash mid-write never leaves it truncated.
-func writePivotFile(configDir string, pf pivotFile) error {
-	if err := os.MkdirAll(configDir, 0o755); err != nil {
-		return err
-	}
+// writePivot replaces pivot.toml whole.
+func (l *Lair) writePivot(pf pivotFile) error {
 	var buf bytes.Buffer
 	if err := toml.NewEncoder(&buf).Encode(pf); err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(configDir, ".pivot-*.tmp")
-	if err != nil {
-		return err
-	}
-	defer os.Remove(tmp.Name()) // gone after the rename; cleans up on failure
-	if _, err := tmp.Write(buf.Bytes()); err != nil {
-		tmp.Close()
-		return err
-	}
-	if err := tmp.Chmod(0o644); err != nil {
-		tmp.Close()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-	return os.Rename(tmp.Name(), paths.PivotFile(configDir))
+	return l.replace(paths.PivotFileName, buf.Bytes())
 }
 
-// WritePivotLocked records name as the locked profile, preserving the equipped
-// order. An unreadable pivot.toml is reported, never replaced.
-func WritePivotLocked(configDir, name string) error {
-	pf, err := ReadPivotProfile(configDir)
+// lockProfile records name as the locked profile, preserving the equipped order.
+func (l *Lair) lockProfile(name string) error {
+	pf, err := l.readPivot()
 	if err != nil {
 		return err
 	}
 	pf.Locked = strings.TrimSpace(name)
-	return writePivotFile(configDir, pf)
-}
-
-// WritePivotEquippedOrder records the equipped-profile order, preserving the
-// lock. An unreadable pivot.toml is reported, never replaced.
-func WritePivotEquippedOrder(configDir string, order []string) error {
-	pf, err := ReadPivotProfile(configDir)
-	if err != nil {
-		return err
-	}
-	pf.EquippedOrder = order
-	return writePivotFile(configDir, pf)
-}
-
-// DeletePivotProfile clears the lock, preserving the equipped order. When no
-// order remains, the file itself goes; one already gone is fine.
-func DeletePivotProfile(configDir string) error {
-	pf, err := ReadPivotProfile(configDir)
-	if err != nil {
-		return err
-	}
-	if len(pf.EquippedOrder) == 0 {
-		if err := os.Remove(paths.PivotFile(configDir)); err != nil && !errors.Is(err, os.ErrNotExist) {
-			return err
-		}
-		return nil
-	}
-	pf.Locked = ""
-	return writePivotFile(configDir, pf)
+	return l.writePivot(pf)
 }

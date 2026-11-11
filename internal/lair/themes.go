@@ -2,8 +2,9 @@ package lair
 
 import (
 	"embed"
+	"errors"
+	"io/fs"
 	"log"
-	"os"
 
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/settings"
@@ -25,14 +26,25 @@ func buildThemes(configDir string) map[string]settings.DracoThemeConfig {
 
 	if configDir != "" {
 		userPath := paths.ThemesFile(configDir)
-		if data, err := os.ReadFile(userPath); err == nil {
+		if data, err := readThemes(configDir); err == nil {
 			settings.MergeThemes(themes, data, userPath)
-		} else if !os.IsNotExist(err) {
+		} else if !errors.Is(err, fs.ErrNotExist) {
 			log.Printf("themes: could not read %s: %v", userPath, err)
 		}
 	}
 
 	return themes
+}
+
+// readThemes returns the user's themes.toml; a config directory that does not
+// exist yet has none.
+func readThemes(configDir string) ([]byte, error) {
+	l, err := Open(configDir)
+	if err != nil {
+		return nil, err
+	}
+	defer l.Close()
+	return l.read(paths.ThemesFileName)
 }
 
 // GetTheme returns the named palette, or dracula. The layers are read on every

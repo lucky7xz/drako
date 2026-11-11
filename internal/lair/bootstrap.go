@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io/fs"
 	"log"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -22,91 +21,32 @@ var bootstrapFS embed.FS
 // back whatever the user deleted (the core deck, starter decks like ssh-101,
 // themes, specs). The returned paths are config-dir-relative ("core.profile.toml",
 // "inventory/ssh-101.profile.toml", …); an empty slice means nothing was missing.
+//
+// A subfolder that is a link leaving the directory is skipped, the rest is
+// still restored, and the error says which folder it was (ErrLinkedFolder).
 func RestoreBootstrap(dstRoot string) ([]string, error) {
 	log.Printf("bootstrap: restoring missing embedded files into %s", dstRoot)
-	var restored []string
 
 	// The config dir may not exist yet (a direct `drako restore-bootstrap`
 	// runs before any TUI-side MkdirAll), and the root-level files below are
 	// written straight into it.
-	if err := os.MkdirAll(dstRoot, 0o755); err != nil {
-		return restored, err
+	l, err := Create(dstRoot)
+	if err != nil {
+		return nil, err
 	}
-
-	// 1. config.toml (from the settings template).
-	if wrote, err := WriteSettingsTemplate(dstRoot); err != nil {
-		return restored, err
-	} else if wrote {
-		restored = append(restored, paths.ConfigFileName)
-		log.Printf("bootstrap: generated config.toml")
-	}
-
-	// 2. core.profile.toml (the default deck).
-	if created, err := RestoreCoreProfile(dstRoot); err != nil {
-		return restored, err
-	} else if created {
-		restored = append(restored, "core.profile.toml")
-		log.Printf("bootstrap: generated core.profile.toml")
-	}
-
-	// 3. Everything else the binary ships (themes, inventory decks, specs, …).
-	if _, err := fs.ReadDir(bootstrapFS, "bootstrap"); err != nil {
-		log.Printf("bootstrap: no embedded assets found")
-		return restored, nil
-	}
-	err := fs.WalkDir(bootstrapFS, "bootstrap", func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-
-		rel := strings.TrimPrefix(path, "bootstrap")
-		rel = strings.TrimPrefix(rel, "/")
-
-		// Skip files handled above or not meant to be materialized on disk.
-		if rel == "settings_template.toml" || rel == "config.toml" || rel == "core.profile.toml" {
-			return nil
-		}
-
-		if rel == "" {
-			return nil // Root dir
-		}
-
-		target := filepath.Join(dstRoot, rel)
-		if d.IsDir() {
-			return os.MkdirAll(target, 0o755)
-		}
-
-		// Never duplicate a deck the user has moved: a profile shipped under
-		// inventory/ counts as present whether stashed or equipped (config root).
-		if strings.HasSuffix(rel, ".profile.toml") && profileDeckPresent(dstRoot, filepath.Base(rel)) {
-			return nil
-		}
-
-		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-			return err
-		}
-		b, err := bootstrapFS.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		if wrote, err := writeNewFile(target, b); err != nil || !wrote {
-			return err
-		}
-		// Report with forward slashes regardless of OS separator.
-		restored = append(restored, filepath.ToSlash(rel))
-		return nil
-	})
-	return restored, err
+	defer l.Close()
+	return l.restoreBootstrap()
 }
 
 // WriteSettingsTemplate writes config.toml from the settings template when it
 // is missing, and reports whether it wrote one.
 func WriteSettingsTemplate(dstRoot string) (bool, error) {
-	settings, err := bootstrapFS.ReadFile("bootstrap/settings_template.toml")
+	l, err := Open(dstRoot)
 	if err != nil {
 		return false, err
 	}
-	return writeNewFile(paths.ConfigFile(dstRoot), settings)
+	defer l.Close()
+	return l.writeSettingsTemplate()
 }
 
 // RestoreCoreProfile writes the embedded default deck as core.profile.toml
@@ -116,41 +56,122 @@ func WriteSettingsTemplate(dstRoot string) (bool, error) {
 // core-deck slice of RestoreBootstrap, kept separate so bootstrap can report
 // the core deck distinctly.
 func RestoreCoreProfile(dstRoot string) (bool, error) {
-	deck, err := bootstrapFS.ReadFile("bootstrap/core.profile.toml")
+	l, err := Open(dstRoot)
 	if err != nil {
 		return false, err
 	}
-	if profileDeckPresent(dstRoot, "core.profile.toml") {
-		return false, nil
-	}
-	return writeNewFile(filepath.Join(dstRoot, "core.profile.toml"), deck)
+	defer l.Close()
+	return l.restoreCoreProfile()
 }
 
-// writeNewFile creates path holding data, or reports false when anything is
-// there already; O_EXCL keeps "never overwrite" true under races and symlinks.
-func writeNewFile(path string, data []byte) (bool, error) {
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
-	if errors.Is(err, fs.ErrExist) {
-		return false, nil
+func (l *Lair) restoreBootstrap() ([]string, error) {
+	var restored []string
+
+	// 1. config.toml (from the settings template).
+	if wrote, err := l.writeSettingsTemplate(); err != nil {
+		return restored, err
+	} else if wrote {
+		restored = append(restored, paths.ConfigFileName)
+		log.Printf("bootstrap: generated config.toml")
 	}
+
+	// 2. core.profile.toml (the default deck).
+	if created, err := l.restoreCoreProfile(); err != nil {
+		return restored, err
+	} else if created {
+		restored = append(restored, coreProfileFile)
+		log.Printf("bootstrap: generated core.profile.toml")
+	}
+
+	// 3. Everything else the binary ships (themes, inventory decks, specs, …).
+	if _, err := fs.ReadDir(bootstrapFS, "bootstrap"); err != nil {
+		log.Printf("bootstrap: no embedded assets found")
+		return restored, nil
+	}
+	var linked error // the first linked subfolder skipped, reported once the rest is done
+	err := fs.WalkDir(bootstrapFS, "bootstrap", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		rel := strings.TrimPrefix(path, "bootstrap")
+		rel = strings.TrimPrefix(rel, "/")
+
+		// Skip files handled above or not meant to be materialized on disk.
+		if rel == "settings_template.toml" || rel == "config.toml" || rel == coreProfileFile {
+			return nil
+		}
+
+		if rel == "" {
+			return nil // Root dir
+		}
+
+		target := filepath.FromSlash(rel)
+		if d.IsDir() {
+			err := l.mkdirAll(target)
+			if errors.Is(err, ErrLinkedFolder) {
+				log.Printf("bootstrap: skipping %s: %v", rel, err)
+				if linked == nil {
+					linked = err
+				}
+				return fs.SkipDir
+			}
+			return err
+		}
+
+		// Never duplicate a deck the user has moved: a profile shipped under
+		// inventory/ counts as present whether stashed or equipped (config root).
+		if strings.HasSuffix(rel, ".profile.toml") && l.profileDeckPresent(filepath.Base(rel)) {
+			return nil
+		}
+
+		b, err := bootstrapFS.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		if wrote, err := l.writeNew(target, b); err != nil || !wrote {
+			return err
+		}
+		// Report with forward slashes regardless of OS separator.
+		restored = append(restored, filepath.ToSlash(rel))
+		return nil
+	})
+	if err == nil {
+		err = linked
+	}
+	return restored, err
+}
+
+// coreProfileFile is the default deck's filename.
+const coreProfileFile = "core.profile.toml"
+
+func (l *Lair) writeSettingsTemplate() (bool, error) {
+	settings, err := bootstrapFS.ReadFile("bootstrap/settings_template.toml")
 	if err != nil {
 		return false, err
 	}
-	_, err = f.Write(data)
-	if cerr := f.Close(); err == nil {
-		err = cerr
+	return l.writeNew(paths.ConfigFileName, settings)
+}
+
+func (l *Lair) restoreCoreProfile() (bool, error) {
+	deck, err := bootstrapFS.ReadFile("bootstrap/" + coreProfileFile)
+	if err != nil {
+		return false, err
 	}
-	return err == nil, err
+	if l.profileDeckPresent(coreProfileFile) {
+		return false, nil
+	}
+	return l.writeNew(coreProfileFile, deck)
 }
 
 // profileDeckPresent reports whether a bootstrap-shipped deck already lives in
 // either place a deck can be: equipped (config root) or stashed (inventory/).
 // Restore uses it so a deck the user has moved is never duplicated back.
-func profileDeckPresent(dstRoot, base string) bool {
-	if _, err := os.Stat(filepath.Join(dstRoot, base)); err == nil {
+func (l *Lair) profileDeckPresent(base string) bool {
+	if _, err := l.stat(base); err == nil {
 		return true // equipped
 	}
-	if _, err := os.Stat(filepath.Join(paths.InventoryDir(dstRoot), base)); err == nil {
+	if _, err := l.stat(filepath.Join(paths.InventoryDirName, base)); err == nil {
 		return true // stashed
 	}
 	return false

@@ -3,7 +3,6 @@ package lair
 import (
 	"fmt"
 	"log"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -13,10 +12,16 @@ import (
 	profilepkg "github.com/lucky7xz/drako/internal/profiles"
 )
 
-// CheckProfileFile reports whether the file at path parses and validates as
-// a profile. Used for immediate feedback after in-app edits.
-func CheckProfileFile(path string) error {
-	data, err := os.ReadFile(path)
+// CheckProfileFile reports whether the file called name inside configDir
+// (e.g. "inventory/git.profile.toml") parses and validates as a profile. Used
+// for immediate feedback after in-app edits.
+func CheckProfileFile(configDir, name string) error {
+	l, err := Open(configDir)
+	if err != nil {
+		return fmt.Errorf("could not read file: %w", err)
+	}
+	defer l.Close()
+	data, err := l.read(name)
 	if err != nil {
 		return fmt.Errorf("could not read file: %w", err)
 	}
@@ -44,9 +49,19 @@ func undecodedKeys(meta toml.MetaData) []string {
 // for every file that could not be loaded or fails validation. Commands are
 // resolved for targets, the platform's variant keys.
 func DiscoverProfilesWithErrors(configDir string, targets []string) ([]ProfileInfo, []ProfileParseError) {
+	l, err := Open(configDir)
+	if err != nil {
+		return []ProfileInfo{}, nil
+	}
+	defer l.Close()
+	return l.discoverProfiles(targets)
+}
+
+func (l *Lair) discoverProfiles(targets []string) ([]ProfileInfo, []ProfileParseError) {
+	configDir := l.dir
 	profiles := []ProfileInfo{}
 
-	entries, err := os.ReadDir(configDir)
+	entries, err := l.entries(".")
 	if err != nil {
 		return profiles, nil
 	}
@@ -64,7 +79,7 @@ func DiscoverProfilesWithErrors(configDir string, targets []string) ([]ProfileIn
 		fullPath := filepath.Join(configDir, name)
 		profileName := strings.TrimSuffix(name, profilepkg.ProfileSuffix)
 
-		raw, err := os.ReadFile(fullPath)
+		raw, err := l.read(name)
 		if err != nil {
 			log.Printf("Failed to read profile %s: %v", entry.Name(), err)
 			broken = append(broken, ProfileParseError{Name: profileName, Path: fullPath, Err: err.Error()})

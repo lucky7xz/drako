@@ -3,6 +3,7 @@ package lair
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"strings"
@@ -18,20 +19,21 @@ import (
 // (best effort), while read and syntax errors keep the broken file and
 // report it as a ProfileParseError. Commands are always empty — those come
 // from profile overlays.
-func loadBaseConfig(configDir string) (settings.Config, []ProfileParseError) {
+func (l *Lair) loadBaseConfig() (settings.Config, []ProfileParseError) {
+	configDir := l.dir
 	configPath := paths.ConfigFile(configDir)
 
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+	if _, err := l.stat(paths.ConfigFileName); errors.Is(err, fs.ErrNotExist) {
 		// Bootstrap failed to produce a config file; run on rescue and write the
 		// settings template so the next run starts from something valid.
-		if _, err := WriteSettingsTemplate(configDir); err != nil {
+		if _, err := l.writeSettingsTemplate(); err != nil {
 			log.Printf("warning: could not write config.toml: %v", err)
 		}
 		return settings.RescueConfig(configDir), nil
 	}
 
 	log.Printf("Loading config from: %s", configPath)
-	configBytes, err := os.ReadFile(configPath)
+	configBytes, err := l.read(paths.ConfigFileName)
 	if err != nil {
 		log.Printf("could not read config file: %v", err)
 		return settings.RescueConfig(configDir), []ProfileParseError{{
@@ -86,27 +88,32 @@ func loadConfig(sessionProfile string) (ConfigBundle, error) {
 		return ConfigBundle{}, fmt.Errorf("could not resolve a config directory: %w", err)
 	}
 
-	configPath := paths.ConfigFile(configDir)
-	// First run: if config file is missing, ensure dir and copy embedded bootstrap assets
-	if _, statErr := os.Stat(configPath); errors.Is(statErr, os.ErrNotExist) {
-		if mkErr := os.MkdirAll(configDir, 0o755); mkErr != nil {
-			return ConfigBundle{}, fmt.Errorf("could not create config directory: %w", mkErr)
-		}
-		if restored, err := RestoreBootstrap(configDir); err != nil {
+	// One handle for the whole load: every file below is reached through it.
+	// The directory always exists once a load is over, so make it now.
+	l, err := Create(configDir)
+	if err != nil {
+		return ConfigBundle{}, err
+	}
+	defer l.Close()
+
+	// First run: if config file is missing, copy embedded bootstrap assets
+	if _, statErr := l.stat(paths.ConfigFileName); errors.Is(statErr, fs.ErrNotExist) {
+		log.Printf("bootstrap: restoring missing embedded files into %s", configDir)
+		if restored, err := l.restoreBootstrap(); err != nil {
 			log.Printf("warning: bootstrap copy failed: %v", err)
 		} else {
 			log.Printf("bootstrap: restored %d file(s): %v", len(restored), restored)
 		}
 	}
 
-	pf, err := ReadPivotProfile(configDir)
+	pf, err := l.readPivot()
 	if err != nil {
 		log.Printf("warning: could not read pivot profile: %v", err)
 		pf = pivotFile{}
 	}
 	requestedPivot := strings.TrimSpace(pf.Locked)
 
-	base, broken := loadBaseConfig(configDir)
+	base, broken := l.loadBaseConfig()
 
 	base.ApplyDefaults()
 
@@ -114,7 +121,7 @@ func loadConfig(sessionProfile string) (ConfigBundle, error) {
 		log.Printf("Error: Base config is invalid: %v", err)
 	}
 
-	profiles, profileErrors := DiscoverProfilesWithErrors(configDir, host.Targets())
+	profiles, profileErrors := l.discoverProfiles(host.Targets())
 	broken = append(broken, profileErrors...)
 
 	profiles = reorderByPivot(profiles, pf.EquippedOrder)
@@ -135,7 +142,7 @@ func loadConfig(sessionProfile string) (ConfigBundle, error) {
 		log.Printf("requested profile is not equipped, falling through: %s", droppedProfile)
 	}
 	if req.StaleLock {
-		if err := WritePivotLocked(configDir, ""); err != nil {
+		if err := l.lockProfile(""); err != nil {
 			log.Printf("warning: could not clear pivot lock: %v", err)
 		}
 		pivotStillValid = false
