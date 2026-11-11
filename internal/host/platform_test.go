@@ -86,21 +86,12 @@ func TestTermuxIsNotSpecialCased(t *testing.T) {
 	}
 }
 
-// Whatever this package can answer must be a key profiles may use: a distro
-// added here without its key in profile.VariantKeys would resolve nothing and
-// be flagged by drako check.
+// Whatever this package can answer must be a key profiles may use.
 func TestTargetsUseOnlyProfileVariantKeys(t *testing.T) {
 	known := profile.VariantKeys()
-	candidates := []string{immutableKey, "linux_generic", "macos", "windows"}
-	for key := range distroKeywords {
-		candidates = append(candidates, key)
-	}
-	for _, key := range candidates {
+	for _, key := range []string{immutableKey, "linux_generic", "macos", "windows"} {
 		if !slices.Contains(known, key) {
 			t.Errorf("host can answer %q, which is not a profile variant key", key)
 		}
-	}
-	if len(candidates) != len(known) {
-		t.Errorf("host knows %d keys, profile lists %d: one side is missing a platform", len(candidates), len(known))
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"sort"
 	"strings"
 
 	"github.com/BurntSushi/toml"
@@ -33,15 +34,30 @@ func warnf(format string, args ...any) Finding {
 	return Finding{Level: "warning", Msg: fmt.Sprintf(format, args...)}
 }
 
-// variantKeys is the closed vocabulary for command variant tables, sorted.
-// host.Targets only ever answers with keys from this list.
-var variantKeys = []string{
-	"linux_arch", "linux_debian", "linux_fedora", "linux_generic", "linux_immutable",
-	"linux_nixos", "linux_suse", "linux_void", "macos", "windows",
+// DistroKeywords says what each Linux variant key means: the /etc/os-release
+// ids (matched by prefix) that select it. To add a distro, append its id to
+// the right list or add an entry; the key then joins the vocabulary below and
+// host detects it.
+var DistroKeywords = map[string][]string{
+	"linux_arch":   {"arch", "manjaro", "endeavouros", "cachy", "garuda", "omarchy"},
+	"linux_fedora": {"fedora", "rhel", "centos", "nobara"},
+	"linux_debian": {"debian", "ubuntu", "pop", "mint", "kali", "mx", "zorin", "elementary", "neon"},
+	"linux_suse":   {"suse", "opensuse", "sles"},
+	"linux_void":   {"void"},
+	"linux_nixos":  {"nixos"},
 }
 
-// VariantKeys is every key a command variant table may use, sorted.
-func VariantKeys() []string { return slices.Clone(variantKeys) }
+// VariantKeys is the closed vocabulary for command variant tables, sorted:
+// every distro key, plus the generic fallbacks. linux_immutable is listed by
+// hand — host probes it from the filesystem, not from /etc/os-release.
+func VariantKeys() []string {
+	keys := []string{"linux_generic", "linux_immutable", "macos", "windows"}
+	for k := range DistroKeywords {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
 
 // loaderFindings reports what the profile loader itself rejects, so check never
 // passes a deck the TUI would show as broken.
@@ -228,7 +244,7 @@ func checkCommandValue(label string, v any, hasItems bool) []Finding {
 			return []Finding{errorf("%s has an empty variant table", label)}
 		}
 		var fs []Finding
-		known := variantKeys
+		known := VariantKeys()
 		for k, raw := range t {
 			if !slices.Contains(known, k) {
 				fs = append(fs, errorf("%s: unknown variant key %q (known: %s)", label, k, strings.Join(known, ", ")))

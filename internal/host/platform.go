@@ -7,21 +7,12 @@ import (
 	"slices"
 	"strings"
 	"sync"
+
+	"github.com/lucky7xz/drako/internal/profile"
 )
 
 // Platform detection for per-platform command variants: which variant key
 // (linux_debian, macos, windows, …) describes the machine drako is running on.
-
-// distroKeywords maps a runtime target key to a list of identifying strings found in /etc/os-release.
-// To add a new distro, simply append its keywords to the appropriate list or create a new entry.
-var distroKeywords = map[string][]string{
-	"linux_arch":   {"arch", "manjaro", "endeavouros", "cachy", "garuda", "omarchy"},
-	"linux_fedora": {"fedora", "rhel", "centos", "nobara"},
-	"linux_debian": {"debian", "ubuntu", "pop", "mint", "kali", "mx", "zorin", "elementary", "neon"},
-	"linux_suse":   {"suse", "opensuse", "sles"},
-	"linux_void":   {"void"},
-	"linux_nixos":  {"nixos"},
-}
 
 // immutableKey is tried ahead of the base distro on image-managed systems.
 const immutableKey = "linux_immutable"
@@ -92,10 +83,10 @@ func distroFromOSRelease(data string) string {
 			fields[k] = strings.ToLower(strings.Trim(v, `"'`))
 		}
 	}
-	families := slices.Sorted(maps.Keys(distroKeywords))
+	families := slices.Sorted(maps.Keys(profile.DistroKeywords))
 	for _, id := range append([]string{fields["ID"]}, strings.Fields(fields["ID_LIKE"])...) {
 		for _, key := range families {
-			for _, kw := range distroKeywords[key] {
+			for _, kw := range profile.DistroKeywords[key] {
 				if id != "" && strings.HasPrefix(id, kw) {
 					return key
 				}
