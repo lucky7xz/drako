@@ -67,7 +67,6 @@ var knownExceptions = []string{
 	"config/pivot.go os",
 	"config/platform.go os",
 	"config/themes.go os",
-	"core/logging.go os",
 	"multiplex/backend.go os",
 	"multiplex/herdr.go os",
 	"multiplex/resolve.go os",

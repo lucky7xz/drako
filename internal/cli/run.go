@@ -5,12 +5,14 @@ package cli
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
 	"github.com/lucky7xz/drako/internal/config"
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/launch"
+	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/proc"
 )
 
@@ -46,7 +48,7 @@ func HandleRunCommand(args []string) int {
 		fmt.Fprintf(os.Stderr, "drako run: %q has no command for this platform\n", plan.Name)
 		return exitRunFailed
 	}
-	core.LogExecution(plan.Name, strings.Join(plan.Argv, " "))
+	logRun(plan)
 
 	code, err := proc.Replace(plan)
 	if err != nil {
@@ -54,6 +56,23 @@ func HandleRunCommand(args []string) int {
 		return exitRunFailed
 	}
 	return code
+}
+
+// logRun appends the run to history.log before the command takes over. Like
+// every history line it is best-effort: a failure is logged, never fatal.
+func logRun(plan launch.Plan) {
+	configDir, err := paths.ConfigDir()
+	if err != nil {
+		log.Printf("logging error: could not get config dir: %v", err)
+		return
+	}
+	home, err := lair.Create(configDir)
+	if err != nil {
+		log.Printf("logging error: %v", err)
+		return
+	}
+	defer home.Close()
+	home.LogExecution(plan.Name, strings.Join(plan.Argv, " "))
 }
 
 // resolveRun resolves a reference to its target and the config the TUI would

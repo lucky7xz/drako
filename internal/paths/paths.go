@@ -11,22 +11,24 @@ import (
 // Well-known names under the drako config directory. They exist exactly
 // once, in this block.
 const (
-	appDirName         = "drako"
-	inventoryDirName   = "inventory"
-	specsDirName       = "specs"
-	assetsDirName      = "assets"
-	trashDirName       = "trash"
-	pivotFileName      = "pivot.toml"
-	themesFileName     = "themes.toml"
-	logFileName        = "drako.log"
-	logArchiveName     = "drako.log.old"
-	historyFileName    = "history.log"
-	historyArchiveName = "history.log.old"
+	appDirName       = "drako"
+	inventoryDirName = "inventory"
+	specsDirName     = "specs"
+	assetsDirName    = "assets"
+	trashDirName     = "trash"
+	pivotFileName    = "pivot.toml"
+	themesFileName   = "themes.toml"
 )
 
-// ConfigFileName is exported because callers match the bare name (watcher
-// events, error reports); names only used as full paths stay unexported.
-const ConfigFileName = "config.toml"
+// Names callers use bare, relative to the config directory: the watcher and
+// error reports match ConfigFileName, and lair opens the logs by name.
+const (
+	ConfigFileName     = "config.toml"
+	LogFileName        = "drako.log"
+	LogArchiveName     = "drako.log.old"
+	HistoryFileName    = "history.log"
+	HistoryArchiveName = "history.log.old"
+)
 
 // ConfigDir is drako's root config directory: ~/.config/drako on every OS, or
 // $XDG_CONFIG_HOME/drako when that is set. It errors rather than guess.
@@ -82,22 +84,22 @@ func ThemesFile(configDir string) string {
 
 // LogFile is drako's application log.
 func LogFile(configDir string) string {
-	return filepath.Join(configDir, logFileName)
+	return filepath.Join(configDir, LogFileName)
 }
 
 // HistoryFile records launched commands.
 func HistoryFile(configDir string) string {
-	return filepath.Join(configDir, historyFileName)
+	return filepath.Join(configDir, HistoryFileName)
 }
 
 // LogArchive is the rotated backup of LogFile.
 func LogArchive(configDir string) string {
-	return filepath.Join(configDir, logArchiveName)
+	return filepath.Join(configDir, LogArchiveName)
 }
 
 // HistoryArchive is the rotated backup of HistoryFile.
 func HistoryArchive(configDir string) string {
-	return filepath.Join(configDir, historyArchiveName)
+	return filepath.Join(configDir, HistoryArchiveName)
 }
 
 // LogFiles is every log drako writes, rotated backups included: exactly what

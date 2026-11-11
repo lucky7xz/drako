@@ -12,7 +12,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/cli"
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/multiplex"
 	"github.com/lucky7xz/drako/internal/paths"
@@ -64,14 +64,18 @@ func Run() int {
 		fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
 		return 1
 	}
-	if err := os.MkdirAll(configDir, 0o755); err != nil {
-		fmt.Fprintf(os.Stderr, "could not create config dir: %v\n", err)
+	// One handle on the config directory for the whole process; everything
+	// drako writes there goes through it.
+	home, err := lair.Create(configDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return 1
 	}
+	defer home.Close()
 	// =======================================
 	// Logging setup
 
-	f, err := core.OpenLog(configDir)
+	f, err := home.OpenLog()
 	if err != nil {
 		// NOTE: cli.go treats this as a non-fatal warning and continues;
 		// reconcile (warn vs exit) in a follow-up.
@@ -140,7 +144,7 @@ func Run() int {
 			return out.ExitCode
 
 		case ui.Batch:
-			runBatch(out)
+			runBatch(home, out)
 			clearScreen()
 
 		case ui.Run:
@@ -155,7 +159,7 @@ func Run() int {
 			case strings.HasPrefix(plan.Name, "drako open"):
 				cli.HandleOpenCommand(plan.Name)
 			default:
-				runPlan(plan)
+				runPlan(home, plan)
 			}
 			clearScreen()
 		}
@@ -176,7 +180,7 @@ func clearScreen() {
 // runBatch launches every marked cell together in a multiplexer. The heavy
 // lifting (layout, quoting, which backend) lives in the multiplex package;
 // this is resolution and handoff, mirroring the single-run dispatch.
-func runBatch(out ui.Outcome) {
+func runBatch(home *lair.Lair, out ui.Outcome) {
 	// Neither multiplexer drako drives has a Windows build worth shipping on.
 	if runtime.GOOS == "windows" {
 		fmt.Println("Batch launch needs tmux or herdr and is not available on Windows yet.")
@@ -211,7 +215,7 @@ func runBatch(out ui.Outcome) {
 		tabs = multiplex.Distribute(len(cmds), multiplex.MinTabs(len(cmds)))
 	}
 	for _, c := range cmds {
-		core.LogExecution(c.Name, "batch: "+strings.Join(c.Argv, " "))
+		home.LogExecution(c.Name, "batch: "+strings.Join(c.Argv, " "))
 	}
 
 	err = multiplex.Launch(backend, session, cmds, tabs, scriptDir)

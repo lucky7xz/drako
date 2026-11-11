@@ -33,7 +33,7 @@ No install — drako served over SSH ([Wish](https://github.com/charmbracelet/wi
 
 ## 🚀 Install
 
-> Requires Go **1.24+** —  A `curl | sh` installer is on the roadmap.
+> Requires Go **1.25+** —  A `curl | sh` installer is on the roadmap.
 >
 > **No Go toolchain?** Prebuilt static binaries for Linux, macOS and FreeBSD are on the [Releases](https://github.com/lucky7xz/drako/releases) page — see [Compatibility](#-compatibility) for what runs where. Linux packages are there too:
 >

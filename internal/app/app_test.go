@@ -123,7 +123,7 @@ func TestRunPlan_NothingToRunPauses(t *testing.T) {
 	for _, sel := range []launch.Selection{{Cell: "test"}, {Cell: "blank"}, {Cell: "gone"}} {
 		paused := false
 		pauseFn = func(string) { paused = true }
-		runPlan(launch.For(cfg, sel, ""))
+		runPlan(nil, launch.For(cfg, sel, "")) // nothing to run, so nothing is logged
 		if !paused {
 			t.Errorf("%s: expected a pause", sel.Cell)
 		}

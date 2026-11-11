@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/proc"
 	"golang.org/x/term"
@@ -17,7 +17,7 @@ var pauseFn = pause
 
 // runPlan carries out plan in the terminal the TUI has just left, and pauses
 // for a keypress where the plan or the outcome calls for one.
-func runPlan(plan launch.Plan) {
+func runPlan(home *lair.Lair, plan launch.Plan) {
 	selected := plan.Name
 
 	if !plan.Runnable() {
@@ -29,7 +29,7 @@ func runPlan(plan launch.Plan) {
 	}
 
 	// Log the execution to history.log; best-effort, never blocks the run.
-	core.LogExecution(selected, strings.Join(plan.Argv, " "))
+	home.LogExecution(selected, strings.Join(plan.Argv, " "))
 
 	if plan.Debug {
 		// Debug: capture combined output and pause.

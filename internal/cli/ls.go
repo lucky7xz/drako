@@ -14,7 +14,7 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 	"github.com/lucky7xz/drako/internal/config"
-	"github.com/lucky7xz/drako/internal/core"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/paths"
 	"golang.org/x/term"
 )
@@ -38,10 +38,17 @@ const (
 // this short-lived CLI process.
 func quietLogs() {
 	log.SetOutput(io.Discard)
-	if configDir, err := paths.ConfigDir(); err == nil {
-		if f, err := core.OpenLog(configDir); err == nil {
-			log.SetOutput(f)
-		}
+	configDir, err := paths.ConfigDir()
+	if err != nil {
+		return
+	}
+	home, err := lair.Open(configDir) // never creates the directory
+	if err != nil {
+		return
+	}
+	defer home.Close() // the log file outlives the handle
+	if f, err := home.OpenLog(); err == nil {
+		log.SetOutput(f)
 	}
 }
 
