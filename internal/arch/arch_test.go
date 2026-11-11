@@ -95,9 +95,6 @@ var knownExceptions = []string{
 	"lair/files.go os.ReadFile", // read: follows a file the user linked out of the folder
 	"lair/files.go os.Stat",     // stat, read's twin; and explain, to recognise a linked subfolder
 	"lair/lair.go os.MkdirAll",  // Create: the folder has to exist before it can be opened
-
-	// an effect package importing another
-	"lair/load.go github.com/lucky7xz/drako/internal/host", // until loading is handed the platform (steps 7 and 8)
 }
 
 func TestPackagesKeepToTheirCapabilities(t *testing.T) {

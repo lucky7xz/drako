@@ -28,7 +28,7 @@ func timerTestModel() Model {
 		{Name: "two", Command: "true", Row: 1, Col: "a"},
 	}}
 	cfg.ApplyDefaults()
-	return Model{Config: cfg, styles: BuildStyles(cfg), mode: gridMode,
+	return Model{Config: cfg, styles: BuildStyles(cfg, ""), mode: gridMode,
 		gridNav: gridNav{grid: profile.BuildGrid(cfg.X, cfg.Y, cfg.Commands)}}
 }
 

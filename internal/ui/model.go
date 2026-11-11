@@ -133,6 +133,7 @@ type Model struct {
 	activeDetail *DetailState // Single source of truth for detail view
 
 	notices []DetailState // from the host, each shown once (see Session.Notices)
+	setup   Setup         // what the host told the TUI at its creation
 }
 
 // clampCursor pulls the cursor back inside the grid bounds after the grid
@@ -158,7 +159,7 @@ func (g *gridNav) clampCursor() {
 }
 
 func (m *Model) applyConfig(cfg settings.Config) {
-	m.styles = BuildStyles(cfg)
+	m.styles = BuildStyles(cfg, m.setup.ConfigDir)
 
 	m.gridNav.grid = profile.BuildGrid(cfg.X, cfg.Y, cfg.Commands)
 	m.gridNav.clampCursor()
@@ -182,8 +183,7 @@ func (m *Model) applyConfig(cfg settings.Config) {
 
 // enterRescue swaps in the rescue grid without forgetting which deck it replaced.
 func (m *Model) enterRescue() {
-	configDir, _ := lair.ConfigDir() // resolution already succeeded by the time rescue can run
-	cfg := settings.RescueConfig(configDir)
+	cfg := settings.RescueConfig(m.setup.ConfigDir)
 	cfg.ApplyDefaults()
 	m.applyConfig(cfg)
 	m.profile.rescue = true
@@ -571,13 +571,14 @@ func (m *Model) Restore(s Session) {
 
 // InitialModel builds one lap's model from the config on disk, then applies what
 // the previous lap carried over (the zero Session on the first lap).
-func InitialModel(glassrootMode bool, carried Session) Model {
+func InitialModel(setup Setup, carried Session) Model {
+	glassrootMode := setup.Glassroot
 	path, err := host.WorkDir()
 	if err != nil {
 		path = "could not get path"
 	}
 
-	bundle, err := lair.LoadConfig()
+	bundle, err := lair.LoadConfig(setup.ConfigDir, setup.Targets, setup.Profile)
 	if err != nil {
 		// No config directory means nothing to run from; hand the host a
 		// model that is already done and let app.Run exit with the code.
@@ -610,6 +611,7 @@ func InitialModel(glassrootMode bool, carried Session) Model {
 			pumpGoal:     defaultLockPumpGoal,
 		},
 		GlassrootMode: glassrootMode,
+		setup:         setup,
 	}
 	m.applyBundle(bundle)
 	for path := range carried.acknowledged {
@@ -721,4 +723,14 @@ func (m Model) exitLockedMode() Model {
 	m.lock.progress = 0
 	m.lock.lastDirection = 0
 	return m
+}
+
+// reload loads the configuration again for the running session: the profile
+// the session has active takes the place of the one asked for from outside.
+func (m Model) reload() (lair.ConfigBundle, error) {
+	wanted := m.profile.sessionProfile
+	if wanted == "" {
+		wanted = m.setup.Profile
+	}
+	return lair.LoadConfig(m.setup.ConfigDir, m.setup.Targets, wanted)
 }

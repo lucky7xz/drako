@@ -230,7 +230,7 @@ func TestInventoryDelete_PromptSharesTheStatusRow(t *testing.T) {
 		m.termWidth, m.termHeight = 100, 40
 		m.Config.X, m.Config.Y = 2, 2
 		m.Config.Theme = "default"
-		m.styles = BuildStyles(m.Config)
+		m.styles = BuildStyles(m.Config, "")
 		mutate(&m)
 
 		lines := strings.Split(m.viewInventoryMode(m.keyHint()), "\n")

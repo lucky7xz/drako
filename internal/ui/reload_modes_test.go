@@ -19,7 +19,7 @@ import (
 func TestReloadKeepsTheInventoryOpen(t *testing.T) {
 	cfg := settings.Config{X: 1, Y: 1}
 	cfg.ApplyDefaults()
-	m := Model{Config: cfg, styles: BuildStyles(cfg), mode: inventoryMode,
+	m := Model{Config: cfg, styles: BuildStyles(cfg, ""), mode: inventoryMode,
 		inventory: inventoryModel{
 			State:  equip.NewInventoryState([]string{"b.profile.toml", "a.profile.toml"}, nil, 9),
 			status: "Trashed c → trash/", statusOK: true,
@@ -40,7 +40,7 @@ func openInventory(t *testing.T) (Model, string) {
 	t.Helper()
 	xdg := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", xdg)
-	m := InitialModel(false, Session{})
+	m := InitialModel(setupFromEnv(false), Session{})
 	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}})
 	m = next.(Model)
 	if m.mode != inventoryMode {

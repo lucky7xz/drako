@@ -29,7 +29,7 @@ func makeInventoryTestModel(n, cursor, focusedList, termW, termH int) Model {
 		termWidth:  termW,
 		termHeight: termH,
 		Config:     cfg,
-		styles:     BuildStyles(cfg),
+		styles:     BuildStyles(cfg, ""),
 		gridNav:    gridNav{grid: [][]string{{"a", "b"}, {"c", "d"}}},
 		inventory: inventoryModel{
 			State:       equip.NewInventoryState(nil, namesN(n), equip.MaxEquipped),
@@ -54,7 +54,7 @@ func makeInventoryTestModelBothLists(equippedN, inventoryN, cursor, focusedList,
 		termWidth:  termW,
 		termHeight: termH,
 		Config:     cfg,
-		styles:     BuildStyles(cfg),
+		styles:     BuildStyles(cfg, ""),
 		gridNav:    gridNav{grid: [][]string{{"a", "b"}, {"c", "d"}}},
 		inventory: inventoryModel{
 			State:       equip.NewInventoryState(equippedNames, namesN(inventoryN), equip.MaxEquipped),

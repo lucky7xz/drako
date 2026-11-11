@@ -2,6 +2,15 @@ package ui
 
 import "github.com/lucky7xz/drako/internal/launch"
 
+// Setup is what the host tells the TUI when it creates it. The TUI looks none
+// of this up for itself.
+type Setup struct {
+	ConfigDir string   // drako's config directory
+	Targets   []string // the platform's variant keys, most specific first (host.Targets)
+	Profile   string   // the profile asked for from outside (DRAKO_PROFILE); "" for none
+	Glassroot bool     // serve the sealed surface
+}
+
 // Action is what the TUI asks its host to do once it is off the screen.
 type Action int
 

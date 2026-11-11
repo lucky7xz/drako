@@ -22,7 +22,7 @@ func twoFolders() Model {
 		{Name: "Logs", Command: "journalctl -f", Row: 0, Col: "c"},
 	}}
 	cfg.ApplyDefaults()
-	return Model{Config: cfg, styles: BuildStyles(cfg), mode: gridMode,
+	return Model{Config: cfg, styles: BuildStyles(cfg, ""), mode: gridMode,
 		gridNav: gridNav{grid: profile.BuildGrid(cfg.X, cfg.Y, cfg.Commands)}}
 }
 

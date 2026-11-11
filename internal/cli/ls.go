@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/x/ansi"
+	"github.com/lucky7xz/drako/internal/host"
 	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/profile"
 	"golang.org/x/term"
@@ -51,6 +52,16 @@ func quietLogs() {
 	}
 }
 
+// loadConfig loads drako's configuration for a CLI command: from the config
+// folder, for this machine, with the profile DRAKO_PROFILE asks for.
+func loadConfig() (lair.ConfigBundle, error) {
+	configDir, err := lair.ConfigDir()
+	if err != nil {
+		return lair.ConfigBundle{}, fmt.Errorf("could not resolve a config directory: %w", err)
+	}
+	return lair.LoadConfig(configDir, host.Targets(), os.Getenv("DRAKO_PROFILE"))
+}
+
 // lsWidth is the terminal width to fit the listing into.
 func lsWidth() int {
 	if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 0 {
@@ -68,7 +79,7 @@ func HandleLsCommand(args []string) int {
 
 	quietLogs()
 
-	bundle, err := lair.LoadConfig()
+	bundle, err := loadConfig()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "drako: %v\n", err)
 		return 1

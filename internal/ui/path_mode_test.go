@@ -358,7 +358,7 @@ func TestEnterDir_RefusalIsVisible(t *testing.T) {
 	t.Run("the refusal renders under the listing", func(t *testing.T) {
 		pm := pathTestModel(t)
 		pm.DeniedDir = "root"
-		out := pm.RenderChildDirs(childMode, BuildStyles(settings.Config{}), 80)
+		out := pm.RenderChildDirs(childMode, BuildStyles(settings.Config{}, ""), 80)
 		if !strings.Contains(out, "cannot enter root") {
 			t.Errorf("RenderChildDirs missing the refusal. Got:\n%s", out)
 		}
@@ -546,7 +546,7 @@ func TestPathSearch_CommittedFilterIsVisibleAndScoped(t *testing.T) {
 	pm.UpdatePathMode(keyRune("al"), cfg)
 	pm.UpdatePathMode(tea.KeyMsg{Type: tea.KeyEnter}, cfg)
 
-	if out := ansi.Strip(pm.RenderChildDirs(pathMode, BuildStyles(cfg), 80)); !strings.Contains(out, "Search: al") || len(pm.ChildDirs) != 1 {
+	if out := ansi.Strip(pm.RenderChildDirs(pathMode, BuildStyles(cfg, ""), 80)); !strings.Contains(out, "Search: al") || len(pm.ChildDirs) != 1 {
 		t.Errorf("filter %q narrows the list to %v but is not shown:\n%s", pm.Filter, pm.ChildDirs, out)
 	}
 

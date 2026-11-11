@@ -46,14 +46,11 @@ func readThemes(configDir string) ([]byte, error) {
 	return l.read(ThemesFileName)
 }
 
-// GetTheme returns the named palette, or dracula. The layers are read on every
-// call, so an edited themes.toml applies on the next reload.
-func GetTheme(name string) settings.DracoThemeConfig {
-	configDir, err := ConfigDir()
-	if err != nil {
-		log.Printf("themes: no config dir, using built-in themes only: %v", err)
-		configDir = ""
-	}
+// Theme returns the palette called name, or dracula: from the built-in themes
+// and the themes.toml in configDir ("" for the built-in ones only). The
+// layers are read on every call, so an edited themes.toml applies on the next
+// reload.
+func Theme(configDir, name string) settings.DracoThemeConfig {
 	if theme, ok := buildThemes(configDir)[name]; ok {
 		return theme
 	}

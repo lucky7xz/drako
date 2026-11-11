@@ -21,7 +21,7 @@ func sessionModel(t *testing.T) Model {
 	cfg.ApplyDefaults()
 	return Model{
 		Config:  cfg,
-		styles:  BuildStyles(cfg),
+		styles:  BuildStyles(cfg, ""),
 		gridNav: gridNav{grid: profile.BuildGrid(cfg.X, cfg.Y, cfg.Commands)},
 	}
 }
@@ -75,7 +75,7 @@ func TestSessionFollowsTheNameNotThePosition(t *testing.T) {
 		{Name: "update", Command: "echo 1", Row: 1, Col: "c"},
 	}}
 	moved.ApplyDefaults()
-	after := Model{Config: moved, styles: BuildStyles(moved),
+	after := Model{Config: moved, styles: BuildStyles(moved, ""),
 		gridNav: gridNav{grid: profile.BuildGrid(moved.X, moved.Y, moved.Commands)}}
 	after.Restore(s)
 

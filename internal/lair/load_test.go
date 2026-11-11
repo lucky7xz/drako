@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/lucky7xz/drako/internal/host"
 	"github.com/lucky7xz/drako/internal/settings"
 )
 
@@ -38,7 +39,7 @@ func loadTestDir(t *testing.T, profileNames ...string) string {
 // which no test environment should produce.
 func mustLoadConfig(t *testing.T) ConfigBundle {
 	t.Helper()
-	bundle, err := LoadConfig()
+	bundle, err := loadFromEnv("")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,7 +153,7 @@ func TestReloadConfig_SessionBeatsEnvAndCfg(t *testing.T) {
 	loadTestDir(t, "alpha", "beta", "work")
 	t.Setenv("DRAKO_PROFILE", "work")
 
-	bundle, err := ReloadConfig("beta")
+	bundle, err := loadFromEnv("beta")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,7 +168,7 @@ func TestReloadConfig_PivotBeatsSession(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bundle, err := ReloadConfig("alpha")
+	bundle, err := loadFromEnv("alpha")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,7 +181,7 @@ func TestReloadConfig_EmptySessionFallsBackToEnv(t *testing.T) {
 	loadTestDir(t, "alpha", "work")
 	t.Setenv("DRAKO_PROFILE", "work")
 
-	bundle, err := ReloadConfig("")
+	bundle, err := loadFromEnv("")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -235,7 +236,7 @@ func TestReloadConfig_DeletedLockedProfileReportsDropped(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bundle, err := ReloadConfig("")
+	bundle, err := loadFromEnv("")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -260,7 +261,7 @@ func TestReloadConfig_UnlockedActiveGoneReportsDropped(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bundle, err := ReloadConfig("work")
+	bundle, err := loadFromEnv("work")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -281,7 +282,7 @@ func TestReloadConfig_GracefulFallbackNoDropped(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bundle, err := ReloadConfig("")
+	bundle, err := loadFromEnv("")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -305,7 +306,7 @@ func TestLoadConfig_MissingRequestedProfileKeepsEquippedDecks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bundle, err := ReloadConfig("ggml.llama-cpp")
+	bundle, err := loadFromEnv("ggml.llama-cpp")
 	if err != nil {
 		t.Fatalf("ReloadConfig: %v", err)
 	}
@@ -322,7 +323,7 @@ func TestLoadConfig_MissingRequestedProfileKeepsEquippedDecks(t *testing.T) {
 
 	// What "Exit Rescue Mode" does: reload with the same session profile. It
 	// must not be a loop.
-	again, err := ReloadConfig("ggml.llama-cpp")
+	again, err := loadFromEnv("ggml.llama-cpp")
 	if err != nil {
 		t.Fatalf("second ReloadConfig: %v", err)
 	}
@@ -347,7 +348,7 @@ func TestReloadConfig_BrokenLockedProfileKeepsTheLock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	broken, err := ReloadConfig("")
+	broken, err := loadFromEnv("")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -361,7 +362,7 @@ func TestReloadConfig_BrokenLockedProfileKeepsTheLock(t *testing.T) {
 	if err := os.WriteFile(path, good, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	fixed, err := ReloadConfig("")
+	fixed, err := loadFromEnv("")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -392,4 +393,19 @@ func loadBaseConfig(dir string) (settings.Config, []ProfileParseError) {
 	}
 	defer l.Close()
 	return l.loadBaseConfig()
+}
+
+// loadFromEnv loads the way drako's shells do: the folder from the
+// environment, this machine's platform, and as the wanted profile the
+// session's, else DRAKO_PROFILE.
+func loadFromEnv(sessionProfile string) (ConfigBundle, error) {
+	configDir, err := ConfigDir()
+	if err != nil {
+		return ConfigBundle{}, err
+	}
+	wanted := sessionProfile
+	if wanted == "" {
+		wanted = os.Getenv("DRAKO_PROFILE")
+	}
+	return LoadConfig(configDir, host.Targets(), wanted)
 }

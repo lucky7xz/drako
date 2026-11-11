@@ -13,6 +13,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/cli"
+	"github.com/lucky7xz/drako/internal/host"
 	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/multiplex"
@@ -90,6 +91,14 @@ func Run() int {
 		log.SetOutput(f)
 	}
 
+	// What the TUI is told at each lap; it looks none of it up for itself.
+	setup := ui.Setup{
+		ConfigDir: configDir,
+		Targets:   host.Targets(),
+		Profile:   os.Getenv("DRAKO_PROFILE"),
+		Glassroot: glassrootMode,
+	}
+
 	// One watcher for the process; between laps InitialModel re-reads the config.
 	var current atomic.Pointer[tea.Program]
 	watching := false
@@ -101,7 +110,7 @@ func Run() int {
 		// We initialize with the *current* directory which might have changed
 		// from manual Chdir or from internal logic
 
-		initial := ui.InitialModel(glassrootMode, session)
+		initial := ui.InitialModel(setup, session)
 		if out := initial.Outcome(); out.Action == ui.Quit {
 			// e.g. glassroot with a broken profile: fail before the TUI starts
 			if out.Message != "" {

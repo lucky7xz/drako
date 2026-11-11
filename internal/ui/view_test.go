@@ -98,7 +98,7 @@ func makeScrollTestModel(cols, rows, termW, termH int) Model {
 		termWidth:  termW,
 		termHeight: termH,
 		Config:     cfg,
-		styles:     BuildStyles(cfg), // real styles: cell height must be measured honestly
+		styles:     BuildStyles(cfg, ""), // real styles: cell height must be measured honestly
 		gridNav:    gridNav{grid: grid},
 		profile:    profileState{profiles: []lair.ProfileInfo{{Name: "Core"}}},
 	}
@@ -228,7 +228,7 @@ func TestView_WideCellsStillRenderNarrow(t *testing.T) {
 		termWidth:  60,
 		termHeight: 30,
 		Config:     cfg,
-		styles:     BuildStyles(cfg),
+		styles:     BuildStyles(cfg, ""),
 		gridNav:    gridNav{grid: grid},
 		profile:    profileState{profiles: []lair.ProfileInfo{{Name: "Core"}}},
 	}
@@ -262,7 +262,7 @@ func TestView_LongTextCompressesNotBlocks(t *testing.T) {
 		termWidth:  44,
 		termHeight: 30,
 		Config:     cfg,
-		styles:     BuildStyles(cfg),
+		styles:     BuildStyles(cfg, ""),
 		gridNav:    gridNav{grid: grid},
 		profile:    profileState{profiles: []lair.ProfileInfo{{Name: "Core"}}},
 	}
@@ -469,7 +469,7 @@ func TestRenderProfileCounter(t *testing.T) {
 			cfg := settings.Config{X: 2, Y: 2, Theme: "default"}
 			m := Model{
 				Config:  cfg,
-				styles:  BuildStyles(cfg),
+				styles:  BuildStyles(cfg, ""),
 				profile: profileState{profiles: make([]lair.ProfileInfo, tc.total), activeIndex: tc.activeIndex},
 			}
 			got := strings.TrimSpace(ansi.Strip(m.renderProfileCounter()))
@@ -538,7 +538,7 @@ func TestRenderCombinedFooter_LongPathFitsBudget(t *testing.T) {
 // The selected crumb must survive the windowing, or the cursor lands on
 // something invisible.
 func TestRenderPathBar_KeepsSelectionVisible(t *testing.T) {
-	styles := BuildStyles(settings.Config{})
+	styles := BuildStyles(settings.Config{}, "")
 	m := longPathModel(pathMode, 60)
 
 	for i := range m.path.PathComponents {

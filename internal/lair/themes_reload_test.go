@@ -8,7 +8,7 @@ import (
 
 // The watcher reloads on any .toml change, themes.toml included, so the next
 // lookup must see the edited palette rather than one cached at first use.
-func TestGetThemeSeesAnEditedThemesFile(t *testing.T) {
+func TestThemeSeesAnEditedThemesFile(t *testing.T) {
 	xdg := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", xdg)
 	dir := filepath.Join(xdg, "drako")
@@ -22,11 +22,11 @@ func TestGetThemeSeesAnEditedThemesFile(t *testing.T) {
 	}
 
 	write("#111111")
-	if got := GetTheme("mine").Primary; got != "#111111" {
+	if got := Theme(dir, "mine").Primary; got != "#111111" {
 		t.Fatalf("first lookup: primary = %q, want #111111", got)
 	}
 	write("#222222")
-	if got := GetTheme("mine").Primary; got != "#222222" {
+	if got := Theme(dir, "mine").Primary; got != "#222222" {
 		t.Errorf("after editing themes.toml: primary = %q, want #222222", got)
 	}
 }

@@ -23,7 +23,7 @@ func batchTestModel() Model {
 	cfg.ApplyDefaults()
 	return Model{
 		Config:  cfg,
-		styles:  BuildStyles(cfg),
+		styles:  BuildStyles(cfg, ""),
 		mode:    batchMode,
 		gridNav: gridNav{grid: profile.BuildGrid(cfg.X, cfg.Y, cfg.Commands)},
 		batch:   batchState{},

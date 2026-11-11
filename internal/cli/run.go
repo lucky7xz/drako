@@ -31,7 +31,7 @@ func HandleRunCommand(args []string) int {
 	}
 
 	quietLogs()
-	bundle, err := lair.LoadConfig()
+	bundle, err := loadConfig()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "drako run: %v\n", err)
 		return exitRunFailed

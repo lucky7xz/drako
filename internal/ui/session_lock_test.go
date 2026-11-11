@@ -19,7 +19,7 @@ func lockTestModel(t *testing.T) Model {
 	t.Helper()
 	cfg := settings.Config{X: 1, Y: 1}
 	cfg.ApplyDefaults()
-	return Model{Config: cfg, styles: BuildStyles(cfg), mode: gridMode}
+	return Model{Config: cfg, styles: BuildStyles(cfg, ""), mode: gridMode}
 }
 
 // update drives one key through the top-level handler, which is where a
@@ -260,7 +260,7 @@ func TestUnlockAfterReloadLeavesTheStaleDropdown(t *testing.T) {
 		return cfg
 	}
 	old := folder("status", "git status")
-	m := Model{Config: old, styles: BuildStyles(old), mode: gridMode, gridNav: gridNav{grid: profile.BuildGrid(old.X, old.Y, old.Commands)}}
+	m := Model{Config: old, styles: BuildStyles(old, ""), mode: gridMode, gridNav: gridNav{grid: profile.BuildGrid(old.X, old.Y, old.Commands)}}
 	m = update(t, m, tea.KeyMsg{Type: tea.KeyEnter}) // open "tools"
 	if m.mode != dropdownMode {
 		t.Fatalf("setup: mode = %v, want dropdownMode", m.mode)

@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
-	"os"
 	"strings"
 
-	"github.com/lucky7xz/drako/internal/host"
 	"github.com/lucky7xz/drako/internal/profile"
 	"github.com/lucky7xz/drako/internal/settings"
 )
@@ -62,31 +60,20 @@ func (l *Lair) loadBaseConfig() (settings.Config, []ProfileParseError) {
 	return base, nil
 }
 
-// LoadConfig assembles the full configuration bundle: it bootstraps a
-// missing config on first run, loads the base settings (falling back to
-// rescue mode on read or syntax errors), discovers and orders the profiles,
-// and applies the requested profile as an overlay: the pivot lock, else the
-// DRAKO_PROFILE env var, else the profile named in config.toml. It errors only when the
-// environment is unusable — no config directory can be resolved or created;
+// LoadConfig assembles the full configuration bundle from configDir: it
+// bootstraps a missing config on first run, loads the base settings (falling
+// back to rescue mode on read or syntax errors), discovers and orders the
+// profiles, and applies the requested profile as an overlay.
+//
+// Everything it needs to know is handed in. targets are the platform's variant
+// keys (host.Targets), which decide each command's text. wanted is the profile
+// asked for from outside: the one a running session has active, else the
+// DRAKO_PROFILE environment variable; the pivot lock still wins over it, and
+// the profile named in config.toml is the fallback.
+//
+// It errors only when the config directory cannot be made or opened;
 // everything else degrades to the rescue config and Broken entries.
-func LoadConfig() (ConfigBundle, error) {
-	return loadConfig("")
-}
-
-// ReloadConfig is LoadConfig for a running session: sessionProfile is the
-// profile the session currently has active, and it takes the env var's slot
-// in the selection precedence (pivot lock still snaps back over it). An empty
-// sessionProfile behaves exactly like LoadConfig().
-func ReloadConfig(sessionProfile string) (ConfigBundle, error) {
-	return loadConfig(sessionProfile)
-}
-
-func loadConfig(sessionProfile string) (ConfigBundle, error) {
-	configDir, err := ConfigDir()
-	if err != nil {
-		return ConfigBundle{}, fmt.Errorf("could not resolve a config directory: %w", err)
-	}
-
+func LoadConfig(configDir string, targets []string, wanted string) (ConfigBundle, error) {
 	// One handle for the whole load: every file below is reached through it.
 	// The directory always exists once a load is over, so make it now.
 	l, err := Create(configDir)
@@ -120,17 +107,12 @@ func loadConfig(sessionProfile string) (ConfigBundle, error) {
 		log.Printf("Error: Base config is invalid: %v", err)
 	}
 
-	profiles, profileErrors := l.discoverProfiles(host.Targets())
+	profiles, profileErrors := l.discoverProfiles(targets)
 	broken = append(broken, profileErrors...)
 
 	profiles = reorderByPivot(profiles, pf.EquippedOrder)
 
-	// The session's active profile occupies the env var's precedence slot:
-	// the env var seeds the first load, the session carries it from there.
-	envProfile := sessionProfile
-	if envProfile == "" {
-		envProfile = os.Getenv("DRAKO_PROFILE")
-	}
+	envProfile := wanted
 
 	req := resolveRequested(pf.Locked, envProfile, base.Profile, profiles, profileErrors)
 

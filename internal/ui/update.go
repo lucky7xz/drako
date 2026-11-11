@@ -65,7 +65,7 @@ func (m Model) handleMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case reloadProfilesMsg:
-		bundle, err := lair.ReloadConfig(m.profile.sessionProfile)
+		bundle, err := m.reload()
 		if err != nil {
 			log.Printf("config reload failed: %v", err)
 			return m, m.setProfileStatus("Config reload failed", false)
@@ -84,7 +84,7 @@ func (m Model) handleMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ConfigChangedMsg:
 		// Config file changed on disk, reload everything
 		log.Printf("Config file change detected: %s", msg.Path)
-		bundle, err := lair.ReloadConfig(m.profile.sessionProfile)
+		bundle, err := m.reload()
 		if err != nil {
 			log.Printf("config reload failed: %v", err)
 			return m, m.setProfileStatus("Config reload failed", false)
@@ -429,7 +429,7 @@ func (m Model) afterEdit(msg editorFinishedMsg) (tea.Model, tea.Cmd) {
 	}
 
 	// The edit may have changed any equipped profile — reload the bundle.
-	bundle, err := lair.ReloadConfig(m.profile.sessionProfile)
+	bundle, err := m.reload()
 	if err != nil {
 		m.inventory.status = "Reload failed: " + err.Error()
 		if !m.protectsMode() {

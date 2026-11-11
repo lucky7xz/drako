@@ -90,9 +90,10 @@ type Styles struct {
 const warnAmber = lipgloss.Color("#FFA500")
 
 // BuildStyles resolves a config into a concrete Styles value. It touches no
-// globals; the palette comes from lair.GetTheme, which reads themes.toml.
-func BuildStyles(cfg settings.Config) Styles {
-	theme := lair.GetTheme(cfg.Theme)
+// globals; the palette comes from lair.Theme, which reads the themes.toml in
+// configDir ("" for the built-in themes only).
+func BuildStyles(cfg settings.Config, configDir string) Styles {
+	theme := lair.Theme(configDir, cfg.Theme)
 	ui := settings.MapThemeToUI(theme)
 
 	var s Styles

@@ -25,7 +25,7 @@ func queueModel(errs ...lair.ProfileParseError) Model {
 	base.ApplyDefaults()
 	return Model{
 		mode:   gridMode,
-		styles: BuildStyles(base),
+		styles: BuildStyles(base, ""),
 		profile: profileState{
 			pendingErrors:    errs,
 			errorQueueActive: true,
@@ -251,7 +251,7 @@ func freshConfigDir(t *testing.T) (dir string) {
 	t.Helper()
 	xdg := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", xdg)
-	if _, err := lair.LoadConfig(); err != nil {
+	if _, err := lair.LoadConfig(setupFromEnv(false).ConfigDir, setupFromEnv(false).Targets, setupFromEnv(false).Profile); err != nil {
 		t.Fatal(err)
 	}
 	return filepath.Join(xdg, "drako")
@@ -320,7 +320,7 @@ func expectBrokenThenDropped(t *testing.T, m Model) {
 // broken one first, whether a reload or a new lap finds them.
 func TestDroppedNoteFollowsBrokenNoticeOnReload(t *testing.T) {
 	dir := pinnedWorkDeck(t)
-	m := InitialModel(false, Session{})
+	m := InitialModel(setupFromEnv(false), Session{})
 	dropWorkAndBreakAnother(t, dir)
 	next, _ := m.Update(ConfigChangedMsg{Path: filepath.Join(dir, "bad.profile.toml")})
 	expectBrokenThenDropped(t, ownPivotWrite(next.(Model), dir))
@@ -333,7 +333,7 @@ func TestDroppedNoteFollowsBrokenNoticeOnNewLap(t *testing.T) {
 		t.Run(lap, func(t *testing.T) {
 			dir := pinnedWorkDeck(t)
 			dropWorkAndBreakAnother(t, dir)
-			m := InitialModel(false, Session{})
+			m := InitialModel(setupFromEnv(false), Session{})
 			if lap == "later" {
 				m = ownPivotWrite(m, dir)
 			}
@@ -346,7 +346,7 @@ func TestDroppedNoteFollowsBrokenNoticeOnNewLap(t *testing.T) {
 func TestReloadQueuesBehindTheNoticeOnScreen(t *testing.T) {
 	dir := freshConfigDir(t)
 	breakDeck(t, dir, "one")
-	m := InitialModel(false, Session{})
+	m := InitialModel(setupFromEnv(false), Session{})
 	breakDeck(t, dir, "two")
 	next, _ := m.Update(ConfigChangedMsg{Path: filepath.Join(dir, "two.profile.toml")})
 	m = next.(Model)

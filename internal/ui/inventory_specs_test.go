@@ -57,7 +57,7 @@ func specsInventoryModel(t *testing.T, equipped, stashed []string, specs map[str
 		termHeight: 40,
 		profile:    profileState{configDir: dir},
 		Config:     settings.Config{Keys: keys},
-		styles:     BuildStyles(settings.Config{Keys: keys}),
+		styles:     BuildStyles(settings.Config{Keys: keys}, ""),
 		inventory: inventoryModel{
 			State:       equip.NewInventoryState(vis, inv, equip.MaxEquipped),
 			focusedList: equip.ListVisible,

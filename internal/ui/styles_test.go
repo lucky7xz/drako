@@ -29,7 +29,7 @@ func luminance(r, g, b uint64) float64 {
 // unrelated color — otherwise a locked cell can clash with the cursor.
 func TestLockedFGIsADarkerShadeOfAccent(t *testing.T) {
 	for _, name := range []string{"dracula", "jade", "nord", "everforest", "orasaka", "dracula2", "viper"} {
-		theme := lair.GetTheme(name)
+		theme := lair.Theme("", name)
 		ui := settings.MapThemeToUI(theme)
 
 		ar, ag, ab := hexChannels(t, ui.CursorFG)
@@ -45,8 +45,8 @@ func TestLockedFGIsADarkerShadeOfAccent(t *testing.T) {
 // onto the right style — which the old side-effecting applyThemeStyles couldn't.
 func TestBuildStylesMapsThemeRolesToStyles(t *testing.T) {
 	cfg := settings.Config{Theme: "dracula"}
-	ui := settings.MapThemeToUI(lair.GetTheme(cfg.Theme))
-	s := BuildStyles(cfg)
+	ui := settings.MapThemeToUI(lair.Theme("", cfg.Theme))
+	s := BuildStyles(cfg, "")
 
 	cases := []struct {
 		name string
@@ -85,7 +85,7 @@ func TestBuildStylesResolvesHeaderArt(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := BuildStyles(settings.Config{Theme: "dracula", HeaderArt: tt.art})
+			s := BuildStyles(settings.Config{Theme: "dracula", HeaderArt: tt.art}, "")
 			if s.HeaderArt != tt.want {
 				t.Errorf("HeaderArt = %q, want %q", s.HeaderArt, tt.want)
 			}

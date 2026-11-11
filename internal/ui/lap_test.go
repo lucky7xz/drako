@@ -33,14 +33,14 @@ func lapConfig(t *testing.T) {
 func TestDismissedErrorStaysDismissedAcrossLaps(t *testing.T) {
 	lapConfig(t)
 
-	first := InitialModel(false, Session{})
+	first := InitialModel(setupFromEnv(false), Session{})
 	if first.mode != infoMode {
 		t.Fatalf("setup: lap 1 should show the broken profile, mode = %v", first.mode)
 	}
 	next, _ := first.Update(tea.KeyMsg{Type: tea.KeyEnter}) // dismiss
 	session := next.(Model).Session()
 
-	second := InitialModel(false, session)
+	second := InitialModel(setupFromEnv(false), session)
 	if second.mode != gridMode {
 		t.Errorf("lap 2 re-showed the dismissed error: mode = %v, title %q", second.mode, second.activeDetail.Title)
 	}
@@ -51,7 +51,7 @@ func TestRebrokenProfileShowsAgainNextLap(t *testing.T) {
 	lapConfig(t)
 	carried := Session{acknowledged: map[string]bool{"/elsewhere/old.profile.toml": true}}
 
-	m := InitialModel(false, carried)
+	m := InitialModel(setupFromEnv(false), carried)
 	if m.mode != infoMode {
 		t.Errorf("an error not acknowledged before must show, mode = %v", m.mode)
 	}
@@ -82,7 +82,7 @@ func twoDecks(t *testing.T) string {
 // to another equipped deck. Later reloads must not repeat the note.
 func TestDroppedSessionProfileIsExplainedOnce(t *testing.T) {
 	dir := twoDecks(t)
-	m := InitialModel(false, Session{Profile: "work"})
+	m := InitialModel(setupFromEnv(false), Session{Profile: "work"})
 	if m.ActiveProfileName() != "work" {
 		t.Fatalf("setup: active = %q, want work", m.ActiveProfileName())
 	}
@@ -111,7 +111,7 @@ func TestDroppedSessionProfileIsExplainedOnce(t *testing.T) {
 // every reload and every lap requests it again. One explanation is enough.
 func TestDroppedConfigProfileIsExplainedOnce(t *testing.T) {
 	dir := twoDecks(t)
-	first := InitialModel(false, Session{}) // bootstraps config.toml
+	first := InitialModel(setupFromEnv(false), Session{}) // bootstraps config.toml
 	_ = first
 	cfgPath := filepath.Join(dir, "config.toml")
 	raw, err := os.ReadFile(cfgPath)
@@ -125,7 +125,7 @@ func TestDroppedConfigProfileIsExplainedOnce(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	m := InitialModel(false, Session{})
+	m := InitialModel(setupFromEnv(false), Session{})
 	if m.mode != infoMode {
 		t.Fatalf("setup: the drop should be explained once, mode = %v", m.mode)
 	}
@@ -134,7 +134,7 @@ func TestDroppedConfigProfileIsExplainedOnce(t *testing.T) {
 	if m = next.(Model); m.mode != gridMode {
 		t.Errorf("a reload repeated the note, mode = %v", m.mode)
 	}
-	lap := InitialModel(false, m.Session())
+	lap := InitialModel(setupFromEnv(false), m.Session())
 	if lap.mode != gridMode {
 		t.Errorf("the next lap repeated the note, mode = %v", lap.mode)
 	}
@@ -144,7 +144,7 @@ func TestDroppedConfigProfileIsExplainedOnce(t *testing.T) {
 // equipped profiles would expose the rescue grid, so the session ends instead.
 func TestAfterEditInGlassrootRejectsAnEmptyBundle(t *testing.T) {
 	dir := twoDecks(t)
-	m := InitialModel(true, Session{})
+	m := InitialModel(setupFromEnv(true), Session{})
 	if m.quitting {
 		t.Fatal("setup: two good decks should start a glassroot session")
 	}
@@ -178,8 +178,8 @@ func TestRescueSurvivesALap(t *testing.T) {
 		}
 	}
 
-	first := InitialModel(false, Session{})
-	second := InitialModel(false, first.Session())
+	first := InitialModel(setupFromEnv(false), Session{})
+	second := InitialModel(setupFromEnv(false), first.Session())
 	for lap, m := range []Model{first, second} {
 		if !m.profile.rescue || m.ActiveProfileName() != "" {
 			t.Errorf("lap %d: want rescue with no active deck, got rescue=%v active=%q", lap+1, m.profile.rescue, m.ActiveProfileName())

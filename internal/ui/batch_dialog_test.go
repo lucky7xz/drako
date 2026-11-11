@@ -28,7 +28,7 @@ func dialogModel(t *testing.T, n int) Model {
 	cfg.ApplyDefaults()
 	m := Model{
 		Config:  cfg,
-		styles:  BuildStyles(cfg),
+		styles:  BuildStyles(cfg, ""),
 		mode:    batchMode,
 		gridNav: gridNav{grid: profile.BuildGrid(cfg.X, cfg.Y, cfg.Commands)},
 		batch:   batchState{marked: cellMarks(names[:n]...)},

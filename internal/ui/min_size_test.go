@@ -13,7 +13,7 @@ func gridOfRows(n int) Model {
 	for i := range grid {
 		grid[i] = []string{"cell", "cell"}
 	}
-	return Model{Config: cfg, styles: BuildStyles(cfg), gridNav: gridNav{grid: grid}}
+	return Model{Config: cfg, styles: BuildStyles(cfg, ""), gridNav: gridNav{grid: grid}}
 }
 
 // The 10th row is labelled "10", so the size gate must budget a second digit.

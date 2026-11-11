@@ -25,7 +25,7 @@ func dropdownTestModel() Model {
 	cfg.ApplyDefaults()
 	return Model{
 		Config:   cfg,
-		styles:   BuildStyles(cfg),
+		styles:   BuildStyles(cfg, ""),
 		mode:     dropdownMode,
 		gridNav:  gridNav{grid: profile.BuildGrid(cfg.X, cfg.Y, cfg.Commands)},
 		dropdown: dropdownState{items: cfg.Commands[0].Items},
@@ -146,7 +146,7 @@ func TestDropdownMarksTellSameNamedItemsApart(t *testing.T) {
 		}},
 	}}
 	cfg.ApplyDefaults()
-	m := Model{Config: cfg, styles: BuildStyles(cfg), mode: dropdownMode,
+	m := Model{Config: cfg, styles: BuildStyles(cfg, ""), mode: dropdownMode,
 		gridNav: gridNav{grid: profile.BuildGrid(cfg.X, cfg.Y, cfg.Commands)}, dropdown: dropdownState{items: cfg.Commands[0].Items}}
 	m, _ = pressDropdown(t, m, keyRunes("m"))
 	m, _ = pressDropdown(t, m, keyRunes("b"))
