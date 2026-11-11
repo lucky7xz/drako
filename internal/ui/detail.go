@@ -3,7 +3,7 @@ package ui
 import (
 	"fmt"
 
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/profile"
 )
 
 // newCommandDetail builds the info popup for a command. value arrives resolved,
@@ -38,7 +38,7 @@ func (m Model) runAddress(name string, n int) string {
 		if shown.Name != name {
 			continue
 		}
-		own := config.FindCell(p.Profile.Commands, shown.Address())
+		own := profile.FindCell(p.Profile.Commands, shown.Address())
 		if own == nil || own.Name != shown.Name || own.Command != shown.Command {
 			return ""
 		}

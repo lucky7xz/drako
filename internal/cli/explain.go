@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/profile"
 	profilepkg "github.com/lucky7xz/drako/internal/profiles"
 )
 
@@ -53,10 +54,10 @@ func HandleExplainCommand(args []string) int {
 // cellTarget is what a [profile:]<addr>[.item] reference points at.
 type cellTarget struct {
 	p      config.ProfileInfo
-	cmd    *config.Command
-	item   *config.CommandItem // nil unless the reference names an item
-	addr   string              // the cell's address, or the item's
-	danger bool                // a danger folder covers its items
+	cmd    *profile.Command
+	item   *profile.CommandItem // nil unless the reference names an item
+	addr   string               // the cell's address, or the item's
+	danger bool                 // a danger folder covers its items
 }
 
 func (t cellTarget) name() string {
@@ -84,11 +85,11 @@ func lookupCell(bundle config.ConfigBundle, ref string) (cellTarget, error) {
 	if err != nil {
 		return cellTarget{}, err
 	}
-	cmd := config.FindCell(p.Profile.Commands, addr)
+	cmd := profile.FindCell(p.Profile.Commands, addr)
 	if cmd == nil {
 		return cellTarget{}, fmt.Errorf("no cell %s in profile %s", addr, p.Name)
 	}
-	if over := config.CoveredBy(p.Profile, cmd); over != nil {
+	if over := profile.CoveredBy(p.Profile, cmd); over != nil {
 		return cellTarget{}, fmt.Errorf("%s (%s) is hidden on the grid behind %s (%s)", addr, cmd.Name, over.Address(), over.Name)
 	}
 

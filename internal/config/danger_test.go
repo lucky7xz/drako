@@ -4,6 +4,8 @@ import (
 	"io/fs"
 	"strings"
 	"testing"
+
+	"github.com/lucky7xz/drako/internal/profile"
 )
 
 func TestDangerDecodes(t *testing.T) {
@@ -46,8 +48,8 @@ items = [
 }
 
 func TestDangerSurvivesOverlay(t *testing.T) {
-	p := ProfileFile{X: 1, Y: 1, Commands: []Command{
-		{Name: "f", Col: "a", Danger: true, Items: []CommandItem{{Name: "i", Danger: true}}},
+	p := profile.File{X: 1, Y: 1, Commands: []profile.Command{
+		{Name: "f", Col: "a", Danger: true, Items: []profile.CommandItem{{Name: "i", Danger: true}}},
 	}}
 	cfg := ApplyProfileOverlay(Config{}, p)
 	if !cfg.Commands[0].Danger || !cfg.Commands[0].Items[0].Danger {
@@ -93,7 +95,7 @@ row = 1
 items = [ { name = "item", command = "true", danger = 1 } ]
 `
 	var errs []string
-	for _, f := range CheckProfile([]byte(src)) {
+	for _, f := range profile.Lint([]byte(src)) {
 		if f.Level == "error" && strings.Contains(f.Msg, "danger must be true or false") {
 			errs = append(errs, f.Msg)
 		}
@@ -117,7 +119,7 @@ col = "a"
 row = 0
 danger = false
 `
-	for _, f := range CheckProfile([]byte(src)) {
+	for _, f := range profile.Lint([]byte(src)) {
 		if strings.Contains(f.Msg, "danger") {
 			t.Errorf("boolean danger flagged: %s", f.Msg)
 		}

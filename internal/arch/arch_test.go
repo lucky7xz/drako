@@ -65,7 +65,6 @@ var knownExceptions = []string{
 	"config/discover.go os",
 	"config/load.go os",
 	"config/pivot.go os",
-	"config/platform.go os",
 	"config/themes.go os",
 	"multiplex/backend.go os",
 	"multiplex/herdr.go os",
@@ -75,10 +74,6 @@ var knownExceptions = []string{
 	"profiles/move.go os",
 	"profiles/profiles.go os",
 	"profiles/trash.go os",
-
-	// a pure package importing one that is not
-	"launch/plan.go github.com/lucky7xz/drako/internal/config",
-	"launch/selection.go github.com/lucky7xz/drako/internal/config",
 }
 
 func TestPackagesKeepToTheirCapabilities(t *testing.T) {

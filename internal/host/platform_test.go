@@ -1,10 +1,13 @@
-package config
+package host
 
 import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"testing"
+
+	"github.com/lucky7xz/drako/internal/profile"
 )
 
 // pinMarkers swaps the immutability probes for paths a test controls.
@@ -66,7 +69,7 @@ func TestDetectRuntimeTargetsChain(t *testing.T) {
 	pinMarkers(t, marker)
 
 	got := detectRuntimeTargets()
-	want := []string{ImmutableKey, base}
+	want := []string{immutableKey, base}
 	if len(got) != 2 || got[0] != want[0] || got[1] != want[1] {
 		t.Errorf("immutable host targets = %v, want %v", got, want)
 	}
@@ -80,5 +83,24 @@ func TestTermuxIsNotSpecialCased(t *testing.T) {
 
 	if got := detectLinuxDistro(); got == "linux_termux" {
 		t.Errorf("detectLinuxDistro() = %q, want the base distro or linux_generic", got)
+	}
+}
+
+// Whatever this package can answer must be a key profiles may use: a distro
+// added here without its key in profile.VariantKeys would resolve nothing and
+// be flagged by drako check.
+func TestTargetsUseOnlyProfileVariantKeys(t *testing.T) {
+	known := profile.VariantKeys()
+	candidates := []string{immutableKey, "linux_generic", "macos", "windows"}
+	for key := range distroKeywords {
+		candidates = append(candidates, key)
+	}
+	for _, key := range candidates {
+		if !slices.Contains(known, key) {
+			t.Errorf("host can answer %q, which is not a profile variant key", key)
+		}
+	}
+	if len(candidates) != len(known) {
+		t.Errorf("host knows %d keys, profile lists %d: one side is missing a platform", len(candidates), len(known))
 	}
 }

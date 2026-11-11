@@ -1,11 +1,13 @@
 package cli
 
 import (
-	"github.com/charmbracelet/x/ansi"
 	"strings"
 	"testing"
 
+	"github.com/charmbracelet/x/ansi"
+
 	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/profile"
 )
 
 func lsBundle() config.ConfigBundle {
@@ -14,8 +16,8 @@ func lsBundle() config.ConfigBundle {
 		Profiles: []config.ProfileInfo{
 			{
 				Name: "core",
-				Profile: config.ProfileFile{X: 2, Y: 2, Commands: []config.Command{
-					{Name: "🧹 Maintenance", Col: "B", Row: 1, Description: "line one\nline two", Items: []config.CommandItem{
+				Profile: profile.File{X: 2, Y: 2, Commands: []profile.Command{
+					{Name: "🧹 Maintenance", Col: "B", Row: 1, Description: "line one\nline two", Items: []profile.CommandItem{
 						{Name: "Clean", Description: "clears caches", Command: "apt clean"},
 					}},
 					{Name: "⬆️ Update", Col: "A", Row: 0, Description: strings.Repeat("x", 100)},
@@ -23,7 +25,7 @@ func lsBundle() config.ConfigBundle {
 			},
 			{
 				Name:    "t103",
-				Profile: config.ProfileFile{X: 1, Y: 1, Commands: []config.Command{{Name: "Solo", Col: "A", Row: 0, Description: "d"}}},
+				Profile: profile.File{X: 1, Y: 1, Commands: []profile.Command{{Name: "Solo", Col: "A", Row: 0, Description: "d"}}},
 			},
 		},
 		Broken: []config.ProfileParseError{{Name: "busted", Err: "invalid TOML: something"}},
@@ -76,7 +78,7 @@ func wideBundle() config.ConfigBundle {
 	return config.ConfigBundle{
 		Profiles: []config.ProfileInfo{{
 			Name: "core",
-			Profile: config.ProfileFile{X: 2, Y: 2, Commands: []config.Command{
+			Profile: profile.File{X: 2, Y: 2, Commands: []profile.Command{
 				{Name: "⬆️ System Update With A Very Long Cell Name Indeed", Col: "A", Row: 0,
 					Description: strings.Repeat("very long description ", 10)},
 				{Name: "🧹 Maintenance", Col: "A", Row: 1,

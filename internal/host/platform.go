@@ -1,4 +1,4 @@
-package config
+package host
 
 import (
 	"maps"
@@ -12,9 +12,9 @@ import (
 // Platform detection for per-platform command variants: which variant key
 // (linux_debian, macos, windows, …) describes the machine drako is running on.
 
-// DistroKeywords maps a runtime target key to a list of identifying strings found in /etc/os-release.
+// distroKeywords maps a runtime target key to a list of identifying strings found in /etc/os-release.
 // To add a new distro, simply append its keywords to the appropriate list or create a new entry.
-var DistroKeywords = map[string][]string{
+var distroKeywords = map[string][]string{
 	"linux_arch":   {"arch", "manjaro", "endeavouros", "cachy", "garuda", "omarchy"},
 	"linux_fedora": {"fedora", "rhel", "centos", "nobara"},
 	"linux_debian": {"debian", "ubuntu", "pop", "mint", "kali", "mx", "zorin", "elementary", "neon"},
@@ -23,8 +23,8 @@ var DistroKeywords = map[string][]string{
 	"linux_nixos":  {"nixos"},
 }
 
-// ImmutableKey is tried ahead of the base distro on image-managed systems.
-const ImmutableKey = "linux_immutable"
+// immutableKey is tried ahead of the base distro on image-managed systems.
+const immutableKey = "linux_immutable"
 
 // immutableMarkers are the files whose presence means the root filesystem is
 // image-managed. Capability probes rather than a distro list: the ostree
@@ -46,9 +46,10 @@ func isImmutable() bool {
 	return false
 }
 
-// runtimeTargets is detectRuntimeTargets, asked once per process: the host
+// Targets is the profile variant keys that describe this machine, most
+// specific first (see profile.VariantKeys). Asked once per process: the host
 // cannot change under us.
-var runtimeTargets = sync.OnceValue(detectRuntimeTargets)
+var Targets = sync.OnceValue(detectRuntimeTargets)
 
 // detectRuntimeTargets lists the variant keys to try, most specific first.
 // An immutable host prepends linux_immutable: brew replaces its package
@@ -63,7 +64,7 @@ func detectRuntimeTargets() []string {
 	case "linux":
 		base := detectLinuxDistro()
 		if isImmutable() {
-			return []string{ImmutableKey, base}
+			return []string{immutableKey, base}
 		}
 		return []string{base}
 	default:
@@ -91,10 +92,10 @@ func distroFromOSRelease(data string) string {
 			fields[k] = strings.ToLower(strings.Trim(v, `"'`))
 		}
 	}
-	families := slices.Sorted(maps.Keys(DistroKeywords))
+	families := slices.Sorted(maps.Keys(distroKeywords))
 	for _, id := range append([]string{fields["ID"]}, strings.Fields(fields["ID_LIKE"])...) {
 		for _, key := range families {
-			for _, kw := range DistroKeywords[key] {
+			for _, kw := range distroKeywords[key] {
 				if id != "" && strings.HasPrefix(id, kw) {
 					return key
 				}

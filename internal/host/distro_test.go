@@ -1,4 +1,4 @@
-package config
+package host
 
 import "testing"
 

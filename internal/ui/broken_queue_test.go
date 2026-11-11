@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/profile"
 )
 
 func brokenErr(name string) config.ProfileParseError {
@@ -106,7 +107,7 @@ func TestBrokenQueueAllAcknowledgedKeepsReloadedConfig(t *testing.T) {
 
 	reloaded := config.Config{X: 1, Y: 1}
 	reloaded.ApplyDefaults()
-	reloaded.Commands = []config.Command{{Name: "my cell", Command: "true", Row: 0, Col: "a"}}
+	reloaded.Commands = []profile.Command{{Name: "my cell", Command: "true", Row: 0, Col: "a"}}
 	m.applyConfig(reloaded)
 
 	m = m.presentNextBrokenProfile()
@@ -141,7 +142,7 @@ func TestApplyBundleAdoptsBundleState(t *testing.T) {
 	base := config.Config{X: 1, Y: 1}
 	base.ApplyDefaults()
 	effective := base
-	effective.Commands = []config.Command{{Name: "noop", Command: "true", Row: 0, Col: "a"}}
+	effective.Commands = []profile.Command{{Name: "noop", Command: "true", Row: 0, Col: "a"}}
 
 	var m Model
 	m.applyBundle(config.ConfigBundle{
@@ -206,10 +207,10 @@ func TestBrokenQueueWaitsForKeypress(t *testing.T) {
 // A clean reload under the error popup (the file got fixed) ends the queue;
 // the next ordinary popup must not be mistaken for it and exit into rescue.
 func TestCleanReloadEndsTheErrorQueue(t *testing.T) {
-	cfg := config.Config{X: 1, Y: 1, Commands: []config.Command{{Name: "hi", Command: "echo hi", Col: "a"}}}
+	cfg := config.Config{X: 1, Y: 1, Commands: []profile.Command{{Name: "hi", Command: "echo hi", Col: "a"}}}
 	cfg.ApplyDefaults()
 	m := queueModel(brokenErr("alpha"))
-	m.Config, m.gridNav.grid = cfg, config.BuildGrid(cfg)
+	m.Config, m.gridNav.grid = cfg, profile.BuildGrid(cfg.X, cfg.Y, cfg.Commands)
 	m = m.presentNextBrokenProfile()
 
 	m = m.applyReloadedBundle(config.ConfigBundle{Config: cfg})

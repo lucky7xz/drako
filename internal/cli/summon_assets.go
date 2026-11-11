@@ -12,8 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/paths"
+	"github.com/lucky7xz/drako/internal/profile"
 )
 
 // Asset copy limits
@@ -25,7 +25,7 @@ const (
 )
 
 // profileAssets returns the profile's declared assets (relative paths).
-func profileAssets(profile config.ProfileFile) []string {
+func profileAssets(profile profile.File) []string {
 	if profile.Assets == nil {
 		return nil
 	}

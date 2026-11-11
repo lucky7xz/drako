@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/lucky7xz/drako/internal/profile"
 )
 
 // TestApplyDefaults ensures that a zero-value Config gets populated with safe defaults.
@@ -57,10 +59,10 @@ func TestApplyProfileOverlay_PreservesBase(t *testing.T) {
 	originalKey := base.Keys.NavUp[0] // e.g. "up"
 
 	// 2. Create an Overlay (Profile) that only changes the Theme
-	overlay := ProfileFile{
+	overlay := profile.File{
 		Theme: "solarized",
 		// Commands is mandatory in a real profile, but Overlay accepts empty
-		Commands: []Command{},
+		Commands: []profile.Command{},
 	}
 
 	// 3. Apply
@@ -216,7 +218,7 @@ func TestLoadConfig_HandlesBrokenConfig(t *testing.T) {
 		// However, LoadConfig logic sets commands to empty [] explicitly for base.
 		// Wait, let's check LoadConfig logic:
 		// "base = RescueConfig()" -> base has commands.
-		// Then later: "base.Commands = []Command{}"?
+		// Then later: "base.Commands = []profile.Command{}"?
 		// No, LoadConfig "Convert Settings to Base" explicitly sets empty commands.
 		// BUT in our fix case:
 		// "base = RescueConfig()"

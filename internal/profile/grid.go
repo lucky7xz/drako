@@ -1,4 +1,4 @@
-package config
+package profile
 
 import (
 	"errors"
@@ -50,75 +50,74 @@ func FindCell(cmds []Command, addr string) *Command {
 
 // CoveredBy returns the command the grid shows on c's square instead of c, or
 // nil when c is visible. c must point into p.Commands.
-func CoveredBy(p ProfileFile, c *Command) *Command {
-	cfg := Config{X: p.X, Y: p.Y}
-	row, col, err := resolveCell(*c, cfg)
+func CoveredBy(p File, c *Command) *Command {
+	row, col, err := resolveCell(*c, p.X, p.Y)
 	if err != nil {
 		return nil
 	}
 	for j := len(p.Commands) - 1; j >= 0 && &p.Commands[j] != c; j-- {
-		if r, cl, err := resolveCell(p.Commands[j], cfg); err == nil && r == row && cl == col {
+		if r, cl, err := resolveCell(p.Commands[j], p.X, p.Y); err == nil && r == row && cl == col {
 			return &p.Commands[j]
 		}
 	}
 	return nil
 }
 
-// resolveCell resolves a command's grid position against the grid dimensions.
-// A row or column of -1 (column 'z') means "last" and is resolved here to
-// Y-1 / X-1. It errors only on an unparseable column letter; bounds-checking
-// against the grid is left to the caller.
-func resolveCell(cmd Command, cfg Config) (row, col int, err error) {
+// resolveCell resolves a command's grid position against the grid dimensions
+// (x columns, y rows). A row or column of -1 (column 'z') means "last" and is
+// resolved here to y-1 / x-1. It errors only on an unparseable column letter;
+// bounds-checking against the grid is left to the caller.
+func resolveCell(cmd Command, x, y int) (row, col int, err error) {
 	col, err = letterToColumn(cmd.Col)
 	if err != nil {
 		return 0, 0, err
 	}
 	row = cmd.Row
 	if row == -1 {
-		row = cfg.Y - 1
+		row = y - 1
 	}
 	if col == -1 {
-		col = cfg.X - 1
+		col = x - 1
 	}
 	return row, col, nil
 }
 
-// ValidateConfig checks if the configuration is logically valid.
-// It returns an error if any command is out of bounds for the grid size.
-func ValidateConfig(cfg Config) error {
-	for _, cmd := range cfg.Commands {
-		row, col, err := resolveCell(cmd, cfg)
+// ValidateGrid checks that every command fits a grid of x columns and y rows.
+// It returns an error for the first command that is out of bounds.
+func ValidateGrid(x, y int, cmds []Command) error {
+	for _, cmd := range cmds {
+		row, col, err := resolveCell(cmd, x, y)
 		if err != nil {
 			return fmt.Errorf("command %q has invalid column %q: %v", cmd.Name, cmd.Col, err)
 		}
 		if row < 0 {
 			return fmt.Errorf("command %q has invalid row %d (rows start at 0; -1 is the last)", cmd.Name, cmd.Row)
 		}
-		if row >= cfg.Y {
-			return fmt.Errorf("command %q needs y >= %d (have %d)", cmd.Name, row+1, cfg.Y)
+		if row >= y {
+			return fmt.Errorf("command %q needs y >= %d (have %d)", cmd.Name, row+1, y)
 		}
-		if col >= cfg.X {
-			return fmt.Errorf("command %q needs x >= %d (have %d)", cmd.Name, col+1, cfg.X)
+		if col >= x {
+			return fmt.Errorf("command %q needs x >= %d (have %d)", cmd.Name, col+1, x)
 		}
 	}
 	return nil
 }
 
-// BuildGrid places command names into a Y-by-X grid of cells.
-func BuildGrid(config Config) [][]string {
-	grid := make([][]string, config.Y)
+// BuildGrid places command names into a y-by-x grid of cells.
+func BuildGrid(x, y int, cmds []Command) [][]string {
+	grid := make([][]string, y)
 	for i := range grid {
-		grid[i] = make([]string, config.X)
+		grid[i] = make([]string, x)
 	}
-	for _, cmd := range config.Commands {
-		row, col, err := resolveCell(cmd, config)
+	for _, cmd := range cmds {
+		row, col, err := resolveCell(cmd, x, y)
 		if err != nil {
-			// ValidateConfig already reports this at load time; rendering
+			// ValidateGrid already reports this at load time; rendering
 			// must never kill the process, so skip the cell.
 			log.Printf("skipping command %q: %v", cmd.Name, err)
 			continue
 		}
-		if row >= 0 && row < config.Y && col >= 0 && col < config.X {
+		if row >= 0 && row < y && col >= 0 && col < x {
 			grid[row][col] = cmd.Name
 		}
 	}

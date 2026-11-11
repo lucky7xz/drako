@@ -16,6 +16,7 @@ import (
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/paths"
+	"github.com/lucky7xz/drako/internal/profile"
 	"golang.org/x/term"
 )
 
@@ -79,8 +80,8 @@ func HandleLsCommand(args []string) int {
 }
 
 // deckOrder sorts commands by column letter, then row.
-func deckOrder(cmds []config.Command) []config.Command {
-	sorted := config.CopyCommands(cmds)
+func deckOrder(cmds []profile.Command) []profile.Command {
+	sorted := profile.CopyCommands(cmds)
 	sort.SliceStable(sorted, func(i, j int) bool {
 		ci := strings.ToLower(sorted[i].Col)
 		cj := strings.ToLower(sorted[j].Col)

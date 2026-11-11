@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/profile"
 )
 
 // altRunes is the chord bubbletea reports for Alt held with a letter.
@@ -251,14 +252,14 @@ func TestSessionLock_BareLetterStillTogglesTheProfileLock(t *testing.T) {
 // dropdown still listing the old folder's items.
 func TestUnlockAfterReloadLeavesTheStaleDropdown(t *testing.T) {
 	folder := func(item, cmd string) config.Config {
-		cfg := config.Config{X: 1, Y: 1, Commands: []config.Command{
-			{Name: "tools", Col: "a", Items: []config.CommandItem{{Name: item, Command: cmd}}},
+		cfg := config.Config{X: 1, Y: 1, Commands: []profile.Command{
+			{Name: "tools", Col: "a", Items: []profile.CommandItem{{Name: item, Command: cmd}}},
 		}}
 		cfg.ApplyDefaults()
 		return cfg
 	}
 	old := folder("status", "git status")
-	m := Model{Config: old, styles: BuildStyles(old), mode: gridMode, gridNav: gridNav{grid: config.BuildGrid(old)}}
+	m := Model{Config: old, styles: BuildStyles(old), mode: gridMode, gridNav: gridNav{grid: profile.BuildGrid(old.X, old.Y, old.Commands)}}
 	m = update(t, m, tea.KeyMsg{Type: tea.KeyEnter}) // open "tools"
 	if m.mode != dropdownMode {
 		t.Fatalf("setup: mode = %v, want dropdownMode", m.mode)

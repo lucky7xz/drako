@@ -14,6 +14,7 @@ import (
 	"github.com/lucky7xz/drako/internal/host"
 	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/paths"
+	"github.com/lucky7xz/drako/internal/profile"
 	"github.com/lucky7xz/drako/internal/profiles"
 )
 
@@ -50,7 +51,7 @@ func (g *gridNav) cancel() {
 type dropdownState struct {
 	row, col    int
 	selectedIdx int
-	items       []config.CommandItem
+	items       []profile.CommandItem
 }
 
 // lockState is the idle auto-lock plus the pump-to-unlock slider.
@@ -156,7 +157,7 @@ func (g *gridNav) clampCursor() {
 func (m *Model) applyConfig(cfg config.Config) {
 	m.styles = BuildStyles(cfg)
 
-	m.gridNav.grid = config.BuildGrid(cfg)
+	m.gridNav.grid = profile.BuildGrid(cfg.X, cfg.Y, cfg.Commands)
 	m.gridNav.clampCursor()
 	m.Config = cfg
 	if m.spinner.frames == nil {

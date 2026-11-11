@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/profile"
 )
 
 func switchTestModel(t *testing.T) Model {
@@ -18,7 +19,7 @@ func switchTestModel(t *testing.T) Model {
 		if err := os.WriteFile(path, []byte("x = 1\ny = 1\n"), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		infos = append(infos, config.ProfileInfo{Name: name, Path: path, Profile: config.ProfileFile{X: 1, Y: 1}})
+		infos = append(infos, config.ProfileInfo{Name: name, Path: path, Profile: profile.File{X: 1, Y: 1}})
 	}
 	base := config.Config{X: 1, Y: 1}
 	base.ApplyDefaults()

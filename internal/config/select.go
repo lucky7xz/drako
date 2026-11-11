@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/lucky7xz/drako/internal/profile"
 	profilepkg "github.com/lucky7xz/drako/internal/profiles"
 )
 
@@ -100,7 +101,7 @@ func buildEffective(base Config, profiles []ProfileInfo, activeIndex int) (effec
 	applyAndValidate := func(p ProfileInfo) (Config, error) {
 		temp := ApplyProfileOverlay(base, p.Profile)
 		temp.ApplyDefaults()
-		if err := ValidateConfig(temp); err != nil {
+		if err := profile.ValidateGrid(temp.X, temp.Y, temp.Commands); err != nil {
 			return temp, err
 		}
 		return temp, nil

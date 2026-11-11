@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/profile"
 )
 
 // returnsWithin runs a Cmd the way bubbletea does (its own goroutine) and
@@ -22,13 +23,13 @@ func returnsWithin(cmd tea.Cmd, d time.Duration) bool {
 }
 
 func timerTestModel() Model {
-	cfg := config.Config{X: 2, Y: 2, Commands: []config.Command{
+	cfg := config.Config{X: 2, Y: 2, Commands: []profile.Command{
 		{Name: "one", Command: "true", Row: 0, Col: "a"},
 		{Name: "two", Command: "true", Row: 1, Col: "a"},
 	}}
 	cfg.ApplyDefaults()
 	return Model{Config: cfg, styles: BuildStyles(cfg), mode: gridMode,
-		gridNav: gridNav{grid: config.BuildGrid(cfg)}}
+		gridNav: gridNav{grid: profile.BuildGrid(cfg.X, cfg.Y, cfg.Commands)}}
 }
 
 func TestInterruptedQuickNavCmdReturns(t *testing.T) {

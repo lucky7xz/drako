@@ -12,6 +12,7 @@ import (
 
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/paths"
+	"github.com/lucky7xz/drako/internal/profile"
 	"github.com/lucky7xz/drako/internal/profiles"
 )
 
@@ -82,17 +83,17 @@ func runChecks(out io.Writer, files []string) int {
 	clashes := nameClashes(files)
 	for _, f := range files {
 		src, err := os.ReadFile(f)
-		var findings []config.Finding
+		var findings []profile.Finding
 		switch {
 		case err != nil:
-			findings = []config.Finding{{Level: "error", Msg: fmt.Sprintf("cannot read file: %v", err)}}
+			findings = []profile.Finding{{Level: "error", Msg: fmt.Sprintf("cannot read file: %v", err)}}
 		case filepath.Base(f) == paths.ConfigFileName:
 			findings = config.CheckSettings(src)
 		default:
-			findings = config.CheckProfile(src)
+			findings = profile.Lint(src)
 		}
 		for _, msg := range clashes[f] {
-			findings = append(findings, config.Finding{Level: "warning", Msg: msg})
+			findings = append(findings, profile.Finding{Level: "warning", Msg: msg})
 		}
 
 		if len(findings) == 0 {

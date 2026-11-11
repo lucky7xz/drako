@@ -9,16 +9,17 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/launch"
+	"github.com/lucky7xz/drako/internal/profile"
 )
 
 // dialogModel: a 3x3 grid of runnable cells, n of them already marked and the
 // layout dialog open on the default distribution.
 func dialogModel(t *testing.T, n int) Model {
 	t.Helper()
-	var cmds []config.Command
+	var cmds []profile.Command
 	names := []string{"c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8", "c9"}
 	for i, name := range names {
-		cmds = append(cmds, config.Command{
+		cmds = append(cmds, profile.Command{
 			Name: name, Command: "true", Row: i / 3, Col: string(rune('a' + i%3)),
 		})
 	}
@@ -28,7 +29,7 @@ func dialogModel(t *testing.T, n int) Model {
 		Config:  cfg,
 		styles:  BuildStyles(cfg),
 		mode:    batchMode,
-		gridNav: gridNav{grid: config.BuildGrid(cfg)},
+		gridNav: gridNav{grid: profile.BuildGrid(cfg.X, cfg.Y, cfg.Commands)},
 		batch:   batchState{marked: cellMarks(names[:n]...)},
 	}
 	next, _ := m.updateBatchMode(tea.KeyMsg{Type: tea.KeyEnter})

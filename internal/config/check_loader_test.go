@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/lucky7xz/drako/internal/profile"
 )
 
 // drako check is the CI gate: any deck the loader would show as broken must
@@ -25,7 +27,7 @@ func TestCheckRejectsWhatTheLoaderRejects(t *testing.T) {
 			t.Fatalf("%s: setup expects the loader to reject this deck", name)
 		}
 		hasError := false
-		for _, f := range CheckProfile([]byte(deck)) {
+		for _, f := range profile.Lint([]byte(deck)) {
 			hasError = hasError || f.Level == "error"
 		}
 		if !hasError {

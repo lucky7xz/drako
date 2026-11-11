@@ -8,7 +8,7 @@ import (
 // The immutable key is an override, not a replacement: cells that install
 // something get brew, everything else still answers from the base distro.
 func TestImmutableOverridesOnlyWhatItDefines(t *testing.T) {
-	pinPlatformChain(t, ImmutableKey, "linux_arch")
+	pinPlatformChain(t, "linux_immutable", "linux_arch")
 
 	p := decodeProfile(t, `
 x = 1
@@ -66,7 +66,7 @@ func TestCoreDeckNeverUsesASystemPackageManagerWhenImmutable(t *testing.T) {
 	}
 
 	// A Steam Deck: immutable, Arch underneath.
-	pinPlatformChain(t, ImmutableKey, "linux_arch")
+	pinPlatformChain(t, "linux_immutable", "linux_arch")
 	p := decodeProfile(t, string(deck))
 
 	managers := []string{"apt", "dnf", "pacman", "zypper", "xbps", "rpm-ostree"}

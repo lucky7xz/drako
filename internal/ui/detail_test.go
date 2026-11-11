@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/profile"
 )
 
 // boolPtr is a tiny helper for the optional execution flags.
@@ -11,13 +12,13 @@ func boolPtr(b bool) *bool { return &b }
 
 // explainModel builds a grid model sitting on one command cell, with the
 // explain key bound, so the explain path can be driven directly.
-func explainModel(cmd config.Command) Model {
+func explainModel(cmd profile.Command) Model {
 	return Model{
 		mode:    gridMode,
 		gridNav: gridNav{grid: [][]string{{cmd.Name}}},
 		Config: config.Config{
 			Keys:     config.InputConfig{Explain: "e"},
-			Commands: []config.Command{cmd},
+			Commands: []profile.Command{cmd},
 		},
 	}
 }
@@ -28,31 +29,31 @@ func explainModel(cmd config.Command) Model {
 func TestExplainDetail_Characterization(t *testing.T) {
 	cases := []struct {
 		name          string
-		cmd           config.Command
+		cmd           profile.Command
 		wantValue     string
 		wantAutoClose string
 	}{
 		{
 			name:          "defaults: nil flags mean auto-close",
-			cmd:           config.Command{Name: "Build", Command: "make", Description: "d"},
+			cmd:           profile.Command{Name: "Build", Command: "make", Description: "d"},
 			wantValue:     "make",
 			wantAutoClose: "true",
 		},
 		{
 			name:          "debug flag set",
-			cmd:           config.Command{Name: "Build", Command: "make", DebugExecution: boolPtr(true)},
+			cmd:           profile.Command{Name: "Build", Command: "make", DebugExecution: boolPtr(true)},
 			wantValue:     "make",
 			wantAutoClose: "true",
 		},
 		{
 			name:          "auto-close disabled",
-			cmd:           config.Command{Name: "Build", Command: "make", AutoCloseExecution: boolPtr(false)},
+			cmd:           profile.Command{Name: "Build", Command: "make", AutoCloseExecution: boolPtr(false)},
 			wantValue:     "make",
 			wantAutoClose: "false",
 		},
 		{
 			name:          "empty command shows the folder hint",
-			cmd:           config.Command{Name: "Tools", Command: ""},
+			cmd:           profile.Command{Name: "Tools", Command: ""},
 			wantValue:     "Error: no command. ( This might be a folder of commands!)",
 			wantAutoClose: "true",
 		},
@@ -90,20 +91,20 @@ func TestExplainDetail_Characterization(t *testing.T) {
 
 // addressModel shows profile core's own grid: A0 a cell, B0 a two-item folder.
 func addressModel() Model {
-	cmds := []config.Command{
+	cmds := []profile.Command{
 		{Name: "Update", Command: "apt upgrade", Col: "a", Row: 0},
-		{Name: "Tools", Col: "b", Row: 0, Items: []config.CommandItem{
+		{Name: "Tools", Col: "b", Row: 0, Items: []profile.CommandItem{
 			{Name: "One", Command: "echo 1"},
 			{Name: "Two", Command: "echo 2"},
 		}},
 	}
-	cfg := config.Config{X: 2, Y: 1, Keys: config.InputConfig{Explain: "e"}, Commands: config.CopyCommands(cmds)}
+	cfg := config.Config{X: 2, Y: 1, Keys: config.InputConfig{Explain: "e"}, Commands: profile.CopyCommands(cmds)}
 	return Model{
 		mode:    gridMode,
 		Config:  cfg,
-		gridNav: gridNav{grid: config.BuildGrid(cfg)},
+		gridNav: gridNav{grid: profile.BuildGrid(cfg.X, cfg.Y, cfg.Commands)},
 		profile: profileState{profiles: []config.ProfileInfo{
-			{Name: "core", Profile: config.ProfileFile{X: 2, Y: 1, Commands: cmds}},
+			{Name: "core", Profile: profile.File{X: 2, Y: 1, Commands: cmds}},
 		}},
 	}
 }
@@ -144,7 +145,7 @@ func TestExplainHidesAddressItCannotReach(t *testing.T) {
 		"rescue grid over loaded profiles": func(m *Model) {
 			rescue := config.RescueConfig()
 			m.Config.Commands = rescue.Commands
-			m.gridNav.grid = config.BuildGrid(rescue)
+			m.gridNav.grid = profile.BuildGrid(rescue.X, rescue.Y, rescue.Commands)
 		},
 		"another command holds that address": func(m *Model) {
 			m.Config.Commands[0].Command = "something else"

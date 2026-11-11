@@ -9,22 +9,23 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/launch"
+	"github.com/lucky7xz/drako/internal/profile"
 )
 
 // batchTestModel: 2x2 grid — "one" (a0) and "two" (b0) are runnable, "folder"
 // (a1) is a dropdown without its own command, b1 is empty.
 func batchTestModel() Model {
-	cfg := config.Config{X: 2, Y: 2, Commands: []config.Command{
+	cfg := config.Config{X: 2, Y: 2, Commands: []profile.Command{
 		{Name: "one", Command: "echo 1", Row: 0, Col: "a"},
 		{Name: "two", Command: "echo 2", Row: 0, Col: "b"},
-		{Name: "folder", Row: 1, Col: "a", Items: []config.CommandItem{{Name: "child", Command: "true"}}},
+		{Name: "folder", Row: 1, Col: "a", Items: []profile.CommandItem{{Name: "child", Command: "true"}}},
 	}}
 	cfg.ApplyDefaults()
 	return Model{
 		Config:  cfg,
 		styles:  BuildStyles(cfg),
 		mode:    batchMode,
-		gridNav: gridNav{grid: config.BuildGrid(cfg)},
+		gridNav: gridNav{grid: profile.BuildGrid(cfg.X, cfg.Y, cfg.Commands)},
 		batch:   batchState{},
 	}
 }

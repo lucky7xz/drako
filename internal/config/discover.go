@@ -9,19 +9,9 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/lucky7xz/drako/internal/profile"
 	profilepkg "github.com/lucky7xz/drako/internal/profiles"
 )
-
-// CopyCommands returns a new slice of the same commands, so callers can sort or
-// replace cells; Items and the *bool fields still point into the source.
-func CopyCommands(src []Command) []Command {
-	if len(src) == 0 {
-		return []Command{}
-	}
-	dst := make([]Command, len(src))
-	copy(dst, src)
-	return dst
-}
 
 // CheckProfileFile reports whether the file at path parses and validates as
 // a profile. Used for immediate feedback after in-app edits.
@@ -30,7 +20,7 @@ func CheckProfileFile(path string) error {
 	if err != nil {
 		return fmt.Errorf("could not read file: %w", err)
 	}
-	_, problems, err := DecodeProfile(data, nil) // validating only: no platform needed
+	_, problems, err := profile.Decode(data, nil) // validating only: no platform needed
 	if err != nil {
 		return fmt.Errorf("invalid TOML: %w", err)
 	}
@@ -40,48 +30,6 @@ func CheckProfileFile(path string) error {
 	return nil
 }
 
-// DecodeProfile decodes a profile file the way the loader does: err is a TOML
-// error, problems what ValidateProfileFile rejects. targets are the platform's
-// variant keys, most specific first; each command becomes the text written
-// for them. A caller that only validates passes nil.
-func DecodeProfile(raw []byte, targets []string) (pf ProfileFile, problems []string, err error) {
-	var written rawProfile
-	meta, err := toml.Decode(string(raw), &written)
-	if err != nil {
-		return ProfileFile{}, nil, err
-	}
-	pf = written.resolve(targets)
-	_, problems = ValidateProfileFile(pf, raw, meta)
-	return pf, problems, nil
-}
-
-// ValidateProfileFile checks a profile has at least one command, x/y in 1-9,
-// and no unrecognized top-level keys (meta names the typo, e.g. "ssy").
-func ValidateProfileFile(pf ProfileFile, raw []byte, meta toml.MetaData) (bool, []string) {
-	var problems []string
-	if len(pf.Commands) == 0 {
-		problems = append(problems, "needs at least one command")
-	}
-	problems = append(problems, validateGridDim("x", pf.X, raw)...)
-	problems = append(problems, validateGridDim("y", pf.Y, raw)...)
-	if unknown := undecodedTopLevelKeys(meta); len(unknown) > 0 {
-		problems = append(problems, fmt.Sprintf("unrecognized key(s): %s (check for a typo)", strings.Join(unknown, ", ")))
-	}
-	return len(problems) == 0, problems
-}
-
-// undecodedTopLevelKeys returns top-level keys that matched no field at all
-// — a longer path (e.g. "commands.5.foo") means the top level DID match.
-func undecodedTopLevelKeys(meta toml.MetaData) []string {
-	var keys []string
-	for _, k := range meta.Undecoded() {
-		if len(k) == 1 {
-			keys = append(keys, k[0])
-		}
-	}
-	return keys
-}
-
 // undecodedKeys returns every key path that matched no field, e.g. "keys.lader".
 func undecodedKeys(meta toml.MetaData) []string {
 	var keys []string
@@ -89,34 +37,6 @@ func undecodedKeys(meta toml.MetaData) []string {
 		keys = append(keys, k.String())
 	}
 	return keys
-}
-
-// validateGridDim distinguishes "key absent" from "present but out of
-// range" instead of reporting the zero-default as if it were typed.
-func validateGridDim(key string, val int, raw []byte) []string {
-	if val >= 1 && val <= 9 {
-		return nil
-	}
-	line := findKeyLine(raw, key)
-	if line == 0 {
-		return []string{fmt.Sprintf("%s is missing (must be 1-9)", key)}
-	}
-	return []string{fmt.Sprintf("%s = %d is invalid (must be 1-9) (line %d)", key, val, line)}
-}
-
-// findKeyLine returns the 1-based line of a top-level `key =` assignment, matched
-// ignoring case like the decoder, or 0.
-func findKeyLine(raw []byte, key string) int {
-	for i, line := range strings.Split(string(raw), "\n") {
-		t := strings.TrimSpace(line)
-		if strings.HasPrefix(t, "[") {
-			return 0 // the first table header ends the top level
-		}
-		if k, _, ok := strings.Cut(t, "="); ok && strings.EqualFold(strings.TrimSpace(k), key) {
-			return i + 1
-		}
-	}
-	return 0
 }
 
 // DiscoverProfilesWithErrors scans configDir for *.profile.toml files and
@@ -151,7 +71,7 @@ func DiscoverProfilesWithErrors(configDir string, targets []string) ([]ProfileIn
 			continue
 		}
 
-		profileFile, problems, err := DecodeProfile(raw, targets)
+		profileFile, problems, err := profile.Decode(raw, targets)
 		if err != nil {
 			log.Printf("Failed to parse profile %s: %v", entry.Name(), err)
 			broken = append(broken, ProfileParseError{Name: profileName, Path: fullPath, Err: err.Error()})
@@ -184,21 +104,21 @@ func DiscoverProfilesWithErrors(configDir string, targets []string) ([]ProfileIn
 // ApplyProfileOverlay layers a profile on top of the base settings: grid
 // size and commands always come from the profile; theme, header art and
 // shell only when the profile sets them.
-func ApplyProfileOverlay(base Config, profile ProfileFile) Config {
+func ApplyProfileOverlay(base Config, pf profile.File) Config {
 	cfg := base
 
-	cfg.X = profile.X
-	cfg.Y = profile.Y
-	if strings.TrimSpace(profile.Theme) != "" {
-		cfg.Theme = profile.Theme
+	cfg.X = pf.X
+	cfg.Y = pf.Y
+	if strings.TrimSpace(pf.Theme) != "" {
+		cfg.Theme = pf.Theme
 	}
-	if profile.HeaderArt != nil {
-		cfg.HeaderArt = profile.HeaderArt
+	if pf.HeaderArt != nil {
+		cfg.HeaderArt = pf.HeaderArt
 	}
-	if profile.Shell != nil {
-		cfg.DefaultShell = *profile.Shell
+	if pf.Shell != nil {
+		cfg.DefaultShell = *pf.Shell
 	}
-	cfg.Commands = CopyCommands(profile.Commands)
+	cfg.Commands = profile.CopyCommands(pf.Commands)
 
 	return cfg
 }

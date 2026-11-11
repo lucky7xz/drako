@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/profile"
 )
 
 // isHexString reports whether s is exactly n hexadecimal characters.
@@ -58,17 +58,17 @@ const (
 )
 
 // validateProfileFile checks that a file is a valid drako profile and returns it decoded.
-func validateProfileFile(path string) (config.ProfileFile, error) {
-	var profile config.ProfileFile
+func validateProfileFile(path string) (profile.File, error) {
+	var pf profile.File
 	// Check file size
 	info, err := os.Stat(path)
 	if err != nil {
-		return profile, fmt.Errorf("failed to stat file: %w", err)
+		return pf, fmt.Errorf("failed to stat file: %w", err)
 	}
 
 	size := info.Size()
 	if size > profileMaxSize {
-		return profile, fmt.Errorf("file too large (%d bytes, max %d bytes). This is not a valid profile", size, profileMaxSize)
+		return pf, fmt.Errorf("file too large (%d bytes, max %d bytes). This is not a valid profile", size, profileMaxSize)
 	}
 
 	if size > profileWarnSize {
@@ -78,17 +78,17 @@ func validateProfileFile(path string) (config.ProfileFile, error) {
 	// Read and parse as TOML
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return profile, fmt.Errorf("failed to read file: %w", err)
+		return pf, fmt.Errorf("failed to read file: %w", err)
 	}
 
-	profile, problems, err := config.DecodeProfile(data, nil) // validating only: no platform needed
+	pf, problems, err := profile.Decode(data, nil) // validating only: no platform needed
 	if err != nil {
-		return profile, fmt.Errorf("invalid TOML format: %w", err)
+		return pf, fmt.Errorf("invalid TOML format: %w", err)
 	}
 	if len(problems) > 0 {
-		return profile, fmt.Errorf("invalid profile: %s", strings.Join(problems, "; "))
+		return pf, fmt.Errorf("invalid profile: %s", strings.Join(problems, "; "))
 	}
-	return profile, nil
+	return pf, nil
 }
 
 // validateFilename checks if the filename is a valid profile name

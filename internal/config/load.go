@@ -8,7 +8,9 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/lucky7xz/drako/internal/host"
 	"github.com/lucky7xz/drako/internal/paths"
+	"github.com/lucky7xz/drako/internal/profile"
 )
 
 // loadBaseConfig reads config.toml into the base Config. Every failure path
@@ -66,7 +68,7 @@ func loadBaseConfig(configDir string) (Config, []ProfileParseError) {
 		BatchForceTmux:     settings.BatchForceTmux,
 		Theme:              settings.Theme,
 		Keys:               settings.Keys,
-		Commands:           []Command{},
+		Commands:           []profile.Command{},
 	}, nil
 }
 
@@ -119,11 +121,11 @@ func loadConfig(sessionProfile string) (ConfigBundle, error) {
 
 	base.ApplyDefaults()
 
-	if err := ValidateConfig(base); err != nil {
+	if err := profile.ValidateGrid(base.X, base.Y, base.Commands); err != nil {
 		log.Printf("Error: Base config is invalid: %v", err)
 	}
 
-	profiles, profileErrors := DiscoverProfilesWithErrors(configDir, runtimeTargets())
+	profiles, profileErrors := DiscoverProfilesWithErrors(configDir, host.Targets())
 	broken = append(broken, profileErrors...)
 
 	profiles = reorderByPivot(profiles, pf.EquippedOrder)

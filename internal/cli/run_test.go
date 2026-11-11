@@ -11,29 +11,30 @@ import (
 	"testing"
 
 	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/profile"
 )
 
 func runBundle() config.ConfigBundle {
 	return config.ConfigBundle{
 		ActiveIndex: 0,
 		Profiles: []config.ProfileInfo{
-			{Name: "core", Profile: config.ProfileFile{X: 3, Y: 3, Commands: []config.Command{
+			{Name: "core", Profile: profile.File{X: 3, Y: 3, Commands: []profile.Command{
 				{Name: "Hello", Command: "echo hi", Col: "a", Row: 0},
 				{Name: "🚨 Nuke", Command: "rm -rf /tmp/x", Col: "a", Row: 1, Danger: true},
-				{Name: "Mixed", Col: "a", Row: 2, Items: []config.CommandItem{
+				{Name: "Mixed", Col: "a", Row: 2, Items: []profile.CommandItem{
 					{Name: "Calm", Command: "echo calm"},
 					{Name: "🚨 Wipe", Command: "echo wipe", Danger: true},
 					{Name: "Ghost"},
 				}},
-				{Name: "🚨 Danger Folder", Col: "b", Row: 0, Danger: true, Items: []config.CommandItem{
+				{Name: "🚨 Danger Folder", Col: "b", Row: 0, Danger: true, Items: []profile.CommandItem{
 					{Name: "Looks Calm", Command: "echo inherited"},
 				}},
 				{Name: "NoVariant", Col: "b", Row: 1},
-				{Name: "Both", Command: "echo own", Col: "b", Row: 2, Items: []config.CommandItem{
+				{Name: "Both", Command: "echo own", Col: "b", Row: 2, Items: []profile.CommandItem{
 					{Name: "Child", Command: "echo child"},
 				}},
 			}}},
-			{Name: "work", Profile: config.ProfileFile{X: 1, Y: 1, Commands: []config.Command{
+			{Name: "work", Profile: profile.File{X: 1, Y: 1, Commands: []profile.Command{
 				{Name: "Deploy", Command: "make deploy", Col: "a", Row: 0},
 			}}},
 		},
@@ -105,8 +106,8 @@ func TestResolveRunMatchesTheGrid(t *testing.T) {
 	b := runBundle()
 	core := &b.Profiles[0].Profile
 	core.Commands = append(core.Commands,
-		config.Command{Name: "Shadow", Command: "echo shadow", Col: "a", Row: 0},
-		config.Command{Name: "Last", Command: "echo last", Col: "c", Row: -1},
+		profile.Command{Name: "Shadow", Command: "echo shadow", Col: "a", Row: 0},
+		profile.Command{Name: "Last", Command: "echo last", Col: "c", Row: -1},
 	)
 	for ref, want := range map[string]string{"A0": "Shadow", "c-1": "Last"} {
 		target, _, err := resolveRun(b, ref)
@@ -119,7 +120,7 @@ func TestResolveRunMatchesTheGrid(t *testing.T) {
 func TestResolveRunRefusesInvalidGrid(t *testing.T) {
 	b := runBundle()
 	work := &b.Profiles[1].Profile
-	work.Commands = append(work.Commands, config.Command{Name: "Off grid", Command: "true", Col: "c", Row: 0})
+	work.Commands = append(work.Commands, profile.Command{Name: "Off grid", Command: "true", Col: "c", Row: 0})
 	if _, _, err := resolveRun(b, "work:A0"); err == nil || !strings.Contains(err.Error(), "invalid grid") {
 		t.Errorf("work:A0 err = %v, want an invalid-grid refusal", err)
 	}
@@ -297,8 +298,8 @@ func TestResolveRunRefusesCellsHiddenOnTheGrid(t *testing.T) {
 	work := &b.Profiles[1].Profile
 	work.Y = 2
 	work.Commands = append(work.Commands,
-		config.Command{Name: "Old", Command: "echo old", Col: "a", Row: 1},
-		config.Command{Name: "New", Command: "echo new", Col: "a", Row: -1},
+		profile.Command{Name: "Old", Command: "echo old", Col: "a", Row: 1},
+		profile.Command{Name: "New", Command: "echo new", Col: "a", Row: -1},
 	)
 	if _, _, err := resolveRun(b, "work:A1"); err == nil || !strings.Contains(err.Error(), "hidden") {
 		t.Errorf("work:A1 err = %v, want it refused as hidden behind New", err)

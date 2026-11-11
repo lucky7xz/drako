@@ -3,6 +3,8 @@ package config
 import (
 	"strings"
 	"testing"
+
+	"github.com/lucky7xz/drako/internal/profile"
 )
 
 func infos(names ...string) []ProfileInfo {
@@ -93,16 +95,16 @@ func TestResolveRequested(t *testing.T) {
 }
 
 func validProfile(name string) ProfileInfo {
-	return ProfileInfo{Name: name, Path: name + ".profile.toml", Profile: ProfileFile{
+	return ProfileInfo{Name: name, Path: name + ".profile.toml", Profile: profile.File{
 		X: 2, Y: 2,
-		Commands: []Command{{Name: name + "-cmd", Command: "true", Row: 0, Col: "a"}},
+		Commands: []profile.Command{{Name: name + "-cmd", Command: "true", Row: 0, Col: "a"}},
 	}}
 }
 
 func invalidProfile(name string) ProfileInfo {
-	return ProfileInfo{Name: name, Path: name + ".profile.toml", Profile: ProfileFile{
+	return ProfileInfo{Name: name, Path: name + ".profile.toml", Profile: profile.File{
 		X: 1, Y: 1,
-		Commands: []Command{{Name: "out-of-bounds", Command: "true", Row: 5, Col: "a"}},
+		Commands: []profile.Command{{Name: "out-of-bounds", Command: "true", Row: 5, Col: "a"}},
 	}}
 }
 

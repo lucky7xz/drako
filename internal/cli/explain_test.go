@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/profile"
 )
 
 func falsePtr() *bool { b := false; return &b }
@@ -15,15 +16,15 @@ func explainBundle() config.ConfigBundle {
 	return config.ConfigBundle{
 		ActiveIndex: 0,
 		Profiles: []config.ProfileInfo{
-			{Name: "core", Profile: config.ProfileFile{X: 2, Y: 2, Commands: []config.Command{
+			{Name: "core", Profile: profile.File{X: 2, Y: 2, Commands: []profile.Command{
 				{Name: "Update", Command: "sudo apt update", Col: "a", Row: 0, Description: "refresh packages"},
-				{Name: "Maint", Col: "a", Row: 1, Description: "housekeeping folder", Items: []config.CommandItem{
+				{Name: "Maint", Col: "a", Row: 1, Description: "housekeeping folder", Items: []profile.CommandItem{
 					{Name: "Clean", Command: "apt clean", Description: "clear caches"},
 					{Name: "Scan", Command: "clamscan -r", AutoCloseExecution: falsePtr()},
 				}},
 				{Name: "GhostCmd", Col: "b", Row: 0, Description: "no variant here"},
 			}}},
-			{Name: "work", Profile: config.ProfileFile{X: 1, Y: 1, Commands: []config.Command{
+			{Name: "work", Profile: profile.File{X: 1, Y: 1, Commands: []profile.Command{
 				{Name: "Deploy", Command: "make deploy", Col: "a", Row: 0, AutoCloseExecution: falsePtr()},
 			}}},
 		},

@@ -1,14 +1,14 @@
-package config
+package profile
 
 import (
 	"strings"
 	"testing"
 )
 
-// TestResolveCell pins the shared cell-resolution that ValidateConfig and
+// TestResolveCell pins the shared cell-resolution that ValidateGrid and
 // BuildGrid both rely on, including the "-1 / 'z' means last" rule.
 func TestResolveCell(t *testing.T) {
-	cfg := Config{X: 3, Y: 4} // columns a,b,c ; rows 0..3
+	const x, y = 3, 4 // columns a,b,c ; rows 0..3
 
 	cases := []struct {
 		name             string
@@ -25,7 +25,7 @@ func TestResolveCell(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			row, col, err := resolveCell(tc.cmd, cfg)
+			row, col, err := resolveCell(tc.cmd, x, y)
 			if tc.wantErr {
 				if err == nil {
 					t.Fatalf("expected an error for column %q", tc.cmd.Col)
@@ -43,28 +43,25 @@ func TestResolveCell(t *testing.T) {
 }
 
 // BuildGrid drops a row below -1 silently, so validation must reject it.
-func TestValidateConfigRejectsNegativeRow(t *testing.T) {
-	cfg := Config{X: 1, Y: 1, Commands: []Command{{Name: "gone", Command: "true", Row: -2, Col: "a"}}}
-	if err := ValidateConfig(cfg); err == nil || !strings.Contains(err.Error(), "invalid row -2") {
+func TestValidateGridRejectsNegativeRow(t *testing.T) {
+	cmds := []Command{{Name: "gone", Command: "true", Row: -2, Col: "a"}}
+	if err := ValidateGrid(1, 1, cmds); err == nil || !strings.Contains(err.Error(), "invalid row -2") {
 		t.Errorf("want an invalid row error, got %v", err)
 	}
-	cfg.Commands[0].Row = -1
-	if err := ValidateConfig(cfg); err != nil {
+	cmds[0].Row = -1
+	if err := ValidateGrid(1, 1, cmds); err != nil {
 		t.Errorf("row -1 is the last row, got %v", err)
 	}
 }
 
 func TestBuildGridSkipsInvalidCell(t *testing.T) {
-	cfg := Config{
-		X: 2, Y: 1,
-		Commands: []Command{
-			{Name: "good", Command: "true", Row: 0, Col: "a"},
-			{Name: "bad", Command: "true", Row: 0, Col: "!"},
-		},
+	cmds := []Command{
+		{Name: "good", Command: "true", Row: 0, Col: "a"},
+		{Name: "bad", Command: "true", Row: 0, Col: "!"},
 	}
-	// Must not kill the process: ValidateConfig already reports this at
+	// Must not kill the process: ValidateGrid already reports this at
 	// load time; rendering skips the cell.
-	grid := BuildGrid(cfg)
+	grid := BuildGrid(2, 1, cmds)
 	if grid[0][0] != "good" {
 		t.Errorf("valid cell should be placed, got %q", grid[0][0])
 	}

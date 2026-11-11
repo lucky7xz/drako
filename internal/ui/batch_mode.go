@@ -119,7 +119,7 @@ func (m Model) updateDropdownMarking(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) 
 // direct, non-empty command. Folder (dropdown) cells and platform-empty cells
 // stay out in v1.
 func (m Model) markable(name string) bool {
-	cell, _, found := launch.Selection{Cell: name}.Resolve(m.Config)
+	cell, _, found := launch.Selection{Cell: name}.Resolve(m.Config.Commands)
 	return found && cell.Command != "" && len(cell.Items) == 0
 }
 

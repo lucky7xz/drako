@@ -1,4 +1,4 @@
-package config
+package profile
 
 import (
 	"strings"
@@ -7,8 +7,7 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-// pinned is the platform chain decodeProfile resolves for; nil means the
-// machine the tests run on.
+// pinned is the platform chain decodeProfile resolves for.
 var pinned []string
 
 func pinPlatform(t *testing.T, target string) {
@@ -26,19 +25,15 @@ func pinPlatformChain(t *testing.T, targets ...string) {
 }
 
 // decodeFor decodes src for the pinned platform, without validating it.
-func decodeFor(src string) (ProfileFile, error) {
-	targets := pinned
-	if targets == nil {
-		targets = detectRuntimeTargets()
-	}
+func decodeFor(src string) (File, error) {
 	var written rawProfile
 	if _, err := toml.Decode(src, &written); err != nil {
-		return ProfileFile{}, err
+		return File{}, err
 	}
-	return written.resolve(targets), nil
+	return written.resolve(pinned), nil
 }
 
-func decodeProfile(t *testing.T, src string) ProfileFile {
+func decodeProfile(t *testing.T, src string) File {
 	t.Helper()
 	p, err := decodeFor(src)
 	if err != nil {
@@ -219,7 +214,7 @@ debug_execution = true
 // The platform is an argument of decoding, not something decoding finds out:
 // the same text gives each platform its own command, and a caller that only
 // validates passes none and gets no command and no note.
-func TestDecodeProfileTakesThePlatform(t *testing.T) {
+func TestDecodeTakesThePlatform(t *testing.T) {
 	src := []byte(`
 x = 1
 y = 1
@@ -231,7 +226,7 @@ description = "install"
 command = { linux_arch = "pacman -S x", macos = "brew install x" }
 `)
 	for targets, want := range map[string]string{"linux_arch": "pacman -S x", "macos": "brew install x"} {
-		pf, problems, err := DecodeProfile(src, []string{targets})
+		pf, problems, err := Decode(src, []string{targets})
 		if err != nil || len(problems) > 0 {
 			t.Fatalf("%s: %v %v", targets, err, problems)
 		}
@@ -240,7 +235,7 @@ command = { linux_arch = "pacman -S x", macos = "brew install x" }
 		}
 	}
 
-	pf, problems, err := DecodeProfile(src, nil)
+	pf, problems, err := Decode(src, nil)
 	if err != nil || len(problems) > 0 {
 		t.Fatalf("no platform: %v %v", err, problems)
 	}

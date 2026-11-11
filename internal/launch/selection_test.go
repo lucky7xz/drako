@@ -3,17 +3,15 @@ package launch
 import (
 	"testing"
 
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/profile"
 )
 
 func TestSelectionResolve(t *testing.T) {
-	cfg := config.Config{
-		Commands: []config.Command{
-			{Name: "A", Command: "echo A"},
-			{Name: "B", Items: []config.CommandItem{{Name: "Same", Command: "echo B1"}}},
-			{Name: "C", Items: []config.CommandItem{{Name: "Same", Command: "echo C1"}}},
-			{Name: "Same", Command: "echo cell"},
-		},
+	cells := []profile.Command{
+		{Name: "A", Command: "echo A"},
+		{Name: "B", Items: []profile.CommandItem{{Name: "Same", Command: "echo B1"}}},
+		{Name: "C", Items: []profile.CommandItem{{Name: "Same", Command: "echo C1"}}},
+		{Name: "Same", Command: "echo cell"},
 	}
 	tests := []struct {
 		name string
@@ -28,7 +26,7 @@ func TestSelectionResolve(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			cell, item, ok := tc.sel.Resolve(cfg)
+			cell, item, ok := tc.sel.Resolve(cells)
 			got := ""
 			if ok {
 				got = cell.Command

@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/multiplex"
+	"github.com/lucky7xz/drako/internal/profile"
 )
 
 // Batch mode rendering: the counter line swaps for a mark count and runnable
@@ -69,7 +69,7 @@ func (b batchState) markGlyph(sel launch.Selection) string {
 
 // itemMarkPrefix is batchCellPrefix's dropdown twin: mark glyphs for the
 // folder's items (i is the item's index) while a dropdown batch is active.
-func (m Model) itemMarkPrefix(i int, item config.CommandItem) string {
+func (m Model) itemMarkPrefix(i int, item profile.CommandItem) string {
 	if !m.batch.dropdown || item.Command == "" {
 		return ""
 	}

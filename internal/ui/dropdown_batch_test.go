@@ -9,13 +9,14 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/launch"
+	"github.com/lucky7xz/drako/internal/profile"
 )
 
 // dropdownTestModel: one folder cell open in dropdown mode — two runnable
 // items and one without a command (platform-empty).
 func dropdownTestModel() Model {
-	cfg := config.Config{X: 1, Y: 1, Commands: []config.Command{
-		{Name: "folder", Row: 0, Col: "a", Items: []config.CommandItem{
+	cfg := config.Config{X: 1, Y: 1, Commands: []profile.Command{
+		{Name: "folder", Row: 0, Col: "a", Items: []profile.CommandItem{
 			{Name: "first", Command: "echo 1"},
 			{Name: "second", Command: "echo 2"},
 			{Name: "bare"},
@@ -26,7 +27,7 @@ func dropdownTestModel() Model {
 		Config:   cfg,
 		styles:   BuildStyles(cfg),
 		mode:     dropdownMode,
-		gridNav:  gridNav{grid: config.BuildGrid(cfg)},
+		gridNav:  gridNav{grid: profile.BuildGrid(cfg.X, cfg.Y, cfg.Commands)},
 		dropdown: dropdownState{items: cfg.Commands[0].Items},
 	}
 }
@@ -138,15 +139,15 @@ func TestDropdownDigitsStillJumpWhileMarking(t *testing.T) {
 // position: two "Logs" in one folder are marked and launched apart.
 func TestDropdownMarksTellSameNamedItemsApart(t *testing.T) {
 	withBackend(t, true)
-	cfg := config.Config{X: 1, Y: 1, Commands: []config.Command{
-		{Name: "folder", Row: 0, Col: "a", Items: []config.CommandItem{
+	cfg := config.Config{X: 1, Y: 1, Commands: []profile.Command{
+		{Name: "folder", Row: 0, Col: "a", Items: []profile.CommandItem{
 			{Name: "Logs", Command: "journalctl"},
 			{Name: "Logs", Command: "dmesg"},
 		}},
 	}}
 	cfg.ApplyDefaults()
 	m := Model{Config: cfg, styles: BuildStyles(cfg), mode: dropdownMode,
-		gridNav: gridNav{grid: config.BuildGrid(cfg)}, dropdown: dropdownState{items: cfg.Commands[0].Items}}
+		gridNav: gridNav{grid: profile.BuildGrid(cfg.X, cfg.Y, cfg.Commands)}, dropdown: dropdownState{items: cfg.Commands[0].Items}}
 	m, _ = pressDropdown(t, m, keyRunes("m"))
 	m, _ = pressDropdown(t, m, keyRunes("b"))
 	m, _ = pressDropdown(t, m, keyRunes("2"))

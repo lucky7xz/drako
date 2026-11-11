@@ -32,11 +32,11 @@ func (m Model) Outcome() Outcome {
 	case len(m.selectedBatch) > 0:
 		plans := make([]launch.Plan, len(m.selectedBatch))
 		for i, sel := range m.selectedBatch {
-			plans[i] = launch.For(m.Config, sel, profile)
+			plans[i] = launch.For(m.Config.DefaultShell, m.Config.Commands, sel, profile)
 		}
 		return Outcome{Action: Batch, Plans: plans, Tabs: m.selectedTabs, ForceTmux: m.Config.BatchForceTmux}
 	case m.selected.Cell != "":
-		return Outcome{Action: Run, Plans: []launch.Plan{launch.For(m.Config, m.selected, profile)}}
+		return Outcome{Action: Run, Plans: []launch.Plan{launch.For(m.Config.DefaultShell, m.Config.Commands, m.selected, profile)}}
 	}
 	return Outcome{}
 }

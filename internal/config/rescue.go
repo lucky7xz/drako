@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/lucky7xz/drako/internal/paths"
+	"github.com/lucky7xz/drako/internal/profile"
 )
 
 // shellQuote keeps s one argument for the rescue shell, spaces and quotes
@@ -63,7 +64,7 @@ func RescueConfig() Config {
 	editCmd := "drako open " + shellQuote(cfg.DefaultShell, configPath)
 	openDirCmd := "drako open " + shellQuote(cfg.DefaultShell, configDir)
 
-	cfg.Commands = []Command{
+	cfg.Commands = []profile.Command{
 		{
 			Name:        "Exit Rescue Mode",
 			Command:     "true", // Intercepted by UI

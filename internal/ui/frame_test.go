@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/launch"
+	"github.com/lucky7xz/drako/internal/profile"
 	"github.com/muesli/termenv"
 )
 
@@ -32,7 +33,7 @@ func screens(t *testing.T, cols, w, h int) map[string]Model {
 	}
 
 	dropdown := grid(dropdownMode)
-	dropdown.dropdown.items = []config.CommandItem{{Name: "first-item", Command: "true"}, {Name: "second-item", Command: "true"}}
+	dropdown.dropdown.items = []profile.CommandItem{{Name: "first-item", Command: "true"}, {Name: "second-item", Command: "true"}}
 	out["dropdown"] = dropdown
 
 	layout := grid(batchMode)
@@ -142,7 +143,7 @@ func TestView_ProfileNoteFloatsOverTheGrid(t *testing.T) {
 	m := makeScrollTestModel(3, 3, 100, 40)
 	m.Config.ApplyDefaults()
 	m.mode, m.previousMode = infoMode, dropdownMode
-	m.dropdown.items = []config.CommandItem{{Name: "stale-item", Command: "true"}}
+	m.dropdown.items = []profile.CommandItem{{Name: "stale-item", Command: "true"}}
 	m.profile.errorQueueActive = true
 	m.activeDetail = &DetailState{Title: "Profile error: x", KeyLabel: "Error", Value: "bad"}
 	if got := m.underneath(); got != gridMode {
