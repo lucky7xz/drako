@@ -1,31 +1,32 @@
-package cli
+package summon
 
 // Assets declared by summoned profiles: planning what would be copied,
-// copying under hard size/count limits, and the path-safety checks that keep
-// a hostile repo from writing or reading outside its own tree.
+// walking them under hard size/count limits, and the path-safety checks that
+// keep a hostile repo from reading outside its own tree. Writing an asset
+// into drako's folder is not done here: each allowed file is handed to the
+// caller's sink.
 
 import (
-	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/profile"
 )
 
 // Asset copy limits
 const (
 	assetWarnSizeBytes = 1 * 1024 * 1024  // 1 MB warn
-	assetMaxFileBytes  = 5 * 1024 * 1024  // 5 MB per file hard limit
-	assetMaxTotalBytes = 50 * 1024 * 1024 // 50 MB total hard limit
-	assetMaxFileCount  = 500              // safety cap
+	AssetMaxFileBytes  = 5 * 1024 * 1024  // 5 MB per file hard limit
+	AssetMaxTotalBytes = 50 * 1024 * 1024 // 50 MB total hard limit
+	AssetMaxFileCount  = 500              // safety cap
 )
 
-// profileAssets returns the profile's declared assets (relative paths).
-func profileAssets(profile profile.File) []string {
+// ProfileAssets returns the profile's declared assets (relative paths).
+func ProfileAssets(profile profile.File) []string {
 	if profile.Assets == nil {
 		return nil
 	}
@@ -38,12 +39,20 @@ func profileAssets(profile profile.File) []string {
 	return out
 }
 
-// copyAssetsList copies a list of assets (files or directories) from the cloned repo into configDir's assets.
-// - repoRoot: the clone or folder being summoned from
-// - profileDir: directory of the profile file (assets are relative to this)
-// - profileName: name of the profile (used for subfolder isolation)
-// Returns counts of copied/skipped/missing and total bytes copied.
-func copyAssetsList(configDir, repoRoot, profileDir string, assets []string, profileName string) (int, int, int, int64) {
+// AssetSink receives what CopyAssets finds. Install is handed each allowed
+// file under the name it should have inside the profile's assets folder;
+// Large is told about a file over the warning size just before it is handed
+// over (inFolder: it came from a declared folder, and name is relative to it).
+type AssetSink struct {
+	Install func(rel string, r io.Reader) error
+	Large   func(name string, size int64, inFolder bool)
+}
+
+// CopyAssets walks the assets a profile declares (paths relative to
+// profileDir, which must stay inside repoRoot) and hands every file the
+// limits allow to sink. It returns counts of copied/skipped/missing and the
+// total bytes copied.
+func CopyAssets(repoRoot, profileDir string, assets []string, sink AssetSink) (int, int, int, int64) {
 	var copied, skipped, missing int
 	var totalBytes int64
 	var fileCount int
@@ -58,14 +67,12 @@ func copyAssetsList(configDir, repoRoot, profileDir string, assets []string, pro
 		}
 		src := filepath.Join(profileDir, cleanRel)
 		// Ensure src is within repoRoot
-		ok, err := isPathWithinBase(repoRoot, src)
+		ok, err := IsPathWithinBase(repoRoot, src)
 		if err != nil || !ok {
 			log.Printf("assets: skipping unsafe path %s (err=%v)", rel, err)
 			skipped++
 			continue
 		}
-		// Destination is the assets/ directory + profile name + original relative path
-		// e.g. ~/.config/drako/assets/my-profile/script.sh
 
 		info, statErr := os.Stat(src)
 		if statErr != nil {
@@ -74,7 +81,7 @@ func copyAssetsList(configDir, repoRoot, profileDir string, assets []string, pro
 			continue
 		}
 		if info.IsDir() {
-			c, s, m, _ := copyDirWithLimits(src, configDir, profileName, cleanRel, &fileCount, &totalBytes)
+			c, s, m, _ := copyDirWithLimits(src, cleanRel, sink, &fileCount, &totalBytes)
 			copied += c
 			skipped += s
 			missing += m
@@ -87,10 +94,10 @@ func copyAssetsList(configDir, repoRoot, profileDir string, assets []string, pro
 			continue
 		}
 		if info.Size() > assetWarnSizeBytes {
-			fmt.Printf("  ⚠️  Large asset: %s (%.1f MB)\n", rel, float64(info.Size())/(1024*1024))
+			sink.Large(rel, info.Size(), false)
 		}
-		if err := installAsset(configDir, profileName, cleanRel, src); err != nil {
-			log.Printf("assets: copy failed %s -> %s: %v", src, filepath.Join(lair.AssetsDir(configDir, profileName), cleanRel), err)
+		if err := hand(sink, cleanRel, src); err != nil {
+			log.Printf("assets: copy failed %s -> %s: %v", src, cleanRel, err)
 			skipped++
 			continue
 		}
@@ -101,8 +108,8 @@ func copyAssetsList(configDir, repoRoot, profileDir string, assets []string, pro
 	return copied, skipped, missing, totalBytes
 }
 
-// assetPlanItem describes what will be copied for an asset
-type assetPlanItem struct {
+// AssetPlan describes what will be copied for an asset
+type AssetPlan struct {
 	AssetRel  string
 	DestRel   string
 	IsDir     bool
@@ -111,24 +118,24 @@ type assetPlanItem struct {
 	Missing   bool
 }
 
-// planAssetsList enumerates assets to present a copy plan before confirmation
-func planAssetsList(repoRoot, profileDir string, assets []string) []assetPlanItem {
-	var plans []assetPlanItem
+// PlanAssets enumerates assets to present a copy plan before confirmation
+func PlanAssets(repoRoot, profileDir string, assets []string) []AssetPlan {
+	var plans []AssetPlan
 	for _, rel := range assets {
 		cleanRel, safe := cleanAssetRel(rel)
 		if !safe {
-			plans = append(plans, assetPlanItem{AssetRel: rel, DestRel: cleanRel, Missing: true})
+			plans = append(plans, AssetPlan{AssetRel: rel, DestRel: cleanRel, Missing: true})
 			continue
 		}
 		src := filepath.Join(profileDir, cleanRel)
-		ok, err := isPathWithinBase(repoRoot, src)
+		ok, err := IsPathWithinBase(repoRoot, src)
 		if err != nil || !ok {
-			plans = append(plans, assetPlanItem{AssetRel: rel, DestRel: cleanRel, Missing: true})
+			plans = append(plans, AssetPlan{AssetRel: rel, DestRel: cleanRel, Missing: true})
 			continue
 		}
 		info, statErr := os.Stat(src)
 		if statErr != nil {
-			plans = append(plans, assetPlanItem{AssetRel: rel, DestRel: cleanRel, Missing: true})
+			plans = append(plans, AssetPlan{AssetRel: rel, DestRel: cleanRel, Missing: true})
 			continue
 		}
 		if info.IsDir() {
@@ -150,7 +157,7 @@ func planAssetsList(repoRoot, profileDir string, assets []string) []assetPlanIte
 				bytes += fi.Size()
 				return nil
 			})
-			plans = append(plans, assetPlanItem{
+			plans = append(plans, AssetPlan{
 				AssetRel:  rel,
 				DestRel:   cleanRel,
 				IsDir:     true,
@@ -159,7 +166,7 @@ func planAssetsList(repoRoot, profileDir string, assets []string) []assetPlanIte
 				Missing:   false,
 			})
 		} else {
-			plans = append(plans, assetPlanItem{
+			plans = append(plans, AssetPlan{
 				AssetRel:  rel,
 				DestRel:   cleanRel,
 				IsDir:     false,
@@ -185,20 +192,19 @@ func cleanAssetRel(rel string) (string, bool) {
 	return filepath.Clean(rel), true
 }
 
-// installAsset hands the asset file at src to lair, for the profile's assets
-// folder under the name rel.
-func installAsset(configDir, profileName, rel, src string) error {
+// hand opens the asset file at src and gives it to the sink under the name rel.
+func hand(sink AssetSink, rel, src string) error {
 	in, err := os.Open(src)
 	if err != nil {
 		return err
 	}
 	defer in.Close()
-	return lair.InstallAsset(configDir, profileName, rel, in)
+	return sink.Install(rel, in)
 }
 
-// copyDirWithLimits recursively copies the files of srcDir, with size/count
-// limits, into the profile's assets folder under the name base.
-func copyDirWithLimits(srcDir, configDir, profileName, base string, fileCount *int, totalBytes *int64) (int, int, int, int64) {
+// copyDirWithLimits recursively hands the files of srcDir to sink, with
+// size/count limits, under names that start with base.
+func copyDirWithLimits(srcDir, base string, sink AssetSink, fileCount *int, totalBytes *int64) (int, int, int, int64) {
 	copied := 0
 	skipped := 0
 	missing := 0
@@ -229,9 +235,9 @@ func copyDirWithLimits(srcDir, configDir, profileName, base string, fileCount *i
 			return nil
 		}
 		if info.Size() > assetWarnSizeBytes {
-			fmt.Printf("  ⚠️  Large asset file: %s (%.1f MB)\n", rel, float64(info.Size())/(1024*1024))
+			sink.Large(rel, info.Size(), true)
 		}
-		if err := installAsset(configDir, profileName, filepath.Join(base, rel), path); err != nil {
+		if err := hand(sink, filepath.Join(base, rel), path); err != nil {
 			skipped++
 			return nil
 		}
@@ -249,20 +255,20 @@ func copyDirWithLimits(srcDir, configDir, profileName, base string, fileCount *i
 
 // checkAssetFileAllowed enforces per-file and aggregate limits
 func checkAssetFileAllowed(size int64, fileCount int, totalBytes int64) bool {
-	if size > assetMaxFileBytes {
+	if size > AssetMaxFileBytes {
 		return false
 	}
-	if fileCount+1 > assetMaxFileCount {
+	if fileCount+1 > AssetMaxFileCount {
 		return false
 	}
-	if totalBytes+size > assetMaxTotalBytes {
+	if totalBytes+size > AssetMaxTotalBytes {
 		return false
 	}
 	return true
 }
 
-// isPathWithinBase checks if target is within base after resolving symlinks
-func isPathWithinBase(base, target string) (bool, error) {
+// IsPathWithinBase checks if target is within base after resolving symlinks
+func IsPathWithinBase(base, target string) (bool, error) {
 	baseAbs, err := filepath.Abs(base)
 	if err != nil {
 		return false, err

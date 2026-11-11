@@ -1,4 +1,4 @@
-package cli
+package summon
 
 // Validation of summoned files: everything that arrives via summon is
 // untrusted input and must pass these checks before it lands in inventory.
@@ -16,8 +16,8 @@ import (
 	"github.com/lucky7xz/drako/internal/profile"
 )
 
-// isHexString reports whether s is exactly n hexadecimal characters.
-func isHexString(s string, n int) bool {
+// IsHexString reports whether s is exactly n hexadecimal characters.
+func IsHexString(s string, n int) bool {
 	if len(s) != n {
 		return false
 	}
@@ -31,9 +31,9 @@ func isHexString(s string, n int) bool {
 	return true
 }
 
-// verifyFileSHA256 hashes path and compares it (case-insensitively) against
+// VerifyFileSHA256 hashes path and compares it (case-insensitively) against
 // the expected hex digest. A mismatch is an error that names both hashes.
-func verifyFileSHA256(path, expected string) error {
+func VerifyFileSHA256(path, expected string) error {
 	f, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("could not open file for verification: %w", err)
@@ -53,46 +53,43 @@ func verifyFileSHA256(path, expected string) error {
 
 // Profile size limits
 const (
-	profileWarnSize = 500 * 1024      // 500KB - warn if larger
-	profileMaxSize  = 2 * 1024 * 1024 // 2MB - reject if larger
+	ProfileWarnSize = 500 * 1024      // 500KB - warn if larger
+	ProfileMaxSize  = 2 * 1024 * 1024 // 2MB - reject if larger
 )
 
-// validateProfileFile checks that a file is a valid drako profile and returns it decoded.
-func validateProfileFile(path string) (profile.File, error) {
-	var pf profile.File
+// ValidateProfileFile checks that a file is a valid drako profile and returns
+// it decoded, with the file's size: one over ProfileWarnSize is unusual, and
+// the caller may want to say so.
+func ValidateProfileFile(path string) (pf profile.File, size int64, err error) {
 	// Check file size
 	info, err := os.Stat(path)
 	if err != nil {
-		return pf, fmt.Errorf("failed to stat file: %w", err)
+		return pf, 0, fmt.Errorf("failed to stat file: %w", err)
 	}
 
-	size := info.Size()
-	if size > profileMaxSize {
-		return pf, fmt.Errorf("file too large (%d bytes, max %d bytes). This is not a valid profile", size, profileMaxSize)
-	}
-
-	if size > profileWarnSize {
-		fmt.Printf("⚠️  Warning: Profile is unusually large (%d KB). Validating...\n", size/1024)
+	size = info.Size()
+	if size > ProfileMaxSize {
+		return pf, size, fmt.Errorf("file too large (%d bytes, max %d bytes). This is not a valid profile", size, ProfileMaxSize)
 	}
 
 	// Read and parse as TOML
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return pf, fmt.Errorf("failed to read file: %w", err)
+		return pf, size, fmt.Errorf("failed to read file: %w", err)
 	}
 
 	pf, problems, err := profile.Decode(data, nil) // validating only: no platform needed
 	if err != nil {
-		return pf, fmt.Errorf("invalid TOML format: %w", err)
+		return pf, size, fmt.Errorf("invalid TOML format: %w", err)
 	}
 	if len(problems) > 0 {
-		return pf, fmt.Errorf("invalid profile: %s", strings.Join(problems, "; "))
+		return pf, size, fmt.Errorf("invalid profile: %s", strings.Join(problems, "; "))
 	}
-	return pf, nil
+	return pf, size, nil
 }
 
-// validateFilename checks if the filename is a valid profile name
-func validateFilename(filename string) error {
+// ValidateFilename checks if the filename is a valid profile name
+func ValidateFilename(filename string) error {
 	// A plain name: separators of any OS would let it land outside the inventory.
 	if strings.ContainsAny(filename, `/\`) || !filepath.IsLocal(filename) {
 		return fmt.Errorf("filename must be a plain file name (got: %s)", filename)
@@ -107,13 +104,13 @@ func validateFilename(filename string) error {
 	return nil
 }
 
-// validateSpecFile checks if a file is a valid drako spec
-func validateSpecFile(path string) error {
+// ValidateSpecFile checks if a file is a valid drako spec
+func ValidateSpecFile(path string) error {
 	info, err := os.Stat(path)
 	if err != nil {
 		return err
 	}
-	if info.Size() > profileMaxSize {
+	if info.Size() > ProfileMaxSize {
 		return fmt.Errorf("file too large")
 	}
 

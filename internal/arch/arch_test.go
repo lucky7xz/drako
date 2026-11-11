@@ -54,6 +54,13 @@ var rules = []rule{
 		only: []string{"lair"},
 	},
 	{
+		// Only the shells talk to the user. Everything beneath them returns
+		// values and errors, so what the user is told is decided in one layer.
+		capability: "print to the user's terminal",
+		calls:      []string{"fmt.Print", "fmt.Printf", "fmt.Println"},
+		allowed:    []string{"cli", "app", "ui"},
+	},
+	{
 		capability: "step around Go's memory safety",
 		imports:    []string{"unsafe", "C"},
 	},
@@ -64,6 +71,11 @@ var rules = []rule{
 // each other.
 var pure = []string{"profile", "settings", "equip", "launch"}
 
+// effects are the packages that touch the world. Each is audited on its own,
+// so of drako's packages they may import only pure ones, and proc: the one
+// way to start a program.
+var effects = []string{"lair", "proc", "summon", "host", "multiplex"}
+
 // internal is the import path prefix of drako's own packages.
 const internal = "github.com/lucky7xz/drako/internal/"
 
@@ -72,7 +84,6 @@ const internal = "github.com/lucky7xz/drako/internal/"
 // moves an effect to its home deletes the lines it has made untrue.
 var knownExceptions = []string{
 	// use the network
-	"cli/summon_transport.go net/http",
 
 	// touch files
 	"multiplex/backend.go os",
@@ -84,6 +95,9 @@ var knownExceptions = []string{
 	"lair/files.go os.ReadFile", // read: follows a file the user linked out of the folder
 	"lair/files.go os.Stat",     // stat, read's twin; and explain, to recognise a linked subfolder
 	"lair/lair.go os.MkdirAll",  // Create: the folder has to exist before it can be opened
+
+	// an effect package importing another
+	"lair/load.go github.com/lucky7xz/drako/internal/host", // until loading is handed the platform (steps 7 and 8)
 }
 
 func TestPackagesKeepToTheirCapabilities(t *testing.T) {
@@ -126,6 +140,15 @@ func violations(t *testing.T, root string) []string {
 				dep, ours := strings.CutPrefix(imp, internal)
 				dep, _, _ = strings.Cut(dep, "/")
 				if ours && !slices.Contains(pure, dep) {
+					out = append(out, rel+" "+imp)
+				}
+			}
+		}
+		if slices.Contains(effects, pkg) {
+			for _, imp := range imports {
+				dep, ours := strings.CutPrefix(imp, internal)
+				dep, _, _ = strings.Cut(dep, "/")
+				if ours && dep != "proc" && !slices.Contains(pure, dep) {
 					out = append(out, rel+" "+imp)
 				}
 			}

@@ -263,15 +263,3 @@ func TestSummonGitUsesSummonerConfigDirAndUI(t *testing.T) {
 		t.Errorf("per-file prompts bypassed the summoner's UI; it saw: %s", got)
 	}
 }
-
-func TestSummonPathsRejectBackslashTraversal(t *testing.T) {
-	if _, ok := cleanAssetRel(`..\..\x.profile.toml`); ok {
-		t.Error(`cleanAssetRel accepted ..\..\x.profile.toml`)
-	}
-	if err := validateFilename(`..\..\work.profile.toml`); err == nil {
-		t.Error(`validateFilename accepted ..\..\work.profile.toml`)
-	}
-	if !isGitURL("ssh://git@host/user/repo") {
-		t.Error("ssh:// URL not treated as git")
-	}
-}

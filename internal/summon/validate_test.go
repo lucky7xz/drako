@@ -1,4 +1,4 @@
-package cli
+package summon
 
 import (
 	"bytes"
@@ -32,7 +32,7 @@ func TestValidateSpecFile(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			path := writeTemp(t, "x.spec.toml", tt.content)
-			err := validateSpecFile(path)
+			err := ValidateSpecFile(path)
 			if tt.wantErr == "" {
 				if err != nil {
 					t.Fatalf("want valid, got %v", err)
@@ -47,29 +47,29 @@ func TestValidateSpecFile(t *testing.T) {
 }
 
 func TestValidateSpecFile_MissingFile(t *testing.T) {
-	if err := validateSpecFile(filepath.Join(t.TempDir(), "ghost.spec.toml")); err == nil {
+	if err := ValidateSpecFile(filepath.Join(t.TempDir(), "ghost.spec.toml")); err == nil {
 		t.Fatal("missing file must be an error")
 	}
 }
 
 func TestValidateSpecFile_TooLarge(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "big.spec.toml")
-	if err := os.WriteFile(path, bytes.Repeat([]byte("# pad\n"), (profileMaxSize/6)+2), 0o644); err != nil {
+	if err := os.WriteFile(path, bytes.Repeat([]byte("# pad\n"), (ProfileMaxSize/6)+2), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	err := validateSpecFile(path)
+	err := ValidateSpecFile(path)
 	if err == nil || !strings.Contains(err.Error(), "too large") {
 		t.Fatalf("oversized spec must be rejected, got %v", err)
 	}
 }
 
 func TestValidateFilename(t *testing.T) {
-	if err := validateFilename("networking.profile.toml"); err != nil {
+	if err := ValidateFilename("networking.profile.toml"); err != nil {
 		t.Errorf("valid name rejected: %v", err)
 	}
 	for _, bad := range []string{"networking.toml", "profile.toml.bak", "networking",
 		".profile.toml", "..profile.toml", "...profile.toml"} {
-		if err := validateFilename(bad); err == nil {
+		if err := ValidateFilename(bad); err == nil {
 			t.Errorf("%q should be rejected", bad)
 		}
 	}
@@ -89,7 +89,7 @@ func TestValidateProfileFile(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			path := writeTemp(t, "x.profile.toml", tt.content)
-			_, err := validateProfileFile(path)
+			_, _, err := ValidateProfileFile(path)
 			if tt.wantErr == "" {
 				if err != nil {
 					t.Fatalf("want valid, got %v", err)
@@ -105,10 +105,10 @@ func TestValidateProfileFile(t *testing.T) {
 
 func TestValidateProfileFile_TooLarge(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "big.profile.toml")
-	if err := os.WriteFile(path, bytes.Repeat([]byte("# pad\n"), (profileMaxSize/6)+2), 0o644); err != nil {
+	if err := os.WriteFile(path, bytes.Repeat([]byte("# pad\n"), (ProfileMaxSize/6)+2), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	_, err := validateProfileFile(path)
+	_, _, err := ValidateProfileFile(path)
 	if err == nil || !strings.Contains(err.Error(), "too large") {
 		t.Fatalf("oversized profile must be rejected, got %v", err)
 	}

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/lucky7xz/drako/internal/lair" // drako.chronyx.xyz
+	"github.com/lucky7xz/drako/internal/summon"
 	"github.com/lucky7xz/drako/internal/version"
 )
 
@@ -174,10 +175,10 @@ func parseSummonArgs(args []string) (sourceURL, sha, rev string, err error) {
 	}
 	// Only full-length pins verify anything: a truncated hash weakens the
 	// check, and branch/tag names are mutable — reject both loudly.
-	if sha != "" && !isHexString(sha, 64) {
+	if sha != "" && !summon.IsHexString(sha, 64) {
 		return "", "", "", fmt.Errorf("--sha256 must be the full 64-character hex digest (got %d characters)", len(sha))
 	}
-	if rev != "" && !isHexString(rev, 40) {
+	if rev != "" && !summon.IsHexString(rev, 40) {
 		return "", "", "", fmt.Errorf("--rev must be a full 40-character commit hash; branch and tag names are mutable and verify nothing")
 	}
 	return sourceURL, sha, rev, nil

@@ -1,4 +1,4 @@
-package cli
+package summon
 
 import (
 	"net/http"
@@ -37,7 +37,7 @@ func TestHTTPDownloaderWritesDestination(t *testing.T) {
 
 // On failure dstPath must not survive — that's the downloader's contract.
 func TestHTTPDownloaderRejectsOversized(t *testing.T) {
-	big := strings.Repeat("a", profileMaxSize+1)
+	big := strings.Repeat("a", ProfileMaxSize+1)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(big))
 	}))

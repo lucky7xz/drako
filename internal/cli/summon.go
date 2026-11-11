@@ -12,6 +12,7 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -20,6 +21,8 @@ import (
 
 	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/lair"
+	"github.com/lucky7xz/drako/internal/profile"
+	"github.com/lucky7xz/drako/internal/summon"
 )
 
 // FileDownloader defines the interface for downloading a file
@@ -57,8 +60,8 @@ type Summoner struct {
 func NewSummoner(configDir string) *Summoner {
 	return &Summoner{
 		ConfigDir:  configDir,
-		Downloader: &HTTPDownloader{},
-		Cloner:     &GitCloner{},
+		Downloader: &summon.HTTPDownloader{},
+		Cloner:     &summon.GitCloner{},
 		UI:         &RealUI{},
 	}
 }
@@ -69,11 +72,11 @@ func (s *Summoner) Summon(sourceURL string) error {
 		return fmt.Errorf("failed to create inventory directory: %w", err)
 	}
 
-	if info, err := os.Stat(sourceURL); err == nil && info.IsDir() && !isGitURL(sourceURL) {
+	if info, err := os.Stat(sourceURL); err == nil && info.IsDir() && !summon.IsGitURL(sourceURL) {
 		return s.summonFromFolder(sourceURL)
 	}
 
-	if isGitURL(sourceURL) {
+	if summon.IsGitURL(sourceURL) {
 		if s.SHA256 != "" {
 			return fmt.Errorf("--sha256 pins single-file downloads; for git repositories use --rev <full-commit-hash>")
 		}
@@ -81,7 +84,7 @@ func (s *Summoner) Summon(sourceURL string) error {
 			return err
 		}
 
-		if isSSHURL(sourceURL) {
+		if summon.IsSSHURL(sourceURL) {
 			warnIfNoSSHKeys()
 		}
 
@@ -107,11 +110,11 @@ func (s *Summoner) Summon(sourceURL string) error {
 	if s.Rev != "" {
 		return fmt.Errorf("--rev pins git clones; for single-file downloads use --sha256 <hash>")
 	}
-	filename := extractFilenameFromURL(sourceURL)
+	filename := summon.ExtractFilenameFromURL(sourceURL)
 	if filename == "" || !strings.HasSuffix(filename, ".profile.toml") {
 		filename = "personal.profile.toml"
 	}
-	if err := validateFilename(filename); err != nil {
+	if err := summon.ValidateFilename(filename); err != nil {
 		return err
 	}
 
@@ -185,6 +188,36 @@ func destinationLabel(configDir, dstPath string) string {
 	return "equipped"
 }
 
+// gitHeadFn and gitCheckoutFn are package vars so tests can stub them; the
+// real ones shell out to git.
+var (
+	gitHeadFn     = summon.GitHead
+	gitCheckoutFn = summon.GitCheckout
+)
+
+// warnIfNoSSHKeys says so when none of the usual SSH keys is set up.
+func warnIfNoSSHKeys() {
+	sshDir, missing := summon.MissingSSHKeys()
+	if !missing {
+		return
+	}
+	fmt.Printf("⚠️  Warning: No SSH keys found in %s\n", sshDir)
+	fmt.Printf("   For private repositories, you may need to:\n")
+	fmt.Printf("   1. Generate SSH keys: ssh-keygen -t ed25519 -C \"your_email@example.com\"\n")
+	fmt.Printf("   2. Add the public key to your Git hosting service (GitHub/GitLab/etc.)\n")
+	fmt.Printf("   3. Or use HTTPS URL instead: https://github.com/user/repo.git\n\n")
+}
+
+// validateProfile is summon.ValidateProfileFile, saying so when the file is
+// unusually large.
+func validateProfile(path string) (profile.File, error) {
+	pf, size, err := summon.ValidateProfileFile(path)
+	if size > summon.ProfileWarnSize && size <= summon.ProfileMaxSize {
+		fmt.Printf("⚠️  Warning: Profile is unusually large (%d KB). Validating...\n", size/1024)
+	}
+	return pf, err
+}
+
 // installProfile hands the profile at srcPath to lair, which puts it where
 // dstPath says: equipped (the config dir itself) or the inventory.
 func installProfile(configDir, srcPath, dstPath string) error {
@@ -242,6 +275,7 @@ func (s *Summoner) summonFromGit(repoURL string) error {
 	defer os.RemoveAll(tempDir)
 
 	// Clone the repository using injected Cloner
+	fmt.Printf("Cloning repository...\n")
 	if err := s.Cloner.CloneRepo(repoURL, tempDir); err != nil {
 		return err
 	}
@@ -275,8 +309,8 @@ func (s *Summoner) summonFromFolder(dir string) error {
 		return err
 	}
 	// Inside the config dir, or around it, summon would copy decks onto themselves.
-	inside, _ := isPathWithinBase(s.ConfigDir, root)
-	around, _ := isPathWithinBase(root, s.ConfigDir)
+	inside, _ := summon.IsPathWithinBase(s.ConfigDir, root)
+	around, _ := summon.IsPathWithinBase(root, s.ConfigDir)
 	if inside || around {
 		return fmt.Errorf("%s is or holds drako's config dir; summon from your deck's own folder", root)
 	}
@@ -290,7 +324,7 @@ func (s *Summoner) summonFromFolder(dir string) error {
 // summonFromDir offers every profile and spec at the top level of root, a
 // clone or a local folder; source names root in messages.
 func (s *Summoner) summonFromDir(root, source string) error {
-	profileFiles, specFiles, err := findRepoFiles(root)
+	profileFiles, specFiles, err := summon.FindFiles(root)
 	if err != nil {
 		return fmt.Errorf("failed to search for files: %w", err)
 	}
@@ -356,28 +390,6 @@ func (s *Summoner) summonFromDir(root, source string) error {
 	return nil
 }
 
-// findRepoFiles lists the .profile.toml and .spec.toml files at the top level
-// of root; subfolders are not searched.
-func findRepoFiles(root string) (profileFiles, specFiles []string, err error) {
-	entries, err := os.ReadDir(root)
-	if err != nil {
-		return nil, nil, err
-	}
-	for _, de := range entries {
-		// Regular files only: a symlink could point outside the repo or at a device.
-		if !de.Type().IsRegular() {
-			continue
-		}
-		path := filepath.Join(root, de.Name())
-		if strings.HasSuffix(path, ".profile.toml") {
-			profileFiles = append(profileFiles, path)
-		} else if strings.HasSuffix(path, ".spec.toml") {
-			specFiles = append(specFiles, path)
-		}
-	}
-	return profileFiles, specFiles, nil
-}
-
 // printFoundFiles shows the user what the repository contains.
 func printFoundFiles(profileFiles, specFiles []string) {
 	fmt.Printf("\nFound %d file(s) in repository:\n", len(profileFiles)+len(specFiles))
@@ -400,19 +412,19 @@ func (s *Summoner) summonRepoProfile(srcPath, tempDir string) (summonOutcome, er
 	dstName := filepath.Base(srcPath)
 
 	// Validate filename
-	if err := validateFilename(dstName); err != nil {
+	if err := summon.ValidateFilename(dstName); err != nil {
 		fmt.Printf("⚠️  Skipping %s: %v\n", dstName, err)
 		return outcomeSkipped, nil
 	}
 
 	// Validate file content before copying
 	fmt.Printf("\nValidating %s...\n", dstName)
-	profile, err := validateProfileFile(srcPath)
+	profile, err := validateProfile(srcPath)
 	if err != nil {
 		fmt.Printf("⚠️  Skipping %s: %v\n", dstName, err)
 		return outcomeSkipped, nil
 	}
-	assets := profileAssets(profile)
+	assets := summon.ProfileAssets(profile)
 
 	dstPath, err := placeFor(s.ConfigDir, dstName)
 	if err != nil {
@@ -448,7 +460,18 @@ func (s *Summoner) summonRepoProfile(srcPath, tempDir string) (summonOutcome, er
 
 	// Handle assets (git-only feature)
 	if len(assets) > 0 {
-		aCopied, aSkipped, aMissing, aBytes := copyAssetsList(s.ConfigDir, tempDir, filepath.Dir(srcPath), assets, profileName)
+		aCopied, aSkipped, aMissing, aBytes := summon.CopyAssets(tempDir, filepath.Dir(srcPath), assets, summon.AssetSink{
+			Install: func(rel string, r io.Reader) error {
+				return lair.InstallAsset(s.ConfigDir, profileName, rel, r)
+			},
+			Large: func(name string, size int64, inFolder bool) {
+				if inFolder {
+					fmt.Printf("  ⚠️  Large asset file: %s (%.1f MB)\n", name, float64(size)/(1024*1024))
+				} else {
+					fmt.Printf("  ⚠️  Large asset: %s (%.1f MB)\n", name, float64(size)/(1024*1024))
+				}
+			},
+		})
 		fmt.Printf("  Assets: copied=%d, skipped=%d, missing=%d, total=%.1f MB\n",
 			aCopied, aSkipped, aMissing, float64(aBytes)/(1024*1024))
 		log.Printf("Assets for %s: copied=%d, skipped=%d, missing=%d, bytes=%d", dstName, aCopied, aSkipped, aMissing, aBytes)
@@ -461,7 +484,7 @@ func (s *Summoner) summonRepoProfile(srcPath, tempDir string) (summonOutcome, er
 func printAssetsPlan(tempDir, srcDir string, assets []string, profileName string) {
 	fmt.Printf("  Assets declared: %d\n", len(assets))
 	fmt.Printf("  Plan (destination under ~/.config/drako/assets/%s/):\n", profileName)
-	plans := planAssetsList(tempDir, srcDir, assets)
+	plans := summon.PlanAssets(tempDir, srcDir, assets)
 	totalPlannedBytes := int64(0)
 	totalPlannedFiles := 0
 	missingPlanned := 0
@@ -487,7 +510,7 @@ func printAssetsPlan(tempDir, srcDir string, assets []string, profileName string
 	fmt.Printf("  Assets summary: planned_files=%d, planned_bytes=%.1f MB, missing=%d\n",
 		totalPlannedFiles, float64(totalPlannedBytes)/(1024*1024), missingPlanned)
 	fmt.Printf("  Note: No per-asset prompts. Missing assets will be warned and skipped. Limits: %d files, total ≤ %d MB, per-file ≤ %d MB.\n",
-		assetMaxFileCount, assetMaxTotalBytes/(1024*1024), assetMaxFileBytes/(1024*1024))
+		summon.AssetMaxFileCount, summon.AssetMaxTotalBytes/(1024*1024), summon.AssetMaxFileBytes/(1024*1024))
 }
 
 // summonRepoSpec validates and copies one spec file on confirmation. Unlike
@@ -497,7 +520,7 @@ func (s *Summoner) summonRepoSpec(srcPath, specsDir string) summonOutcome {
 	dstPath := filepath.Join(specsDir, dstName)
 
 	// Validate spec file content
-	if err := validateSpecFile(srcPath); err != nil {
+	if err := summon.ValidateSpecFile(srcPath); err != nil {
 		fmt.Printf("⚠️  Skipping %s: %v\n", dstName, err)
 		return outcomeSkipped
 	}
@@ -540,6 +563,7 @@ func (s *Summoner) summonFromHTTP(sourceURL, dstPath string) error {
 	tempFile.Close() // close immediately, downloader will open
 	defer os.Remove(tempPath)
 
+	fmt.Printf("Downloading from %s...\n", sourceURL)
 	if err := s.Downloader.DownloadFile(sourceURL, tempPath); err != nil {
 		return err
 	}
@@ -548,7 +572,7 @@ func (s *Summoner) summonFromHTTP(sourceURL, dstPath string) error {
 	// cheap check gates the risky one.
 	if s.SHA256 != "" {
 		fmt.Printf("Verifying sha256...\n")
-		if err := verifyFileSHA256(tempPath, s.SHA256); err != nil {
+		if err := summon.VerifyFileSHA256(tempPath, s.SHA256); err != nil {
 			return err
 		}
 		fmt.Printf("✓ sha256 verified\n")
@@ -556,7 +580,7 @@ func (s *Summoner) summonFromHTTP(sourceURL, dstPath string) error {
 
 	// Validate the downloaded file
 	fmt.Printf("Validating profile...\n")
-	if _, err := validateProfileFile(tempPath); err != nil {
+	if _, err := validateProfile(tempPath); err != nil {
 		return fmt.Errorf("validation failed: %w", err)
 	}
 

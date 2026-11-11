@@ -1,4 +1,4 @@
-package cli
+package summon
 
 import (
 	"os"
@@ -33,7 +33,7 @@ func TestIsPathWithinBase_BaseBehindSymlink(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ok, err := isPathWithinBase(link, asset)
+	ok, err := IsPathWithinBase(link, asset)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -55,7 +55,7 @@ func TestIsPathWithinBase_RejectsEscapeFromSymlinkedBase(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ok, _ := isPathWithinBase(link, escaping)
+	ok, _ := IsPathWithinBase(link, escaping)
 	if ok {
 		t.Error("a symlink pointing outside the repo was accepted")
 	}

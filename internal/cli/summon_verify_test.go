@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/lucky7xz/drako/internal/summon"
 )
 
 func TestParseSummonArgs(t *testing.T) {
@@ -51,27 +53,6 @@ func TestParseSummonArgs(t *testing.T) {
 				t.Errorf("got (%q,%q,%q), want (%q,%q,%q)", url, sha, rev, tt.url, tt.sha, tt.rev)
 			}
 		})
-	}
-}
-
-func TestVerifyFileSHA256(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "f")
-	payload := []byte("deck bytes")
-	if err := os.WriteFile(path, payload, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	sum := sha256.Sum256(payload)
-	good := hex.EncodeToString(sum[:])
-
-	if err := verifyFileSHA256(path, good); err != nil {
-		t.Errorf("correct hash rejected: %v", err)
-	}
-	if err := verifyFileSHA256(path, strings.ToUpper(good)); err != nil {
-		t.Errorf("uppercase hash must match (case-insensitive): %v", err)
-	}
-	err := verifyFileSHA256(path, strings.Repeat("0", 64))
-	if err == nil || !strings.Contains(err.Error(), "MISMATCH") {
-		t.Errorf("wrong hash: err = %v, want MISMATCH", err)
 	}
 }
 
@@ -194,7 +175,7 @@ func TestSummonGitRevChecksOutThePinnedCommit(t *testing.T) {
 	os.WriteFile(deck, []byte(validDeck+"# v2\n"), 0o644)
 	git("commit", "-qam", "v2")
 
-	s := &Summoner{ConfigDir: t.TempDir(), Downloader: &MockDownloader{}, Cloner: &GitCloner{}, UI: &yesToAll{}, Rev: pinned}
+	s := &Summoner{ConfigDir: t.TempDir(), Downloader: &MockDownloader{}, Cloner: &summon.GitCloner{}, UI: &yesToAll{}, Rev: pinned}
 	// A clone a Ctrl-C left behind in the old fixed spot must not get in the way.
 	os.MkdirAll(filepath.Join(s.ConfigDir, "inventory", ".summon-temp"), 0o755)
 	os.WriteFile(filepath.Join(s.ConfigDir, "inventory", ".summon-temp", "leftover"), nil, 0o644)

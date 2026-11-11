@@ -1,4 +1,4 @@
-package cli
+package summon
 
 // Transports for summon: how bytes get from a git repo or an HTTP URL onto
 // this machine. No validation or policy lives here — see summon_validate.go
@@ -17,8 +17,8 @@ import (
 	"github.com/lucky7xz/drako/internal/proc"
 )
 
-// isGitURL checks if the URL points to a git repository.
-func isGitURL(urlStr string) bool {
+// IsGitURL checks if the URL points to a git repository.
+func IsGitURL(urlStr string) bool {
 	// SSH format: git@github.com:user/repo.git
 	if strings.HasPrefix(urlStr, "git@") {
 		return true
@@ -34,46 +34,32 @@ func isGitURL(urlStr string) bool {
 	return false
 }
 
-// isSSHURL checks if the URL uses SSH protocol
-func isSSHURL(urlStr string) bool {
+// IsSSHURL checks if the URL uses SSH protocol
+func IsSSHURL(urlStr string) bool {
 	return strings.HasPrefix(urlStr, "git@") || strings.HasPrefix(urlStr, "ssh://")
 }
 
-// warnIfNoSSHKeys checks if SSH keys are configured and warns if not
-func warnIfNoSSHKeys() {
+// MissingSSHKeys reports the user's SSH folder and whether none of the usual
+// key files is in it. With no home directory to look in, nothing is missing.
+func MissingSSHKeys() (sshDir string, missing bool) {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return
+		return "", false
 	}
 
-	sshDir := filepath.Join(home, ".ssh")
+	sshDir = filepath.Join(home, ".ssh")
 
 	// Check for common SSH key files
-	keyFiles := []string{"id_rsa", "id_ed25519", "id_ecdsa", "id_dsa"}
-	hasKeys := false
-
-	for _, keyFile := range keyFiles {
-		keyPath := filepath.Join(sshDir, keyFile)
-		if _, err := os.Stat(keyPath); err == nil {
-			hasKeys = true
-			break
+	for _, keyFile := range []string{"id_rsa", "id_ed25519", "id_ecdsa", "id_dsa"} {
+		if _, err := os.Stat(filepath.Join(sshDir, keyFile)); err == nil {
+			return sshDir, false
 		}
 	}
-
-	if !hasKeys {
-		fmt.Printf("⚠️  Warning: No SSH keys found in %s\n", sshDir)
-		fmt.Printf("   For private repositories, you may need to:\n")
-		fmt.Printf("   1. Generate SSH keys: ssh-keygen -t ed25519 -C \"your_email@example.com\"\n")
-		fmt.Printf("   2. Add the public key to your Git hosting service (GitHub/GitLab/etc.)\n")
-		fmt.Printf("   3. Or use HTTPS URL instead: https://github.com/user/repo.git\n\n")
-	}
+	return sshDir, true
 }
 
-// gitHeadFn resolves a checkout's HEAD commit. A package var so tests can
-// stub it; the real implementation shells out to git.
-var gitHeadFn = gitHead
-
-func gitHead(dir string) (string, error) {
+// GitHead resolves a checkout's HEAD commit.
+func GitHead(dir string) (string, error) {
 	out, err := proc.Git.Command("-C", dir, "rev-parse", "HEAD").Output()
 	if err != nil {
 		return "", fmt.Errorf("could not resolve the cloned HEAD commit: %w", err)
@@ -81,10 +67,8 @@ func gitHead(dir string) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-// gitCheckoutFn checks out a commit in a clone; a package var so tests can stub it.
-var gitCheckoutFn = gitCheckout
-
-func gitCheckout(dir, rev string) error {
+// GitCheckout checks out a commit in a clone.
+func GitCheckout(dir, rev string) error {
 	out, err := proc.Git.Command("-C", dir, "-c", "advice.detachedHead=false", "checkout", "-q", "--detach", rev).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("pinned commit %s is not in the repository: %w\n%s", rev, err, strings.TrimSpace(string(out)))
@@ -104,7 +88,6 @@ func (c *GitCloner) CheckGitAvailable() error {
 }
 
 func (c *GitCloner) CloneRepo(url, destDir string) error {
-	fmt.Printf("Cloning repository...\n")
 	// Use -- to prevent argument injection if repoURL starts with a hyphen
 	cmd := proc.Git.Command("clone", "--", url, destDir)
 	cmd.Stdout = os.Stdout
@@ -122,8 +105,6 @@ type HTTPDownloader struct{}
 // removed, so a partial download never survives. The caller stages dstPath
 // somewhere temporary and validates before anything reaches the inventory.
 func (d *HTTPDownloader) DownloadFile(sourceURL, dstPath string) error {
-	fmt.Printf("Downloading from %s...\n", sourceURL)
-
 	client := &http.Client{
 		Timeout: 30 * time.Second,
 	}
@@ -145,8 +126,8 @@ func (d *HTTPDownloader) DownloadFile(sourceURL, dstPath string) error {
 		return fmt.Errorf("server returned status %d", resp.StatusCode)
 	}
 
-	if resp.ContentLength > profileMaxSize {
-		return fmt.Errorf("file too large (%d bytes, max %d bytes)", resp.ContentLength, profileMaxSize)
+	if resp.ContentLength > ProfileMaxSize {
+		return fmt.Errorf("file too large (%d bytes, max %d bytes)", resp.ContentLength, ProfileMaxSize)
 	}
 
 	out, err := os.Create(dstPath)
@@ -155,21 +136,21 @@ func (d *HTTPDownloader) DownloadFile(sourceURL, dstPath string) error {
 	}
 
 	// Copy limit+1 so an oversized body is detected rather than truncated.
-	written, err := io.CopyN(out, resp.Body, profileMaxSize+1)
+	written, err := io.CopyN(out, resp.Body, ProfileMaxSize+1)
 	out.Close()
 	if err != nil && err != io.EOF {
 		os.Remove(dstPath)
 		return fmt.Errorf("failed to write file: %w", err)
 	}
-	if written > profileMaxSize {
+	if written > ProfileMaxSize {
 		os.Remove(dstPath)
-		return fmt.Errorf("file too large (>%d bytes). This is not a valid profile", profileMaxSize)
+		return fmt.Errorf("file too large (>%d bytes). This is not a valid profile", ProfileMaxSize)
 	}
 	return nil
 }
 
-// extractFilenameFromURL extracts a filename from a URL
-func extractFilenameFromURL(urlStr string) string {
+// ExtractFilenameFromURL extracts a filename from a URL
+func ExtractFilenameFromURL(urlStr string) string {
 	u, err := url.Parse(urlStr)
 	if err != nil {
 		return ""
