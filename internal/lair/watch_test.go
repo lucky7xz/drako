@@ -1,4 +1,4 @@
-package ui
+package lair
 
 import (
 	"os"
@@ -8,11 +8,11 @@ import (
 	"time"
 )
 
-func watchTestDir(t *testing.T) (string, <-chan ConfigChangedMsg) {
+func watchTestDir(t *testing.T) (string, <-chan string) {
 	t.Helper()
 	dir := t.TempDir()
-	got := make(chan ConfigChangedMsg, 16)
-	stop, err := WatchConfig(dir, func(msg ConfigChangedMsg) { got <- msg })
+	got := make(chan string, 16)
+	stop, err := Watch(dir, func(path string) { got <- path })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -20,7 +20,7 @@ func watchTestDir(t *testing.T) (string, <-chan ConfigChangedMsg) {
 	return dir, got
 }
 
-func TestWatchConfigReportsTomlChangesOnly(t *testing.T) {
+func TestWatchReportsTomlChangesOnly(t *testing.T) {
 	dir, got := watchTestDir(t)
 	if err := os.MkdirAll(filepath.Join(dir, "inventory"), 0o755); err != nil {
 		t.Fatal(err)
@@ -32,8 +32,8 @@ func TestWatchConfigReportsTomlChangesOnly(t *testing.T) {
 	}
 	select {
 	case msg := <-got:
-		if filepath.Base(msg.Path) != "a.profile.toml" {
-			t.Errorf("reported %s, want only the root .toml", msg.Path)
+		if filepath.Base(msg) != "a.profile.toml" {
+			t.Errorf("reported %s, want only the root .toml", msg)
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("no change reported for a.profile.toml")
@@ -41,7 +41,7 @@ func TestWatchConfigReportsTomlChangesOnly(t *testing.T) {
 }
 
 // Linux-only probe: one inotify instance per watcher, released by stop.
-func TestWatchConfigStopReleasesTheWatcher(t *testing.T) {
+func TestWatchStopReleasesTheWatcher(t *testing.T) {
 	if runtime.GOOS != "linux" {
 		t.Skip("counts inotify instances via /proc")
 	}
@@ -56,7 +56,7 @@ func TestWatchConfigStopReleasesTheWatcher(t *testing.T) {
 		return n
 	}
 	before := count()
-	stop, err := WatchConfig(t.TempDir(), func(ConfigChangedMsg) {})
+	stop, err := Watch(t.TempDir(), func(string) {})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,14 +68,14 @@ func TestWatchConfigStopReleasesTheWatcher(t *testing.T) {
 
 // An in-place rewrite (truncate, then write) is reported once, after the file
 // is whole: a reload on the truncate would read an empty, "broken" profile.
-func TestWatchConfigWaitsForWritesToSettle(t *testing.T) {
+func TestWatchWaitsForWritesToSettle(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "a.profile.toml")
 	if err := os.WriteFile(path, []byte("x = 1\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	seen := make(chan string, 16)
-	stop, err := WatchConfig(dir, func(ConfigChangedMsg) {
+	stop, err := Watch(dir, func(string) {
 		b, _ := os.ReadFile(path)
 		seen <- string(b)
 	})

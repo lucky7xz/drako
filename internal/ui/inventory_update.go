@@ -3,7 +3,6 @@ package ui
 import (
 	"fmt"
 	"log"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -66,9 +65,7 @@ type pendingDelete struct {
 
 // InitInventoryModel creates the initial state for the inventory TUI.
 func InitInventoryModel(configDir string) inventoryModel {
-	inventoryDir := lair.InventoryDir(configDir)
-
-	if err := os.MkdirAll(inventoryDir, 0755); err != nil {
+	if err := lair.MakeInventory(configDir); err != nil {
 		log.Printf("could not create inventory directory: %v", err)
 		return inventoryModel{err: err}
 	}
@@ -120,11 +117,11 @@ func (inv inventoryModel) selectedFile(configDir string) (rel, name string, ok b
 	file := (*listPtr)[inv.cursor]
 	name = strings.TrimSuffix(file, equip.ProfileSuffix)
 
-	if _, err := os.Stat(filepath.Join(configDir, file)); err == nil {
+	if lair.Exists(configDir, file) {
 		return file, name, true
 	}
 	stashed := filepath.Join(lair.InventoryDir(configDir), file)
-	if _, err := os.Stat(stashed); err != nil {
+	if !lair.Exists(configDir, filepath.Join(lair.InventoryDirName, file)) {
 		return "", "", false
 	}
 	rel, err = filepath.Rel(configDir, stashed)

@@ -1,4 +1,4 @@
-package ui
+package lair
 
 import (
 	"log"
@@ -13,14 +13,10 @@ import (
 // before reloading, so the reload never reads a half-written profile.
 const settleDelay = 150 * time.Millisecond
 
-// ConfigChangedMsg signals that a config file has changed
-type ConfigChangedMsg struct {
-	Path string
-}
-
-// WatchConfig reports .toml changes in configDir to notify until stop is called.
-// One watcher serves every lap, so none leak and no change lands in a gap.
-func WatchConfig(configDir string, notify func(ConfigChangedMsg)) (stop func(), err error) {
+// Watch reports .toml changes in configDir to changed, with the path that
+// changed, until stop is called. One watcher serves every lap of the TUI, so
+// none leak and no change lands in a gap.
+func Watch(configDir string, changed func(path string)) (stop func(), err error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, err
@@ -47,7 +43,7 @@ func WatchConfig(configDir string, notify func(ConfigChangedMsg)) (stop func(), 
 			case <-settled:
 				settled = nil
 				log.Printf("Detected change in: %s", filepath.Base(last))
-				notify(ConfigChangedMsg{Path: last})
+				changed(last)
 			case err, ok := <-watcher.Errors:
 				if !ok {
 					return

@@ -37,6 +37,11 @@ type (
 	lockCheckMsg       struct{}
 )
 
+// ConfigChangedMsg signals that a config file has changed
+type ConfigChangedMsg struct {
+	Path string
+}
+
 // DetailState defines the content for the info/error popup.
 type DetailState struct {
 	Title       string

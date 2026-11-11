@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"maps"
-	"os"
 	"slices"
 	"strings"
 	"time"
@@ -106,7 +105,8 @@ type Model struct {
 	selectedBatch []launch.Selection // entries for a batch launch
 	selectedTabs  []int              // how those entries split into tabs, chosen in the dialog (nil: default)
 	quitting      bool
-	exitCode      int // process exit code the host should use once the TUI is down
+	exitCode      int    // process exit code the host should use once the TUI is down
+	exitMessage   string // why it is quitting, when the host should say so
 
 	GlassrootMode bool
 	Config        settings.Config // effective config
@@ -572,7 +572,7 @@ func (m *Model) Restore(s Session) {
 // InitialModel builds one lap's model from the config on disk, then applies what
 // the previous lap carried over (the zero Session on the first lap).
 func InitialModel(glassrootMode bool, carried Session) Model {
-	path, err := os.Getwd()
+	path, err := host.WorkDir()
 	if err != nil {
 		path = "could not get path"
 	}
@@ -581,8 +581,7 @@ func InitialModel(glassrootMode bool, carried Session) Model {
 	if err != nil {
 		// No config directory means nothing to run from; hand the host a
 		// model that is already done and let app.Run exit with the code.
-		fmt.Fprintf(os.Stderr, "drako: %v\n", err)
-		return Model{quitting: true, exitCode: 1, GlassrootMode: glassrootMode}
+		return Model{quitting: true, exitCode: 1, exitMessage: fmt.Sprintf("drako: %v", err), GlassrootMode: glassrootMode}
 	}
 
 	if glassrootMode && glassrootRejectsBundle(bundle) {

@@ -37,8 +37,8 @@ var rules = []rule{
 	{
 		capability: "touch files",
 		imports:    []string{"os"},
-		// ui is today's name for tui.
-		allowed: []string{"lair", "summon", "proc", "host", "tui", "ui", "cli", "app"},
+		// Not ui: the screen code reaches the disk through lair and host.
+		allowed: []string{"lair", "summon", "proc", "host", "cli", "app"},
 	},
 	{
 		// lair reaches drako's files through its os.Root, so nothing can

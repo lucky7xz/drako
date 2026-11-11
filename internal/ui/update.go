@@ -3,7 +3,6 @@ package ui
 import (
 	"fmt"
 	"log"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -368,7 +367,7 @@ func (m Model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 // copyToClipboardCmd copies text to clipboard using the best available method
 func copyToClipboardCmd(s string) tea.Cmd {
 	return func() tea.Msg {
-		CopyToClipboard(s)
+		host.CopyToClipboard(s)
 		return nil
 	}
 }
@@ -523,7 +522,7 @@ func (m Model) switchToProfileIndex(target int) (Model, bool) {
 	selected := m.profile.profiles[target]
 
 	// Check for existence
-	if _, err := os.Stat(selected.Path); err != nil {
+	if !lair.Exists(filepath.Dir(selected.Path), filepath.Base(selected.Path)) {
 		log.Printf("skipping missing profile: %s", selected.Path)
 		return m, false
 	}

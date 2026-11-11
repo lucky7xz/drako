@@ -3,7 +3,6 @@ package ui
 import (
 	"fmt"
 	"log"
-	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -12,6 +11,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/lucky7xz/drako/internal/host"
 	"github.com/lucky7xz/drako/internal/settings"
 )
 
@@ -73,8 +73,8 @@ func splitPath(path string, sep rune) []string {
 }
 
 func (pm *PathModel) UpdatePathComponents() {
-	home, _ := os.UserHomeDir()
-	pm.PathComponents = splitPath(collapseHome(pm.CurrentPath, home, os.PathSeparator), os.PathSeparator)
+	home := host.HomeDir()
+	pm.PathComponents = splitPath(collapseHome(pm.CurrentPath, home, filepath.Separator), filepath.Separator)
 	pm.SelectedPathIndex = len(pm.PathComponents) - 1
 }
 
@@ -83,16 +83,15 @@ func (pm *PathModel) ListChildDirs() {
 	pm.ChildDirsError = nil
 	path := pm.BuildPathFromComponents(pm.SelectedPathIndex)
 
-	files, err := os.ReadDir(path)
+	dirs, err := host.Dirs(path)
 	if err != nil {
 		log.Printf("could not read directory %s: %v", path, err)
 		pm.ChildDirsError = err
 		return
 	}
 
-	for _, f := range files {
+	for _, name := range dirs {
 		// Basic visibility check: skip hidden files unless toggled
-		name := f.Name()
 		if !pm.ShowHidden && strings.HasPrefix(name, ".") {
 			continue
 		}
@@ -100,16 +99,14 @@ func (pm *PathModel) ListChildDirs() {
 		if pm.Filter != "" && !strings.Contains(strings.ToLower(name), strings.ToLower(pm.Filter)) {
 			continue
 		}
-		if f.IsDir() {
-			pm.ChildDirs = append(pm.ChildDirs, name)
-		}
+		pm.ChildDirs = append(pm.ChildDirs, name)
 	}
 	sort.Strings(pm.ChildDirs)
 }
 
 func (pm *PathModel) BuildPathFromComponents(index int) string {
-	home, _ := os.UserHomeDir()
-	root := string(os.PathSeparator)
+	home := host.HomeDir()
+	root := string(filepath.Separator)
 
 	if len(pm.PathComponents) == 0 {
 		return pm.CurrentPath
@@ -136,7 +133,7 @@ func (pm *PathModel) BuildPathFromComponents(index int) string {
 
 	// Windows Drive Root Fix
 	if runtime.GOOS == "windows" && len(pathToJoin) == 1 && strings.HasSuffix(result, ":") {
-		return result + string(os.PathSeparator)
+		return result + string(filepath.Separator)
 	}
 
 	return result
@@ -188,12 +185,13 @@ func (pm *PathModel) selectedChild() (string, bool) {
 // enterDir chdirs to target and rebuilds the breadcrumb around it. Reading the
 // path back with Getwd resolves "..", symlinks and relative components.
 func (pm *PathModel) enterDir(target string) bool {
-	if err := os.Chdir(target); err != nil {
+	entered, err := host.Enter(target)
+	if err != nil {
 		log.Printf("could not enter directory %s: %v", target, err)
 		pm.DeniedDir = filepath.Base(target)
 		return false
 	}
-	pm.CurrentPath, _ = os.Getwd()
+	pm.CurrentPath = entered
 	pm.Searching, pm.Filter = false, "" // the filter was scoped to the directory we left
 	pm.UpdatePathComponents()
 	pm.ListChildDirs()
@@ -408,7 +406,7 @@ func (pm *PathModel) RenderPathBar(active bool, styles Styles, width int) string
 		widths[i] = lipgloss.Width(rendered[i])
 	}
 
-	separator := styles.PathSeparator.Render(string(os.PathSeparator))
+	separator := styles.PathSeparator.Render(string(filepath.Separator))
 	ellipsis := styles.Path.Render("…")
 	start, end := pathWindow(widths, lipgloss.Width(separator), lipgloss.Width(ellipsis),
 		pm.SelectedPathIndex, width)

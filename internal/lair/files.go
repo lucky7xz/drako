@@ -38,6 +38,19 @@ func (l *Lair) stat(name string) (fs.FileInfo, error) {
 	return info, l.explain(name, err)
 }
 
+// Exists reports whether the file called name (e.g.
+// "inventory/git.profile.toml") is in configDir. A file the user linked there
+// counts, like for read.
+func Exists(configDir, name string) bool {
+	l, err := Open(configDir)
+	if err != nil {
+		return false
+	}
+	defer l.Close()
+	_, err = l.stat(name)
+	return err == nil
+}
+
 // isLink reports whether name itself is a symbolic link. A name that passes
 // through a linked folder, or steps out with "..", is not one: the directory
 // refuses to look.

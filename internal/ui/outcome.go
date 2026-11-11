@@ -17,6 +17,7 @@ const (
 type Outcome struct {
 	Action    Action
 	ExitCode  int           // Quit
+	Message   string        // Quit: why, for the host to print; usually empty
 	Plans     []launch.Plan // Run: exactly one. Batch: one per mark, runnable or not
 	Tabs      []int         // Batch: the layout chosen in the dialog; nil for the default
 	ForceTmux bool          // Batch: the batch_force_tmux setting
@@ -28,7 +29,7 @@ func (m Model) Outcome() Outcome {
 	profile := m.ActiveProfileName()
 	switch {
 	case m.quitting:
-		return Outcome{Action: Quit, ExitCode: m.exitCode}
+		return Outcome{Action: Quit, ExitCode: m.exitCode, Message: m.exitMessage}
 	case len(m.selectedBatch) > 0:
 		plans := make([]launch.Plan, len(m.selectedBatch))
 		for i, sel := range m.selectedBatch {

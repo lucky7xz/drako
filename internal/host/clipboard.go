@@ -1,4 +1,4 @@
-package ui
+package host
 
 import (
 	"encoding/base64"

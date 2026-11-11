@@ -2,13 +2,12 @@ package ui
 
 import (
 	"fmt"
-	"os"
-	"os/user"
 	"runtime"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucky7xz/drako/internal/equip"
+	"github.com/lucky7xz/drako/internal/host"
 )
 
 // renderGrid renders the grid into at most budgetLines terminal lines. When
@@ -172,15 +171,8 @@ func (m Model) renderProfileCounter() string {
 // the badges and the hint stay: the badges are what you'd check when
 // something's gone sideways, and the hint is how you find every other key.
 func (m Model) renderProfileBar(availWidth int, hint string) string {
-	hostname, _ := os.Hostname()
-	currUser, _ := user.Current()
-	username := "unknown"
-	if currUser != nil {
-		username = currUser.Username
-	} else {
-		// Fallback to environment variable if user lookup fails
-		username = os.Getenv("USER")
-	}
+	hostname := host.Hostname()
+	username := host.Username()
 
 	// Clean up username if it contains full path (rare, but happens on some systems)
 	if idx := strings.LastIndex(username, "\\"); idx != -1 {

@@ -104,6 +104,9 @@ func Run() int {
 		initial := ui.InitialModel(glassrootMode, session)
 		if out := initial.Outcome(); out.Action == ui.Quit {
 			// e.g. glassroot with a broken profile: fail before the TUI starts
+			if out.Message != "" {
+				fmt.Fprintln(os.Stderr, out.Message)
+			}
 			return out.ExitCode
 		}
 
@@ -111,9 +114,9 @@ func Run() int {
 		// the bootstrap files, and drako's own writes are no reason to reload.
 		if !watching {
 			watching = true
-			if stop, err := ui.WatchConfig(configDir, func(msg ui.ConfigChangedMsg) {
+			if stop, err := lair.Watch(configDir, func(path string) {
 				if p := current.Load(); p != nil {
-					p.Send(msg) // a no-op once that lap's program has quit
+					p.Send(ui.ConfigChangedMsg{Path: path}) // a no-op once that lap's program has quit
 				}
 			}); err != nil {
 				log.Printf("Failed to watch config directory: %v", err)
