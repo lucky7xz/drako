@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // Styling lives in one place so colors and layout tweaks are easy to reason about.
@@ -90,9 +91,9 @@ const warnAmber = lipgloss.Color("#FFA500")
 
 // BuildStyles resolves a config into a concrete Styles value. It touches no
 // globals; the palette comes from config.GetTheme, which reads themes.toml.
-func BuildStyles(cfg config.Config) Styles {
+func BuildStyles(cfg settings.Config) Styles {
 	theme := config.GetTheme(cfg.Theme)
-	ui := config.MapThemeToUI(theme)
+	ui := settings.MapThemeToUI(theme)
 
 	var s Styles
 

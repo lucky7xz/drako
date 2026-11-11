@@ -7,15 +7,15 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/profile"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // dropdownTestModel: one folder cell open in dropdown mode — two runnable
 // items and one without a command (platform-empty).
 func dropdownTestModel() Model {
-	cfg := config.Config{X: 1, Y: 1, Commands: []profile.Command{
+	cfg := settings.Config{X: 1, Y: 1, Commands: []profile.Command{
 		{Name: "folder", Row: 0, Col: "a", Items: []profile.CommandItem{
 			{Name: "first", Command: "echo 1"},
 			{Name: "second", Command: "echo 2"},
@@ -139,7 +139,7 @@ func TestDropdownDigitsStillJumpWhileMarking(t *testing.T) {
 // position: two "Logs" in one folder are marked and launched apart.
 func TestDropdownMarksTellSameNamedItemsApart(t *testing.T) {
 	withBackend(t, true)
-	cfg := config.Config{X: 1, Y: 1, Commands: []profile.Command{
+	cfg := settings.Config{X: 1, Y: 1, Commands: []profile.Command{
 		{Name: "folder", Row: 0, Col: "a", Items: []profile.CommandItem{
 			{Name: "Logs", Command: "journalctl"},
 			{Name: "Logs", Command: "dmesg"},

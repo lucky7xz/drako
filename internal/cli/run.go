@@ -15,6 +15,7 @@ import (
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/proc"
 	"github.com/lucky7xz/drako/internal/profile"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // exitRunFailed is drako run's own failure code, kept apart from the
@@ -78,12 +79,12 @@ func logRun(plan launch.Plan) {
 
 // resolveRun resolves a reference to its target and the config the TUI would
 // run it with, refusing anything that isn't a single runnable, safe target.
-func resolveRun(bundle config.ConfigBundle, ref string) (t cellTarget, cfg config.Config, err error) {
+func resolveRun(bundle config.ConfigBundle, ref string) (t cellTarget, cfg settings.Config, err error) {
 	if t, err = lookupCell(bundle, ref); err != nil {
 		return t, cfg, err
 	}
 
-	cfg = config.ApplyProfileOverlay(bundle.Base, t.p.Profile)
+	cfg = settings.ApplyProfileOverlay(bundle.Base, t.p.Profile)
 	cfg.ApplyDefaults()
 	if err := profile.ValidateGrid(cfg.X, cfg.Y, cfg.Commands); err != nil {
 		return t, cfg, fmt.Errorf("profile %s has an invalid grid: %v", t.p.Name, err)

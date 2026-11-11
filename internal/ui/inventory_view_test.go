@@ -8,6 +8,7 @@ import (
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/profiles"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // namesN builds n synthetic profile names ("profile-0".."profile-(n-1)").
@@ -23,7 +24,7 @@ func namesN(n int) []string {
 // the inventory list, real styles, and the given terminal size. focusedList
 // selects which list (0=equipped, 1=inventory) currently owns the cursor.
 func makeInventoryTestModel(n, cursor, focusedList, termW, termH int) Model {
-	cfg := config.Config{X: 2, Y: 2, Theme: "default", DefaultShell: "/bin/bash"}
+	cfg := settings.Config{X: 2, Y: 2, Theme: "default", DefaultShell: "/bin/bash"}
 	return Model{
 		mode:       inventoryMode,
 		termWidth:  termW,
@@ -48,7 +49,7 @@ func makeInventoryTestModelBothLists(equippedN, inventoryN, cursor, focusedList,
 	for i := range equippedNames {
 		equippedNames[i] = fmt.Sprintf("equip-%d", i)
 	}
-	cfg := config.Config{X: 2, Y: 2, Theme: "default", DefaultShell: "/bin/bash"}
+	cfg := settings.Config{X: 2, Y: 2, Theme: "default", DefaultShell: "/bin/bash"}
 	return Model{
 		mode:       inventoryMode,
 		termWidth:  termW,

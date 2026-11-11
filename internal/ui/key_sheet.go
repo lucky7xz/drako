@@ -3,7 +3,7 @@ package ui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // The key sheet: one reference for every screen's keys, opened with the help
@@ -61,7 +61,7 @@ func gated(keys, does string) binding { return binding{keys: keys, does: does, g
 // shows as remapped. Each section mirrors what that screen's handler does.
 // Glassroot leaves out what it blocks (glassroot.go), so the
 // sheet never offers a key that does nothing.
-func sheetSections(cfg config.Config, glassroot bool) []sheetSection {
+func sheetSections(cfg settings.Config, glassroot bool) []sheetSection {
 	k := cfg.Keys
 	upDown := moveLabel(k, "↑↓", "ws", "kj")
 	leftRight := moveLabel(k, "←→", "ad", "hl")
@@ -149,7 +149,7 @@ func sheetSections(cfg config.Config, glassroot bool) []sheetSection {
 
 // moveLabel names a set of direction keys: the arrows, then the wasd and vim
 // equivalents unless the config disables them, as InitControls does.
-func moveLabel(k config.InputConfig, arrows, wasd, vim string) string {
+func moveLabel(k settings.InputConfig, arrows, wasd, vim string) string {
 	label := arrows
 	if !k.DisableWasd {
 		label += " " + wasd

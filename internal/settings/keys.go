@@ -1,4 +1,4 @@
-package config
+package settings
 
 // InputConfig defines the user-configurable keybindings and toggles.
 type InputConfig struct {

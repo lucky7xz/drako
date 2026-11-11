@@ -8,13 +8,13 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // navKeys is a minimal binding set for driving path/child navigation.
-func navKeys() config.Config {
-	return config.Config{
-		Keys: config.InputConfig{
+func navKeys() settings.Config {
+	return settings.Config{
+		Keys: settings.InputConfig{
 			NavUp:        []string{"up", "k"},
 			NavDown:      []string{"down", "j"},
 			NavLeft:      []string{"left", "h"},
@@ -358,7 +358,7 @@ func TestEnterDir_RefusalIsVisible(t *testing.T) {
 	t.Run("the refusal renders under the listing", func(t *testing.T) {
 		pm := pathTestModel(t)
 		pm.DeniedDir = "root"
-		out := pm.RenderChildDirs(childMode, BuildStyles(config.Config{}), 80)
+		out := pm.RenderChildDirs(childMode, BuildStyles(settings.Config{}), 80)
 		if !strings.Contains(out, "cannot enter root") {
 			t.Errorf("RenderChildDirs missing the refusal. Got:\n%s", out)
 		}
@@ -444,8 +444,8 @@ func TestPathSearch_TypesKeysBoundElsewhere(t *testing.T) {
 					mode:    tc.mode,
 					path:    *pm,
 					gridNav: gridNav{grid: [][]string{{"A"}}},
-					Config: config.Config{
-						Keys: config.InputConfig{Lock: "r", ProfilePrev: "o", ProfileNext: "p"},
+					Config: settings.Config{
+						Keys: settings.InputConfig{Lock: "r", ProfilePrev: "o", ProfileNext: "p"},
 					},
 				}
 
@@ -540,7 +540,7 @@ func TestPathSearch_NonASCII(t *testing.T) {
 // screen; and it belongs to one directory, so moving the breadcrumb drops it.
 func TestPathSearch_CommittedFilterIsVisibleAndScoped(t *testing.T) {
 	pm := pathTestModel(t)
-	cfg := config.Config{}
+	cfg := settings.Config{}
 	cfg.ApplyDefaults()
 	pm.UpdatePathMode(keyRune(cfg.Keys.PathSearch), cfg)
 	pm.UpdatePathMode(keyRune("al"), cfg)

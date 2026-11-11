@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // hexChannels parses "#RRGGBB" into its three byte channels.
@@ -29,7 +30,7 @@ func luminance(r, g, b uint64) float64 {
 func TestLockedFGIsADarkerShadeOfAccent(t *testing.T) {
 	for _, name := range []string{"dracula", "jade", "nord", "everforest", "orasaka", "dracula2", "viper"} {
 		theme := config.GetTheme(name)
-		ui := config.MapThemeToUI(theme)
+		ui := settings.MapThemeToUI(theme)
 
 		ar, ag, ab := hexChannels(t, ui.CursorFG)
 		lr, lg, lb := hexChannels(t, ui.LockedFG)
@@ -43,8 +44,8 @@ func TestLockedFGIsADarkerShadeOfAccent(t *testing.T) {
 // BuildStyles returns a value, so we can assert it wires the right theme role
 // onto the right style — which the old side-effecting applyThemeStyles couldn't.
 func TestBuildStylesMapsThemeRolesToStyles(t *testing.T) {
-	cfg := config.Config{Theme: "dracula"}
-	ui := config.MapThemeToUI(config.GetTheme(cfg.Theme))
+	cfg := settings.Config{Theme: "dracula"}
+	ui := settings.MapThemeToUI(config.GetTheme(cfg.Theme))
 	s := BuildStyles(cfg)
 
 	cases := []struct {
@@ -84,7 +85,7 @@ func TestBuildStylesResolvesHeaderArt(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := BuildStyles(config.Config{Theme: "dracula", HeaderArt: tt.art})
+			s := BuildStyles(settings.Config{Theme: "dracula", HeaderArt: tt.art})
 			if s.HeaderArt != tt.want {
 				t.Errorf("HeaderArt = %q, want %q", s.HeaderArt, tt.want)
 			}

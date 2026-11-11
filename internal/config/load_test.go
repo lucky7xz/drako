@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // loadTestDir builds a config dir with a valid config.toml and the named
@@ -211,7 +213,7 @@ func TestLoadConfig_PivotOrderReorders(t *testing.T) {
 
 // isRescueGrid reports whether cfg is the compiled-in rescue grid, identified
 // by its distinctive "Exit Rescue Mode" command.
-func isRescueGrid(cfg Config) bool {
+func isRescueGrid(cfg settings.Config) bool {
 	for _, c := range cfg.Commands {
 		if c.Name == "Exit Rescue Mode" {
 			return true

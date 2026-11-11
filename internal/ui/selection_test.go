@@ -4,14 +4,14 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/profile"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // twoFolders: folders "git" (A0) and "docker" (B0) each hold an item named
 // "Status", and a plain cell "Logs" (C0) shares its name with a git item.
 func twoFolders() Model {
-	cfg := config.Config{X: 3, Y: 1, Commands: []profile.Command{
+	cfg := settings.Config{X: 3, Y: 1, Commands: []profile.Command{
 		{Name: "git", Row: 0, Col: "a", Items: []profile.CommandItem{
 			{Name: "Status", Command: "git status"},
 			{Name: "Logs", Command: "git log"},

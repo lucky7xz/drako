@@ -14,6 +14,7 @@ import (
 	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profiles"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // specsInventoryModel builds an inventory sitting on a real config dir: the
@@ -49,15 +50,15 @@ func specsInventoryModel(t *testing.T, equipped, stashed []string, specs map[str
 		}
 	}
 
-	keys := config.InputConfig{EditFile: "e", Delete: "delete", Lock: "r", PathGridMode: "tab"}
+	keys := settings.InputConfig{EditFile: "e", Delete: "delete", Lock: "r", PathGridMode: "tab"}
 	keys.InitControls()
 	m := Model{
 		mode:       inventoryMode,
 		termWidth:  100,
 		termHeight: 40,
 		profile:    profileState{configDir: dir},
-		Config:     config.Config{Keys: keys},
-		styles:     BuildStyles(config.Config{Keys: keys}),
+		Config:     settings.Config{Keys: keys},
+		styles:     BuildStyles(settings.Config{Keys: keys}),
 		inventory: inventoryModel{
 			State:       equip.NewInventoryState(vis, inv, profiles.MaxEquipped),
 			focusedList: equip.ListVisible,

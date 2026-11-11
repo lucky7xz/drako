@@ -6,12 +6,13 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/equip"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // The Rescue button shows the rescue grid, so nothing may still claim the deck
 // it replaced: not the footer, not DRAKO_PROFILE (ActiveProfileName).
 func TestRescueButtonLeavesNoActiveProfile(t *testing.T) {
-	cfg := config.Config{X: 1, Y: 1}
+	cfg := settings.Config{X: 1, Y: 1}
 	cfg.ApplyDefaults()
 	m := Model{Config: cfg, styles: BuildStyles(cfg), mode: inventoryMode,
 		profile: profileState{profiles: []config.ProfileInfo{{Name: "alpha"}, {Name: "beta"}}},

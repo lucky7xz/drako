@@ -7,12 +7,13 @@ import (
 	"testing"
 
 	"github.com/lucky7xz/drako/internal/profile"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // TestApplyDefaults ensures that a zero-value Config gets populated with safe defaults.
 // This is critical for the "Base" configuration.
 func TestApplyDefaults(t *testing.T) {
-	cfg := Config{} // Empty
+	cfg := settings.Config{} // Empty
 	cfg.ApplyDefaults()
 
 	if cfg.Theme != "dracula" {
@@ -54,7 +55,7 @@ func TestApplyDefaults(t *testing.T) {
 // CRITICAL: It must NOT wipe out existing settings (like Keys) if the profile doesn't specify them.
 func TestApplyProfileOverlay_PreservesBase(t *testing.T) {
 	// 1. Setup Base with Defaults
-	base := Config{}
+	base := settings.Config{}
 	base.ApplyDefaults()
 	originalKey := base.Keys.NavUp[0] // e.g. "up"
 
@@ -66,7 +67,7 @@ func TestApplyProfileOverlay_PreservesBase(t *testing.T) {
 	}
 
 	// 3. Apply
-	result := ApplyProfileOverlay(base, overlay)
+	result := settings.ApplyProfileOverlay(base, overlay)
 
 	// 4. Verification
 	if result.Theme != "solarized" {
@@ -217,14 +218,14 @@ func TestLoadConfig_HandlesBrokenConfig(t *testing.T) {
 		// BUT RescueConfig provides commands!
 		// However, LoadConfig logic sets commands to empty [] explicitly for base.
 		// Wait, let's check LoadConfig logic:
-		// "base = RescueConfig()" -> base has commands.
+		// "base = settings.RescueConfig("")" -> base has commands.
 		// Then later: "base.Commands = []profile.Command{}"?
 		// No, LoadConfig "Convert Settings to Base" explicitly sets empty commands.
 		// BUT in our fix case:
-		// "base = RescueConfig()"
+		// "base = settings.RescueConfig("")"
 		// We do NOT wipe base.Commands in the error path!
 		// But let's check the code:
-		// if error { base = RescueConfig() ... } else { ... base = Config{ ... Commands: [] } }
+		// if error { base = settings.RescueConfig("") ... } else { ... base = settings.Config{ ... Commands: [] } }
 		// So in error case, base HAS commands from RescueConfig.
 	}
 
@@ -232,7 +233,7 @@ func TestLoadConfig_HandlesBrokenConfig(t *testing.T) {
 	// "effective = base"
 	// Then tries to load profile.
 	// If profiles are broken/missing -> the rescue config
-	// "effective = RescueConfig()"
+	// "effective = settings.RescueConfig("")"
 	// "effective.ApplyDefaults()"
 
 	// So ultimately effective config should have Rescue commands.
@@ -256,7 +257,7 @@ func TestLoadConfig_HandlesBrokenConfig(t *testing.T) {
 // The cursor opens on cell 0,a, so that cell must be the escape hatch and never
 // a destructive command.
 func TestRescueConfig_ExitIsFirstCell(t *testing.T) {
-	for _, cmd := range RescueConfig().Commands {
+	for _, cmd := range settings.RescueConfig("").Commands {
 		if cmd.Name != "Exit Rescue Mode" {
 			continue
 		}

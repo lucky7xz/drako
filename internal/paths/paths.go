@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // Well-known names under the drako config directory. They exist exactly
@@ -23,7 +25,7 @@ const (
 // Names callers use bare, relative to the config directory: the watcher and
 // error reports match ConfigFileName, and lair opens the logs by name.
 const (
-	ConfigFileName     = "config.toml"
+	ConfigFileName     = settings.FileName
 	LogFileName        = "drako.log"
 	LogArchiveName     = "drako.log.old"
 	HistoryFileName    = "history.log"

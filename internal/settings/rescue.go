@@ -1,10 +1,10 @@
-package config
+package settings
 
 import (
+	"path/filepath"
 	"runtime"
 	"strings"
 
-	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profile"
 )
 
@@ -50,16 +50,13 @@ func factorySettings() Config {
 	}
 }
 
-// RescueConfig returns a minimal "Safe Mode" configuration.
-// It provides tools to help the user fix a broken configuration.
-func RescueConfig() Config {
+// RescueConfig returns a minimal "Safe Mode" configuration: tools to help the
+// user fix a broken one. configDir is drako's config directory; two of the
+// cells open it, or the settings file inside it.
+func RescueConfig(configDir string) Config {
 	cfg := factorySettings()
 
-	// Used only to build the "Edit Config" / "Open Config Dir" helper
-	// commands; resolution has already succeeded by the time rescue mode
-	// can run.
-	configDir, _ := paths.ConfigDir()
-	configPath := paths.ConfigFile(configDir)
+	configPath := filepath.Join(configDir, FileName)
 
 	editCmd := "drako open " + shellQuote(cfg.DefaultShell, configPath)
 	openDirCmd := "drako open " + shellQuote(cfg.DefaultShell, configDir)

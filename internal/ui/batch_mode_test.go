@@ -7,15 +7,15 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/profile"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // batchTestModel: 2x2 grid — "one" (a0) and "two" (b0) are runnable, "folder"
 // (a1) is a dropdown without its own command, b1 is empty.
 func batchTestModel() Model {
-	cfg := config.Config{X: 2, Y: 2, Commands: []profile.Command{
+	cfg := settings.Config{X: 2, Y: 2, Commands: []profile.Command{
 		{Name: "one", Command: "echo 1", Row: 0, Col: "a"},
 		{Name: "two", Command: "echo 2", Row: 0, Col: "b"},
 		{Name: "folder", Row: 1, Col: "a", Items: []profile.CommandItem{{Name: "child", Command: "true"}}},

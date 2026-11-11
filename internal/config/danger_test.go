@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/lucky7xz/drako/internal/profile"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 func TestDangerDecodes(t *testing.T) {
@@ -51,7 +52,7 @@ func TestDangerSurvivesOverlay(t *testing.T) {
 	p := profile.File{X: 1, Y: 1, Commands: []profile.Command{
 		{Name: "f", Col: "a", Danger: true, Items: []profile.CommandItem{{Name: "i", Danger: true}}},
 	}}
-	cfg := ApplyProfileOverlay(Config{}, p)
+	cfg := settings.ApplyProfileOverlay(settings.Config{}, p)
 	if !cfg.Commands[0].Danger || !cfg.Commands[0].Items[0].Danger {
 		t.Error("overlay dropped the danger flag")
 	}

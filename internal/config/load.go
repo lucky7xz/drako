@@ -7,10 +7,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/BurntSushi/toml"
 	"github.com/lucky7xz/drako/internal/host"
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profile"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // loadBaseConfig reads config.toml into the base Config. Every failure path
@@ -18,7 +18,7 @@ import (
 // (best effort), while read and syntax errors keep the broken file and
 // report it as a ProfileParseError. Commands are always empty — those come
 // from profile overlays.
-func loadBaseConfig(configDir string) (Config, []ProfileParseError) {
+func loadBaseConfig(configDir string) (settings.Config, []ProfileParseError) {
 	configPath := paths.ConfigFile(configDir)
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
@@ -27,49 +27,38 @@ func loadBaseConfig(configDir string) (Config, []ProfileParseError) {
 		if _, err := WriteSettingsTemplate(configDir); err != nil {
 			log.Printf("warning: could not write config.toml: %v", err)
 		}
-		return RescueConfig(), nil
+		return settings.RescueConfig(configDir), nil
 	}
 
 	log.Printf("Loading config from: %s", configPath)
 	configBytes, err := os.ReadFile(configPath)
 	if err != nil {
 		log.Printf("could not read config file: %v", err)
-		return RescueConfig(), []ProfileParseError{{
+		return settings.RescueConfig(configDir), []ProfileParseError{{
 			Name: paths.ConfigFileName,
 			Path: configPath,
 			Err:  fmt.Sprintf("Could not read config: %v", err),
 		}}
 	}
 
-	var settings AppSettings
-	meta, err := toml.Decode(string(configBytes), &settings)
+	base, unknown, err := settings.Decode(configBytes)
 	if err != nil {
 		log.Printf("could not decode config file: %v", err)
-		return RescueConfig(), []ProfileParseError{{
+		return settings.RescueConfig(configDir), []ProfileParseError{{
 			Name: paths.ConfigFileName,
 			Path: configPath,
 			Err:  fmt.Sprintf("SYNTAX ERROR: %v", err),
 		}}
 	}
 
-	if keys := undecodedKeys(meta); len(keys) > 0 { // drako check reports them
-		log.Printf("config.toml: ignoring unrecognized key(s): %s", strings.Join(keys, ", "))
+	if len(unknown) > 0 { // drako check reports them
+		log.Printf("config.toml: ignoring unrecognized key(s): %s", strings.Join(unknown, ", "))
 	}
 
 	// Settings become the base config; commands only ever
 	// come from profile overlays.
 	log.Printf("Loaded base settings")
-	return Config{
-		DefaultShell:       settings.DefaultShell,
-		NumbModifier:       settings.NumbModifier,
-		Profile:            settings.Profile,
-		LockTimeoutMinutes: settings.LockTimeoutMinutes,
-		AutoLockEnabled:    settings.AutoLockEnabled,
-		BatchForceTmux:     settings.BatchForceTmux,
-		Theme:              settings.Theme,
-		Keys:               settings.Keys,
-		Commands:           []profile.Command{},
-	}, nil
+	return base, nil
 }
 
 // LoadConfig assembles the full configuration bundle: it bootstraps a
@@ -153,7 +142,7 @@ func loadConfig(sessionProfile string) (ConfigBundle, error) {
 	}
 
 	activeIndex, _ := selectProfile(profiles, req.Name) // resolveRequested only names equipped decks
-	effective, activeIndex, extraBroken, fellBack, rescue := buildEffective(base, profiles, activeIndex)
+	effective, activeIndex, extraBroken, fellBack, rescue := buildEffective(base, profiles, activeIndex, configDir)
 	broken = append(broken, extraBroken...)
 	if fellBack {
 		pivotStillValid = false

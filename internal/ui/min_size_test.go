@@ -3,11 +3,11 @@ package ui
 import (
 	"testing"
 
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 func gridOfRows(n int) Model {
-	cfg := config.Config{X: 2, Y: n}
+	cfg := settings.Config{X: 2, Y: n}
 	cfg.ApplyDefaults()
 	grid := make([][]string, n)
 	for i := range grid {

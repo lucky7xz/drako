@@ -11,12 +11,13 @@ import (
 
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/equip"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // Trashing an equipped profile renames a root .toml, so a reload follows. It
 // must not throw away the inventory screen, its verdict, or the staged lists.
 func TestReloadKeepsTheInventoryOpen(t *testing.T) {
-	cfg := config.Config{X: 1, Y: 1}
+	cfg := settings.Config{X: 1, Y: 1}
 	cfg.ApplyDefaults()
 	m := Model{Config: cfg, styles: BuildStyles(cfg), mode: inventoryMode,
 		inventory: inventoryModel{

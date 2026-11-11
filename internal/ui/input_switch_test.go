@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 func TestIsProfileSwitchMatchesOnlyModifierDigit(t *testing.T) {
@@ -18,7 +18,7 @@ func TestIsProfileSwitchMatchesOnlyModifierDigit(t *testing.T) {
 		{tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("3")}, false},
 	}
 	for _, tc := range cases {
-		if got, _ := IsProfileSwitch(config.InputConfig{}, tc.msg, "alt"); got != tc.want {
+		if got, _ := IsProfileSwitch(settings.InputConfig{}, tc.msg, "alt"); got != tc.want {
 			t.Errorf("IsProfileSwitch(%q) = %v, want %v", tc.msg.String(), got, tc.want)
 		}
 	}

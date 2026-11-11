@@ -7,9 +7,9 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/paths"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // Apply commits the arrangement on screen when it was pressed. Keys handled
@@ -46,7 +46,7 @@ func TestApplyRefusedWhileHolding(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	cfg := config.Config{X: 1, Y: 1}
+	cfg := settings.Config{X: 1, Y: 1}
 	cfg.ApplyDefaults()
 	m := Model{Config: cfg, styles: BuildStyles(cfg), mode: inventoryMode,
 		profile: profileState{configDir: dir},

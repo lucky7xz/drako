@@ -8,12 +8,12 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // sheetConfig is a config as a real session sees it: user keys, then defaults.
-func sheetConfig(edit func(k *config.InputConfig)) config.Config {
-	cfg := config.Config{}
+func sheetConfig(edit func(k *settings.InputConfig)) settings.Config {
+	cfg := settings.Config{}
 	edit(&cfg.Keys)
 	cfg.ApplyDefaults()
 	return cfg
@@ -50,7 +50,7 @@ func does(secs []sheetSection, title, what string) bool {
 }
 
 func TestSheetShowsRemappedKeys(t *testing.T) {
-	secs := sheetSections(sheetConfig(func(k *config.InputConfig) { k.Explain = "x" }), false)
+	secs := sheetSections(sheetConfig(func(k *settings.InputConfig) { k.Explain = "x" }), false)
 	for _, title := range []string{"GRID", "FOLDER"} {
 		if !binds(secs, title, "x", "explain") {
 			t.Errorf("%s does not show the remapped explain key x", title)
@@ -64,12 +64,12 @@ func TestSheetShowsRemappedKeys(t *testing.T) {
 func TestSheetMoveKeysFollowTheDisableFlags(t *testing.T) {
 	for _, tt := range []struct {
 		name string
-		edit func(k *config.InputConfig)
+		edit func(k *settings.InputConfig)
 		want string
 	}{
-		{"all", func(k *config.InputConfig) {}, "←↑↓→ wasd hjkl"},
-		{"no vim", func(k *config.InputConfig) { k.DisableVim = true }, "←↑↓→ wasd"},
-		{"arrows only", func(k *config.InputConfig) { k.DisableVim, k.DisableWasd = true, true }, "←↑↓→"},
+		{"all", func(k *settings.InputConfig) {}, "←↑↓→ wasd hjkl"},
+		{"no vim", func(k *settings.InputConfig) { k.DisableVim = true }, "←↑↓→ wasd"},
+		{"arrows only", func(k *settings.InputConfig) { k.DisableVim, k.DisableWasd = true, true }, "←↑↓→"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			if secs := sheetSections(sheetConfig(tt.edit), false); !binds(secs, "GRID", tt.want, "move") {
@@ -82,7 +82,7 @@ func TestSheetMoveKeysFollowTheDisableFlags(t *testing.T) {
 // Glassroot blocks path mode, the inventory, the profile lock, batch and copy;
 // the sheet must not offer keys that do nothing.
 func TestSheetHidesWhatGlassrootBlocks(t *testing.T) {
-	secs := sheetSections(sheetConfig(func(*config.InputConfig) {}), true)
+	secs := sheetSections(sheetConfig(func(*settings.InputConfig) {}), true)
 	for _, s := range secs {
 		switch s.title {
 		case "PATH", "INVENTORY", "BATCH":

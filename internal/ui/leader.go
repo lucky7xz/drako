@@ -5,7 +5,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // The leader key arms a short two-key sequence in grid mode, quick-nav style:
@@ -23,7 +23,7 @@ type leaderState struct {
 type leaderTimeoutMsg struct{ seq int }
 
 // IsLeader reports whether the key is the configured leader.
-func IsLeader(c config.InputConfig, msg tea.KeyMsg) bool {
+func IsLeader(c settings.InputConfig, msg tea.KeyMsg) bool {
 	return msg.String() == c.Leader
 }
 

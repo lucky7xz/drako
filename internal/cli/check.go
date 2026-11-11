@@ -10,10 +10,10 @@ import (
 	"slices"
 	"sort"
 
-	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profile"
 	"github.com/lucky7xz/drako/internal/profiles"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // HandleCheckCommand processes 'drako check [path ...]': lint profile files
@@ -88,7 +88,7 @@ func runChecks(out io.Writer, files []string) int {
 		case err != nil:
 			findings = []profile.Finding{{Level: "error", Msg: fmt.Sprintf("cannot read file: %v", err)}}
 		case filepath.Base(f) == paths.ConfigFileName:
-			findings = config.CheckSettings(src)
+			findings = settings.Lint(src)
 		default:
 			findings = profile.Lint(src)
 		}

@@ -3,14 +3,14 @@ package ui
 import (
 	"testing"
 
-	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/profile"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // sessionModel is a 3x2 deck. The cell names are what a Session carries.
 func sessionModel(t *testing.T) Model {
 	t.Helper()
-	cfg := config.Config{X: 3, Y: 2, Commands: []profile.Command{
+	cfg := settings.Config{X: 3, Y: 2, Commands: []profile.Command{
 		{Name: "update", Command: "echo 1", Row: 0, Col: "a"},
 		{Name: "monitor", Command: "echo 2", Row: 0, Col: "b"},
 		{Name: "finder", Command: "echo 3", Row: 0, Col: "c"},
@@ -68,7 +68,7 @@ func TestSessionFollowsTheNameNotThePosition(t *testing.T) {
 	s := before.Session()
 
 	// The profile was edited while the command ran: bandwidth moved.
-	moved := config.Config{X: 3, Y: 2, Commands: []profile.Command{
+	moved := settings.Config{X: 3, Y: 2, Commands: []profile.Command{
 		{Name: "bandwidth", Command: "echo 4", Row: 0, Col: "a"},
 		{Name: "update", Command: "echo 1", Row: 1, Col: "c"},
 	}}

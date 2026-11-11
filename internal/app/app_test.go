@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/profile"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 func TestCwdFileArg(t *testing.T) {
@@ -70,7 +70,7 @@ func TestWriteCwdFile_UnwritablePathIsSurvivable(t *testing.T) {
 // auto_close_execution = false or debug_execution = true, item flags for items.
 func TestBatchCommands_KeepOpen(t *testing.T) {
 	yes, no := true, false
-	cfg := config.Config{Commands: []profile.Command{
+	cfg := settings.Config{Commands: []profile.Command{
 		{Name: "plain", Command: "ls"},
 		{Name: "stay", Command: "ls", AutoCloseExecution: &no},
 		{Name: "debug", Command: "ls", DebugExecution: &yes},
@@ -94,7 +94,7 @@ func TestBatchCommands_KeepOpen(t *testing.T) {
 // A marked entry with nothing to run is left out by the same rule a single run
 // uses: gone from the config, no command, or a command of only spaces.
 func TestBatchCommands_SkipsNothingToRun(t *testing.T) {
-	cfg := config.Config{Commands: []profile.Command{
+	cfg := settings.Config{Commands: []profile.Command{
 		{Name: "real", Command: "ls"},
 		{Name: "empty"},
 		{Name: "blank", Command: "   "},
@@ -106,7 +106,7 @@ func TestBatchCommands_SkipsNothingToRun(t *testing.T) {
 	}
 }
 
-func plansFor(cfg config.Config, sels []launch.Selection) []launch.Plan {
+func plansFor(cfg settings.Config, sels []launch.Selection) []launch.Plan {
 	plans := make([]launch.Plan, len(sels))
 	for i, sel := range sels {
 		plans[i] = launch.For(cfg.DefaultShell, cfg.Commands, sel, "work")
@@ -120,7 +120,7 @@ func TestRunPlan_NothingToRunPauses(t *testing.T) {
 	old := pauseFn
 	defer func() { pauseFn = old }()
 
-	cfg := config.Config{Commands: []profile.Command{{Name: "test", Command: ""}, {Name: "blank", Command: "   "}}}
+	cfg := settings.Config{Commands: []profile.Command{{Name: "test", Command: ""}, {Name: "blank", Command: "   "}}}
 	for _, sel := range []launch.Selection{{Cell: "test"}, {Cell: "blank"}, {Cell: "gone"}} {
 		paused := false
 		pauseFn = func(string) { paused = true }

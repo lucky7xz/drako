@@ -10,6 +10,7 @@ import (
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/profile"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // dialogModel: a 3x3 grid of runnable cells, n of them already marked and the
@@ -23,7 +24,7 @@ func dialogModel(t *testing.T, n int) Model {
 			Name: name, Command: "true", Row: i / 3, Col: string(rune('a' + i%3)),
 		})
 	}
-	cfg := config.Config{X: 3, Y: 3, Commands: cmds}
+	cfg := settings.Config{X: 3, Y: 3, Commands: cmds}
 	cfg.ApplyDefaults()
 	m := Model{
 		Config:  cfg,

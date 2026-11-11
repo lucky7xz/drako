@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // Layout constants define the geometry of the TUI elements.
@@ -58,7 +58,7 @@ func widestLineWidth(s string) int {
 // resolved header template (m.styles.HeaderArt for the ASCII-art views; a
 // view-specific title string, e.g. inventory mode's; "" if the view has no
 // header-equivalent element) — used only to measure its width.
-func CalculateLayout(termW, termH int, cfg config.Config, headerArt string) Layout {
+func CalculateLayout(termW, termH int, cfg settings.Config, headerArt string) Layout {
 	// The essential central grid: beyond the minimum window it scrolls,
 	// so it never claims more height than that window.
 	gridHeight := min(cfg.Y, MinVisibleGridRows) * GridCellHeight

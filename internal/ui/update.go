@@ -13,6 +13,7 @@ import (
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/host"
 	"github.com/lucky7xz/drako/internal/launch"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 func (m Model) Init() tea.Cmd {
@@ -527,7 +528,7 @@ func (m Model) switchToProfileIndex(target int) (Model, bool) {
 	updated.profile.activeIndex = target
 	updated.profile.rescue = false
 	updated.profile.sessionProfile = selected.Name
-	updated.Config = config.ApplyProfileOverlay(m.profile.base, selected.Profile)
+	updated.Config = settings.ApplyProfileOverlay(m.profile.base, selected.Profile)
 	updated.applyConfig(updated.Config)
 
 	return updated, true

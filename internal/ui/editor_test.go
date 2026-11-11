@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/profiles"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // editInventoryModel builds an inventory-mode model over a real temp config
@@ -26,7 +26,7 @@ func editInventoryModel(t *testing.T) (Model, string) {
 	m := Model{
 		mode:    inventoryMode,
 		profile: profileState{configDir: dir},
-		Config:  config.Config{Keys: config.InputConfig{EditFile: "e", Delete: "delete", Lock: "r"}},
+		Config:  settings.Config{Keys: settings.InputConfig{EditFile: "e", Delete: "delete", Lock: "r"}},
 		inventory: inventoryModel{
 			State:       equip.NewInventoryState([]string{"eq.profile.toml"}, []string{"st.profile.toml"}, profiles.MaxEquipped),
 			focusedList: equip.ListVisible,

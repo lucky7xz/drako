@@ -16,6 +16,7 @@ import (
 	"github.com/lucky7xz/drako/internal/paths"
 	"github.com/lucky7xz/drako/internal/profile"
 	"github.com/lucky7xz/drako/internal/profiles"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 const (
@@ -76,7 +77,7 @@ type netStatus struct {
 // one, pivot pinning, the transient status message, and the broken-profile
 // error queue.
 type profileState struct {
-	base               config.Config
+	base               settings.Config
 	profiles           []config.ProfileInfo
 	activeIndex        int
 	rescue             bool // the rescue grid is showing; activeIndex is the deck to go back to
@@ -108,7 +109,7 @@ type Model struct {
 	exitCode      int // process exit code the host should use once the TUI is down
 
 	GlassrootMode bool
-	Config        config.Config // effective config
+	Config        settings.Config // effective config
 
 	mode         navMode
 	previousMode navMode
@@ -154,7 +155,7 @@ func (g *gridNav) clampCursor() {
 	}
 }
 
-func (m *Model) applyConfig(cfg config.Config) {
+func (m *Model) applyConfig(cfg settings.Config) {
 	m.styles = BuildStyles(cfg)
 
 	m.gridNav.grid = profile.BuildGrid(cfg.X, cfg.Y, cfg.Commands)
@@ -179,7 +180,8 @@ func (m *Model) applyConfig(cfg config.Config) {
 
 // enterRescue swaps in the rescue grid without forgetting which deck it replaced.
 func (m *Model) enterRescue() {
-	cfg := config.RescueConfig()
+	configDir, _ := paths.ConfigDir() // resolution already succeeded by the time rescue can run
+	cfg := settings.RescueConfig(configDir)
 	cfg.ApplyDefaults()
 	m.applyConfig(cfg)
 	m.profile.rescue = true

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // quickNavModel builds a grid model with a known sparse layout for driving
@@ -25,7 +25,7 @@ func quickNavModel() Model {
 				{"G", "", ""},
 			},
 		},
-		Config: config.Config{Keys: config.InputConfig{}},
+		Config: settings.Config{Keys: settings.InputConfig{}},
 	}
 }
 

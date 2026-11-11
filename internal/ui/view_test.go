@@ -11,12 +11,13 @@ import (
 	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/profile"
 	"github.com/lucky7xz/drako/internal/profiles"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // Helper to create a model for view testing
 func createTestModelForView(mode navMode) Model {
 	// Minimal config with small grid to avoid "Terminal too small" overlay
-	cfg := config.Config{
+	cfg := settings.Config{
 		X:            2,
 		Y:            2,
 		Theme:        "default",
@@ -92,7 +93,7 @@ func makeScrollTestModel(cols, rows, termW, termH int) Model {
 			grid[r][c] = fmt.Sprintf("R%dC%d", r, c)
 		}
 	}
-	cfg := config.Config{X: cols, Y: rows, Theme: "default", DefaultShell: "/bin/bash"}
+	cfg := settings.Config{X: cols, Y: rows, Theme: "default", DefaultShell: "/bin/bash"}
 	return Model{
 		mode:       gridMode,
 		termWidth:  termW,
@@ -222,7 +223,7 @@ func TestView_WideCellsStillRenderNarrow(t *testing.T) {
 		{wide, wide, wide},
 		{wide, wide, wide},
 	}
-	cfg := config.Config{X: 3, Y: 3, Theme: "default", DefaultShell: "/bin/bash"}
+	cfg := settings.Config{X: 3, Y: 3, Theme: "default", DefaultShell: "/bin/bash"}
 	m := Model{
 		mode:       gridMode,
 		termWidth:  60,
@@ -256,7 +257,7 @@ func TestView_LongTextCompressesNotBlocks(t *testing.T) {
 		{long, long, long},
 		{long, long, long},
 	}
-	cfg := config.Config{X: 3, Y: 3, Theme: "default", DefaultShell: "/bin/bash"}
+	cfg := settings.Config{X: 3, Y: 3, Theme: "default", DefaultShell: "/bin/bash"}
 	m := Model{
 		mode:       gridMode,
 		termWidth:  44,
@@ -466,7 +467,7 @@ func TestRenderProfileCounter(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			cfg := config.Config{X: 2, Y: 2, Theme: "default"}
+			cfg := settings.Config{X: 2, Y: 2, Theme: "default"}
 			m := Model{
 				Config:  cfg,
 				styles:  BuildStyles(cfg),
@@ -538,7 +539,7 @@ func TestRenderCombinedFooter_LongPathFitsBudget(t *testing.T) {
 // The selected crumb must survive the windowing, or the cursor lands on
 // something invisible.
 func TestRenderPathBar_KeepsSelectionVisible(t *testing.T) {
-	styles := BuildStyles(config.Config{})
+	styles := BuildStyles(settings.Config{})
 	m := longPathModel(pathMode, 60)
 
 	for i := range m.path.PathComponents {

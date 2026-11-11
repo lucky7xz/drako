@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/lucky7xz/drako/internal/profile"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 func infos(names ...string) []ProfileInfo {
@@ -111,7 +112,7 @@ func invalidProfile(name string) ProfileInfo {
 func TestBuildEffective_AppliesSelectedProfile(t *testing.T) {
 	profiles := []ProfileInfo{validProfile("alpha"), validProfile("work")}
 
-	effective, active, extraBroken, fellBack, rescue := buildEffective(Config{}, profiles, 1)
+	effective, active, extraBroken, fellBack, rescue := buildEffective(settings.Config{}, profiles, 1, "")
 	if rescue != false {
 		t.Errorf("rescue = %v, want false", rescue)
 	}
@@ -127,7 +128,7 @@ func TestBuildEffective_AppliesSelectedProfile(t *testing.T) {
 }
 
 func TestBuildEffective_NoProfilesForcesFactoryDefaults(t *testing.T) {
-	effective, active, extraBroken, fellBack, rescue := buildEffective(Config{}, nil, 0)
+	effective, active, extraBroken, fellBack, rescue := buildEffective(settings.Config{}, nil, 0, "")
 	if rescue != true {
 		t.Errorf("rescue = %v, want true", rescue)
 	}
@@ -142,7 +143,7 @@ func TestBuildEffective_NoProfilesForcesFactoryDefaults(t *testing.T) {
 func TestBuildEffective_InvalidProfileFallsBackToFirst(t *testing.T) {
 	profiles := []ProfileInfo{validProfile("alpha"), invalidProfile("broken")}
 
-	effective, active, extraBroken, fellBack, rescue := buildEffective(Config{}, profiles, 1)
+	effective, active, extraBroken, fellBack, rescue := buildEffective(settings.Config{}, profiles, 1, "")
 	if rescue != false {
 		t.Errorf("rescue = %v, want false", rescue)
 	}
@@ -164,7 +165,7 @@ func TestBuildEffective_InvalidProfileFallsBackToFirst(t *testing.T) {
 func TestBuildEffective_SelectedAndFallbackInvalid(t *testing.T) {
 	profiles := []ProfileInfo{invalidProfile("a"), invalidProfile("b")}
 
-	_, _, extraBroken, _, rescue := buildEffective(Config{}, profiles, 1)
+	_, _, extraBroken, _, rescue := buildEffective(settings.Config{}, profiles, 1, "")
 	if rescue != true {
 		t.Errorf("rescue = %v, want true", rescue)
 	}
@@ -176,7 +177,7 @@ func TestBuildEffective_SelectedAndFallbackInvalid(t *testing.T) {
 func TestBuildEffective_AllInvalidLandsOnRescue(t *testing.T) {
 	profiles := []ProfileInfo{invalidProfile("broken")}
 
-	effective, active, extraBroken, fellBack, rescue := buildEffective(Config{}, profiles, 0)
+	effective, active, extraBroken, fellBack, rescue := buildEffective(settings.Config{}, profiles, 0, "")
 	if rescue != true {
 		t.Errorf("rescue = %v, want true", rescue)
 	}

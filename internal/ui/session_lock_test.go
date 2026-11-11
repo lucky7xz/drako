@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/profile"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // altRunes is the chord bubbletea reports for Alt held with a letter.
@@ -16,7 +17,7 @@ func altRunes(s string) tea.KeyMsg {
 
 func lockTestModel(t *testing.T) Model {
 	t.Helper()
-	cfg := config.Config{X: 1, Y: 1}
+	cfg := settings.Config{X: 1, Y: 1}
 	cfg.ApplyDefaults()
 	return Model{Config: cfg, styles: BuildStyles(cfg), mode: gridMode}
 }
@@ -34,7 +35,7 @@ func update(t *testing.T, m Model, msg tea.KeyMsg) Model {
 }
 
 func TestIsSessionLock(t *testing.T) {
-	keys := config.InputConfig{Lock: "r", SessionLock: "r"}
+	keys := settings.InputConfig{Lock: "r", SessionLock: "r"}
 	cases := []struct {
 		name     string
 		msg      tea.KeyMsg
@@ -53,7 +54,7 @@ func TestIsSessionLock(t *testing.T) {
 	}
 
 	// It follows a rebound letter, independently of the profile lock.
-	rebound := config.InputConfig{Lock: "r", SessionLock: "x"}
+	rebound := settings.InputConfig{Lock: "r", SessionLock: "x"}
 	if !IsSessionLock(rebound, altRunes("x"), "alt") {
 		t.Error("session_lock = \"x\" should answer to alt+x")
 	}
@@ -251,8 +252,8 @@ func TestSessionLock_BareLetterStillTogglesTheProfileLock(t *testing.T) {
 // A reload while locked replaces the grid; unlocking must not return to a
 // dropdown still listing the old folder's items.
 func TestUnlockAfterReloadLeavesTheStaleDropdown(t *testing.T) {
-	folder := func(item, cmd string) config.Config {
-		cfg := config.Config{X: 1, Y: 1, Commands: []profile.Command{
+	folder := func(item, cmd string) settings.Config {
+		cfg := settings.Config{X: 1, Y: 1, Commands: []profile.Command{
 			{Name: "tools", Col: "a", Items: []profile.CommandItem{{Name: item, Command: cmd}}},
 		}}
 		cfg.ApplyDefaults()

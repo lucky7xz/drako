@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/profiles"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // Helper to create a basic model for Grid testing
@@ -19,8 +19,8 @@ func createTestGridModel() Model {
 				{"C", "D"},
 			},
 		},
-		Config: config.Config{
-			Keys: config.InputConfig{
+		Config: settings.Config{
+			Keys: settings.InputConfig{
 				NavUp:    []string{"up", "k"},
 				NavDown:  []string{"down", "j"},
 				NavLeft:  []string{"left", "h"},
@@ -77,8 +77,8 @@ func createTestInventoryModel() Model {
 			cursor:      0,
 			focusedList: 0, // 0=Visible, 1=Inventory, 2=Apply, 3=Rescue
 		},
-		Config: config.Config{
-			Keys: config.InputConfig{
+		Config: settings.Config{
+			Keys: settings.InputConfig{
 				NavUp:    []string{"up", "k"},
 				NavDown:  []string{"down", "j"},
 				NavLeft:  []string{"left", "h"},

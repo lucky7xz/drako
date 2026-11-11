@@ -7,6 +7,7 @@ import (
 
 	"github.com/lucky7xz/drako/internal/profile"
 	profilepkg "github.com/lucky7xz/drako/internal/profiles"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // Profile selection policy, factored out of LoadConfig so each rule is a
@@ -89,17 +90,17 @@ func resolveRequested(pivotLocked, envProfile, cfgProfile string, available []Pr
 // fellBack is true whenever the selected profile had to be abandoned, so the
 // caller can drop a pivot lock that points at it. With no profiles, the
 // rescue config is used directly; rescue reports it.
-func buildEffective(base Config, profiles []ProfileInfo, activeIndex int) (effective Config, newActive int, extraBroken []ProfileParseError, fellBack, rescue bool) {
+func buildEffective(base settings.Config, profiles []ProfileInfo, activeIndex int, configDir string) (effective settings.Config, newActive int, extraBroken []ProfileParseError, fellBack, rescue bool) {
 	if len(profiles) == 0 {
-		effective = RescueConfig()
+		effective = settings.RescueConfig(configDir)
 		effective.ApplyDefaults()
 		return effective, activeIndex, nil, false, true
 	}
 	newActive = activeIndex
 	selected := profiles[activeIndex]
 
-	applyAndValidate := func(p ProfileInfo) (Config, error) {
-		temp := ApplyProfileOverlay(base, p.Profile)
+	applyAndValidate := func(p ProfileInfo) (settings.Config, error) {
+		temp := settings.ApplyProfileOverlay(base, p.Profile)
 		temp.ApplyDefaults()
 		if err := profile.ValidateGrid(temp.X, temp.Y, temp.Commands); err != nil {
 			return temp, err
@@ -130,7 +131,7 @@ func buildEffective(base Config, profiles []ProfileInfo, activeIndex int) (effec
 	if activeIndex != 0 { // profile 0 was the selected one, already reported
 		extraBroken = append(extraBroken, gridBroken(selected, err2))
 	}
-	effective = RescueConfig()
+	effective = settings.RescueConfig(configDir)
 	effective.ApplyDefaults()
 	return effective, 0, extraBroken, true, true
 }

@@ -12,7 +12,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 type PathModel struct {
@@ -223,7 +223,7 @@ func (pm *PathModel) toggleHidden() {
 }
 
 // Update handles key events when in PathMode
-func (pm *PathModel) UpdatePathMode(msg tea.KeyMsg, cfg config.Config) navMode {
+func (pm *PathModel) UpdatePathMode(msg tea.KeyMsg, cfg settings.Config) navMode {
 	pm.DeniedDir = "" // any keypress dismisses the last refusal
 	if pm.Searching {
 		switch key := msg.String(); key {
@@ -278,7 +278,7 @@ func (pm *PathModel) UpdatePathMode(msg tea.KeyMsg, cfg config.Config) navMode {
 }
 
 // Update handles key events when in ChildMode
-func (pm *PathModel) UpdateChildMode(msg tea.KeyMsg, cfg config.Config) navMode {
+func (pm *PathModel) UpdateChildMode(msg tea.KeyMsg, cfg settings.Config) navMode {
 	pm.DeniedDir = "" // any keypress dismisses the last refusal
 	if pm.Searching {
 		switch key := msg.String(); key {

@@ -100,25 +100,3 @@ func DiscoverProfilesWithErrors(configDir string, targets []string) ([]ProfileIn
 	profiles = append(profiles, discoveredProfiles...)
 	return profiles, broken
 }
-
-// ApplyProfileOverlay layers a profile on top of the base settings: grid
-// size and commands always come from the profile; theme, header art and
-// shell only when the profile sets them.
-func ApplyProfileOverlay(base Config, pf profile.File) Config {
-	cfg := base
-
-	cfg.X = pf.X
-	cfg.Y = pf.Y
-	if strings.TrimSpace(pf.Theme) != "" {
-		cfg.Theme = pf.Theme
-	}
-	if pf.HeaderArt != nil {
-		cfg.HeaderArt = pf.HeaderArt
-	}
-	if pf.Shell != nil {
-		cfg.DefaultShell = *pf.Shell
-	}
-	cfg.Commands = profile.CopyCommands(pf.Commands)
-
-	return cfg
-}

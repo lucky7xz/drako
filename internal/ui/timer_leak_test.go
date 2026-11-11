@@ -5,8 +5,8 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/profile"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // returnsWithin runs a Cmd the way bubbletea does (its own goroutine) and
@@ -23,7 +23,7 @@ func returnsWithin(cmd tea.Cmd, d time.Duration) bool {
 }
 
 func timerTestModel() Model {
-	cfg := config.Config{X: 2, Y: 2, Commands: []profile.Command{
+	cfg := settings.Config{X: 2, Y: 2, Commands: []profile.Command{
 		{Name: "one", Command: "true", Row: 0, Col: "a"},
 		{Name: "two", Command: "true", Row: 1, Col: "a"},
 	}}

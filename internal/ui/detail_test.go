@@ -5,6 +5,7 @@ import (
 
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/profile"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // boolPtr is a tiny helper for the optional execution flags.
@@ -16,8 +17,8 @@ func explainModel(cmd profile.Command) Model {
 	return Model{
 		mode:    gridMode,
 		gridNav: gridNav{grid: [][]string{{cmd.Name}}},
-		Config: config.Config{
-			Keys:     config.InputConfig{Explain: "e"},
+		Config: settings.Config{
+			Keys:     settings.InputConfig{Explain: "e"},
 			Commands: []profile.Command{cmd},
 		},
 	}
@@ -98,7 +99,7 @@ func addressModel() Model {
 			{Name: "Two", Command: "echo 2"},
 		}},
 	}
-	cfg := config.Config{X: 2, Y: 1, Keys: config.InputConfig{Explain: "e"}, Commands: profile.CopyCommands(cmds)}
+	cfg := settings.Config{X: 2, Y: 1, Keys: settings.InputConfig{Explain: "e"}, Commands: profile.CopyCommands(cmds)}
 	return Model{
 		mode:    gridMode,
 		Config:  cfg,
@@ -143,7 +144,7 @@ func TestExplainHidesAddressItCannotReach(t *testing.T) {
 	cases := map[string]func(*Model){
 		"no profiles loaded": func(m *Model) { m.profile.profiles = nil },
 		"rescue grid over loaded profiles": func(m *Model) {
-			rescue := config.RescueConfig()
+			rescue := settings.RescueConfig("")
 			m.Config.Commands = rescue.Commands
 			m.gridNav.grid = profile.BuildGrid(rescue.X, rescue.Y, rescue.Commands)
 		},

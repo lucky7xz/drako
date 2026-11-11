@@ -5,6 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/config"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // glassrootModel builds a grid-mode model with known bindings for every
@@ -14,8 +15,8 @@ func glassrootModel(glassroot bool) Model {
 		mode:          gridMode,
 		GlassrootMode: glassroot,
 		gridNav:       gridNav{grid: [][]string{{"A"}}},
-		Config: config.Config{
-			Keys: config.InputConfig{
+		Config: settings.Config{
+			Keys: settings.InputConfig{
 				Inventory:    "i",
 				PathGridMode: "tab",
 				Lock:         "r",

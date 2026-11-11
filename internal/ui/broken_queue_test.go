@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/config"
 	"github.com/lucky7xz/drako/internal/profile"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 func brokenErr(name string) config.ProfileParseError {
@@ -20,7 +21,7 @@ func brokenErr(name string) config.ProfileParseError {
 }
 
 func queueModel(errs ...config.ProfileParseError) Model {
-	base := config.Config{X: 1, Y: 1}
+	base := settings.Config{X: 1, Y: 1}
 	base.ApplyDefaults()
 	return Model{
 		mode:   gridMode,
@@ -105,7 +106,7 @@ func TestBrokenQueueAllAcknowledgedKeepsReloadedConfig(t *testing.T) {
 	m := queueModel(brokenErr("alpha"))
 	m.profile.acknowledged["/tmp/alpha.profile.toml"] = true
 
-	reloaded := config.Config{X: 1, Y: 1}
+	reloaded := settings.Config{X: 1, Y: 1}
 	reloaded.ApplyDefaults()
 	reloaded.Commands = []profile.Command{{Name: "my cell", Command: "true", Row: 0, Col: "a"}}
 	m.applyConfig(reloaded)
@@ -126,7 +127,7 @@ func TestApplyBundleClearsAcknowledgedOnceFixed(t *testing.T) {
 	m := queueModel()
 	m.profile.acknowledged["/tmp/alpha.profile.toml"] = true
 
-	base := config.Config{X: 1, Y: 1}
+	base := settings.Config{X: 1, Y: 1}
 	base.ApplyDefaults()
 	m.applyBundle(config.ConfigBundle{Base: base, Config: base}) // Broken is empty: alpha is fixed
 
@@ -139,7 +140,7 @@ func TestApplyBundleClearsAcknowledgedOnceFixed(t *testing.T) {
 }
 
 func TestApplyBundleAdoptsBundleState(t *testing.T) {
-	base := config.Config{X: 1, Y: 1}
+	base := settings.Config{X: 1, Y: 1}
 	base.ApplyDefaults()
 	effective := base
 	effective.Commands = []profile.Command{{Name: "noop", Command: "true", Row: 0, Col: "a"}}
@@ -166,7 +167,7 @@ func TestApplyBundleAdoptsBundleState(t *testing.T) {
 }
 
 func TestApplyBundleClampsBadActiveIndex(t *testing.T) {
-	base := config.Config{X: 1, Y: 1}
+	base := settings.Config{X: 1, Y: 1}
 	base.ApplyDefaults()
 
 	var m Model
@@ -207,7 +208,7 @@ func TestBrokenQueueWaitsForKeypress(t *testing.T) {
 // A clean reload under the error popup (the file got fixed) ends the queue;
 // the next ordinary popup must not be mistaken for it and exit into rescue.
 func TestCleanReloadEndsTheErrorQueue(t *testing.T) {
-	cfg := config.Config{X: 1, Y: 1, Commands: []profile.Command{{Name: "hi", Command: "echo hi", Col: "a"}}}
+	cfg := settings.Config{X: 1, Y: 1, Commands: []profile.Command{{Name: "hi", Command: "echo hi", Col: "a"}}}
 	cfg.ApplyDefaults()
 	m := queueModel(brokenErr("alpha"))
 	m.Config, m.gridNav.grid = cfg, profile.BuildGrid(cfg.X, cfg.Y, cfg.Commands)
