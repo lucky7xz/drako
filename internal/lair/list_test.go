@@ -1,9 +1,11 @@
-package profiles
+package lair
 
 import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/lucky7xz/drako/internal/equip"
 )
 
 func TestList_FiltersSortsAndFills(t *testing.T) {
@@ -13,7 +15,7 @@ func TestList_FiltersSortsAndFills(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "notes.txt"), []byte{}, 0o644) // ignored
 	os.Mkdir(filepath.Join(dir, "sub.profile.toml"), 0o755)        // dir, ignored
 
-	got, err := List(dir)
+	got, err := List(dir, equip.Equipped)
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
@@ -29,7 +31,7 @@ func TestList_FiltersSortsAndFills(t *testing.T) {
 }
 
 func TestList_MissingDirIsTolerant(t *testing.T) {
-	got, err := List(filepath.Join(t.TempDir(), "nope"))
+	got, err := List(filepath.Join(t.TempDir(), "nope"), equip.Equipped)
 	if err != nil {
 		t.Errorf("missing dir must not error, got %v", err)
 	}
@@ -38,15 +40,16 @@ func TestList_MissingDirIsTolerant(t *testing.T) {
 	}
 }
 
-func TestListSpecs_NormEqualsName(t *testing.T) {
+// Spec names are shown as written: no lowercasing, unlike profile names.
+func TestDiscoverSpecs_KeepsTheNameAsWritten(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "Work.spec.toml"), []byte{}, 0o644)
+	writeSpec(t, dir, "Work.spec.toml", "")
 
-	got, err := ListSpecs(dir)
+	got, err := DiscoverSpecs(dir)
 	if err != nil {
-		t.Fatalf("ListSpecs: %v", err)
+		t.Fatalf("DiscoverSpecs: %v", err)
 	}
-	if len(got) != 1 || got[0].Name != "Work" || got[0].Norm != "Work" {
-		t.Errorf("specs are not normalized; want Name==Norm==\"Work\", got %+v", got)
+	if len(got) != 1 || got[0].Name != "Work" || got[0].File != "Work.spec.toml" {
+		t.Errorf("want one spec named \"Work\", got %+v", got)
 	}
 }

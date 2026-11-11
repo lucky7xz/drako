@@ -9,7 +9,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/lair"
-	"github.com/lucky7xz/drako/internal/paths"
 )
 
 // This file owns the spec-function picker end to end: what a spec function is,
@@ -166,7 +165,7 @@ func (m Model) lockedFile() string {
 // It decides nothing about what is allowed and says nothing in English. Those
 // are planVerdict's job, from the facts recorded here.
 func (m Model) buildSpecPlans() []specPlan {
-	specs, err := lair.DiscoverSpecs(paths.SpecsDir(m.profile.configDir))
+	specs, err := lair.DiscoverSpecs(m.profile.configDir)
 	if err != nil {
 		// A directory we cannot read yields no specs; strip still works.
 		specs = nil

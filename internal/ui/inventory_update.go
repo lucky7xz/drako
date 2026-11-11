@@ -12,7 +12,6 @@ import (
 	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/paths"
-	"github.com/lucky7xz/drako/internal/profiles"
 )
 
 // reloadProfilesMsg signals the app to reload the configuration.
@@ -75,12 +74,12 @@ func InitInventoryModel(configDir string) inventoryModel {
 		return inventoryModel{err: err}
 	}
 
-	equipped, err := profiles.List(configDir)
+	equipped, err := lair.List(configDir, equip.Equipped)
 	if err != nil {
 		log.Printf("could not read config directory: %v", err)
 		return inventoryModel{err: err}
 	}
-	stashed, err := profiles.List(inventoryDir)
+	stashed, err := lair.List(configDir, equip.Inventory)
 	if err != nil {
 		log.Printf("could not read inventory directory: %v", err)
 		return inventoryModel{err: err}
@@ -145,7 +144,7 @@ func ApplyInventoryChangesCmd(configDir string, m inventoryModel) tea.Cmd {
 	}
 	return func() tea.Msg {
 		// Equip/stash files to match the arrangement (core stays protected).
-		if _, err := profiles.Reconcile(configDir, desired); err != nil {
+		if _, err := lair.Reconcile(configDir, desired); err != nil {
 			return inventoryErrorMsg{err: fmt.Errorf("apply inventory changes failed: %w", err)}
 		}
 
@@ -350,7 +349,7 @@ func (m Model) updatePendingDelete(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			inv.status = "Name doesn't match — nothing deleted"
 			return m, nil
 		}
-		if err := profiles.MoveToTrash(m.profile.configDir, pd.rel); err != nil {
+		if err := lair.MoveToTrash(m.profile.configDir, pd.rel); err != nil {
 			inv.status = "Could not delete: " + err.Error()
 			return m, nil
 		}

@@ -1,4 +1,4 @@
-package profiles
+package lair
 
 import (
 	"os"
@@ -23,7 +23,7 @@ func TestMoveToTrashNeverOverwrites(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	entries, err := os.ReadDir(locationDir(equip.Trash, dir))
+	entries, err := os.ReadDir(LocationDir(dir, equip.Trash))
 	if err != nil {
 		t.Fatal(err)
 	}

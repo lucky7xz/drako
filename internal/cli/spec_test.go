@@ -8,7 +8,11 @@ import (
 )
 
 func TestListSpecs(t *testing.T) {
-	specsDir := t.TempDir()
+	configDir := t.TempDir()
+	specsDir := filepath.Join(configDir, "specs")
+	if err := os.MkdirAll(specsDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
 
 	// Two valid specs plus a non-spec file that must be ignored.
 	os.WriteFile(filepath.Join(specsDir, "work.spec.toml"), []byte("profiles = [\"git\", \"docker\"]\n"), 0644)
@@ -16,7 +20,7 @@ func TestListSpecs(t *testing.T) {
 	os.WriteFile(filepath.Join(specsDir, "README.md"), []byte("ignore me\n"), 0644)
 
 	var out strings.Builder
-	if err := ListSpecs(specsDir, &out); err != nil {
+	if err := ListSpecs(configDir, &out); err != nil {
 		t.Fatalf("ListSpecs failed: %v", err)
 	}
 

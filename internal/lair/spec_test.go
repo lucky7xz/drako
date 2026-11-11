@@ -7,9 +7,14 @@ import (
 	"testing"
 )
 
+// writeSpec puts a spec file into the specs folder of the config directory dir.
 func writeSpec(t *testing.T, dir, file, body string) {
 	t.Helper()
-	if err := os.WriteFile(filepath.Join(dir, file), []byte(body), 0o644); err != nil {
+	specs := filepath.Join(dir, "specs")
+	if err := os.MkdirAll(specs, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(specs, file), []byte(body), 0o644); err != nil {
 		t.Fatalf("write %s: %v", file, err)
 	}
 }
@@ -18,7 +23,7 @@ func TestLoadSpec_ReadsProfiles(t *testing.T) {
 	dir := t.TempDir()
 	writeSpec(t, dir, "dev.spec.toml", "profiles = [\"git\", \"rust\"]\n")
 
-	got, err := LoadSpec(filepath.Join(dir, "dev.spec.toml"))
+	got, err := LoadSpec(dir, "dev.spec.toml")
 	if err != nil {
 		t.Fatalf("LoadSpec: %v", err)
 	}
@@ -31,13 +36,13 @@ func TestLoadSpec_MalformedTOML(t *testing.T) {
 	dir := t.TempDir()
 	writeSpec(t, dir, "bad.spec.toml", "profiles = [\"git\"\n")
 
-	if _, err := LoadSpec(filepath.Join(dir, "bad.spec.toml")); err == nil {
+	if _, err := LoadSpec(dir, "bad.spec.toml"); err == nil {
 		t.Fatal("malformed TOML should be an error")
 	}
 }
 
 func TestLoadSpec_Missing(t *testing.T) {
-	if _, err := LoadSpec(filepath.Join(t.TempDir(), "nope.spec.toml")); err == nil {
+	if _, err := LoadSpec(t.TempDir(), "nope.spec.toml"); err == nil {
 		t.Fatal("a missing spec should be an error")
 	}
 }
@@ -46,7 +51,7 @@ func TestLoadSpec_EmptyProfilesIsNotAnError(t *testing.T) {
 	dir := t.TempDir()
 	writeSpec(t, dir, "empty.spec.toml", "profiles = []\n")
 
-	got, err := LoadSpec(filepath.Join(dir, "empty.spec.toml"))
+	got, err := LoadSpec(dir, "empty.spec.toml")
 	if err != nil {
 		t.Fatalf("LoadSpec: %v", err)
 	}
@@ -60,7 +65,7 @@ func TestLoadSpec_UnknownKeyIsAnError(t *testing.T) {
 	dir := t.TempDir()
 	writeSpec(t, dir, "typo.spec.toml", "profile = [\"git\"]\n")
 
-	_, err := LoadSpec(filepath.Join(dir, "typo.spec.toml"))
+	_, err := LoadSpec(dir, "typo.spec.toml")
 	if err == nil || !strings.Contains(err.Error(), "profile") {
 		t.Fatalf("err = %v, want it to name the unknown key", err)
 	}

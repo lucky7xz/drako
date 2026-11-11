@@ -19,8 +19,8 @@ import (
 	"strings"
 
 	"github.com/lucky7xz/drako/internal/equip"
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/paths"
-	"github.com/lucky7xz/drako/internal/profiles"
 )
 
 // FileDownloader defines the interface for downloading a file
@@ -146,11 +146,11 @@ func (s *Summoner) Summon(sourceURL string) error {
 // the disk each time, so decks summoned earlier in the same run count.
 func placeFor(configDir, file string) (string, error) {
 	inventoryDir := paths.InventoryDir(configDir)
-	equipped, err := profiles.List(configDir)
+	equipped, err := lair.List(configDir, equip.Equipped)
 	if err != nil {
 		return "", err
 	}
-	stashed, err := profiles.List(inventoryDir)
+	stashed, err := lair.List(configDir, equip.Inventory)
 	if err != nil {
 		return "", err
 	}

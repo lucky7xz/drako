@@ -14,15 +14,15 @@ import (
 // once, in this block.
 const (
 	appDirName    = "drako"
-	specsDirName  = "specs"
 	assetsDirName = "assets"
-	trashDirName  = "trash"
 )
 
 // Names callers use bare, relative to the config directory: the watcher and
 // error reports match ConfigFileName, and lair opens its files by name.
 const (
 	InventoryDirName   = "inventory"
+	SpecsDirName       = "specs"
+	TrashDirName       = "trash"
 	PivotFileName      = "pivot.toml"
 	ThemesFileName     = "themes.toml"
 	ConfigFileName     = settings.FileName
@@ -55,7 +55,7 @@ func InventoryDir(configDir string) string {
 
 // SpecsDir is where *.spec.toml files (profile bundles) live.
 func SpecsDir(configDir string) string {
-	return filepath.Join(configDir, specsDirName)
+	return filepath.Join(configDir, SpecsDirName)
 }
 
 // AssetsDir is where the assets bundled with one profile live.
@@ -65,7 +65,7 @@ func AssetsDir(configDir, profileName string) string {
 
 // TrashDir is where purged files are moved instead of being deleted.
 func TrashDir(configDir string) string {
-	return filepath.Join(configDir, trashDirName)
+	return filepath.Join(configDir, TrashDirName)
 }
 
 // ConfigFile is drako's main configuration file.

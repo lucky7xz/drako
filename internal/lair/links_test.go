@@ -8,6 +8,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/lucky7xz/drako/internal/equip"
 )
 
 const linkedDeck = "x = 1\ny = 1\n[[commands]]\nname = \"a\"\ncol = \"A\"\nrow = 0\ncommand = \"true\"\n"
@@ -117,5 +119,33 @@ func TestBootstrapSkipsALinkedSubfolder(t *testing.T) {
 	}
 	if left, _ := os.ReadDir(outside); len(left) != 0 {
 		t.Errorf("the link's target was written to: %v", left)
+	}
+}
+
+// Stashing and trashing write into a subfolder. When that subfolder is a
+// link leaving the directory, nothing moves and the error names it.
+func TestMovesRefuseALinkedSubfolder(t *testing.T) {
+	_, dir := lairAt(t)
+	writeFile(t, filepath.Join(dir, "work.profile.toml"), linkedDeck)
+	inventory := linkOut(t, dir, "inventory", "", true)
+	trash := linkOut(t, dir, "trash", "", true)
+
+	err := Move(dir, "work.profile.toml", equip.Equipped, equip.Inventory)
+	if !errors.Is(err, ErrLinkedFolder) || !strings.HasPrefix(err.Error(), "inventory ") {
+		t.Errorf("stash into a linked inventory: %v, want ErrLinkedFolder naming it", err)
+	}
+	err = MoveToTrash(dir, "work.profile.toml")
+	if !errors.Is(err, ErrLinkedFolder) || !strings.HasPrefix(err.Error(), "trash ") {
+		t.Errorf("trash into a linked trash: %v, want ErrLinkedFolder naming it", err)
+	}
+
+	assertContent(t, filepath.Join(dir, "work.profile.toml"), linkedDeck) // still equipped
+	for _, target := range []string{inventory, trash} {
+		if left, _ := os.ReadDir(target); len(left) != 0 {
+			t.Errorf("%s was written to through the link: %v", target, left)
+		}
+	}
+	if _, err := List(dir, equip.Inventory); !errors.Is(err, ErrLinkedFolder) {
+		t.Errorf("listing a linked inventory: %v, want ErrLinkedFolder", err)
 	}
 }

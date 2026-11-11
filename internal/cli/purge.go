@@ -15,7 +15,6 @@ import (
 	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/paths"
-	"github.com/lucky7xz/drako/internal/profiles"
 )
 
 // ErrPurgeCancelled reports that the user declined or picked nothing.
@@ -68,7 +67,7 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 	// Case 1: Reset Core Config (config.toml)
 	if opts.TargetConfig {
 		log.Printf("Purging Core config (config.toml)")
-		if err := profiles.MoveToTrash(configDir, paths.ConfigFileName); err != nil {
+		if err := lair.MoveToTrash(configDir, paths.ConfigFileName); err != nil {
 			failed = append(failed, fmt.Errorf("could not move %s to trash: %w", paths.ConfigFileName, err))
 		} else {
 			fmt.Printf("  ✓ Moved %s to trash\n", paths.ConfigFileName)
@@ -95,7 +94,7 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 	// Case 3: Target Specific Profiles
 	for _, file := range opts.TargetProfiles {
 		log.Printf("Purging Profile: %s", file)
-		if err := profiles.MoveToTrash(configDir, file); err != nil {
+		if err := lair.MoveToTrash(configDir, file); err != nil {
 			failed = append(failed, fmt.Errorf("could not move %s to trash: %w", file, err))
 		} else {
 			fmt.Printf("  ✓ Moved %s to trash\n", file)
@@ -211,8 +210,9 @@ func purgeFile(configDir, target string) (string, error) {
 	if _, err := os.Stat(filepath.Join(configDir, file)); err == nil {
 		return file, nil
 	}
-	for _, dir := range []string{configDir, paths.InventoryDir(configDir)} {
-		entries, err := profiles.List(dir)
+	for _, loc := range []equip.Location{equip.Equipped, equip.Inventory} {
+		dir := lair.LocationDir(configDir, loc)
+		entries, err := lair.List(configDir, loc)
 		if err != nil {
 			return "", err
 		}
@@ -267,8 +267,8 @@ func runInteractivePurgeSelection(configDir string, opts *PurgeOptions, input io
 	var validProfiles []startProfile
 
 	// Helper to scan a directory
-	scanDir := func(dir, location string) {
-		entries, err := profiles.List(dir)
+	scanDir := func(loc equip.Location, location string) {
+		entries, err := lair.List(configDir, loc)
 		if err != nil {
 			return
 		}
@@ -286,10 +286,10 @@ func runInteractivePurgeSelection(configDir string, opts *PurgeOptions, input io
 	}
 
 	// 1. Scan Root (Equipped)
-	scanDir(configDir, "Equipped")
+	scanDir(equip.Equipped, "Equipped")
 
 	// 2. Scan Inventory
-	scanDir(paths.InventoryDir(configDir), "Inventory")
+	scanDir(equip.Inventory, "Inventory")
 
 	if len(validProfiles) == 0 {
 		fmt.Fprintln(output, "(No profiles found)")

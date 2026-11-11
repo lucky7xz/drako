@@ -1,4 +1,4 @@
-package profiles
+package lair
 
 import (
 	"fmt"
@@ -59,7 +59,7 @@ func TestReconcile_FailedStashNeverExceedsTheCap(t *testing.T) {
 	if _, err := Reconcile(cfg, desired); err == nil {
 		t.Fatal("Reconcile should report the failed stash")
 	}
-	if n, _ := List(cfg); len(n) > equip.MaxEquipped {
+	if n, _ := List(cfg, equip.Equipped); len(n) > equip.MaxEquipped {
 		t.Errorf("%d decks equipped after the failure, cap is %d", len(n), equip.MaxEquipped)
 	}
 }
@@ -80,7 +80,7 @@ func TestReconcile_OverCapMovesNothing(t *testing.T) {
 
 	// The refusal has to land before any Move: a half-applied plan would
 	// leave the config dir in a state the user never asked for.
-	equipped, err := List(cfg)
+	equipped, err := List(cfg, equip.Equipped)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,7 +109,7 @@ func TestReconcileOverCap_EquipsPastTheCap(t *testing.T) {
 		t.Errorf("equipped %d profiles, want %d", len(res.Equipped), want)
 	}
 
-	equipped, err := List(cfg)
+	equipped, err := List(cfg, equip.Equipped)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,7 +152,7 @@ func TestPlannedEquippedCount(t *testing.T) {
 				t.Errorf("count = %d, want %d", got, tc.want)
 			}
 			// Preview only: nothing may reach disk.
-			equipped, err := List(cfg)
+			equipped, err := List(cfg, equip.Equipped)
 			if err != nil {
 				t.Fatal(err)
 			}

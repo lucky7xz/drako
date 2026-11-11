@@ -80,15 +80,11 @@ var knownExceptions = []string{
 	"multiplex/resolve.go os",
 	"multiplex/tmux.go os",
 	"paths/paths.go os",
-	"profiles/move.go os",
-	"profiles/profiles.go os",
-	"profiles/trash.go os",
 
 	// open a file by path instead of through the lair's root
-	"lair/files.go os.ReadFile",                          // read: follows a file the user linked out of the folder
-	"lair/files.go os.Stat",                              // stat, read's twin; and explain, to recognise a linked subfolder
-	"lair/lair.go os.MkdirAll",                           // Create: the folder has to exist before it can be opened
-	"lair/spec.go github.com/BurntSushi/toml.DecodeFile", // until specs move behind the root (step 5)
+	"lair/files.go os.ReadFile", // read: follows a file the user linked out of the folder
+	"lair/files.go os.Stat",     // stat, read's twin; and explain, to recognise a linked subfolder
+	"lair/lair.go os.MkdirAll",  // Create: the folder has to exist before it can be opened
 }
 
 func TestPackagesKeepToTheirCapabilities(t *testing.T) {

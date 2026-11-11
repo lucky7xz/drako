@@ -1,12 +1,15 @@
 package lair
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"path/filepath"
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	profilepkg "github.com/lucky7xz/drako/internal/profiles"
+	"github.com/lucky7xz/drako/internal/equip"
+	"github.com/lucky7xz/drako/internal/paths"
 )
 
 // specFile is the on-disk shape of a *.spec.toml: a named set of profiles to
@@ -26,12 +29,26 @@ type SpecInfo struct {
 	Err      error
 }
 
-// LoadSpec reads the profile list out of one spec file. It is the single
-// decoder for the format: the CLI commands and the TUI inventory both go
-// through here, so "what a spec is" is stated once.
-func LoadSpec(path string) ([]string, error) {
+// LoadSpec reads the profile list out of the spec file called file (e.g.
+// "dev.spec.toml") in configDir's specs folder. It is the single decoder for
+// the format: the CLI commands and the TUI inventory both go through here, so
+// "what a spec is" is stated once.
+func LoadSpec(configDir, file string) ([]string, error) {
+	l, err := Open(configDir)
+	if err != nil {
+		return nil, err
+	}
+	defer l.Close()
+	return l.loadSpec(file)
+}
+
+func (l *Lair) loadSpec(file string) ([]string, error) {
+	data, err := l.read(filepath.Join(paths.SpecsDirName, file))
+	if err != nil {
+		return nil, err
+	}
 	var sf specFile
-	meta, err := toml.DecodeFile(path, &sf)
+	meta, err := toml.Decode(string(data), &sf)
 	if err != nil {
 		return nil, err
 	}
@@ -42,12 +59,22 @@ func LoadSpec(path string) ([]string, error) {
 	return sf.Profiles, nil
 }
 
-// DiscoverSpecs returns every *.spec.toml in specsDir, sorted by name, with
-// each file's parse error carried on its own entry rather than failing the
-// scan — one unreadable spec must not hide the rest. A missing directory
-// yields no specs and no error.
-func DiscoverSpecs(specsDir string) ([]SpecInfo, error) {
-	entries, err := profilepkg.ListSpecs(specsDir)
+// DiscoverSpecs returns every *.spec.toml in configDir's specs folder, sorted
+// by name, with each file's parse error carried on its own entry rather than
+// failing the scan — one unreadable spec must not hide the rest. A missing
+// folder yields no specs and no error.
+func DiscoverSpecs(configDir string) ([]SpecInfo, error) {
+	l, err := Open(configDir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return []SpecInfo{}, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("could not read specs dir: %w", err)
+	}
+	defer l.Close()
+
+	// Specs are not normalized, so Norm == Name.
+	entries, err := l.list(paths.SpecsDirName, equip.SpecSuffix, func(s string) string { return s })
 	if err != nil {
 		return nil, fmt.Errorf("could not read specs dir: %w", err)
 	}
@@ -55,7 +82,7 @@ func DiscoverSpecs(specsDir string) ([]SpecInfo, error) {
 	specs := make([]SpecInfo, 0, len(entries))
 	for _, e := range entries {
 		info := SpecInfo{Name: e.Name, File: e.File}
-		info.Profiles, info.Err = LoadSpec(filepath.Join(specsDir, e.File))
+		info.Profiles, info.Err = l.loadSpec(e.File)
 		specs = append(specs, info)
 	}
 	return specs, nil

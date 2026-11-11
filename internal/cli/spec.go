@@ -12,7 +12,6 @@ import (
 	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/paths"
-	"github.com/lucky7xz/drako/internal/profiles"
 )
 
 // unlockIfLocked clears the pivot lock when it points at name, and says so.
@@ -53,7 +52,7 @@ func HandleSpecCommand(args []string) int {
 	specsDir := paths.SpecsDir(configDir)
 
 	if args[2] == "list" {
-		if err := ListSpecs(specsDir, os.Stdout); err != nil {
+		if err := ListSpecs(configDir, os.Stdout); err != nil {
 			fmt.Fprintf(os.Stderr, "failed to list specs: %v\n", err)
 			return 1
 		}
@@ -72,7 +71,7 @@ func HandleSpecCommand(args []string) int {
 		return 1
 	}
 
-	specProfiles, err := lair.LoadSpec(specPath)
+	specProfiles, err := lair.LoadSpec(configDir, filepath.Base(specPath))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to parse spec: %v\n", err)
 		return 1
@@ -82,7 +81,7 @@ func HandleSpecCommand(args []string) int {
 	// profiles than the leader chords can address. Say what that costs and let
 	// the user decide, rather than refusing to express what the file says.
 	overCapConfirmed := false
-	planned, err := profiles.PlannedEquippedCount(configDir, specProfiles)
+	planned, err := lair.PlannedEquippedCount(configDir, specProfiles)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to inspect spec: %v\n", err)
 		return 1
@@ -129,7 +128,7 @@ func HandleStashCommand(args []string) int {
 		return 1
 	}
 
-	specProfiles, err := lair.LoadSpec(specPath)
+	specProfiles, err := lair.LoadSpec(configDir, filepath.Base(specPath))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to parse spec: %v\n", err)
 		return 1
@@ -166,11 +165,13 @@ func HandleStripCommand(args []string) int {
 	return 0
 }
 
-// ListSpecs writes the name and profiles of every *.spec.toml file in specsDir.
+// ListSpecs writes the name and profiles of every *.spec.toml file in
+// configDir's specs folder.
 // The name shown is the filename with the .spec.toml suffix removed — exactly
 // what "drako spec <name>" expects.
-func ListSpecs(specsDir string, out io.Writer) error {
-	specs, err := lair.DiscoverSpecs(specsDir)
+func ListSpecs(configDir string, out io.Writer) error {
+	specsDir := paths.SpecsDir(configDir)
+	specs, err := lair.DiscoverSpecs(configDir)
 	if err != nil {
 		return err
 	}
@@ -218,7 +219,7 @@ func StashSpec(configDir string, targetProfiles []string) error {
 	}
 
 	// Scan Visible profiles and move them to Inventory if they are in the target set
-	visEntries, err := profiles.List(configDir)
+	visEntries, err := lair.List(configDir, equip.Equipped)
 	if err != nil {
 		return err
 	}
@@ -228,7 +229,7 @@ func StashSpec(configDir string, targetProfiles []string) error {
 		if !targetSet[e.Norm] {
 			continue
 		}
-		if err := profiles.Move(configDir, e.File, equip.Equipped, equip.Inventory); err != nil {
+		if err := lair.Move(configDir, e.File, equip.Equipped, equip.Inventory); err != nil {
 			failed = append(failed, fmt.Errorf("could not stash %s: %w", e.Name, err))
 			continue
 		}
@@ -243,7 +244,7 @@ func StashSpec(configDir string, targetProfiles []string) error {
 // overflow — see HandleSpecCommand.
 func ApplySpec(configDir string, targetProfiles []string, allowOverCap bool) error {
 	// A spec that matches no deck would stash everything; strip is the command for that.
-	missing, err := profiles.Unmatched(configDir, targetProfiles)
+	missing, err := lair.Unmatched(configDir, targetProfiles)
 	if err != nil {
 		return err
 	}
@@ -259,9 +260,9 @@ func ApplySpec(configDir string, targetProfiles []string, allowOverCap bool) err
 
 	// Equip the targets, stash the rest — file moves live in the profiles
 	// package; the CLI keeps the pivot bookkeeping and feedback.
-	reconcile := profiles.Reconcile
+	reconcile := lair.Reconcile
 	if allowOverCap {
-		reconcile = profiles.ReconcileOverCap
+		reconcile = lair.ReconcileOverCap
 	}
 	// res holds the moves made before any failure; their locks still need releasing.
 	res, err := reconcile(configDir, targetProfiles)
@@ -293,7 +294,7 @@ func StripAllProfiles(configDir string) error {
 	}
 
 	// Empty desired set ⇒ stash everything.
-	res, err := profiles.Reconcile(configDir, nil)
+	res, err := lair.Reconcile(configDir, nil)
 	if err != nil {
 		return err
 	}
