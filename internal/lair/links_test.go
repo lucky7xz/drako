@@ -149,3 +149,42 @@ func TestMovesRefuseALinkedSubfolder(t *testing.T) {
 		t.Errorf("listing a linked inventory: %v, want ErrLinkedFolder", err)
 	}
 }
+
+// The layout check names every subfolder that is a link leaving drako's
+// folder; a real folder and a link that stays inside are fine.
+func TestCheckLayout(t *testing.T) {
+	_, dir := lairAt(t)
+	if err := CheckLayout(dir); err != nil {
+		t.Fatalf("plain folder: %v", err)
+	}
+	if err := os.Mkdir(filepath.Join(dir, "inv-real"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("inv-real", filepath.Join(dir, "inventory")); err != nil {
+		t.Fatal(err)
+	}
+	if err := CheckLayout(dir); err != nil {
+		t.Fatalf("a link that stays inside: %v", err)
+	}
+
+	linkOut(t, dir, "specs", "", true)
+	err := CheckLayout(dir)
+	if err == nil || !strings.HasPrefix(err.Error(), "specs is a linked folder, and drako does not support linked folders.\n") {
+		t.Fatalf("one linked folder: %v", err)
+	}
+	linkOut(t, dir, "trash", "", true)
+	err = CheckLayout(dir)
+	if err == nil || !strings.HasPrefix(err.Error(), "specs and trash are linked folders") {
+		t.Fatalf("two linked folders: %v", err)
+	}
+	if !strings.Contains(err.Error(), `See "Linking Your Config" in the README.`) {
+		t.Errorf("no pointer to the README: %v", err)
+	}
+}
+
+// A folder that does not exist yet (first run) has nothing to check.
+func TestCheckLayoutMissingFolder(t *testing.T) {
+	if err := CheckLayout(filepath.Join(t.TempDir(), "drako")); err != nil {
+		t.Errorf("missing folder: %v", err)
+	}
+}

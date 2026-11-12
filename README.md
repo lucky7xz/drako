@@ -348,9 +348,9 @@ cd ~/dotfiles && stow --no-folding drako
 ```
 
 **Not supported: a linked subfolder.** If `inventory/`, `specs/`, `assets/` or
-`trash/` is itself a link, drako does not read or write through it and tells
-you so. GNU Stow makes such links when the subfolder does not exist yet;
-`--no-folding` stops it from doing that.
+`trash/` is itself a link, drako stops and tells you so. GNU Stow makes such
+links when the subfolder does not exist yet; `--no-folding` stops it from
+doing that.
 
 > **Decks and profiles.** This README and drako's messages use the two words
 > interchangeably: both mean a `*.profile.toml` file.

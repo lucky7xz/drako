@@ -16,6 +16,48 @@ import (
 // leaves it. Drako follows a linked file when reading, never a linked folder.
 var ErrLinkedFolder = errors.New("is a link that leaves drako's folder; drako does not read or write through linked subfolders")
 
+// CheckLayout says whether configDir is laid out the way drako supports. A
+// subfolder drako keeps (inventory, specs, assets, trash) may not be a link
+// that leaves it; the error names every one that is, and what to do instead.
+// A folder that does not exist yet, or cannot be opened, has nothing to check.
+func CheckLayout(configDir string) error {
+	l, err := Open(configDir)
+	if err != nil {
+		return nil
+	}
+	defer l.Close()
+	var linked []string
+	for _, name := range []string{InventoryDirName, SpecsDirName, assetsDirName, TrashDirName} {
+		if l.linksOut(name) {
+			linked = append(linked, name)
+		}
+	}
+	switch len(linked) {
+	case 0:
+		return nil
+	case 1:
+		return fmt.Errorf("%s is a linked folder, and drako does not support linked folders.\n%s", linked[0], layoutHint)
+	default:
+		names := strings.Join(linked[:len(linked)-1], ", ") + " and " + linked[len(linked)-1]
+		return fmt.Errorf("%s are linked folders, and drako does not support linked folders.\n%s", names, layoutHint)
+	}
+}
+
+const layoutHint = `Link the whole drako folder or single files instead. See "Linking Your Config" in the README.`
+
+// linksOut reports whether name is a link to a folder outside the directory.
+// A link that stays inside is fine: the directory follows it.
+func (l *Lair) linksOut(name string) bool {
+	if !l.isLink(name) {
+		return false
+	}
+	if _, err := l.root.Stat(name); err == nil {
+		return false
+	}
+	info, err := os.Stat(filepath.Join(l.dir, name))
+	return err == nil && info.IsDir()
+}
+
 // read returns the content of a file drako loads. It is the one place a path
 // may leave the directory: a file that is itself a link pointing elsewhere
 // (stow and home-manager make these from a dotfiles repository) is followed,

@@ -65,6 +65,12 @@ func Run() int {
 		fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
 		return 1
 	}
+	// The TUI starts only on a layout drako supports, like every command
+	// that works in drako's folder.
+	if err := lair.CheckLayout(configDir); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
 	// One handle on the config directory for the whole process; everything
 	// drako writes there goes through it.
 	home, err := lair.Create(configDir)

@@ -21,6 +21,18 @@ func HandleCLI(args []string) (handled bool, code int) {
 
 	command := args[1]
 
+	// A command that works in drako's folder starts only on a layout drako
+	// supports: one check, before anything is read or written.
+	if worksInFolder(args) {
+		configDir, err := lair.ConfigDir()
+		if err == nil {
+			if err := lair.CheckLayout(configDir); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				return true, 1
+			}
+		}
+	}
+
 	switch command {
 	case "ls", "list":
 		return true, HandleLsCommand(args)
@@ -61,6 +73,33 @@ func HandleCLI(args []string) (handled bool, code int) {
 		PrintUsage()
 		return true, 1
 	}
+}
+
+// worksInFolder reports whether the command in args reads or writes drako's
+// folder. check does only when given no paths; with paths it lints just
+// those, so deck authors can run it anywhere.
+func worksInFolder(args []string) bool {
+	switch args[1] {
+	case "check", "--check":
+		return len(args) == 2
+	}
+	return folderCommands[args[1]]
+}
+
+// folderCommands names the commands, aliases included, that always work in
+// drako's folder. The others (version, help, open, check-terminal, agents)
+// do not need it.
+var folderCommands = map[string]bool{
+	"ls": true, "list": true,
+	"summon": true, "--summon": true,
+	"purge": true, "--purge": true,
+	"spec": true, "--spec": true,
+	"stash": true, "--stash": true,
+	"strip": true, "--strip": true,
+	"restore-bootstrap": true, "--restore-bootstrap": true,
+	"restore-core": true, "--restore-core": true,
+	"explain": true, "--explain": true,
+	"run": true,
 }
 
 func PrintUsage() {
