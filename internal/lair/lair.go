@@ -5,7 +5,9 @@
 package lair
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 )
 
@@ -41,3 +43,18 @@ func (l *Lair) Close() error { return l.root.Close() }
 // Dir is the directory's path, for messages and for code that has not moved
 // behind the Lair yet.
 func (l *Lair) Dir() string { return l.dir }
+
+// Destroy deletes the config folder and everything in it. A folder cannot
+// remove itself through its own root, so this is the one removal by path. A
+// folder that is a link loses only the link; what it points to stays.
+func Destroy(dir string) error {
+	l, err := Open(dir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("config directory does not exist: %s", dir)
+	}
+	if err != nil {
+		return err
+	}
+	l.Close()
+	return os.RemoveAll(dir)
+}

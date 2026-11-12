@@ -185,3 +185,26 @@ func (l *Lair) remove(name string) error {
 	}
 	return nil
 }
+
+// ReadFile is the content of the file called name in configDir, read the way
+// the loader reads it: a file linked into the folder is followed.
+func ReadFile(configDir, name string) ([]byte, error) {
+	l, err := Open(configDir)
+	if err != nil {
+		return nil, err
+	}
+	defer l.Close()
+	return l.read(name)
+}
+
+// SameFile reports whether the file called name in configDir is src, one file
+// on disk: a deck that is a link to the very file being summoned.
+func SameFile(configDir, name string, src fs.FileInfo) bool {
+	l, err := Open(configDir)
+	if err != nil {
+		return false
+	}
+	defer l.Close()
+	info, err := l.stat(name)
+	return err == nil && os.SameFile(info, src)
+}

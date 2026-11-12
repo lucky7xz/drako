@@ -255,3 +255,37 @@ func reconcile(configDir string, desired []string, enforceCap bool) (equip.Resul
 	}
 	return res, nil
 }
+
+// DeckFiles names, relative to configDir, every file drako check lints there
+// when given no paths: config.toml when present, and each *.profile.toml
+// equipped or in the inventory. Names drako refuses are included, so check
+// can say why.
+func DeckFiles(configDir string) ([]string, error) {
+	l, err := Open(configDir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer l.Close()
+	var names []string
+	if _, err := l.stat(ConfigFileName); err == nil {
+		names = append(names, ConfigFileName)
+	}
+	for _, dir := range []string{".", InventoryDirName} {
+		entries, err := l.entries(dir)
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		for _, e := range entries {
+			if !e.IsDir() && strings.HasSuffix(e.Name(), equip.ProfileSuffix) {
+				names = append(names, filepath.Join(dir, e.Name()))
+			}
+		}
+	}
+	return names, nil
+}

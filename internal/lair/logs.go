@@ -1,7 +1,9 @@
 package lair
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"time"
@@ -55,4 +57,29 @@ func (l *Lair) rotate(name, archive string, maxBytes int64) {
 			log.Printf("Failed to rotate log %s: %v", name, err)
 		}
 	}
+}
+
+// DeleteLogs deletes drako's logs and their archives and names those it
+// deleted. A log that is not there is skipped; one that is a link loses the
+// link, never what it points to.
+func DeleteLogs(configDir string) (deleted []string, err error) {
+	l, err := Open(configDir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer l.Close()
+	var failed []error
+	for _, name := range []string{LogFileName, LogArchiveName, HistoryFileName, HistoryArchiveName} {
+		switch err := l.root.Remove(name); {
+		case err == nil:
+			deleted = append(deleted, name)
+		case errors.Is(err, fs.ErrNotExist):
+		default:
+			failed = append(failed, fmt.Errorf("could not delete %s: %w", name, err))
+		}
+	}
+	return deleted, errors.Join(failed...)
 }

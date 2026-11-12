@@ -96,17 +96,12 @@ var knownExceptions = []string{
 	"lair/files.go os.ReadFile", // read: follows a file the user linked out of the folder
 	"lair/files.go os.Stat",     // stat, read's twin; and explain, to recognise a linked subfolder
 	"lair/lair.go os.MkdirAll",  // Create: the folder has to exist before it can be opened
+	"lair/lair.go os.RemoveAll", // Destroy: a folder cannot remove itself through its own root
 
 	// cli, bound since step 8a; each line names the sub-step that removes it
-	"cli/check.go os.ReadFile",    // 8b for drako's folder; files named by path stay (outside the folder)
-	"cli/check.go os.Stat",        // 8b
-	"cli/cli.go os.MkdirAll",      // 8b
-	"cli/purge.go os.Remove",      // 8b
-	"cli/purge.go os.RemoveAll",   // 8b
-	"cli/purge.go os.Stat",        // 8b
-	"cli/spec.go os.Stat",         // 8b
-	"cli/summon.go os.Lstat",      // 8b
-	"cli/summon.go os.Stat",       // 8b, 8c
+	"cli/check.go os.ReadFile",    // stays: a file you name by path, outside drako's folder
+	"cli/check.go os.Stat",        // stays: same
+	"cli/summon.go os.Stat",       // 8c
 	"cli/summon.go os.CreateTemp", // 8c
 	"cli/summon.go os.MkdirTemp",  // 8c
 	"cli/summon.go os.Open",       // 8c

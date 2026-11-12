@@ -261,17 +261,21 @@ func TestSummonReplacesALinkInsteadOfWritingThroughIt(t *testing.T) {
 // equipped deck without saying so.
 func TestSummonSaysWhereADeckLands(t *testing.T) {
 	cfg := t.TempDir()
-	inv := filepath.Join(cfg, "inventory")
 	writeAll(t, cfg, map[string]string{"core.profile.toml": validDeck, "inventory/st.profile.toml": validDeck})
-	for _, tt := range []struct{ dst, want string }{
-		{filepath.Join(cfg, "core.profile.toml"), "replaces your equipped core.profile.toml"},
-		{filepath.Join(inv, "st.profile.toml"), "replaces st.profile.toml in the inventory"},
-		{filepath.Join(cfg, "new.profile.toml"), "equipped"},
-		{filepath.Join(inv, "new.profile.toml"), "inventory (9 decks are equipped)"},
+	for _, tt := range []struct{ file, want string }{
+		{"core.profile.toml", "replaces your equipped core.profile.toml"},
+		{"st.profile.toml", "replaces st.profile.toml in the inventory"},
+		{"new.profile.toml", "equipped"},
 	} {
-		if got := destinationLabel(cfg, tt.dst); got != tt.want {
-			t.Errorf("%s: %q, want %q", tt.dst, got, tt.want)
+		if _, got, err := placeFor(cfg, tt.file); err != nil || got != tt.want {
+			t.Errorf("%s: %q (%v), want %q", tt.file, got, err, tt.want)
 		}
+	}
+	// Once nine are equipped, a new deck waits in the inventory.
+	s := &Summoner{ConfigDir: cfg}
+	equipDecks(t, s, 8)
+	if _, got, _ := placeFor(cfg, "new.profile.toml"); got != "inventory (9 decks are equipped)" {
+		t.Errorf("new deck with nine equipped: %q", got)
 	}
 }
 

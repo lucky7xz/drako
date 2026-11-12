@@ -145,10 +145,6 @@ func HandleSummonCommand(args []string) int {
 		fmt.Fprintf(os.Stderr, "could not get config dir: %v\n", err)
 		return 1
 	}
-	if err := os.MkdirAll(configDir, 0o755); err != nil {
-		fmt.Fprintf(os.Stderr, "could not create config dir: %v\n", err)
-		return 1
-	}
 
 	quietLogs()
 

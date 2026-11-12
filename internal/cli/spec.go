@@ -61,7 +61,7 @@ func HandleSpecCommand(args []string) int {
 	specName := args[2]
 
 	// Try resolve the spec path
-	specPath, err := resolveSpecPath(specsDir, specName)
+	specPath, err := resolveSpecPath(configDir, specName)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Spec not found: %s\n", specName)
 		fmt.Fprintf(os.Stderr, "Please create a spec file in %s\n", specsDir)
@@ -120,8 +120,7 @@ func HandleStashCommand(args []string) int {
 		return 1
 	}
 
-	specsDir := lair.SpecsDir(configDir)
-	specPath, err := resolveSpecPath(specsDir, specName)
+	specPath, err := resolveSpecPath(configDir, specName)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Spec not found: %s\n", specName)
 		return 1
@@ -196,14 +195,14 @@ func ListSpecs(configDir string, out io.Writer) error {
 
 // resolveSpecPath finds the spec file for name (forcing the .spec.toml suffix).
 // It returns the full path to the found file, or an error if not found.
-func resolveSpecPath(specsDir, name string) (string, error) {
+func resolveSpecPath(configDir, name string) (string, error) {
 	// Force .spec.toml extension
 	if !strings.HasSuffix(name, equip.SpecSuffix) {
 		name += equip.SpecSuffix
 	}
 
-	specPath := filepath.Join(specsDir, name)
-	if _, err := os.Stat(specPath); err == nil {
+	specPath := filepath.Join(lair.SpecsDir(configDir), name)
+	if lair.Exists(configDir, filepath.Join(lair.SpecsDirName, name)) {
 		return specPath, nil
 	}
 

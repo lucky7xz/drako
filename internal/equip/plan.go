@@ -88,21 +88,22 @@ func PlanReconcile(equipped, inventory, desired []string) []Move {
 	return moves
 }
 
-// Place says where an arriving profile called file lands, and under which
-// name: over the copy that is already there, equipped or in the inventory
-// (keeping that copy's spelling), so there is never a second one; else
-// equipped while fewer than MaxEquipped are; else the inventory.
-func Place(equipped, stashed []Entry, file string) (Location, string) {
+// Place says where an arriving profile called file lands, under which name,
+// and whether it replaces a copy: over the copy that is already there,
+// equipped or in the inventory (keeping that copy's spelling), so there is
+// never a second one; else equipped while fewer than MaxEquipped are; else
+// the inventory.
+func Place(equipped, stashed []Entry, file string) (loc Location, name string, replaces bool) {
 	norm := NormalizeName(file)
 	same := func(e Entry) bool { return e.Norm == norm }
 	if i := slices.IndexFunc(equipped, same); i >= 0 {
-		return Equipped, equipped[i].File
+		return Equipped, equipped[i].File, true
 	}
 	if i := slices.IndexFunc(stashed, same); i >= 0 {
-		return Inventory, stashed[i].File
+		return Inventory, stashed[i].File, true
 	}
 	if len(equipped) < MaxEquipped {
-		return Equipped, file
+		return Equipped, file, false
 	}
-	return Inventory, file
+	return Inventory, file, false
 }

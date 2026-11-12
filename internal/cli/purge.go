@@ -77,16 +77,12 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 	// Case 2: Purge Logs
 	if opts.TargetLogs {
 		log.Printf("Purging Logs (Permanent Delete)")
-		for _, path := range lair.LogFiles(configDir) {
-			name := filepath.Base(path)
-			// Permanent deletion as requested
-			if err := os.Remove(path); err != nil {
-				if !os.IsNotExist(err) {
-					failed = append(failed, fmt.Errorf("could not delete %s: %w", name, err))
-				}
-			} else {
-				fmt.Printf("  💀 Deleted %s\n", name)
-			}
+		deleted, err := lair.DeleteLogs(configDir)
+		for _, name := range deleted {
+			fmt.Printf("  💀 Deleted %s\n", name)
+		}
+		if err != nil {
+			failed = append(failed, err)
 		}
 	}
 
@@ -109,15 +105,10 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 
 // performFullNuke implements the "Destroy Everything" logic (Old --all)
 func performFullNuke(configDir string) error {
-	// Confirm existence
-	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		return fmt.Errorf("config directory does not exist: %s", configDir)
-	}
-
 	fmt.Printf("\n💀 DESTROYING EVERYTHING in %s\n", configDir)
 	// The caller (HandlePurgeCommand) should have asked for confirmation.
 
-	if err := os.RemoveAll(configDir); err != nil {
+	if err := lair.Destroy(configDir); err != nil {
 		return fmt.Errorf("failed to destroy config directory: %w", err)
 	}
 	return nil
@@ -206,7 +197,7 @@ func purgeFile(configDir, target string) (string, error) {
 	if filepath.Ext(file) != ".toml" {
 		file += equip.ProfileSuffix
 	}
-	if _, err := os.Stat(filepath.Join(configDir, file)); err == nil {
+	if lair.Exists(configDir, file) {
 		return file, nil
 	}
 	for _, loc := range []equip.Location{equip.Equipped, equip.Inventory} {

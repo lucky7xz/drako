@@ -137,19 +137,20 @@ func TestPlace(t *testing.T) {
 		file              string
 		wantLoc           Location
 		wantName          string
+		wantReplaces      bool
 	}{
-		{"new, room left: equipped", []Entry{entry("a.profile.toml")}, nil, "b.profile.toml", Equipped, "b.profile.toml"},
-		{"new, nine equipped: inventory", full, nil, "b.profile.toml", Inventory, "b.profile.toml"},
-		{"already equipped: replaced in place, even when full", full, nil, "e3.profile.toml", Equipped, "e3.profile.toml"},
-		{"already stashed: replaced in the inventory", nil, []Entry{entry("b.profile.toml")}, "b.profile.toml", Inventory, "b.profile.toml"},
-		{"same deck, other spelling: the existing name is kept", []Entry{entry("Work.profile.toml")}, nil, "work.profile.toml", Equipped, "Work.profile.toml"},
-		{"equipped wins over stashed", []Entry{entry("b.profile.toml")}, []Entry{entry("B.profile.toml")}, "b.profile.toml", Equipped, "b.profile.toml"},
+		{"new, room left: equipped", []Entry{entry("a.profile.toml")}, nil, "b.profile.toml", Equipped, "b.profile.toml", false},
+		{"new, nine equipped: inventory", full, nil, "b.profile.toml", Inventory, "b.profile.toml", false},
+		{"already equipped: replaced in place, even when full", full, nil, "e3.profile.toml", Equipped, "e3.profile.toml", true},
+		{"already stashed: replaced in the inventory", nil, []Entry{entry("b.profile.toml")}, "b.profile.toml", Inventory, "b.profile.toml", true},
+		{"same deck, other spelling: the existing name is kept", []Entry{entry("Work.profile.toml")}, nil, "work.profile.toml", Equipped, "Work.profile.toml", true},
+		{"equipped wins over stashed", []Entry{entry("b.profile.toml")}, []Entry{entry("B.profile.toml")}, "b.profile.toml", Equipped, "b.profile.toml", true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			loc, name := Place(tc.equipped, tc.stashed, tc.file)
-			if loc != tc.wantLoc || name != tc.wantName {
-				t.Errorf("Place = %v, %q; want %v, %q", loc, name, tc.wantLoc, tc.wantName)
+			loc, name, replaces := Place(tc.equipped, tc.stashed, tc.file)
+			if loc != tc.wantLoc || name != tc.wantName || replaces != tc.wantReplaces {
+				t.Errorf("Place = %v, %q, %v; want %v, %q, %v", loc, name, replaces, tc.wantLoc, tc.wantName, tc.wantReplaces)
 			}
 		})
 	}

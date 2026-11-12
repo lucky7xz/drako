@@ -1,10 +1,8 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -39,22 +37,24 @@ func HandleCheckCommand(args []string) int {
 
 // checkTargets resolves the argument list to profile files. Arguments may be
 // files or directories (scanned non-recursively for *.profile.toml); no
-// arguments means config.toml, the equipped dir and the inventory.
+// arguments means config.toml, the equipped dir and the inventory, as lair
+// lists them.
 func checkTargets(args []string) ([]string, error) {
 	if len(args) == 0 {
 		configDir, err := lair.ConfigDir()
 		if err != nil {
 			return nil, fmt.Errorf("could not get config dir: %v", err)
 		}
-		if _, err := os.Stat(lair.ConfigFile(configDir)); err == nil {
-			args = append(args, lair.ConfigFile(configDir))
+		names, err := lair.DeckFiles(configDir)
+		if err != nil {
+			return nil, err
 		}
-		// A default dir that doesn't exist yet has nothing to check.
-		for _, d := range []string{configDir, lair.InventoryDir(configDir)} {
-			if _, err := os.Stat(d); !errors.Is(err, fs.ErrNotExist) {
-				args = append(args, d)
-			}
+		var files []string
+		for _, n := range names {
+			files = append(files, filepath.Join(configDir, n))
 		}
+		sort.Strings(files)
+		return files, nil
 	}
 
 	var files []string
@@ -82,7 +82,7 @@ func runChecks(out io.Writer, files []string) int {
 	var rows [][]string
 	clashes := nameClashes(files)
 	for _, f := range files {
-		src, err := os.ReadFile(f)
+		src, err := readForCheck(f)
 		var findings []profile.Finding
 		switch {
 		case err != nil:
@@ -122,6 +122,17 @@ func runChecks(out io.Writer, files []string) int {
 			total, len(files), filesWithErrors)
 	}
 	return filesWithErrors
+}
+
+// readForCheck reads a file to lint. One in drako's folder is read through
+// lair, the way the loader reads it; one named by path elsewhere, as it is.
+func readForCheck(path string) ([]byte, error) {
+	if dir, err := lair.ConfigDir(); err == nil {
+		if rel, err := filepath.Rel(dir, path); err == nil && filepath.IsLocal(rel) {
+			return lair.ReadFile(dir, rel)
+		}
+	}
+	return os.ReadFile(path)
 }
 
 // nameClashes warns about deck files drako cannot tell apart: the same name

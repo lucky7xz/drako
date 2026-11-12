@@ -128,13 +128,13 @@ func (s *Summoner) Summon(sourceURL string) error {
 		return err
 	}
 
-	dstPath, err := placeFor(s.ConfigDir, filename)
+	dstPath, where, err := placeFor(s.ConfigDir, filename)
 	if err != nil {
 		return err
 	}
 	fmt.Printf("\nYou are about to download a profile:\n")
 	fmt.Printf("  Source: %s\n", sourceURL)
-	fmt.Printf("  Destination: %s\n", destinationLabel(s.ConfigDir, dstPath))
+	fmt.Printf("  Destination: %s\n", where)
 	fmt.Printf("  Path: %s\n", dstPath)
 	fmt.Println()
 
@@ -151,35 +151,32 @@ func (s *Summoner) Summon(sourceURL string) error {
 	return s.summonFromHTTP(sourceURL, dstPath)
 }
 
-// placeFor says where the summoned deck named file lands, as a path: see
-// equip.Place for the rule. It reads the disk each time, so decks summoned
-// earlier in the same run count.
-func placeFor(configDir, file string) (string, error) {
+// placeFor says where the summoned deck named file lands, as a path, and in
+// words for the prompt: see equip.Place for the rule. It reads the disk each
+// time, so decks summoned earlier in the same run count.
+func placeFor(configDir, file string) (dstPath, where string, err error) {
 	equipped, err := lair.List(configDir, equip.Equipped)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	stashed, err := lair.List(configDir, equip.Inventory)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	loc, name := equip.Place(equipped, stashed, file)
-	return filepath.Join(lair.LocationDir(configDir, loc), name), nil
+	loc, name, replaces := equip.Place(equipped, stashed, file)
+	return filepath.Join(lair.LocationDir(configDir, loc), name), destinationLabel(loc, name, replaces), nil
 }
 
-// destinationLabel says in words where a summoned deck lands, for the prompt:
-// over the deck you already have, equipped or stashed, or as a new deck —
-// equipped, or in the inventory once MaxEquipped are.
-func destinationLabel(configDir, dstPath string) string {
-	name := filepath.Base(dstPath)
-	stashed := filepath.Dir(dstPath) != filepath.Clean(configDir)
-	if _, err := os.Lstat(dstPath); err == nil {
-		if stashed {
-			return "replaces " + name + " in the inventory"
-		}
+// destinationLabel says in words where a summoned deck lands: over the deck
+// you already have, equipped or stashed, or as a new deck — equipped, or in
+// the inventory once MaxEquipped are.
+func destinationLabel(loc equip.Location, name string, replaces bool) string {
+	switch {
+	case replaces && loc == equip.Inventory:
+		return "replaces " + name + " in the inventory"
+	case replaces:
 		return "replaces your equipped " + name
-	}
-	if stashed {
+	case loc == equip.Inventory:
 		return fmt.Sprintf("inventory (%d decks are equipped)", equip.MaxEquipped)
 	}
 	return "equipped"
@@ -240,15 +237,15 @@ func installSpec(configDir, srcPath, file string) error {
 	return lair.InstallSpec(configDir, file, in)
 }
 
-// sameFile reports whether a and b are one file on disk: the deck in the
-// config dir is a link to the very file being summoned.
-func sameFile(a, b string) bool {
-	ai, err := os.Stat(a)
+// sameFile reports whether the deck at dstPath, in the config dir, and the
+// file being summoned are one file on disk: the deck is a link to it.
+func sameFile(configDir, srcPath, dstPath string) bool {
+	src, err := os.Stat(srcPath)
 	if err != nil {
 		return false
 	}
-	bi, err := os.Stat(b)
-	return err == nil && os.SameFile(ai, bi)
+	rel, err := filepath.Rel(configDir, dstPath)
+	return err == nil && lair.SameFile(configDir, rel, src)
 }
 
 // summonOutcome classifies what happened to one candidate file.
@@ -423,7 +420,7 @@ func (s *Summoner) summonRepoProfile(srcPath, tempDir string) (summonOutcome, er
 	}
 	assets := summon.ProfileAssets(profile)
 
-	dstPath, err := placeFor(s.ConfigDir, dstName)
+	dstPath, where, err := placeFor(s.ConfigDir, dstName)
 	if err != nil {
 		return outcomeFailed, err
 	}
@@ -435,7 +432,7 @@ func (s *Summoner) summonRepoProfile(srcPath, tempDir string) (summonOutcome, er
 	// Ask for confirmation (include assets plan if any)
 	fmt.Printf("  File: %s\n", dstName)
 	fmt.Printf("  Size: %d bytes (%.1f KB)\n", size, float64(size)/1024)
-	fmt.Printf("  Destination: %s\n", destinationLabel(s.ConfigDir, dstPath))
+	fmt.Printf("  Destination: %s\n", where)
 	profileName := strings.TrimSuffix(filepath.Base(dstPath), ".profile.toml")
 	if len(assets) > 0 {
 		printAssetsPlan(tempDir, filepath.Dir(srcPath), assets, profileName)
@@ -452,7 +449,7 @@ func (s *Summoner) summonRepoProfile(srcPath, tempDir string) (summonOutcome, er
 		return outcomeCancelled, nil
 	}
 
-	if sameFile(srcPath, dstPath) {
+	if sameFile(s.ConfigDir, srcPath, dstPath) {
 		// The deck is a link to this very file: it is already in place.
 		fmt.Printf("✓ Already in place: %s\n", dstName)
 	} else if err := installProfile(s.ConfigDir, srcPath, dstPath); err != nil {
@@ -573,7 +570,6 @@ func visible(s string) string {
 // profiles, a spec copy failure is reported and the summon continues.
 func (s *Summoner) summonRepoSpec(srcPath, specsDir string) summonOutcome {
 	dstName := filepath.Base(srcPath)
-	dstPath := filepath.Join(specsDir, dstName)
 
 	if err := glyph.CheckName(dstName); err != nil {
 		fmt.Printf("⚠️  Skipping %q: file name %v\n", dstName, err)
@@ -591,7 +587,7 @@ func (s *Summoner) summonRepoSpec(srcPath, specsDir string) summonOutcome {
 	fmt.Printf("  File: %s\n", dstName)
 	fmt.Printf("  Size: %d bytes\n", size)
 	fmt.Printf("  Destination: %s\n", specsDir)
-	if _, err := os.Stat(dstPath); err == nil {
+	if lair.Exists(s.ConfigDir, filepath.Join(lair.SpecsDirName, dstName)) {
 		fmt.Printf("  ⚠️  Warning: Will overwrite existing file\n")
 	}
 
