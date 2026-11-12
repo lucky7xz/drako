@@ -107,13 +107,14 @@ func (l *Lair) writeNew(name string, data []byte) (bool, error) {
 
 // replace puts data in name; see replaceFrom.
 func (l *Lair) replace(name string, data []byte) error {
-	return l.replaceFrom(name, bytes.NewReader(data))
+	return l.replaceFrom(name, bytes.NewReader(data), 0o644)
 }
 
 // replaceFrom puts what r holds in name through a temp file next to it and a
 // rename, so a crash mid-write never leaves name truncated. A name that was a
-// link becomes a plain file; what the link pointed at is not touched.
-func (l *Lair) replaceFrom(name string, r io.Reader) error {
+// link becomes a plain file; what the link pointed at is not touched. The
+// file ends up with exactly the mode perm.
+func (l *Lair) replaceFrom(name string, r io.Reader, perm fs.FileMode) error {
 	base := filepath.Base(name)
 	tmp := filepath.Join(filepath.Dir(name), "."+strings.TrimSuffix(base, filepath.Ext(base))+"-"+rand.Text()+".tmp")
 	f, err := l.root.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
@@ -125,7 +126,7 @@ func (l *Lair) replaceFrom(name string, r io.Reader) error {
 		f.Close()
 		return err
 	}
-	if err := f.Chmod(0o644); err != nil {
+	if err := f.Chmod(perm); err != nil {
 		f.Close()
 		return err
 	}

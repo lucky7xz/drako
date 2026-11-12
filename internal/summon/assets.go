@@ -40,11 +40,12 @@ func ProfileAssets(profile profile.File) []string {
 }
 
 // AssetSink receives what CopyAssets finds. Install is handed each allowed
-// file under the name it should have inside the profile's assets folder;
+// file under the name it should have inside the profile's assets folder, and
+// whether it is executable at its source;
 // Large is told about a file over the warning size just before it is handed
 // over (inFolder: it came from a declared folder, and name is relative to it).
 type AssetSink struct {
-	Install func(rel string, r io.Reader) error
+	Install func(rel string, r io.Reader, executable bool) error
 	Large   func(name string, size int64, inFolder bool)
 }
 
@@ -202,7 +203,11 @@ func hand(sink AssetSink, rel, src string) error {
 		return err
 	}
 	defer in.Close()
-	return sink.Install(rel, in)
+	info, err := in.Stat()
+	if err != nil {
+		return err
+	}
+	return sink.Install(rel, in, info.Mode()&0o111 != 0)
 }
 
 // copyDirWithLimits recursively hands the files of srcDir to sink, with

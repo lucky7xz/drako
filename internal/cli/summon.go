@@ -447,8 +447,8 @@ func (s *Summoner) summonRepoProfile(srcPath, tempDir string) (summonOutcome, er
 	// Handle assets (git-only feature)
 	if len(assets) > 0 {
 		aCopied, aSkipped, aMissing, aBytes := summon.CopyAssets(tempDir, filepath.Dir(srcPath), assets, summon.AssetSink{
-			Install: func(rel string, r io.Reader) error {
-				return lair.InstallAsset(s.ConfigDir, profileName, rel, r)
+			Install: func(rel string, r io.Reader, executable bool) error {
+				return lair.InstallAsset(s.ConfigDir, profileName, rel, r, executable)
 			},
 			Large: func(name string, size int64, inFolder bool) {
 				if inFolder {

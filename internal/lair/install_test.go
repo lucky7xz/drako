@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -22,13 +23,30 @@ func TestInstallPutsEachKindInItsPlace(t *testing.T) {
 	if err := InstallSpec(dir, "dev.spec.toml", strings.NewReader("s")); err != nil {
 		t.Fatal(err)
 	}
-	if err := InstallAsset(dir, "a", filepath.Join("scripts", "run.sh"), strings.NewReader("r")); err != nil {
+	if err := InstallAsset(dir, "a", filepath.Join("scripts", "run.sh"), strings.NewReader("r"), false); err != nil {
 		t.Fatal(err)
 	}
 	assertContent(t, filepath.Join(dir, "a.profile.toml"), "a")
 	assertContent(t, filepath.Join(dir, "inventory", "b.profile.toml"), "b")
 	assertContent(t, filepath.Join(dir, "specs", "dev.spec.toml"), "s")
 	assertContent(t, filepath.Join(dir, "assets", "a", "scripts", "run.sh"), "r")
+
+	// An executable asset stays runnable; nothing else is ever executable.
+	if err := InstallAsset(dir, "a", "tool.sh", strings.NewReader("t"), true); err != nil {
+		t.Fatal(err)
+	}
+	if runtime.GOOS != "windows" {
+		for name, want := range map[string]os.FileMode{
+			filepath.Join("assets", "a", "tool.sh"):           0o755,
+			filepath.Join("assets", "a", "scripts", "run.sh"): 0o644,
+			"a.profile.toml":                        0o644,
+			filepath.Join("specs", "dev.spec.toml"): 0o644,
+		} {
+			if info, err := os.Stat(filepath.Join(dir, name)); err != nil || info.Mode().Perm() != want {
+				t.Errorf("%s: mode %v (%v), want %o", name, info.Mode().Perm(), err, want)
+			}
+		}
+	}
 
 	// Installing again replaces, and leaves no temp file behind.
 	if err := InstallProfile(dir, equip.Equipped, "a.profile.toml", strings.NewReader("a2")); err != nil {
@@ -54,9 +72,9 @@ func TestInstallRefusesNamesThatAreNotPlain(t *testing.T) {
 		InstallProfile(dir, equip.Equipped, filepath.Join("inventory", "x.profile.toml"), strings.NewReader("x")),
 		InstallProfile(dir, equip.Trash, "x.profile.toml", strings.NewReader("x")),
 		InstallSpec(dir, "../escaped.txt", strings.NewReader("x")),
-		InstallAsset(dir, "..", "x", strings.NewReader("x")),
-		InstallAsset(dir, "a", filepath.Join("..", "..", "escaped.txt"), strings.NewReader("x")),
-		InstallAsset(dir, "a", outside, strings.NewReader("x")),
+		InstallAsset(dir, "..", "x", strings.NewReader("x"), false),
+		InstallAsset(dir, "a", filepath.Join("..", "..", "escaped.txt"), strings.NewReader("x"), false),
+		InstallAsset(dir, "a", outside, strings.NewReader("x"), false),
 	}
 	for i, err := range bad {
 		if err == nil {
@@ -77,7 +95,7 @@ func TestInstallRefusesALinkedSubfolder(t *testing.T) {
 	errs := map[string]error{
 		"inventory": InstallProfile(dir, equip.Inventory, "b.profile.toml", strings.NewReader("b")),
 		"specs":     InstallSpec(dir, "dev.spec.toml", strings.NewReader("s")),
-		"assets":    InstallAsset(dir, "a", "run.sh", strings.NewReader("r")),
+		"assets":    InstallAsset(dir, "a", "run.sh", strings.NewReader("r"), false),
 	}
 	for name, err := range errs {
 		if !errors.Is(err, ErrLinkedFolder) || !strings.HasPrefix(err.Error(), name+" ") {

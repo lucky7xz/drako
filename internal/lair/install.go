@@ -3,6 +3,7 @@ package lair
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"path/filepath"
 
 	"github.com/lucky7xz/drako/internal/equip"
@@ -22,7 +23,7 @@ func InstallProfile(configDir string, loc equip.Location, file string, r io.Read
 	if err := bareName(file); err != nil {
 		return err
 	}
-	return install(configDir, filepath.Join(folder(loc), file), r)
+	return install(configDir, filepath.Join(folder(loc), file), r, 0o644)
 }
 
 // InstallSpec writes what r holds as the spec called file in the specs folder.
@@ -30,19 +31,24 @@ func InstallSpec(configDir, file string, r io.Reader) error {
 	if err := bareName(file); err != nil {
 		return err
 	}
-	return install(configDir, filepath.Join(SpecsDirName, file), r)
+	return install(configDir, filepath.Join(SpecsDirName, file), r, 0o644)
 }
 
 // InstallAsset writes what r holds as rel (e.g. "scripts/run.sh") in the
-// assets folder of the profile called profileName.
-func InstallAsset(configDir, profileName, rel string, r io.Reader) error {
+// assets folder of the profile called profileName. An executable asset is
+// installed so it can be run (mode 755); any other as a plain file (644).
+func InstallAsset(configDir, profileName, rel string, r io.Reader, executable bool) error {
 	if err := bareName(profileName); err != nil {
 		return err
 	}
 	if !filepath.IsLocal(rel) {
 		return fmt.Errorf("asset path %q does not stay inside the profile's assets", rel)
 	}
-	return install(configDir, filepath.Join(assetsDirName, profileName, rel), r)
+	perm := fs.FileMode(0o644)
+	if executable {
+		perm = 0o755
+	}
+	return install(configDir, filepath.Join(assetsDirName, profileName, rel), r, perm)
 }
 
 // MakeInventory makes sure the inventory folder exists.
@@ -55,7 +61,7 @@ func MakeSpecs(configDir string) error {
 	return makeFolder(configDir, SpecsDirName)
 }
 
-func install(configDir, name string, r io.Reader) error {
+func install(configDir, name string, r io.Reader, perm fs.FileMode) error {
 	l, err := Open(configDir)
 	if err != nil {
 		return err
@@ -64,7 +70,7 @@ func install(configDir, name string, r io.Reader) error {
 	if err := l.mkdirAll(filepath.Dir(name)); err != nil {
 		return err
 	}
-	return l.replaceFrom(name, r)
+	return l.replaceFrom(name, r, perm)
 }
 
 func makeFolder(configDir, name string) error {

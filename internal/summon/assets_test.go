@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -107,10 +108,17 @@ func TestAssetsRefusedAndMissingAreToldApart(t *testing.T) {
 		}
 	}
 
+	if err := os.Chmod(filepath.Join(repo, "scripts", "run.sh"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	var installed []string
 	copied, skipped, missing, _ := CopyAssets(repo, repo, declared, AssetSink{
-		Install: func(rel string, r io.Reader) error {
+		Install: func(rel string, r io.Reader, executable bool) error {
 			installed = append(installed, filepath.ToSlash(rel))
+			// The execute bit travels with the file: the script has it, the note does not.
+			if wantExec := strings.HasSuffix(rel, ".sh"); executable != wantExec {
+				t.Errorf("%s: executable=%v, want %v", rel, executable, wantExec)
+			}
 			return nil
 		},
 		Large: func(string, int64, bool) {},
