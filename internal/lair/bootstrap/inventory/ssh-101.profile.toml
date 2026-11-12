@@ -89,7 +89,7 @@ else echo "❓ No ufw/firewalld found — restrict port 22 with your firewall's 
 fi
 """, description = "Tighter: SSH answers only one address. Great when you always connect from the same place; painful the day your IP changes. Keep a second way in before you combine this with removing the general allow rule.", auto_close_execution = false },
     { name = "🚨 Enable Firewall", danger = true, command = """
-echo "⚠️  Once enabled, everything not explicitly allowed is blocked."
+echo "🚨 Once enabled, everything not explicitly allowed is blocked."
 echo "    On a REMOTE machine, run 'Allow SSH (22)' first — otherwise this is a self-lockout."
 printf "Enable the firewall now? [y/N]: "; read ok
 [ "$ok" = y ] || { echo cancelled; exit 0; }
@@ -205,7 +205,7 @@ items = [
 echo "Current effective setting:"
 sudo sshd -T 2>/dev/null | grep -i '^passwordauthentication' || { echo "Could not query sshd — is the server installed?"; exit 1; }
 echo ""
-echo "⚠️  Only proceed if 'Test Key Login' JUST worked from the machine you connect from."
+echo "🚨 Only proceed if 'Test Key Login' JUST worked from the machine you connect from."
 echo "    With passwords off and a broken key, there is no way back in."
 printf "Set PasswordAuthentication no? [y/N]: "; read ok
 [ "$ok" = y ] || { echo cancelled; exit 0; }
@@ -223,7 +223,7 @@ fi
 echo "Current effective setting:"
 sudo sshd -T 2>/dev/null | grep -i '^permitrootlogin' || { echo "Could not query sshd — is the server installed?"; exit 1; }
 echo ""
-echo "⚠️  Make sure a normal user with sudo works BEFORE locking root out of SSH."
+echo "🚨 Make sure a normal user with sudo works BEFORE locking root out of SSH."
 printf "Set PermitRootLogin no? [y/N]: "; read ok
 [ "$ok" = y ] || { echo cancelled; exit 0; }
 sudo sed -i.bak -E 's/^[#[:space:]]*PermitRootLogin[[:space:]].*/PermitRootLogin no/' /etc/ssh/sshd_config

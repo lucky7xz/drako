@@ -93,7 +93,7 @@ items = [
 # Yours first, then the system's (root owns those).
 nix-collect-garbage --delete-older-than 14d
 sudo nix-collect-garbage --delete-older-than 14d
-echo "ℹ️ The boot menu drops the deleted generations on your next rebuild."
+echo "💡 The boot menu drops the deleted generations on your next rebuild."
 ''', linux_generic = """
 if command -v apt >/dev/null; then sudo apt autoremove
 elif command -v dnf >/dev/null; then sudo dnf autoremove
@@ -349,7 +349,7 @@ fi
 """, macos = "brew install micro", windows = "winget install -e --id zyedidia.micro" }, auto_close_execution = false },
     { name = "Install Flatpak", description = "Installs Flatpak and adds Flathub, the big shared shelf of Linux apps, switching it on in full where Fedora ships it disabled or filtered. Flatpak apps carry their own libraries and run sandboxed, so the same app works the same on any distro. Restart once afterwards so new apps show up in your menu.", command = { linux_immutable = '''flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo && flatpak remote-modify --enable --no-filter flathub && echo "✅ Flathub is ready."''', linux_debian = '''sudo apt install flatpak && flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo && echo "✅ Flatpak and Flathub are ready. Restart your computer to finish the setup."''', linux_arch = '''sudo pacman -S flatpak && flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo && echo "✅ Flatpak and Flathub are ready. Restart your computer to finish the setup."''', linux_fedora = '''sudo dnf install flatpak && flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo && flatpak remote-modify --enable --no-filter flathub && echo "✅ Flatpak and Flathub are ready. Restart your computer to finish the setup."''', linux_suse = '''sudo zypper install flatpak && flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo && echo "✅ Flatpak and Flathub are ready. Restart your computer to finish the setup."''', linux_void = '''sudo xbps-install -S flatpak && flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo && echo "✅ Flatpak and Flathub are ready. Restart your computer to finish the setup."''', linux_nixos = '''
 # NixOS turns Flatpak on in the system config, not with a package install.
-echo "❄️ On NixOS, Flatpak is enabled in your system config. Add this to"
+echo "🧊 On NixOS, Flatpak is enabled in your system config. Add this to"
 echo "   /etc/nixos/configuration.nix (or your flake's NixOS module):"
 echo
 echo "     services.flatpak.enable = true;"
