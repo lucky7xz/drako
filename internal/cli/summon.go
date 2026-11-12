@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/lucky7xz/drako/internal/equip"
+	"github.com/lucky7xz/drako/internal/glyph"
 	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/profile"
 	"github.com/lucky7xz/drako/internal/summon"
@@ -409,7 +410,7 @@ func (s *Summoner) summonRepoProfile(srcPath, tempDir string) (summonOutcome, er
 
 	// Validate filename
 	if err := summon.ValidateFilename(dstName); err != nil {
-		fmt.Printf("⚠️  Skipping %s: %v\n", dstName, err)
+		fmt.Printf("⚠️  Skipping %q: %v\n", dstName, err)
 		return outcomeSkipped, nil
 	}
 
@@ -574,6 +575,10 @@ func (s *Summoner) summonRepoSpec(srcPath, specsDir string) summonOutcome {
 	dstName := filepath.Base(srcPath)
 	dstPath := filepath.Join(specsDir, dstName)
 
+	if err := glyph.CheckName(dstName); err != nil {
+		fmt.Printf("⚠️  Skipping %q: file name %v\n", dstName, err)
+		return outcomeSkipped
+	}
 	// Validate spec file content
 	if err := summon.ValidateSpecFile(srcPath); err != nil {
 		fmt.Printf("⚠️  Skipping %s: %v\n", dstName, err)

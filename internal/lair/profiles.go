@@ -4,17 +4,21 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/lucky7xz/drako/internal/equip"
+	"github.com/lucky7xz/drako/internal/glyph"
 )
 
 // This file lists and moves profile files. It deliberately does no TOML
 // parsing: the file-moving commands (stash, apply, strip, purge) must see
-// every matching file, including profiles that fail to parse.
+// every matching file, including profiles that fail to parse. The one
+// exception is a file whose name drako refuses (CheckFileName): it is left out
+// everywhere, and drako check names it.
 
 // folder is where loc's profiles sit, as a name inside the config directory.
 func folder(loc equip.Location) string {
@@ -64,12 +68,31 @@ func (l *Lair) list(name, suffix string, norm func(string) string) ([]equip.Entr
 		if de.IsDir() || !strings.HasSuffix(de.Name(), suffix) {
 			continue
 		}
+		if err := CheckFileName(de.Name()); err != nil {
+			log.Printf("left out %q: %v", de.Name(), err)
+			continue
+		}
 		base := strings.TrimSuffix(de.Name(), suffix)
 		entries = append(entries, equip.Entry{File: de.Name(), Name: base, Norm: norm(base)})
 	}
 
 	sort.Slice(entries, func(i, j int) bool { return entries[i].Name < entries[j].Name })
 	return entries, nil
+}
+
+// CheckFileName says why drako refuses the file called name: a deck's name is
+// drawn on screen and typed by you (drako run work:B2, DRAKO_PROFILE), so it
+// must be exactly what drako draws (glyph.CheckName). When only invisible
+// characters are in the way, it names the file to rename it to.
+func CheckFileName(name string) error {
+	err := glyph.CheckName(name)
+	if err == nil {
+		return nil
+	}
+	if glyph.Check(name) == nil {
+		return fmt.Errorf("file name %v. Rename it to %q", err, glyph.Clean(name))
+	}
+	return fmt.Errorf("file name %v", err)
 }
 
 // Move relocates file (a bare filename) from one location to another under

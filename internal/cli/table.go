@@ -7,13 +7,16 @@ import (
 	"unicode"
 
 	"github.com/charmbracelet/x/ansi"
+	"github.com/lucky7xz/drako/internal/glyph"
 )
 
 // safeText shows control characters as visible escapes (\x1b), so text from a
-// deck can't drive the terminal. Newlines and tabs pass through.
+// deck can't drive the terminal, and leaves out what terminals draw at
+// different widths (glyph.Clean), so the borders line up. Newlines and tabs
+// pass through.
 func safeText(s string) string {
 	if !strings.ContainsFunc(s, isUnsafeRune) {
-		return s
+		return glyph.Clean(s)
 	}
 	var b strings.Builder
 	for _, r := range s {
@@ -23,7 +26,7 @@ func safeText(s string) string {
 			b.WriteRune(r)
 		}
 	}
-	return b.String()
+	return glyph.Clean(b.String())
 }
 
 func isUnsafeRune(r rune) bool {

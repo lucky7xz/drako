@@ -174,3 +174,19 @@ func TestRunChecks_WarnsOnSameDeckInTwoPlaces(t *testing.T) {
 		t.Errorf("want a warning on each copy naming inventory/:\n%s", got)
 	}
 }
+
+// check names a deck file drako would refuse for its name.
+func TestCheckRefusedFileName(t *testing.T) {
+	dir := t.TempDir()
+	f := filepath.Join(dir, "team\U0001f469\u200d\U0001f4bb.profile.toml")
+	if err := os.WriteFile(f, []byte(validDeck), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var b strings.Builder
+	if n := runChecks(&b, []string{f}); n != 1 {
+		t.Errorf("files with errors = %d, want 1\n%s", n, b.String())
+	}
+	if !strings.Contains(b.String(), "file name contains U+200D") || strings.Contains(b.String(), "\u200d") {
+		t.Errorf("output:\n%s", b.String())
+	}
+}

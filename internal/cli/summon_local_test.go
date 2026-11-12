@@ -274,3 +274,27 @@ func TestSummonSaysWhereADeckLands(t *testing.T) {
 		}
 	}
 }
+
+// A deck whose file name would steer the terminal is skipped; the rest of
+// the folder is summoned.
+func TestSummonSkipsRefusedFileName(t *testing.T) {
+	s, dir := localSummoner(t)
+	bad := "x\x1b]52;c;eA==.profile.toml"
+	writeAll(t, dir, map[string]string{"good.profile.toml": validDeck, bad: validDeck})
+	var err error
+	out := captureStdout(t, func() { err = s.Summon(dir) })
+	if err != nil {
+		t.Fatalf("Summon: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(s.ConfigDir, "good.profile.toml")); err != nil {
+		t.Errorf("good deck not summoned: %v", err)
+	}
+	for _, d := range []string{s.ConfigDir, filepath.Join(s.ConfigDir, "inventory")} {
+		if _, err := os.Stat(filepath.Join(d, bad)); err == nil {
+			t.Errorf("refused deck landed in %s", d)
+		}
+	}
+	if strings.Contains(out, "\x1b]52") {
+		t.Error("the file name reached the terminal unescaped")
+	}
+}

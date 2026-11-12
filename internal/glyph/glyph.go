@@ -22,6 +22,22 @@ func Check(s string) error {
 	return nil
 }
 
+// CheckName reports why name cannot be a name drako draws and you type, such
+// as a deck's file name: it steers the terminal (Check), or it holds an
+// invisible character drako would leave out when drawing it, so what you see
+// is not what you would have to type.
+func CheckName(name string) error {
+	if err := Check(name); err != nil {
+		return err
+	}
+	for _, r := range name {
+		if invisible(r) {
+			return fmt.Errorf("contains %U, which drako does not draw as written", r)
+		}
+	}
+	return nil
+}
+
 // Clean is s as drako draws it. A character that would steer the terminal
 // becomes U+FFFD. The invisible characters terminals disagree about are
 // dropped: joiners, variation selectors and other format characters. A

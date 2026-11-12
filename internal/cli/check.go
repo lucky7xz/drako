@@ -92,6 +92,9 @@ func runChecks(out io.Writer, files []string) int {
 		default:
 			findings = profile.Lint(src)
 		}
+		if err := lair.CheckFileName(filepath.Base(f)); err != nil {
+			findings = append(findings, profile.Finding{Level: "error", Msg: err.Error()})
+		}
 		for _, msg := range clashes[f] {
 			findings = append(findings, profile.Finding{Level: "warning", Msg: msg})
 		}

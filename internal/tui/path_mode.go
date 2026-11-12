@@ -11,6 +11,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/lucky7xz/drako/internal/glyph"
 	"github.com/lucky7xz/drako/internal/host"
 	"github.com/lucky7xz/drako/internal/settings"
 )
@@ -402,7 +403,7 @@ func (pm *PathModel) RenderPathBar(active bool, styles Styles, width int) string
 		if active && i == pm.SelectedPathIndex {
 			style = styles.SelectedPath
 		}
-		rendered[i] = style.Render(component)
+		rendered[i] = style.Render(glyph.Clean(component)) // a folder name is drawn, never trusted
 		widths[i] = lipgloss.Width(rendered[i])
 	}
 
@@ -445,7 +446,7 @@ func (pm *PathModel) RenderChildDirs(mode navMode, styles Styles, width int) str
 			if mode == childMode && i == pm.SelectedChildIndex {
 				style, marker = styles.SelectedChildDir, "› "
 			}
-			rows = append(rows, truncateText(style.Render(marker+dir), width))
+			rows = append(rows, truncateText(style.Render(marker+glyph.Clean(dir)), width))
 		}
 
 		maxVisible := 5
@@ -462,7 +463,7 @@ func (pm *PathModel) RenderChildDirs(mode navMode, styles Styles, width int) str
 
 	// We are still in the old directory, so the refusal goes under its listing.
 	if pm.DeniedDir != "" {
-		refusal := fmt.Sprintf("  [cannot enter %s: permission denied or path invalid]", pm.DeniedDir)
+		refusal := fmt.Sprintf("  [cannot enter %s: permission denied or path invalid]", glyph.Clean(pm.DeniedDir))
 		content = lipgloss.JoinVertical(lipgloss.Left, content, truncateText(styles.Offline.Render(refusal), width))
 	}
 

@@ -79,6 +79,12 @@ func (l *Lair) discoverProfiles(targets []string) ([]ProfileInfo, []ProfileParse
 		fullPath := filepath.Join(configDir, name)
 		profileName := strings.TrimSuffix(name, equip.ProfileSuffix)
 
+		if err := CheckFileName(name); err != nil {
+			log.Printf("Refused profile %q: %v", name, err)
+			broken = append(broken, ProfileParseError{Name: profileName, Path: fullPath, Err: err.Error()})
+			continue
+		}
+
 		raw, err := l.read(name)
 		if err != nil {
 			log.Printf("Failed to read profile %s: %v", entry.Name(), err)

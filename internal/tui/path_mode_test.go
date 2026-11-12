@@ -555,3 +555,17 @@ func TestPathSearch_CommittedFilterIsVisibleAndScoped(t *testing.T) {
 		t.Errorf("filter %q carried over to another directory's listing", pm.Filter)
 	}
 }
+
+// A folder name is drawn cleaned: what steers the terminal becomes U+FFFD,
+// joiners are left out. The real name is kept for entering it.
+func TestPathModeDrawsFolderNamesCleaned(t *testing.T) {
+	pm := pathTestModel(t)
+	pm.ChildDirs = []string{"x\x1b[31mred", "\U0001f469\u200d\U0001f4bb notes"}
+	out := ansi.Strip(pm.RenderChildDirs(childMode, BuildStyles(settings.Config{}, ""), 80))
+	if !strings.Contains(out, "x\ufffd[31mred") || !strings.Contains(out, "\U0001f469\U0001f4bb notes") {
+		t.Errorf("folder names not cleaned:\n%q", out)
+	}
+	if pm.ChildDirs[0] != "x\x1b[31mred" {
+		t.Error("the real name changed")
+	}
+}

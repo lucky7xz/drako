@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/lucky7xz/drako/internal/glyph"
 	"github.com/lucky7xz/drako/internal/profile"
 )
 
@@ -90,6 +91,10 @@ func ValidateProfileFile(path string) (pf profile.File, size int64, err error) {
 
 // ValidateFilename checks if the filename is a valid profile name
 func ValidateFilename(filename string) error {
+	// Drawn on screen and typed by the user, so exactly what drako draws.
+	if err := glyph.CheckName(filename); err != nil {
+		return fmt.Errorf("file name %v", err)
+	}
 	// A plain name: separators of any OS would let it land outside the inventory.
 	if strings.ContainsAny(filename, `/\`) || !filepath.IsLocal(filename) {
 		return fmt.Errorf("filename must be a plain file name (got: %s)", filename)

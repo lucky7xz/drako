@@ -56,3 +56,20 @@ func TestCleanPassesCheck(t *testing.T) {
 		}
 	}
 }
+
+func TestCheckName(t *testing.T) {
+	for _, ok := range []string{"work.profile.toml", "\U0001f409 dragon.profile.toml", "\u5578\u9f99.profile.toml"} {
+		if err := CheckName(ok); err != nil {
+			t.Errorf("CheckName(%q) = %v", ok, err)
+		}
+	}
+	for name, want := range map[string]string{
+		"ops\u26a0\ufe0f.profile.toml":                "U+FE0F, which drako does not draw as written",
+		"team\U0001f469\u200d\U0001f4bb.profile.toml": "U+200D, which drako does not draw as written",
+		"x\x1b]52;c;eA==.profile.toml":                "U+001B, a character that steers the terminal",
+	} {
+		if err := CheckName(name); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("CheckName(%q) = %v, want %q", name, err, want)
+		}
+	}
+}

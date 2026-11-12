@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/lucky7xz/drako/internal/glyph"
 	"github.com/lucky7xz/drako/internal/lair"
 )
 
@@ -114,6 +115,8 @@ func (m Model) presentNextBrokenProfile() Model {
 			"• **Documentation**: View default controls on Documentation website.\n\n" +
 			"• **Exit Rescue Mode**: You can still keep using drako by exiting rescue mode (the top-left button, the error will keep showing up though)."
 
+	} else if strings.HasPrefix(e.Err, "file name ") {
+		desc += "drako does not use a file whose name it cannot draw exactly as written: you would have to type a name you cannot see. Rename the file.\n\n"
 	} else if strings.Contains(e.Err, "empty profile file") {
 		desc += "The file is completely empty. Either add valid TOML configuration or move/delete the file via Inventory (i).\n\n"
 	} else if strings.Contains(e.Err, "no settings found") {
@@ -124,9 +127,9 @@ func (m Model) presentNextBrokenProfile() Model {
 	desc += "Press any key to continue to the next error, or 'y' to copy error details to clipboard."
 
 	m.activeDetail = &DetailState{
-		Title:       fmt.Sprintf("Profile error: %s", e.Name),
+		Title:       fmt.Sprintf("Profile error: %s", glyph.Clean(e.Name)),
 		KeyLabel:    "Error",
-		Value:       fmt.Sprintf("Path: %s\nError: %s", e.Path, strings.TrimSpace(e.Err)),
+		Value:       fmt.Sprintf("Path: %s\nError: %s", glyph.Clean(e.Path), glyph.Clean(strings.TrimSpace(e.Err))),
 		Description: desc,
 		Meta: []DetailMeta{
 			{Label: "CWD", Value: m.profile.configDir},
