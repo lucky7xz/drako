@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/lucky7xz/drako/internal/glyph"
 )
 
 // drako check: lint a profile file for authoring mistakes the loader
@@ -93,6 +94,7 @@ func Lint(src []byte) []Finding {
 		return append(fs, errorf("no [[commands]] found"))
 	}
 	fs = append(fs, loaderFindings(src)...)
+	fs = append(fs, checkDrawn("deck", raw, "header_art")...)
 
 	seenNames := map[string]bool{}
 	seenCells := map[string]string{} // cell -> first claimant
@@ -107,6 +109,7 @@ func Lint(src []byte) []Finding {
 		}
 		seenNames[name] = true
 		fs = append(fs, checkFields(label, cmd, cellFields)...)
+		fs = append(fs, checkDrawn(label, cmd, "name", "description")...)
 
 		// Cell address: parse the column, resolve 'z'/-1 against the grid
 		// when its size is known, then check bounds and collisions.
@@ -159,6 +162,7 @@ func Lint(src []byte) []Finding {
 				fs = append(fs, warnf("%s has no name", ilabel))
 			}
 			fs = append(fs, checkFields(ilabel, item, itemFields)...)
+			fs = append(fs, checkDrawn(ilabel, item, "name", "description")...)
 			fs = append(fs, checkCommandValue(ilabel, item["command"], false)...)
 			fs = append(fs, checkDanger(ilabel, item)...)
 		}
@@ -191,6 +195,23 @@ func checkFields(label string, m map[string]any, fields map[string]string) []Fin
 			fs = append(fs, warnf("%s: unrecognized key %q is ignored (check for a typo)", label, k))
 		case want != "" && got != want:
 			fs = append(fs, errorf("%s: %s must be %s, got %s", label, k, want, got))
+		}
+	}
+	return fs
+}
+
+// checkDrawn warns about labels drako draws without some of their
+// characters: joiners and variation selectors, which terminals draw at
+// different widths (glyph.Clean). Commands are not labels; they run as written.
+func checkDrawn(label string, m map[string]any, keys ...string) []Finding {
+	var fs []Finding
+	for _, k := range keys {
+		s, ok := m[k].(string)
+		if !ok || glyph.Check(s) != nil {
+			continue // refused by the loader, reported there
+		}
+		if drawn := glyph.Clean(s); drawn != s {
+			fs = append(fs, warnf("%s: %s holds characters terminals draw at different widths (joiners, variation selectors); drako shows it as %q", label, k, drawn))
 		}
 	}
 	return fs

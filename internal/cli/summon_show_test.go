@@ -24,7 +24,7 @@ command = { linux_arch = "sudo pacman -Syu", macos = "brew upgrade" }
 name = "Tools"
 [[commands.items]]
 name = "Wipe"
-command = "rm -rf ~/tmp\u001b[2K\rls"
+command = "rm -rf ~/tmp"
 `
 
 func captureStdout(t *testing.T, f func()) string {
@@ -81,7 +81,7 @@ func TestSummonShowListsCommandsBeforeConfirming(t *testing.T) {
 		"    Hello\n      echo hi\n",
 		"    Update [linux_arch]\n      sudo pacman -Syu\n",
 		"    Update [macos]\n      brew upgrade\n",
-		`    Tools › Wipe` + "\n" + `      rm -rf ~/tmp\x1b[2K\rls`,
+		"    Tools › Wipe\n      rm -rf ~/tmp\n",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output lacks %q:\n%s", want, out)
@@ -89,6 +89,41 @@ func TestSummonShowListsCommandsBeforeConfirming(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(s.ConfigDir, "show.profile.toml")); err == nil {
 		t.Error("the deck was installed although it was declined")
+	}
+}
+
+// A deck whose command would steer the terminal is refused before anything
+// is listed or asked: deck text is data.
+func TestSummonRefusesSteeringCommand(t *testing.T) {
+	deck := strings.Replace(showDeck, `"rm -rf ~/tmp"`, `"rm -rf ~/tmp\u001b[2K\rls"`, 1)
+	ui := &yesToAll{}
+	s := &Summoner{
+		ConfigDir: t.TempDir(),
+		Downloader: &MockDownloader{DownloadFunc: func(url, dst string) error {
+			return os.WriteFile(dst, []byte(deck), 0o644)
+		}},
+		Cloner: &MockCloner{},
+		UI:     ui,
+		Show:   true,
+	}
+	var err error
+	out := captureStdout(t, func() { err = s.Summon("https://x/show.profile.toml") })
+	if err == nil || !strings.Contains(err.Error(), "steers the terminal") {
+		t.Fatalf("err = %v, want the deck refused", err)
+	}
+	if strings.Contains(out, "as written") || len(ui.prompts) != 1 {
+		t.Errorf("listed or asked about a refused deck: prompts %q", ui.prompts)
+	}
+	if _, err := os.Stat(filepath.Join(s.ConfigDir, "show.profile.toml")); err == nil {
+		t.Error("the refused deck was installed")
+	}
+}
+
+// visible stays a second layer under the deck rules: whatever reaches the
+// listing is shown escaped if a terminal would not draw it as itself.
+func TestVisibleEscapes(t *testing.T) {
+	if got := visible("a\x1b[2K\rb"); got != `a\x1b[2K\rb` {
+		t.Errorf("visible = %q", got)
 	}
 }
 

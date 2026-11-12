@@ -69,7 +69,7 @@ var rules = []rule{
 // pure packages hold values and decisions only: none of them appears in a
 // rule's allowed list, and of drako's own packages they may import only
 // each other.
-var pure = []string{"profile", "settings", "equip", "launch"}
+var pure = []string{"profile", "settings", "equip", "launch", "glyph"}
 
 // effects are the packages that touch the world. Each is audited on its own,
 // so of drako's packages they may import only pure ones, and proc: the one

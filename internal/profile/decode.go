@@ -2,10 +2,14 @@ package profile
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/lucky7xz/drako/internal/glyph"
 )
 
 // Decode decodes a profile file the way the loader does: err is a TOML
@@ -20,7 +24,59 @@ func Decode(raw []byte, targets []string) (pf File, problems []string, err error
 	}
 	pf = written.resolve(targets)
 	_, problems = validate(pf, raw, meta)
-	return pf, problems, nil
+	return pf, append(problems, steeringText(raw)...), nil
+}
+
+// steeringText names every string in the deck, wherever it sits and whether
+// drako reads it or not, that holds a character steering the terminal
+// (glyph.Check). A deck is data: such a deck is refused, not repaired.
+func steeringText(raw []byte) []string {
+	var doc map[string]any
+	if _, err := toml.Decode(string(raw), &doc); err != nil {
+		return nil // Decode has already reported it
+	}
+	var problems []string
+	var walk func(where string, v any)
+	walk = func(where string, v any) {
+		switch t := v.(type) {
+		case string:
+			if err := glyph.Check(t); err != nil {
+				problems = append(problems, where+" "+err.Error())
+			}
+		case map[string]any:
+			for _, k := range slices.Sorted(maps.Keys(t)) {
+				walk(join(where, k), t[k])
+			}
+		case []map[string]any:
+			for i, m := range t {
+				walk(join(where, entry(m, i)), m)
+			}
+		case []any:
+			for i, e := range t {
+				m, _ := e.(map[string]any)
+				walk(join(where, entry(m, i)), e)
+			}
+		}
+	}
+	walk("", doc)
+	return problems
+}
+
+// join and entry spell a place in the deck for a message: commands › "Tools"
+// › items › "Wipe" › command. A name is quoted with its odd characters
+// escaped, so the message itself cannot steer the terminal.
+func join(where, next string) string {
+	if where == "" {
+		return next
+	}
+	return where + " › " + next
+}
+
+func entry(m map[string]any, i int) string {
+	if name, ok := m["name"].(string); ok && name != "" {
+		return strconv.QuoteToASCII(name)
+	}
+	return "#" + strconv.Itoa(i+1)
 }
 
 // validate checks a profile has at least one command, x/y in 1-9,
@@ -258,6 +314,10 @@ type rawProfile struct {
 // resolve picks every command's text for targets.
 func (r rawProfile) resolve(targets []string) File {
 	pf := File{X: r.X, Y: r.Y, Theme: r.Theme, HeaderArt: r.HeaderArt, Shell: r.Shell, Assets: r.Assets}
+	if r.HeaderArt != nil {
+		art := glyph.Clean(*r.HeaderArt)
+		pf.HeaderArt = &art
+	}
 	for _, c := range r.Commands {
 		pf.Commands = append(pf.Commands, c.resolve(targets))
 	}
@@ -301,8 +361,8 @@ func (c *rawCommand) UnmarshalTOML(v any) error {
 		return fmt.Errorf("command entry must be a table")
 	}
 	c.cell = Command{
-		Name:               tomlStr(m, "name"),
-		Description:        tomlStr(m, "description"),
+		Name:               glyph.Clean(tomlStr(m, "name")),
+		Description:        glyph.Clean(tomlStr(m, "description")),
 		Row:                tomlInt(m, "row"),
 		Col:                tomlStr(m, "col"),
 		AutoCloseExecution: tomlBoolPtr(m, "auto_close_execution"),
@@ -333,8 +393,8 @@ func (c *rawCommand) UnmarshalTOML(v any) error {
 			return fmt.Errorf("command %q: items must be tables", c.cell.Name)
 		}
 		item := CommandItem{
-			Name:               tomlStr(im, "name"),
-			Description:        tomlStr(im, "description"),
+			Name:               glyph.Clean(tomlStr(im, "name")),
+			Description:        glyph.Clean(tomlStr(im, "description")),
 			AutoCloseExecution: tomlBoolPtr(im, "auto_close_execution"),
 			DebugExecution:     tomlBoolPtr(im, "debug_execution"),
 			Danger:             tomlDanger(im),
