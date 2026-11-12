@@ -328,6 +328,37 @@ On first run, `drako` creates:
 
 **NOTE:** If drako mis-detects your distro or a default command is wrong for your OS, please open an issue.
 
+## 🪢 Linking Your Config (dotfiles, stow)
+
+You can keep drako's files in a dotfiles repository and link them into place.
+Two layouts are supported:
+
+- **Link the whole folder.** `~/.config/drako` itself is a link into your
+  repository. Everything works as usual.
+- **Link single files.** `config.toml`, `themes.toml` and any `*.profile.toml`
+  (also inside `inventory/`) can each be a link. drako reads through them, and
+  when you stash or equip a linked profile, the link moves with it.
+
+```bash
+# the whole folder
+ln -s ~/dotfiles/drako ~/.config/drako
+
+# single files with GNU Stow (package laid out as drako/.config/drako/…)
+cd ~/dotfiles && stow --no-folding drako
+```
+
+**Not supported: a linked subfolder.** If `inventory/`, `specs/`, `assets/` or
+`trash/` is itself a link, drako does not read or write through it and tells
+you so. GNU Stow makes such links when the subfolder does not exist yet;
+`--no-folding` stops it from doing that.
+
+> **Decks and profiles.** This README and drako's messages use the two words
+> interchangeably: both mean a `*.profile.toml` file.
+
+> drako never writes through a link. A file it rewrites itself, such as
+> `pivot.toml`, becomes a regular file in the folder, and the file the link
+> pointed to stays as it was.
+
 ## 🪄 Power Tools
 
 ### 📋 Listing Decks
