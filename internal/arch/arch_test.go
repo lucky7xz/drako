@@ -43,7 +43,8 @@ var rules = []rule{
 	{
 		// lair reaches drako's files through its os.Root, so nothing can
 		// leave the config directory. Opening a file by path would step
-		// around that; the few lines that must are knownExceptions.
+		// around that; the few lines that must are knownExceptions. cli
+		// reaches drako's folder through lair, never by path.
 		capability: "open a file by path instead of through the lair's root",
 		calls: []string{
 			"os.ReadFile", "os.WriteFile", "os.Open", "os.OpenFile", "os.Create", "os.CreateTemp",
@@ -51,7 +52,7 @@ var rules = []rule{
 			"os.ReadDir", "os.Stat", "os.Lstat", "os.Chmod", "os.Symlink", "os.Readlink", "os.Link",
 			"os.Truncate", "os.DirFS", "github.com/BurntSushi/toml.DecodeFile",
 		},
-		only: []string{"lair"},
+		only: []string{"lair", "cli"},
 	},
 	{
 		// Only the shells talk to the user. Everything beneath them returns
@@ -95,6 +96,23 @@ var knownExceptions = []string{
 	"lair/files.go os.ReadFile", // read: follows a file the user linked out of the folder
 	"lair/files.go os.Stat",     // stat, read's twin; and explain, to recognise a linked subfolder
 	"lair/lair.go os.MkdirAll",  // Create: the folder has to exist before it can be opened
+
+	// cli, bound since step 8a; each line names the sub-step that removes it
+	"cli/check.go os.ReadFile",    // 8b for drako's folder; files named by path stay (outside the folder)
+	"cli/check.go os.Stat",        // 8b
+	"cli/cli.go os.MkdirAll",      // 8b
+	"cli/purge.go os.Remove",      // 8b
+	"cli/purge.go os.RemoveAll",   // 8b
+	"cli/purge.go os.Stat",        // 8b
+	"cli/spec.go os.Stat",         // 8b
+	"cli/summon.go os.Lstat",      // 8b
+	"cli/summon.go os.Stat",       // 8b, 8c
+	"cli/summon.go os.CreateTemp", // 8c
+	"cli/summon.go os.MkdirTemp",  // 8c
+	"cli/summon.go os.Open",       // 8c
+	"cli/summon.go os.ReadFile",   // 8c
+	"cli/summon.go os.Remove",     // 8c
+	"cli/summon.go os.RemoveAll",  // 8c
 }
 
 func TestPackagesKeepToTheirCapabilities(t *testing.T) {
