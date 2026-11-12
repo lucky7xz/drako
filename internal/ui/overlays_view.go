@@ -103,15 +103,27 @@ func padLinesTo(raw []string, width int, bgFill lipgloss.Style) []string {
 	return lines
 }
 
+// popupFill is a style that carries only the popup's background. Every
+// segment inside a popup renders with it, or the reset that ends each nested
+// Render punches a hole in the background.
+func (m Model) popupFill() lipgloss.Style {
+	return lipgloss.NewStyle().Background(m.styles.DropdownPopup.GetBackground())
+}
+
+// framePopup pads lines into a solid block as wide as the widest one, on the
+// popup's background, and draws the popup frame around it.
+func (m Model) framePopup(lines []string) string {
+	return m.styles.DropdownPopup.Render(lipgloss.JoinVertical(lipgloss.Left, padLinesToWidth(lines, m.popupFill())...))
+}
+
 // renderDropdownPopup is the open folder's items, floated over the grid.
 func (m Model) renderDropdownPopup() string {
 	// Ensure every segment renders with the popup background to avoid black gaps
 	bg := m.styles.DropdownPopup.GetBackground()
-	bgFill := lipgloss.NewStyle().Background(bg)
 	cursorSel := m.styles.SelectedCursor.Background(bg)
 	textNorm := m.styles.Item.Background(bg)
 	textSel := m.styles.SelectedItem.Background(bg)
-	gap := lipgloss.NewStyle().Background(bg)
+	gap := m.popupFill()
 
 	// Build lines, then right-pad them into a solid block. Items are always
 	// numbered — digits jump the selector; in a dropdown batch each runnable
@@ -132,10 +144,7 @@ func (m Model) renderDropdownPopup() string {
 		hints := textNorm.Render(" Space mark · Enter launch · Esc/q cancel")
 		raw = append(raw, gap.Render("  ")+counter+hints)
 	}
-	lines := padLinesToWidth(raw, bgFill)
-
-	content := lipgloss.JoinVertical(lipgloss.Left, lines...)
-	return m.styles.DropdownPopup.Render(content)
+	return m.framePopup(raw)
 }
 
 // renderLayoutPopup is the batch layout dialog, floated over the grid. It takes
@@ -150,7 +159,7 @@ func (m Model) renderLayoutPopup() string {
 	// each nested Render punch holes in it — the same care renderDropdownPopup
 	// takes, and for the same reason.
 	bg := m.styles.DropdownPopup.GetBackground()
-	bgFill := lipgloss.NewStyle().Background(bg)
+	bgFill := m.popupFill()
 	title := m.styles.Title.Background(bg)
 
 	labels, bodies := m.layoutFields()
@@ -181,9 +190,7 @@ func (m Model) renderLayoutPopup() string {
 
 	raw := append([]string{headRow}, cellRows...)
 	raw = append(raw, "", counter)
-	lines := padLinesToWidth(raw, bgFill)
-
-	return m.styles.DropdownPopup.Render(lipgloss.JoinVertical(lipgloss.Left, lines...))
+	return m.framePopup(raw)
 }
 
 // The lock screen never runs CalculateLayout — no header, grid or help line to
@@ -414,7 +421,7 @@ func (m Model) renderInfoPopup() string {
 
 	// Every segment carries the popup background, to avoid black gaps.
 	bg := m.styles.DropdownPopup.GetBackground()
-	bgFill := lipgloss.NewStyle().Background(bg)
+	bgFill := m.popupFill()
 	valueStyle := m.styles.Item.Background(bg)
 
 	// Only real command values get shell highlighting; error/profile overlays
@@ -459,5 +466,5 @@ func (m Model) renderInfoPopup() string {
 	}
 
 	raw := append(append(append([]string{}, l.head...), valueRows...), l.tail...)
-	return m.styles.DropdownPopup.Render(lipgloss.JoinVertical(lipgloss.Left, padLinesToWidth(raw, bgFill)...))
+	return m.framePopup(raw)
 }

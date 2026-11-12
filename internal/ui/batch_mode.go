@@ -162,14 +162,8 @@ func (m Model) updateBatchMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key == "enter":
 		return m.beginLaunch()
 
-	case IsUp(m.Config.Keys, msg):
-		m.gridNav.moveCursor(-1, 0)
-	case IsDown(m.Config.Keys, msg):
-		m.gridNav.moveCursor(1, 0)
-	case IsLeft(m.Config.Keys, msg):
-		m.gridNav.moveCursor(0, -1)
-	case IsRight(m.Config.Keys, msg):
-		m.gridNav.moveCursor(0, 1)
+	case m.gridNav.step(m.Config.Keys, msg):
+		// a direction key: the cursor has moved
 	}
 	return m, nil
 }

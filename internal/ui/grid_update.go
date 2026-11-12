@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/launch"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -46,14 +47,8 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.path.clearSearch() // a filter left from the last visit would hide directories
 	// ====================
 
-	case IsUp(m.Config.Keys, msg):
-		m.gridNav.moveCursor(-1, 0)
-	case IsDown(m.Config.Keys, msg):
-		m.gridNav.moveCursor(1, 0)
-	case IsLeft(m.Config.Keys, msg):
-		m.gridNav.moveCursor(0, -1)
-	case IsRight(m.Config.Keys, msg):
-		m.gridNav.moveCursor(0, 1)
+	case m.gridNav.step(m.Config.Keys, msg):
+		// a direction key: the cursor has moved
 	case IsExplain(m.Config.Keys, msg):
 		selectedChoice := m.gridNav.grid[m.gridNav.cursorRow][m.gridNav.cursorCol]
 		if strings.TrimSpace(selectedChoice) == "" {
@@ -160,9 +155,30 @@ func (m Model) quickNav(targetIndex int) (tea.Model, tea.Cmd) {
 	})
 }
 
+// step moves the cursor when msg is a direction key, and reports whether it
+// was one. Grid mode and batch mode both steer the cursor this way.
+func (g *gridNav) step(keys settings.InputConfig, msg tea.KeyMsg) bool {
+	switch {
+	case IsUp(keys, msg):
+		g.moveCursor(-1, 0)
+	case IsDown(keys, msg):
+		g.moveCursor(1, 0)
+	case IsLeft(keys, msg):
+		g.moveCursor(0, -1)
+	case IsRight(keys, msg):
+		g.moveCursor(0, 1)
+	default:
+		return false
+	}
+	return true
+}
+
+// moveCursor jumps to the nearest filled cell in the given direction (one of
+// rowDir, colDir is -1 or 1). The first cell found at the smallest distance
+// wins; with none that way, the cursor stays.
 func (g *gridNav) moveCursor(rowDir, colDir int) {
 	bestRow, bestCol := -1, -1
-	minDist := math.MaxFloat64
+	minDist := math.MaxInt
 
 	for r, row := range g.grid {
 		for c, val := range row {
@@ -172,26 +188,12 @@ func (g *gridNav) moveCursor(rowDir, colDir int) {
 
 			rowDiff := r - g.cursorRow
 			colDiff := c - g.cursorCol
-			isCorrectDirection := false
-			if rowDir > 0 && rowDiff > 0 {
-				isCorrectDirection = true
-			}
-			if rowDir < 0 && rowDiff < 0 {
-				isCorrectDirection = true
-			}
-			if colDir > 0 && colDiff > 0 {
-				isCorrectDirection = true
-			}
-			if colDir < 0 && colDiff < 0 {
-				isCorrectDirection = true
-			}
-
-			if isCorrectDirection {
-				dist := math.Sqrt(math.Pow(float64(rowDiff), 2) + math.Pow(float64(colDiff), 2))
-				if dist < minDist {
-					minDist = dist
-					bestRow, bestCol = r, c
-				}
+			// That way: the cell lies on the side the key points to.
+			thatWay := rowDir*rowDiff > 0 || colDir*colDiff > 0
+			// Squared distance orders cells exactly as the distance does.
+			if dist := rowDiff*rowDiff + colDiff*colDiff; thatWay && dist < minDist {
+				minDist = dist
+				bestRow, bestCol = r, c
 			}
 		}
 	}

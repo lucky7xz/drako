@@ -288,7 +288,7 @@ func (m Model) renderKeySheet() string {
 	lines, viewportH, maxOffset := m.sheetMetrics()
 	width := m.sheetWidth()
 	bg := m.styles.DropdownPopup.GetBackground()
-	fill := lipgloss.NewStyle().Background(bg)
+	fill := m.popupFill()
 
 	scrolling := maxOffset > 0
 	offset := min(m.sheet.offset, maxOffset)
@@ -305,5 +305,5 @@ func (m Model) renderKeySheet() string {
 	// The title and hint start in the ▸ column, one level out from the sections.
 	raw := append([]string{m.styles.Title.Padding(0).Background(bg).Render("Keys"), ""}, body...)
 	raw = append(raw, "", m.styles.Help.Background(bg).Render(truncateText(hint, width)))
-	return m.styles.DropdownPopup.Render(lipgloss.JoinVertical(lipgloss.Left, padLinesToWidth(raw, fill)...))
+	return m.framePopup(raw)
 }

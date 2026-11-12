@@ -65,39 +65,23 @@ func (m Model) handleMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case reloadProfilesMsg:
-		bundle, err := m.reload()
-		if err != nil {
-			log.Printf("config reload failed: %v", err)
-			return m, m.setProfileStatus("Config reload failed", false)
-		}
-		if m.GlassrootMode && glassrootRejectsBundle(bundle) {
-			return m.failGlassroot()
-		}
-		m = m.applyReloadedBundle(bundle)
+		next, cmd, applied := m.reloadAndApply()
 		// From the inventory this is Apply's reload, and Apply means done. A
 		// watcher reload (ConfigChangedMsg) leaves the inventory open instead.
-		if m.mode == inventoryMode {
-			m.mode = gridMode
+		if applied && next.mode == inventoryMode {
+			next.mode = gridMode
 		}
-		return m, nil
+		return next, cmd
 
 	case ConfigChangedMsg:
 		// Config file changed on disk, reload everything
 		log.Printf("Config file change detected: %s", msg.Path)
-		bundle, err := m.reload()
-		if err != nil {
-			log.Printf("config reload failed: %v", err)
-			return m, m.setProfileStatus("Config reload failed", false)
-		}
-		if m.GlassrootMode && glassrootRejectsBundle(bundle) {
-			return m.failGlassroot()
-		}
 		wasInventory := m.mode == inventoryMode
-		m = m.applyReloadedBundle(bundle)
-		if wasInventory {
-			m = m.refreshInventory()
+		next, cmd, applied := m.reloadAndApply()
+		if applied && wasInventory {
+			next = next.refreshInventory()
 		}
-		return m, nil
+		return next, cmd
 
 	case inventoryErrorMsg:
 		m.inventory.err = msg.err
@@ -415,6 +399,23 @@ func (m Model) updateInfoMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.activeDetail = nil // Clear detail state
 		return m, nil
 	}
+}
+
+// reloadAndApply loads the configuration again and applies it to the running
+// session. applied is false when there is nothing new on screen: the load
+// failed (the status line says so), or glassroot refuses what it found (the
+// model that comes back ends the session).
+func (m Model) reloadAndApply() (next Model, cmd tea.Cmd, applied bool) {
+	bundle, err := m.reload()
+	if err != nil {
+		log.Printf("config reload failed: %v", err)
+		return m, m.setProfileStatus("Config reload failed", false), false
+	}
+	if m.GlassrootMode && glassrootRejectsBundle(bundle) {
+		next, cmd = m.failGlassroot()
+		return next, cmd, false
+	}
+	return m.applyReloadedBundle(bundle), nil, true
 }
 
 // afterEdit reloads after the editor closes: broken decks go to the queue, else
