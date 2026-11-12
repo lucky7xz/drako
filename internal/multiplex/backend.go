@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Backend is one multiplexer. Everything risky and shared — quoting, the script
@@ -22,9 +23,27 @@ type Backend interface {
 	Launch(session string, cmds []Command, tabs []int, paths []string) error
 }
 
-// Launch writes one 0700 script per cell into scriptDir (command text, like
+// Start launches a batch. multiplex owns the scripts from start to end: it
+// makes a private folder for them, names the session after the folder (its
+// random suffix keeps two batches started together apart), and launches. The
+// session comes back even when the launch fails, so the caller can still look
+// for one left running; the folder does not outlive a failed launch.
+func Start(b Backend, cmds []Command, tabs []int) (session string, err error) {
+	dir, err := os.MkdirTemp("", "drako-batch-*")
+	if err != nil {
+		return "", fmt.Errorf("could not create script dir: %w", err)
+	}
+	session = "drako-" + strings.TrimPrefix(filepath.Base(dir), "drako-batch-")
+	if err := launchIn(b, session, cmds, tabs, dir); err != nil {
+		os.RemoveAll(dir)
+		return session, err
+	}
+	return session, nil
+}
+
+// launchIn writes one 0700 script per cell into scriptDir (command text, like
 // history.log) and hands b the paths; each script deletes itself once it runs.
-func Launch(b Backend, session string, cmds []Command, tabs []int, scriptDir string) error {
+func launchIn(b Backend, session string, cmds []Command, tabs []int, scriptDir string) error {
 	if len(cmds) == 0 {
 		return fmt.Errorf("nothing to launch")
 	}

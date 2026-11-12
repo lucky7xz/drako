@@ -29,7 +29,7 @@ func captureSteps(t *testing.T) *[]fakeStep {
 func TestTmux_RunsEveryPlannedStepInOrder(t *testing.T) {
 	got := captureSteps(t)
 
-	if err := Launch(NewTmux(true), "drako-t", cells(2), []int{2},
+	if err := launchIn(NewTmux(true), "drako-t", cells(2), []int{2},
 		filepath.Join(t.TempDir(), "batch")); err != nil {
 		t.Fatal(err)
 	}
@@ -50,7 +50,7 @@ func TestTmux_RunsEveryPlannedStepInOrder(t *testing.T) {
 func TestTmux_LastStepAttaches(t *testing.T) {
 	got := captureSteps(t)
 
-	if err := Launch(NewTmux(false), "drako-t", cells(1), []int{1},
+	if err := launchIn(NewTmux(false), "drako-t", cells(1), []int{1},
 		filepath.Join(t.TempDir(), "batch")); err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +72,7 @@ func TestTmux_ReportsWhichVerbFailed(t *testing.T) {
 		return nil
 	}
 
-	err := Launch(NewTmux(true), "drako-t", cells(2), []int{2},
+	err := launchIn(NewTmux(true), "drako-t", cells(2), []int{2},
 		filepath.Join(t.TempDir(), "batch"))
 	if err == nil {
 		t.Fatal("a failing step must surface")

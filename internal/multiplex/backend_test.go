@@ -33,7 +33,7 @@ func TestLaunch_WritesAScriptPerCellAndHandsOverThePaths(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "batch")
 	f := &fakeBackend{}
 
-	if err := Launch(f, "drako-t", cells(3), []int{2, 1}, dir); err != nil {
+	if err := launchIn(f, "drako-t", cells(3), []int{2, 1}, dir); err != nil {
 		t.Fatal(err)
 	}
 	if f.calls != 1 {
@@ -72,7 +72,7 @@ func TestLaunch_WritesAScriptPerCellAndHandsOverThePaths(t *testing.T) {
 // scripts of a launch that worked to delete themselves.
 func TestLaunch_LeavesTheScriptsToThePanes(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "batch")
-	if err := Launch(&fakeBackend{}, "s", cells(1), []int{1}, dir); err != nil {
+	if err := launchIn(&fakeBackend{}, "s", cells(1), []int{1}, dir); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(dir); err != nil {
@@ -93,7 +93,7 @@ func TestLaunch_RejectsABatchTheBackendCouldNotRun(t *testing.T) {
 	}
 	for _, c := range cases {
 		f := &fakeBackend{}
-		if err := Launch(f, "s", c.cmds, c.tabs, dir); err == nil {
+		if err := launchIn(f, "s", c.cmds, c.tabs, dir); err == nil {
 			t.Errorf("%s: want an error", c.name)
 		}
 		if f.calls != 0 {
@@ -105,7 +105,7 @@ func TestLaunch_RejectsABatchTheBackendCouldNotRun(t *testing.T) {
 func TestLaunch_ReportsWhatTheBackendFailedOn(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "batch")
 	boom := errors.New("no such pane")
-	err := Launch(&fakeBackend{err: boom}, "s", cells(1), []int{1}, dir)
+	err := launchIn(&fakeBackend{err: boom}, "s", cells(1), []int{1}, dir)
 	if !errors.Is(err, boom) {
 		t.Errorf("err = %v, want it to wrap the backend's own error", err)
 	}
@@ -115,7 +115,7 @@ func TestLaunch_ReportsWhatTheBackendFailedOn(t *testing.T) {
 // not be left in the temp dir.
 func TestLaunch_RemovesTheScriptsWhenTheBackendFails(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "batch")
-	if err := Launch(&fakeBackend{err: errors.New("attach failed")}, "s", cells(2), []int{2}, dir); err == nil {
+	if err := launchIn(&fakeBackend{err: errors.New("attach failed")}, "s", cells(2), []int{2}, dir); err == nil {
 		t.Fatal("the backend error must surface")
 	}
 	if _, err := os.Stat(dir); !os.IsNotExist(err) {
@@ -142,10 +142,38 @@ func (runningBackend) Launch(session string, cmds []Command, tabs []int, paths [
 func TestLaunch_ScriptsCleanUpAfterThemselves(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "batch")
 	cmds := []Command{{Name: "a", Argv: []string{"sh", "-c", "true"}}, {Name: "b", Argv: []string{"sh", "-c", "true"}}}
-	if err := Launch(runningBackend{}, "s", cmds, []int{2}, dir); err != nil {
+	if err := launchIn(runningBackend{}, "s", cmds, []int{2}, dir); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(dir); !os.IsNotExist(err) {
 		t.Errorf("the scripts stayed after every pane ran (%v)", err)
+	}
+}
+
+// Start owns the batch folder: a private one per batch, the session named
+// after it, and nothing left behind when the launch fails.
+func TestStartOwnsTheBatchFolder(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("TMPDIR", tmp)
+
+	f := &fakeBackend{}
+	session, err := Start(f, cells(2), []int{2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(tmp, "drako-batch-"+strings.TrimPrefix(session, "drako-"))
+	if f.session != session || len(f.paths) != 2 || filepath.Dir(f.paths[0]) != dir {
+		t.Fatalf("session %q, paths %v; want both scripts in %s", session, f.paths, dir)
+	}
+	if info, err := os.Stat(dir); err != nil || info.Mode().Perm() != 0o700 {
+		t.Errorf("batch folder %v, %v; want private", info, err)
+	}
+
+	failed, err := Start(&fakeBackend{err: errors.New("no tmux")}, cells(1), []int{1})
+	if err == nil || failed == "" {
+		t.Fatalf("failed launch: session %q, err %v; want both", failed, err)
+	}
+	if _, err := os.Stat(filepath.Join(tmp, "drako-batch-"+strings.TrimPrefix(failed, "drako-"))); !os.IsNotExist(err) {
+		t.Errorf("a failed launch left its folder: %v", err)
 	}
 }

@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"sync/atomic"
@@ -233,14 +232,6 @@ func runBatch(home *lair.Lair, out tui.Outcome) {
 		return
 	}
 
-	scriptDir, err := os.MkdirTemp("", "drako-batch-*")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "batch launch failed: %v\n", err)
-		pause("\nPress any key to return to drako.")
-		return
-	}
-	// The temp dir's random suffix keeps two batches started together apart.
-	session := "drako-" + strings.TrimPrefix(filepath.Base(scriptDir), "drako-batch-")
 	// The layout chosen in the dialog; the default when there was none (a single
 	// cell) or a mark no longer resolved above.
 	tabs := out.Tabs
@@ -251,9 +242,13 @@ func runBatch(home *lair.Lair, out tui.Outcome) {
 		home.LogExecution(c.Name, "batch: "+strings.Join(c.Argv, " "))
 	}
 
-	err = multiplex.Launch(backend, session, cmds, tabs, scriptDir)
+	session, err := multiplex.Start(backend, cmds, tabs)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "batch launch failed: %v\n", err)
+	}
+	if session == "" { // no folder, nothing launched
+		pause("\nPress any key to return to drako.")
+		return
 	}
 	// A session drako made outside tmux outlives a detach, and a launch that broke
 	// after creating it; its cells may be running, so say how to get back.

@@ -125,7 +125,7 @@ func launchHerdr(t *testing.T, n int, tabs []int) ([][]string, []string) {
 	t.Helper()
 	got := fakeHerdr(t)
 	dir := filepath.Join(t.TempDir(), "batch")
-	if err := Launch(NewHerdr(), "drako-t", cells(n), tabs, dir); err != nil {
+	if err := launchIn(NewHerdr(), "drako-t", cells(n), tabs, dir); err != nil {
 		t.Fatal(err)
 	}
 	return *got, scriptPaths(cells(n), dir)
@@ -230,7 +230,7 @@ func TestHerdr_OnlyTheFirstTabTakesFocus(t *testing.T) {
 func TestHerdr_LeavesTheScriptsToThePanes(t *testing.T) {
 	fakeHerdr(t)
 	dir := filepath.Join(t.TempDir(), "batch")
-	if err := Launch(NewHerdr(), "drako-t", cells(2), []int{2}, dir); err != nil {
+	if err := launchIn(NewHerdr(), "drako-t", cells(2), []int{2}, dir); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(dir); err != nil {
@@ -244,7 +244,7 @@ func TestHerdr_ReportsAFailedCall(t *testing.T) {
 	herdrExec = func(argv []string) ([]byte, error) {
 		return nil, errors.New("pane w1:p9 not found")
 	}
-	err := Launch(NewHerdr(), "drako-t", cells(1), []int{1}, filepath.Join(t.TempDir(), "b"))
+	err := launchIn(NewHerdr(), "drako-t", cells(1), []int{1}, filepath.Join(t.TempDir(), "b"))
 	if err == nil {
 		t.Fatal("a failing call must surface")
 	}
@@ -286,7 +286,7 @@ func TestHerdr_TreatsAVanishedPaneAsStarted(t *testing.T) {
 		}
 		return []byte(`{"result":{}}`), nil
 	}
-	if err := Launch(NewHerdr(), "drako-t", cells(1), []int{1},
+	if err := launchIn(NewHerdr(), "drako-t", cells(1), []int{1},
 		filepath.Join(t.TempDir(), "batch")); err != nil {
 		t.Errorf("a pane that already closed means the cell ran: %v", err)
 	}

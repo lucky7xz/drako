@@ -38,7 +38,8 @@ var rules = []rule{
 		capability: "touch files",
 		imports:    []string{"os"},
 		// Not tui: the screen code reaches the disk through lair and host.
-		allowed: []string{"lair", "summon", "proc", "host", "cli", "app"},
+		// summon owns its quarantine, multiplex its batch scripts.
+		allowed: []string{"lair", "summon", "proc", "host", "multiplex", "cli", "app"},
 	},
 	{
 		// lair reaches drako's files through its os.Root, so nothing can
@@ -87,10 +88,6 @@ var knownExceptions = []string{
 	// use the network
 
 	// touch files
-	"multiplex/backend.go os",
-	"multiplex/herdr.go os",
-	"multiplex/resolve.go os",
-	"multiplex/tmux.go os",
 
 	// open a file by path instead of through the lair's root
 	"lair/files.go os.ReadFile", // read: follows a file the user linked out of the folder

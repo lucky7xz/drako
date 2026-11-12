@@ -101,7 +101,7 @@ func shellHerdr(t *testing.T, readyAfter int, drops bool) map[string]*fakeShell 
 // with a resent start command typed into the running cell.
 func TestHerdr_SlowShellGetsNothingTypedIntoTheCell(t *testing.T) {
 	panes := shellHerdr(t, 25, false) // ~1.25s of profile, input kept
-	if err := Launch(NewHerdr(), "drako-t", cells(2), []int{2}, filepath.Join(t.TempDir(), "batch")); err != nil {
+	if err := launchIn(NewHerdr(), "drako-t", cells(2), []int{2}, filepath.Join(t.TempDir(), "batch")); err != nil {
 		t.Fatal(err)
 	}
 	for id, p := range panes {
@@ -115,7 +115,7 @@ func TestHerdr_SlowShellGetsNothingTypedIntoTheCell(t *testing.T) {
 // cell started, with exec sent exactly once.
 func TestHerdr_ShellThatDropsTypingStillStartsTheCell(t *testing.T) {
 	panes := shellHerdr(t, 25, true)
-	if err := Launch(NewHerdr(), "drako-t", cells(2), []int{2}, filepath.Join(t.TempDir(), "batch")); err != nil {
+	if err := launchIn(NewHerdr(), "drako-t", cells(2), []int{2}, filepath.Join(t.TempDir(), "batch")); err != nil {
 		t.Fatal(err)
 	}
 	for id, p := range panes {
@@ -128,7 +128,7 @@ func TestHerdr_ShellThatDropsTypingStillStartsTheCell(t *testing.T) {
 // A shell that is already reading costs one probe and one exec, nothing more.
 func TestHerdr_ReadyShellGetsOneProbeAndOneExec(t *testing.T) {
 	panes := shellHerdr(t, 0, false)
-	if err := Launch(NewHerdr(), "drako-t", cells(2), []int{2}, filepath.Join(t.TempDir(), "batch")); err != nil {
+	if err := launchIn(NewHerdr(), "drako-t", cells(2), []int{2}, filepath.Join(t.TempDir(), "batch")); err != nil {
 		t.Fatal(err)
 	}
 	for id, p := range panes {
@@ -141,7 +141,7 @@ func TestHerdr_ReadyShellGetsOneProbeAndOneExec(t *testing.T) {
 // A shell that never reads is reported rather than retried forever.
 func TestHerdr_GivesUpAndSaysSo(t *testing.T) {
 	shellHerdr(t, 1<<30, true)
-	err := Launch(NewHerdr(), "drako-t", cells(1), []int{1}, filepath.Join(t.TempDir(), "batch"))
+	err := launchIn(NewHerdr(), "drako-t", cells(1), []int{1}, filepath.Join(t.TempDir(), "batch"))
 	if err == nil || !strings.Contains(err.Error(), "did not start") {
 		t.Fatalf("a cell that never starts must say so, got %v", err)
 	}
@@ -158,7 +158,7 @@ func TestHerdr_FailedProcessInfoIsNotAStart(t *testing.T) {
 		}
 		return inner(argv)
 	}
-	err := Launch(NewHerdr(), "drako-t", cells(1), []int{1}, filepath.Join(t.TempDir(), "batch"))
+	err := launchIn(NewHerdr(), "drako-t", cells(1), []int{1}, filepath.Join(t.TempDir(), "batch"))
 	if err == nil {
 		t.Error("an unconfirmed cell was reported as started")
 	}
