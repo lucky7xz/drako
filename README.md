@@ -375,6 +375,9 @@ drako summon git@github.com:user/my_profile_collection.git
 drako summon https://example.com/deck.profile.toml --sha256 <full 64-char hex digest>
 drako summon git@github.com:user/repo.git --rev <full 40-char commit hash>
 
+# Read every command a deck holds (each platform's variant too) before you confirm it:
+drako summon git@github.com:user/repo.git --show
+
 # A deck you're writing, from its own folder (re-run after edits)
 drako summon .
 ```

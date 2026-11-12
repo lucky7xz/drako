@@ -16,6 +16,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/lucky7xz/drako/internal/equip"
@@ -53,6 +54,9 @@ type Summoner struct {
 	// (allowed for compatibility, warned about).
 	SHA256 string
 	Rev    string
+
+	// Show lists every command a deck holds before the user confirms it.
+	Show bool
 }
 
 // NewSummoner creates a new Summoner with real dependencies
@@ -435,6 +439,12 @@ func (s *Summoner) summonRepoProfile(srcPath, tempDir string) (summonOutcome, er
 	if len(assets) > 0 {
 		printAssetsPlan(tempDir, filepath.Dir(srcPath), assets, profileName)
 	}
+	if s.Show {
+		if err := printCommands(srcPath, profile.Shell); err != nil {
+			fmt.Printf("⚠️  Skipping %s: %v\n", dstName, err)
+			return outcomeSkipped, nil
+		}
+	}
 
 	if !s.UI.Confirm(fmt.Sprintf("Summon %s?", dstName)) {
 		fmt.Printf("⊘ Cancelled: %s\n", dstName)
@@ -510,6 +520,54 @@ func printAssetsPlan(tempDir, srcDir string, assets []string, profileName string
 		summon.AssetMaxFileCount, summon.AssetMaxTotalBytes/(1024*1024), summon.AssetMaxFileBytes/(1024*1024))
 }
 
+// printCommands lists every command the deck at path holds, as written and
+// for every platform, so the user reads them before confirming (--show).
+func printCommands(path string, shell *string) error {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	cmds, err := profile.WrittenCommands(raw)
+	if err != nil {
+		return err
+	}
+	if shell != nil {
+		fmt.Printf("  Shell: %s\n", visible(*shell))
+	}
+	fmt.Printf("  Commands (%d), as written:\n", len(cmds))
+	for _, c := range cmds {
+		where := c.Cell
+		if c.Item != "" {
+			where += " › " + c.Item
+		}
+		if c.Platform != "" {
+			where += " [" + c.Platform + "]"
+		}
+		fmt.Printf("    %s\n", visible(where))
+		for _, line := range strings.Split(visible(c.Text), "\n") {
+			fmt.Printf("      %s\n", line)
+		}
+	}
+	return nil
+}
+
+// visible escapes what a terminal would not show as itself (control
+// characters such as ESC or carriage return, direction overrides, odd
+// spaces), so a deck cannot hide part of a command from the reader. Line
+// breaks and tabs stay.
+func visible(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		if r == '\n' || r == '\t' || strconv.IsPrint(r) {
+			b.WriteRune(r)
+			continue
+		}
+		q := strconv.QuoteRune(r)
+		b.WriteString(q[1 : len(q)-1])
+	}
+	return b.String()
+}
+
 // summonRepoSpec validates and copies one spec file on confirmation. Unlike
 // profiles, a spec copy failure is reported and the summon continues.
 func (s *Summoner) summonRepoSpec(srcPath, specsDir string) summonOutcome {
@@ -577,8 +635,17 @@ func (s *Summoner) summonFromHTTP(sourceURL, dstPath string) error {
 
 	// Validate the downloaded file
 	fmt.Printf("Validating profile...\n")
-	if _, err := validateProfile(tempPath); err != nil {
+	pf, err := validateProfile(tempPath)
+	if err != nil {
 		return fmt.Errorf("validation failed: %w", err)
+	}
+	if s.Show {
+		if err := printCommands(tempPath, pf.Shell); err != nil {
+			return err
+		}
+		if !s.UI.Confirm(fmt.Sprintf("Summon %s?", filename)) {
+			return fmt.Errorf("operation cancelled by user")
+		}
 	}
 
 	// Move temp file to final destination

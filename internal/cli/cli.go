@@ -113,7 +113,8 @@ func HandleSummonCommand(args []string) int {
 
 	quietLogs()
 
-	sourceURL, sha, rev, err := parseSummonArgs(args[2:])
+	rest, show := takeFlag(args[2:], "--show")
+	sourceURL, sha, rev, err := parseSummonArgs(rest)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n\n", err)
 		PrintSummonUsage()
@@ -124,6 +125,7 @@ func HandleSummonCommand(args []string) int {
 	summoner := NewSummoner(configDir)
 	summoner.SHA256 = sha
 	summoner.Rev = rev
+	summoner.Show = show
 	if err := summoner.Summon(sourceURL); err != nil {
 		log.Printf("Summon failed: %v", err)
 		fmt.Fprintf(os.Stderr, "Summon failed: %v\n", err)
@@ -132,6 +134,19 @@ func HandleSummonCommand(args []string) int {
 
 	fmt.Printf("\n✓ Summon complete\n")
 	return 0
+}
+
+// takeFlag removes every plain occurrence of flag from args and reports
+// whether there was one.
+func takeFlag(args []string, flag string) (rest []string, found bool) {
+	for _, a := range args {
+		if a == flag {
+			found = true
+			continue
+		}
+		rest = append(rest, a)
+	}
+	return rest, found
 }
 
 // parseSummonArgs extracts the source URL and the optional verification
@@ -186,13 +201,14 @@ func parseSummonArgs(args []string) (sourceURL, sha, rev string, err error) {
 
 // PrintSummonUsage prints the usage information for the summon command
 func PrintSummonUsage() {
-	fmt.Fprintf(os.Stderr, "Usage: drako summon <url|folder> [--sha256 <hex64> | --rev <commit40>]\n")
+	fmt.Fprintf(os.Stderr, "Usage: drako summon <url|folder> [--sha256 <hex64> | --rev <commit40>] [--show]\n")
 	fmt.Fprintf(os.Stderr, "\nA summoned deck replaces the copy you have, equipped or in the inventory;\n")
 	fmt.Fprintf(os.Stderr, "a new one is equipped, or goes to ~/.config/drako/inventory/ once 9 are.\n")
 	fmt.Fprintf(os.Stderr, "Only files at the top level of the folder or repo are summoned.\n")
 	fmt.Fprintf(os.Stderr, "Pins verify that what arrived is what the author published;\n")
 	fmt.Fprintf(os.Stderr, "without one, drako warns and proceeds unverified. An unencrypted\n")
 	fmt.Fprintf(os.Stderr, "address (http://, git://) must be pinned.\n")
+	fmt.Fprintf(os.Stderr, "--show lists every command a deck holds before you confirm it.\n")
 	fmt.Fprintf(os.Stderr, "\nExamples:\n")
 	fmt.Fprintf(os.Stderr, "  # Summon a single profile file (pin with its sha256):\n")
 	fmt.Fprintf(os.Stderr, "  drako summon https://example.com/deck.profile.toml --sha256 9f2a...\n")

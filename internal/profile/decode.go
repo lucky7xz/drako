@@ -156,6 +156,54 @@ func (c commandText) pick(targets []string) (cmd string, note string) {
 		targets[0], strings.Join(keys, ", "))
 }
 
+// Written is one command text as its author wrote it, for a reader to review
+// before trusting a deck. Item is "" for the cell's own command; Platform is
+// "" when one text serves every platform.
+type Written struct {
+	Cell, Item string
+	Platform   string
+	Text       string
+}
+
+// WrittenCommands lists every command text in raw, each platform's variant
+// included, in file order: what the deck can run on any machine, not only
+// this one. Cells without a command (folders) are left out.
+func WrittenCommands(raw []byte) ([]Written, error) {
+	var r rawProfile
+	if _, err := toml.Decode(string(raw), &r); err != nil {
+		return nil, err
+	}
+	var out []Written
+	for _, c := range r.Commands {
+		out = append(out, c.text.written(c.cell.Name, "")...)
+		for _, ri := range c.items {
+			out = append(out, ri.text.written(c.cell.Name, ri.item.Name)...)
+		}
+	}
+	return out, nil
+}
+
+// written lists c's texts for the cell (and item) it belongs to, variants
+// sorted by platform key.
+func (c commandText) written(cell, item string) []Written {
+	if c.variants == nil {
+		if c.plain == "" {
+			return nil
+		}
+		return []Written{{Cell: cell, Item: item, Text: c.plain}}
+	}
+	keys := make([]string, 0, len(c.variants))
+	for k := range c.variants {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	out := make([]Written, 0, len(keys))
+	for _, k := range keys {
+		out = append(out, Written{Cell: cell, Item: item, Platform: k, Text: c.variants[k]})
+	}
+	return out
+}
+
 // appendNote attaches a resolution note to a description.
 func appendNote(desc, note string) string {
 	if note == "" {

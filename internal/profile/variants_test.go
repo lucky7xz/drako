@@ -243,3 +243,34 @@ command = { linux_arch = "pacman -S x", macos = "brew install x" }
 		t.Errorf("no platform: got command %q, description %q; want nothing picked and nothing noted", c.Command, c.Description)
 	}
 }
+
+func TestWrittenCommandsListsEveryVariant(t *testing.T) {
+	raw := []byte(`x = 1
+y = 1
+[[commands]]
+name = "Up"
+command = { macos = "brew upgrade", linux_arch = "pacman -Syu" }
+[[commands]]
+name = "Folder"
+[[commands.items]]
+name = "A"
+command = "echo a"
+`)
+	got, err := WrittenCommands(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []Written{
+		{Cell: "Up", Platform: "linux_arch", Text: "pacman -Syu"},
+		{Cell: "Up", Platform: "macos", Text: "brew upgrade"},
+		{Cell: "Folder", Item: "A", Text: "echo a"},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("got %+v, want %+v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("[%d] = %+v, want %+v", i, got[i], want[i])
+		}
+	}
+}
