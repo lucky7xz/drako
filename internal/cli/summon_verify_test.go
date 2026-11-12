@@ -190,3 +190,38 @@ func TestSummonGitRevChecksOutThePinnedCommit(t *testing.T) {
 		t.Error("summoned the branch tip instead of the pinned commit")
 	}
 }
+
+// An unencrypted address (http://, git://) is refused unless pinned; a pinned
+// one goes ahead, and the pin then decides.
+func TestSummonUnencryptedNeedsPin(t *testing.T) {
+	payload := "x=3\ny=3\n[[commands]]\nname=\"T\"\ncommand=\"echo t\"\n"
+	sum := sha256.Sum256([]byte(payload))
+	pin := hex.EncodeToString(sum[:])
+	newSummoner := func() *Summoner {
+		return &Summoner{
+			ConfigDir: t.TempDir(),
+			Downloader: &MockDownloader{DownloadFunc: func(url, dst string) error {
+				return os.WriteFile(dst, []byte(payload), 0o644)
+			}},
+			Cloner: &MockCloner{},
+			UI:     &MockUI{},
+		}
+	}
+
+	for _, src := range []string{"http://x/p.profile.toml", "HTTP://x/p.profile.toml"} {
+		if err := newSummoner().Summon(src); err == nil || !strings.Contains(err.Error(), "not encrypted") || !strings.Contains(err.Error(), "--sha256") {
+			t.Errorf("unpinned %s: err = %v, want refusal pointing to --sha256", src, err)
+		}
+	}
+	for _, src := range []string{"git://host/repo", "http://host/repo.git"} {
+		if err := newSummoner().Summon(src); err == nil || !strings.Contains(err.Error(), "not encrypted") || !strings.Contains(err.Error(), "--rev") {
+			t.Errorf("unpinned %s: err = %v, want refusal pointing to --rev", src, err)
+		}
+	}
+
+	s := newSummoner()
+	s.SHA256 = pin
+	if err := s.Summon("http://x/p.profile.toml"); err != nil {
+		t.Errorf("pinned http summon: %v", err)
+	}
+}

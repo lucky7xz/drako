@@ -79,6 +79,9 @@ func (s *Summoner) Summon(sourceURL string) error {
 		if s.SHA256 != "" {
 			return fmt.Errorf("--sha256 pins single-file downloads; for git repositories use --rev <full-commit-hash>")
 		}
+		if summon.Unencrypted(sourceURL) && s.Rev == "" {
+			return fmt.Errorf("%s is not encrypted: anyone on the network path could change what arrives.\nPin it with --rev <full-commit-hash>, or use an https:// or ssh address", sourceURL)
+		}
 		if err := s.Cloner.CheckGitAvailable(); err != nil {
 			return err
 		}
@@ -108,6 +111,9 @@ func (s *Summoner) Summon(sourceURL string) error {
 	// HTTP/HTTPS Download
 	if s.Rev != "" {
 		return fmt.Errorf("--rev pins git clones; for single-file downloads use --sha256 <hash>")
+	}
+	if summon.Unencrypted(sourceURL) && s.SHA256 == "" {
+		return fmt.Errorf("%s is not encrypted: anyone on the network path could change what arrives.\nPin it with --sha256 <hash>, or use an https:// address", sourceURL)
 	}
 	filename := summon.ExtractFilenameFromURL(sourceURL)
 	if filename == "" || !strings.HasSuffix(filename, ".profile.toml") {

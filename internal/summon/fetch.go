@@ -5,6 +5,7 @@ package summon
 // and summon.go for those.
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -32,6 +33,18 @@ func IsGitURL(urlStr string) bool {
 		return true
 	}
 	return false
+}
+
+// Unencrypted reports whether src travels in the clear: an http:// or git://
+// address. Anyone on the network path can change what arrives, so such a
+// summon must be pinned.
+func Unencrypted(src string) bool {
+	u, err := url.Parse(src)
+	if err != nil {
+		return false
+	}
+	scheme := strings.ToLower(u.Scheme)
+	return scheme == "http" || scheme == "git"
 }
 
 // IsSSHURL checks if the URL uses SSH protocol
@@ -88,8 +101,15 @@ func (c *GitCloner) CheckGitAvailable() error {
 }
 
 func (c *GitCloner) CloneRepo(url, destDir string) error {
+	var args []string
+	if strings.HasPrefix(strings.ToLower(url), "https://") {
+		// An HTTPS clone may not be redirected to plain HTTP: git hands its
+		// allowed protocols to curl as the allowed redirect targets.
+		args = append(args, "-c", "protocol.http.allow=never")
+	}
 	// Use -- to prevent argument injection if repoURL starts with a hyphen
-	cmd := proc.Git.Command("clone", "--", url, destDir)
+	args = append(args, "clone", "--", url, destDir)
+	cmd := proc.Git.Command(args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
@@ -106,7 +126,8 @@ type HTTPDownloader struct{}
 // somewhere temporary and validates before anything reaches the inventory.
 func (d *HTTPDownloader) DownloadFile(sourceURL, dstPath string) error {
 	client := &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout:       30 * time.Second,
+		CheckRedirect: keepHTTPS,
 	}
 
 	req, err := http.NewRequest("GET", sourceURL, nil)
@@ -145,6 +166,18 @@ func (d *HTTPDownloader) DownloadFile(sourceURL, dstPath string) error {
 	if written > ProfileMaxSize {
 		os.Remove(dstPath)
 		return fmt.Errorf("file too large (>%d bytes). This is not a valid profile", ProfileMaxSize)
+	}
+	return nil
+}
+
+// keepHTTPS is the downloader's redirect rule: Go's usual limit of 10, and a
+// download that started on HTTPS may not be sent to an unencrypted address.
+func keepHTTPS(req *http.Request, via []*http.Request) error {
+	if len(via) >= 10 {
+		return errors.New("stopped after 10 redirects")
+	}
+	if strings.EqualFold(via[0].URL.Scheme, "https") && !strings.EqualFold(req.URL.Scheme, "https") {
+		return fmt.Errorf("refused a redirect from https to an unencrypted address (%s)", req.URL.Redacted())
 	}
 	return nil
 }

@@ -379,7 +379,7 @@ drako summon git@github.com:user/repo.git --rev <full 40-char commit hash>
 drako summon .
 ```
 
-**NOTE:** Works with any Git host (GitHub, GitLab, self-hosted). Only files at the top level of the repo or folder are summoned, each validated before copying. A summoned deck replaces the copy you already have, equipped or in `inventory/`, so there is never a second one; a new deck is equipped, or lands in `inventory/` once 9 are equipped. Summoning without a pin still works — drako just warns that the download is unverified.
+**NOTE:** Works with any Git host (GitHub, GitLab, self-hosted). Only files at the top level of the repo or folder are summoned, each validated before copying. A summoned deck replaces the copy you already have, equipped or in `inventory/`, so there is never a second one; a new deck is equipped, or lands in `inventory/` once 9 are equipped. Summoning without a pin still works — drako just warns that the download is unverified — except from an unencrypted address (`http://`, `git://`), which must be pinned. A download that starts on HTTPS is never redirected to plain HTTP.
 
 If a profile needs extra files (scripts, configs), declare it under `assets = ["relative/path/to/file", ...]`.
 `drako` will copy these assets to `~/.config/drako/assets/<profile_name>/`.
