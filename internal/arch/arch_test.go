@@ -37,7 +37,7 @@ var rules = []rule{
 	{
 		capability: "touch files",
 		imports:    []string{"os"},
-		// Not ui: the screen code reaches the disk through lair and host.
+		// Not tui: the screen code reaches the disk through lair and host.
 		allowed: []string{"lair", "summon", "proc", "host", "cli", "app"},
 	},
 	{
@@ -58,7 +58,7 @@ var rules = []rule{
 		// values and errors, so what the user is told is decided in one layer.
 		capability: "print to the user's terminal",
 		calls:      []string{"fmt.Print", "fmt.Printf", "fmt.Println"},
-		allowed:    []string{"cli", "app", "ui"},
+		allowed:    []string{"cli", "app", "tui"},
 	},
 	{
 		capability: "step around Go's memory safety",

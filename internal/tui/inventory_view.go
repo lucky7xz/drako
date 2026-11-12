@@ -1,0 +1,218 @@
+package tui
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/lucky7xz/drako/internal/equip"
+	"github.com/lucky7xz/drako/internal/version"
+)
+
+// viewInventoryMode is the inventory screen, its footer carrying hint.
+func (m Model) viewInventoryMode(hint string) string {
+	// If there's an error, just show that.
+	if m.inventory.err != nil {
+		errorText := lipgloss.JoinVertical(lipgloss.Center,
+			m.styles.ErrorTitle.Render("Error"),
+			m.styles.ErrorText.Render(m.inventory.err.Error()),
+			m.styles.Help.Render("\nPress any key to return to the grid."),
+		)
+		return m.frame(errorText)
+	}
+
+	// Calculate layout to determine visibility of header/footer. This
+	// view's header is the "Inventory Management" title, not the ASCII-art
+	// logo, so the width gate measures that string's actual length.
+	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config, "Inventory Management")
+
+	title := m.styles.InventoryTitle.Render("Inventory Management")
+
+	visiblePtr, _ := m.inventory.State.GetList(equip.ListVisible)
+	visible := *visiblePtr
+	inventoryPtr, _ := m.inventory.State.GetList(equip.ListInventory)
+	inventory := *inventoryPtr
+
+	// The count is of the staged list, so the budget updates while arranging.
+	equippedLabel := fmt.Sprintf("Equipped Items (%d/%d)", len(visible), equip.MaxEquipped)
+	if len(visible) > equip.MaxEquipped {
+		equippedLabel += " ⚠"
+	}
+	equippedHeader := m.styles.ListHeader.Render(equippedLabel)
+	inventoryHeader := m.styles.ListHeader.Render("Inventory Items")
+
+	applyButton := m.styles.Button.Render("[ Apply Changes ]")
+	if m.inventory.focusedList == focusApply {
+		applyButton = m.styles.SelectedButton.Render("[ Apply Changes ]")
+	}
+
+	rescueButton := m.styles.RescueButton.Render("[ Rescue Mode ]")
+	if m.inventory.focusedList == focusRescue {
+		rescueButton = m.styles.SelectedRescueButton.Render("[ Rescue Mode ]")
+	}
+
+	heldItemStatus := " " // Reserve space
+	if m.inventory.State.HeldItem != nil {
+		heldItemStatus = m.styles.Help.Render("Holding: ") + m.styles.SelectedItem.Render(*m.inventory.State.HeldItem)
+	}
+
+	// One line under Holding: carries every piece of inventory feedback — a
+	// rejected action, and the delete confirmation prompt. It is reserved
+	// either way so the lists below don't jump when a message appears, and
+	// truncated rather than wrapped to keep it exactly one row.
+	//
+	// The prompt can't travel through status: that is cleared on every
+	// keystroke, and the prompt has to survive the whole name being typed.
+	statusLine := " " // Reserve space
+	if pd := m.inventory.pending; pd != nil {
+		prompt := fmt.Sprintf("Type '%s' to confirm: %s_", pd.name, pd.typed)
+		statusLine = m.styles.StatusNegative.Render(truncateText(prompt, m.termWidth-LayoutSideMargin))
+	} else if m.inventory.status != "" {
+		style := m.styles.StatusNegative
+		if m.inventory.statusOK {
+			style = m.styles.StatusPositive
+		}
+		statusLine = style.Render(truncateText(m.inventory.status, m.termWidth-LayoutSideMargin))
+	}
+
+	var footer string
+	if layout.ShowFooter {
+		// Trimmed like the HOST bar: the version shortens, the hint stays.
+		tail := " | " + hint
+		room := max(1, m.termWidth-appStyle.GetHorizontalMargins()-lipgloss.Width(tail))
+		label := truncateText(version.AppName+" | "+version.String(), room)
+		footer = m.styles.Footer.Render(m.styles.Help.Render(label + tail))
+	}
+
+	// Everything except the two grids is fixed-height chrome — measure it
+	// first (gridRowBudget sums lipgloss.Height of each piece, exactly like
+	// the main grid's own budget calc) so the grids get whatever vertical
+	// room is actually left. Section headers, buttons, and the held-item and
+	// status lines are unconditional; title/footer follow the existing
+	// layout.ShowHeader/ShowFooter gates.
+	var chrome []string
+	if layout.ShowHeader {
+		chrome = append(chrome, title)
+	}
+	chrome = append(chrome, equippedHeader, inventoryHeader, applyButton, rescueButton, heldItemStatus, statusLine)
+	if layout.ShowFooter {
+		chrome = append(chrome, footer)
+	}
+	fixedBudget := gridRowBudget(m.termHeight, chrome...)
+
+	// Split the remaining room between the two grids: whichever list is
+	// focused gets priority (most of the space), the other is capped to a
+	// small fixed row count. This is what stops a large Equipped Items
+	// list (e.g. a big custom grid with many equipped slots) from
+	// stranding a selected-but-invisible item at narrow widths, where both
+	// lists' renderInventoryGrid wrap math drops to one item per row.
+	rowHeight := lipgloss.Height(m.styles.Cell.Render("x"))
+	secondaryBudget := minSecondaryListRows * rowHeight
+
+	equippedBudget, inventoryBudget := secondaryBudget, secondaryBudget
+	switch m.inventory.focusedList {
+	case equip.ListVisible:
+		equippedBudget = fixedBudget - secondaryBudget
+	case equip.ListInventory:
+		inventoryBudget = fixedBudget - secondaryBudget
+	}
+
+	equippedGrid := m.renderInventoryGrid(visible, equip.ListVisible, equippedBudget)
+	inventoryGrid := m.renderInventoryGrid(inventory, equip.ListInventory, inventoryBudget)
+
+	var sections []string
+	if layout.ShowHeader {
+		sections = append(sections, title)
+	}
+	sections = append(sections, equippedHeader, equippedGrid, inventoryHeader, inventoryGrid, applyButton, rescueButton, heldItemStatus, statusLine)
+	if layout.ShowFooter {
+		sections = append(sections, footer)
+	}
+	// The spec picker floats over this screen (View's popups), not inside it.
+	return m.frame(lipgloss.JoinVertical(lipgloss.Left, sections...))
+}
+
+// unlimitedRowBudget is a large sentinel that makes visibleCount always
+// return the full row count, so no scrolling logic engages — used by tests
+// to verify renderInventoryGrid's unwindowed behavior.
+const unlimitedRowBudget = 1 << 30
+
+// minSecondaryListRows is how many rows the non-priority list (Equipped or
+// Inventory, whichever isn't focused) is guaranteed in viewInventoryMode's
+// budget split, even when the focused list claims the rest.
+const minSecondaryListRows = 2
+
+// renderInventoryGrid wraps profiles into rows and windows those rows to
+// rowBudget lines, reusing the same window()/visibleCount() primitives and
+// ▴/▾ marker convention the main grid uses for its own scrolling. The
+// window centers on the cursor's row when this list is focused; otherwise
+// it starts from the top (window(0, ...) naturally yields offset 0), while
+// still respecting rowBudget so an unfocused list can't overflow the page.
+func (m Model) renderInventoryGrid(items []string, listID, rowBudget int) string {
+	var cells []string
+	isFocused := m.inventory.focusedList == listID
+
+	// Add a placeholder cell for dropping if the list is empty
+	if len(items) == 0 {
+		style := m.styles.Cell
+		if isFocused {
+			style = m.styles.SelectedCell
+		}
+		cells = append(cells, style.Render(" (empty) "))
+	} else {
+		for i, p := range items {
+			selected := isFocused && i == m.inventory.cursor
+			locked := m.isLockedProfile(strings.TrimSuffix(p, equip.ProfileSuffix))
+
+			style := m.styles.Cell
+			switch {
+			case selected && locked:
+				style = m.styles.LockedSelectedCell
+			case selected:
+				style = m.styles.SelectedCell
+			case locked:
+				style = m.styles.LockedCell
+			}
+			cells = append(cells, style.Render(p))
+		}
+	}
+
+	if len(cells) == 0 {
+		return ""
+	}
+
+	// Wrap cells into rows of however many fit inside appStyle's margin.
+	cellWidth := lipgloss.Width(cells[0])
+	maxCellsPerLine := (m.termWidth - appStyle.GetHorizontalMargins()) / cellWidth
+	if maxCellsPerLine < 1 {
+		maxCellsPerLine = 1
+	}
+	var rows []string
+	for i := 0; i < len(cells); i += maxCellsPerLine {
+		end := min(i+maxCellsPerLine, len(cells))
+		rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Left, cells[i:end]...))
+	}
+
+	cursorRow := 0
+	if isFocused {
+		cursorRow = m.inventory.cursor / maxCellsPerLine
+	}
+	rowHeight := lipgloss.Height(m.styles.Cell.Render("x"))
+	// reserve 1: the marker line while scrolling
+	rowWin := window(cursorRow, len(rows), visibleCount(rowBudget, rowHeight, len(rows), 1))
+
+	visibleRows := rows[rowWin.start:rowWin.end]
+
+	if rowWin.scrolling() {
+		down, up := " ", " "
+		if rowWin.hiddenAfter > 0 {
+			down = "▾"
+		}
+		if rowWin.hiddenBefore > 0 {
+			up = "▴"
+		}
+		visibleRows = append(visibleRows, m.styles.SelectedCursor.Render(down+" "+up))
+	}
+
+	return lipgloss.JoinVertical(lipgloss.Left, visibleRows...)
+}

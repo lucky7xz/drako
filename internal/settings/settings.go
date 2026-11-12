@@ -19,18 +19,18 @@ const FileName = "config.toml"
 // profile laid over it (its grid size and commands always; its theme, header
 // art and shell when it sets them).
 type Config struct {
-	Theme              string            `toml:"theme"`
-	HeaderArt          *string           `toml:"header_art"`
-	DefaultShell       string            `toml:"default_shell"`
-	NumbModifier       string            `toml:"numb_modifier"`
-	X                  int               `toml:"x"`
-	Y                  int               `toml:"y"`
-	Profile            string            `toml:"profile"`
-	LockTimeoutMinutes *int              `toml:"lock_timeout_minutes"`
-	AutoLockEnabled    *bool             `toml:"auto_lock_enabled"`
-	BatchForceTmux     bool              `toml:"batch_force_tmux"`
-	Keys               InputConfig       `toml:"keys"`
-	Commands           []profile.Command `toml:"commands"`
+	Theme              string
+	HeaderArt          *string
+	DefaultShell       string
+	NumbModifier       string
+	X                  int
+	Y                  int
+	Profile            string
+	LockTimeoutMinutes *int
+	AutoLockEnabled    *bool
+	BatchForceTmux     bool
+	Keys               InputConfig
+	Commands           []profile.Command
 }
 
 // file is config.toml as written.

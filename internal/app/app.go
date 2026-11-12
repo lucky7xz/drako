@@ -18,7 +18,7 @@ import (
 	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/multiplex"
 	"github.com/lucky7xz/drako/internal/proc"
-	"github.com/lucky7xz/drako/internal/ui"
+	"github.com/lucky7xz/drako/internal/tui"
 )
 
 // Run wires everything together. It keeps the program running so that after a command
@@ -79,7 +79,7 @@ func Run() int {
 	// Each lap throws the model away so a launched command gets a clean
 	// terminal, so where the cursor was has to be handed forward explicitly.
 	// The zero value restores nothing, which is what the first lap wants.
-	var session ui.Session
+	var session tui.Session
 
 	// A log that cannot be opened is no reason to lock the user out: run
 	// without one, as the CLI does, and say so on screen.
@@ -92,7 +92,7 @@ func Run() int {
 	}
 
 	// What the TUI is told at each lap; it looks none of it up for itself.
-	setup := ui.Setup{
+	setup := tui.Setup{
 		ConfigDir: configDir,
 		Targets:   host.Targets(),
 		Profile:   os.Getenv("DRAKO_PROFILE"),
@@ -106,12 +106,12 @@ func Run() int {
 	// Start of TUI Loop
 	for {
 
-		// Start the TUI program (Model/View/Update is now in internal/ui)
+		// Start the TUI program (Model/View/Update is in internal/tui)
 		// We initialize with the *current* directory which might have changed
 		// from manual Chdir or from internal logic
 
-		initial := ui.InitialModel(setup, session)
-		if out := initial.Outcome(); out.Action == ui.Quit {
+		initial := tui.InitialModel(setup, session)
+		if out := initial.Outcome(); out.Action == tui.Quit {
 			// e.g. glassroot with a broken profile: fail before the TUI starts
 			if out.Message != "" {
 				fmt.Fprintln(os.Stderr, out.Message)
@@ -125,7 +125,7 @@ func Run() int {
 			watching = true
 			if stop, err := lair.Watch(configDir, func(path string) {
 				if p := current.Load(); p != nil {
-					p.Send(ui.ConfigChangedMsg{Path: path}) // a no-op once that lap's program has quit
+					p.Send(tui.ConfigChangedMsg{Path: path}) // a no-op once that lap's program has quit
 				}
 			}); err != nil {
 				log.Printf("Failed to watch config directory: %v", err)
@@ -143,8 +143,8 @@ func Run() int {
 			return 1
 		}
 
-		// Cast result to ui.Model
-		state, ok := result.(ui.Model)
+		// Cast result to tui.Model
+		state, ok := result.(tui.Model)
 		if !ok {
 			// Should not happen, but safe exit
 			return 0
@@ -152,14 +152,14 @@ func Run() int {
 		session = state.Session()
 
 		switch out := state.Outcome(); out.Action {
-		case ui.Quit:
+		case tui.Quit:
 			return out.ExitCode
 
-		case ui.Batch:
+		case tui.Batch:
 			runBatch(home, out)
 			clearScreen()
 
-		case ui.Run:
+		case tui.Run:
 			// Internal "drako …" cells are dispatched here, at the layer that
 			// may wire cli and proc together; everything else is an ordinary run.
 			plan := out.Plans[0]
@@ -179,8 +179,8 @@ func Run() int {
 }
 
 // noLogNotice is what the user is told when drako runs without its log.
-func noLogNotice(path string, err error) ui.DetailState {
-	return ui.DetailState{
+func noLogNotice(path string, err error) tui.DetailState {
+	return tui.DetailState{
 		Title:    "Running without a log",
 		KeyLabel: "Reason",
 		Value:    err.Error(),
@@ -189,7 +189,7 @@ func noLogNotice(path string, err error) ui.DetailState {
 			"A common cause: the log file is a link that leaves drako's folder. " +
 			"drako does not write through links.\n\n" +
 			"Press any key to dismiss.",
-		Meta: []ui.DetailMeta{{Label: "Log file", Value: path}},
+		Meta: []tui.DetailMeta{{Label: "Log file", Value: path}},
 	}
 }
 
@@ -207,7 +207,7 @@ func clearScreen() {
 // runBatch launches every marked cell together in a multiplexer. The heavy
 // lifting (layout, quoting, which backend) lives in the multiplex package;
 // this is resolution and handoff, mirroring the single-run dispatch.
-func runBatch(home *lair.Lair, out ui.Outcome) {
+func runBatch(home *lair.Lair, out tui.Outcome) {
 	// Neither multiplexer drako drives has a Windows build worth shipping on.
 	if runtime.GOOS == "windows" {
 		fmt.Println("Batch launch needs tmux or herdr and is not available on Windows yet.")
