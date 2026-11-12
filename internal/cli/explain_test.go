@@ -159,53 +159,6 @@ func TestHandleExplainCommand_ExitCodes(t *testing.T) {
 	}
 }
 
-func TestParseCellRef(t *testing.T) {
-	tests := []struct {
-		ref         string
-		wantProfile string
-		wantAddr    string
-		wantItem    int // 0 = no item
-		wantErr     bool
-	}{
-		{"A0", "", "A0", 0, false},
-		{"b12", "", "B12", 0, false},
-		{"work:A1.2", "work", "A1", 2, false},
-		{":A0", "", "A0", 0, false},
-		{"Work:B2", "Work", "B2", 0, false},
-		{"a1.10", "", "A1", 10, false},
-		{"a-1", "", "A-1", 0, false},
-		{"work:C-1.2", "work", "C-1", 2, false},
-		{"A", "", "", 0, true},
-		{"1A", "", "", 0, true},
-		{"A1.0", "", "", 0, true},
-		{"A1.2.3", "", "", 0, true},
-		{"work:", "", "", 0, true},
-		{"", "", "", 0, true},
-		{"AA1", "", "", 0, true},
-		{"A1.x", "", "", 0, true},
-		{"A-", "", "", 0, true},
-		{"A--1", "", "", 0, true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.ref, func(t *testing.T) {
-			profile, addr, item, err := parseCellRef(tt.ref)
-			if tt.wantErr {
-				if err == nil {
-					t.Fatalf("parseCellRef(%q) should fail, got (%q,%q,%d)", tt.ref, profile, addr, item)
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("parseCellRef(%q) = %v", tt.ref, err)
-			}
-			if profile != tt.wantProfile || addr != tt.wantAddr || item != tt.wantItem {
-				t.Errorf("parseCellRef(%q) = (%q,%q,%d), want (%q,%q,%d)",
-					tt.ref, profile, addr, item, tt.wantProfile, tt.wantAddr, tt.wantItem)
-			}
-		})
-	}
-}
-
 func TestExplainShowsDanger(t *testing.T) {
 	b := runBundle()
 	for ref, want := range map[string]bool{

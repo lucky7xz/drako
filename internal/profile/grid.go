@@ -123,3 +123,54 @@ func BuildGrid(x, y int, cmds []Command) [][]string {
 	}
 	return grid
 }
+
+// ParseAddress splits "[profile:]COLROW[.ITEM]" into its parts. The profile
+// qualifier may be empty (active profile); the address is normalized to
+// upper case; item is 1-based, 0 when absent.
+func ParseAddress(ref string) (name, addr string, item int, err error) {
+	rest := ref
+	if i := strings.IndexByte(ref, ':'); i >= 0 {
+		name = ref[:i]
+		rest = ref[i+1:]
+	}
+
+	bad := func() (string, string, int, error) {
+		return "", "", 0, fmt.Errorf("bad cell address %q (expected e.g. A0, work:B2, A1.2)", ref)
+	}
+
+	cell := rest
+	if i := strings.IndexByte(rest, '.'); i >= 0 {
+		cell = rest[:i]
+		itemPart := rest[i+1:]
+		if _, err := fmt.Sscanf(itemPart+"\n", "%d\n", &item); err != nil || item < 1 {
+			return bad()
+		}
+		// Reject trailing garbage like "A1.2.3" or "A1.2x".
+		if fmt.Sprintf("%d", item) != itemPart {
+			return bad()
+		}
+	}
+
+	if len(cell) < 2 {
+		return bad()
+	}
+	col := cell[0]
+	if !('a' <= col && col <= 'z' || 'A' <= col && col <= 'Z') {
+		return bad()
+	}
+	// row = -1 (last row) is addressed as written, e.g. A-1.
+	rowStart := 1
+	if cell[1] == '-' {
+		rowStart = 2
+	}
+	if rowStart == len(cell) {
+		return bad()
+	}
+	for i := rowStart; i < len(cell); i++ {
+		if cell[i] < '0' || cell[i] > '9' {
+			return bad()
+		}
+	}
+
+	return name, strings.ToUpper(cell), item, nil
+}
