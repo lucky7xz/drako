@@ -98,16 +98,9 @@ var knownExceptions = []string{
 	"lair/lair.go os.MkdirAll",  // Create: the folder has to exist before it can be opened
 	"lair/lair.go os.RemoveAll", // Destroy: a folder cannot remove itself through its own root
 
-	// cli, bound since step 8a; each line names the sub-step that removes it
-	"cli/check.go os.ReadFile",    // stays: a file you name by path, outside drako's folder
-	"cli/check.go os.Stat",        // stays: same
-	"cli/summon.go os.Stat",       // 8c
-	"cli/summon.go os.CreateTemp", // 8c
-	"cli/summon.go os.MkdirTemp",  // 8c
-	"cli/summon.go os.Open",       // 8c
-	"cli/summon.go os.ReadFile",   // 8c
-	"cli/summon.go os.Remove",     // 8c
-	"cli/summon.go os.RemoveAll",  // 8c
+	// cli, bound since step 8a: only check, for files you name by path
+	"cli/check.go os.ReadFile", // stays: a file you name by path, outside drako's folder
+	"cli/check.go os.Stat",     // stays: same
 }
 
 func TestPackagesKeepToTheirCapabilities(t *testing.T) {

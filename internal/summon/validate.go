@@ -59,34 +59,36 @@ const (
 )
 
 // ValidateProfileFile checks that a file is a valid drako profile and returns
-// it decoded, with the file's size: one over ProfileWarnSize is unusual, and
-// the caller may want to say so.
-func ValidateProfileFile(path string) (pf profile.File, size int64, err error) {
-	// Check file size
+// it as a checked File, decoded. Info is set whenever the file could be
+// looked at, failed or not: a size over ProfileWarnSize is unusual, and the
+// caller may want to say so.
+func ValidateProfileFile(path string) (File, error) {
+	f := File{Path: path}
 	info, err := os.Stat(path)
 	if err != nil {
-		return pf, 0, fmt.Errorf("failed to stat file: %w", err)
+		return f, fmt.Errorf("failed to stat file: %w", err)
 	}
+	f.Info = info
 
-	size = info.Size()
-	if size > ProfileMaxSize {
-		return pf, size, fmt.Errorf("file too large (%d bytes, max %d bytes). This is not a valid profile", size, ProfileMaxSize)
+	if size := info.Size(); size > ProfileMaxSize {
+		return f, fmt.Errorf("file too large (%d bytes, max %d bytes). This is not a valid profile", size, ProfileMaxSize)
 	}
 
 	// Read and parse as TOML
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return pf, size, fmt.Errorf("failed to read file: %w", err)
+		return f, fmt.Errorf("failed to read file: %w", err)
 	}
 
 	pf, problems, err := profile.Decode(data, nil) // validating only: no platform needed
 	if err != nil {
-		return pf, size, fmt.Errorf("invalid TOML format: %w", err)
+		return f, fmt.Errorf("invalid TOML format: %w", err)
 	}
 	if len(problems) > 0 {
-		return pf, size, fmt.Errorf("invalid profile: %s", strings.Join(problems, "; "))
+		return f, fmt.Errorf("invalid profile: %s", strings.Join(problems, "; "))
 	}
-	return pf, size, nil
+	f.Profile = pf
+	return f, nil
 }
 
 // ValidateFilename checks if the filename is a valid profile name
@@ -109,35 +111,38 @@ func ValidateFilename(filename string) error {
 	return nil
 }
 
-// ValidateSpecFile checks if a file is a valid drako spec
-func ValidateSpecFile(path string) error {
+// ValidateSpecFile checks if a file is a valid drako spec, and returns it as
+// a checked File.
+func ValidateSpecFile(path string) (File, error) {
+	f := File{Path: path}
 	info, err := os.Stat(path)
 	if err != nil {
-		return err
+		return f, err
 	}
+	f.Info = info
 	if info.Size() > ProfileMaxSize {
-		return fmt.Errorf("file too large")
+		return f, fmt.Errorf("file too large")
 	}
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return err
+		return f, err
 	}
 
 	// Basic TOML validation
 	var temp map[string]any
 	if _, err := toml.Decode(string(data), &temp); err != nil {
-		return fmt.Errorf("invalid TOML: %w", err)
+		return f, fmt.Errorf("invalid TOML: %w", err)
 	}
 
 	// Spec files should expect a 'profiles' key (list of strings)
 	if profiles, ok := temp["profiles"]; ok {
 		if _, isList := profiles.([]any); !isList {
-			return fmt.Errorf("missing or invalid 'profiles' list")
+			return f, fmt.Errorf("missing or invalid 'profiles' list")
 		}
 	} else {
-		return fmt.Errorf("missing 'profiles' key")
+		return f, fmt.Errorf("missing 'profiles' key")
 	}
 
-	return nil
+	return f, nil
 }

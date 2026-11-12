@@ -22,7 +22,6 @@ import (
 	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/glyph"
 	"github.com/lucky7xz/drako/internal/lair"
-	"github.com/lucky7xz/drako/internal/profile"
 	"github.com/lucky7xz/drako/internal/summon"
 )
 
@@ -76,11 +75,12 @@ func (s *Summoner) Summon(sourceURL string) error {
 		return fmt.Errorf("failed to create inventory directory: %w", err)
 	}
 
-	if info, err := os.Stat(sourceURL); err == nil && info.IsDir() && !summon.IsGitURL(sourceURL) {
+	kind := summon.Classify(sourceURL)
+	if kind == summon.Folder {
 		return s.summonFromFolder(sourceURL)
 	}
 
-	if summon.IsGitURL(sourceURL) {
+	if kind == summon.Git {
 		if s.SHA256 != "" {
 			return fmt.Errorf("--sha256 pins single-file downloads; for git repositories use --rev <full-commit-hash>")
 		}
@@ -204,18 +204,20 @@ func warnIfNoSSHKeys() {
 
 // validateProfile is summon.ValidateProfileFile, saying so when the file is
 // unusually large.
-func validateProfile(path string) (profile.File, error) {
-	pf, size, err := summon.ValidateProfileFile(path)
-	if size > summon.ProfileWarnSize && size <= summon.ProfileMaxSize {
-		fmt.Printf("⚠️  Warning: Profile is unusually large (%d KB). Validating...\n", size/1024)
+func validateProfile(path string) (summon.File, error) {
+	f, err := summon.ValidateProfileFile(path)
+	if f.Info != nil {
+		if size := f.Info.Size(); size > summon.ProfileWarnSize && size <= summon.ProfileMaxSize {
+			fmt.Printf("⚠️  Warning: Profile is unusually large (%d KB). Validating...\n", size/1024)
+		}
 	}
-	return pf, err
+	return f, err
 }
 
-// installProfile hands the profile at srcPath to lair, which puts it where
+// installProfile hands the checked deck f to lair, which puts it where
 // dstPath says: equipped (the config dir itself) or the inventory.
-func installProfile(configDir, srcPath, dstPath string) error {
-	in, err := os.Open(srcPath)
+func installProfile(configDir string, f summon.File, dstPath string) error {
+	in, err := f.Open()
 	if err != nil {
 		return err
 	}
@@ -227,9 +229,9 @@ func installProfile(configDir, srcPath, dstPath string) error {
 	return lair.InstallProfile(configDir, loc, filepath.Base(dstPath), in)
 }
 
-// installSpec hands the spec at srcPath to lair under the name file.
-func installSpec(configDir, srcPath, file string) error {
-	in, err := os.Open(srcPath)
+// installSpec hands the checked spec f to lair under the name file.
+func installSpec(configDir string, f summon.File, file string) error {
+	in, err := f.Open()
 	if err != nil {
 		return err
 	}
@@ -238,14 +240,10 @@ func installSpec(configDir, srcPath, file string) error {
 }
 
 // sameFile reports whether the deck at dstPath, in the config dir, and the
-// file being summoned are one file on disk: the deck is a link to it.
-func sameFile(configDir, srcPath, dstPath string) bool {
-	src, err := os.Stat(srcPath)
-	if err != nil {
-		return false
-	}
+// checked file f are one file on disk: the deck is a link to it.
+func sameFile(configDir string, f summon.File, dstPath string) bool {
 	rel, err := filepath.Rel(configDir, dstPath)
-	return err == nil && lair.SameFile(configDir, rel, src)
+	return err == nil && f.Info != nil && lair.SameFile(configDir, rel, f.Info)
 }
 
 // summonOutcome classifies what happened to one candidate file.
@@ -261,12 +259,12 @@ const (
 // summonFromGit clones a profile repository and walks the user through
 // summoning every profile and spec file it contains.
 func (s *Summoner) summonFromGit(repoURL string) error {
-	// A fresh dir per run: one left by a Ctrl-C can't block the next summon.
-	tempDir, err := os.MkdirTemp("", "drako-summon-*")
+	q, err := summon.NewQuarantine()
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tempDir)
+	defer q.Close()
+	tempDir := q.Dir
 
 	// Clone the repository using injected Cloner
 	fmt.Printf("Cloning repository...\n")
@@ -413,21 +411,19 @@ func (s *Summoner) summonRepoProfile(srcPath, tempDir string) (summonOutcome, er
 
 	// Validate file content before copying
 	fmt.Printf("\nValidating %s...\n", dstName)
-	profile, err := validateProfile(srcPath)
+	f, err := validateProfile(srcPath)
 	if err != nil {
 		fmt.Printf("⚠️  Skipping %s: %v\n", dstName, err)
 		return outcomeSkipped, nil
 	}
-	assets := summon.ProfileAssets(profile)
+	assets := summon.ProfileAssets(f.Profile)
 
 	dstPath, where, err := placeFor(s.ConfigDir, dstName)
 	if err != nil {
 		return outcomeFailed, err
 	}
 
-	// Get file info for size display
-	info, _ := os.Stat(srcPath)
-	size := info.Size()
+	size := f.Info.Size()
 
 	// Ask for confirmation (include assets plan if any)
 	fmt.Printf("  File: %s\n", dstName)
@@ -438,7 +434,7 @@ func (s *Summoner) summonRepoProfile(srcPath, tempDir string) (summonOutcome, er
 		printAssetsPlan(tempDir, filepath.Dir(srcPath), assets, profileName)
 	}
 	if s.Show {
-		if err := printCommands(srcPath, profile.Shell); err != nil {
+		if err := printCommands(f); err != nil {
 			fmt.Printf("⚠️  Skipping %s: %v\n", dstName, err)
 			return outcomeSkipped, nil
 		}
@@ -449,10 +445,10 @@ func (s *Summoner) summonRepoProfile(srcPath, tempDir string) (summonOutcome, er
 		return outcomeCancelled, nil
 	}
 
-	if sameFile(s.ConfigDir, srcPath, dstPath) {
+	if sameFile(s.ConfigDir, f, dstPath) {
 		// The deck is a link to this very file: it is already in place.
 		fmt.Printf("✓ Already in place: %s\n", dstName)
-	} else if err := installProfile(s.ConfigDir, srcPath, dstPath); err != nil {
+	} else if err := installProfile(s.ConfigDir, f, dstPath); err != nil {
 		return outcomeFailed, fmt.Errorf("failed to copy %s: %w", dstName, err)
 	} else {
 		fmt.Printf("✓ Summoned: %s\n", dstName)
@@ -518,18 +514,14 @@ func printAssetsPlan(tempDir, srcDir string, assets []string, profileName string
 		summon.AssetMaxFileCount, summon.AssetMaxTotalBytes/(1024*1024), summon.AssetMaxFileBytes/(1024*1024))
 }
 
-// printCommands lists every command the deck at path holds, as written and
+// printCommands lists every command the checked deck f holds, as written and
 // for every platform, so the user reads them before confirming (--show).
-func printCommands(path string, shell *string) error {
-	raw, err := os.ReadFile(path)
+func printCommands(f summon.File) error {
+	cmds, err := f.Commands()
 	if err != nil {
 		return err
 	}
-	cmds, err := profile.WrittenCommands(raw)
-	if err != nil {
-		return err
-	}
-	if shell != nil {
+	if shell := f.Profile.Shell; shell != nil {
 		fmt.Printf("  Shell: %s\n", visible(*shell))
 	}
 	fmt.Printf("  Commands (%d), as written:\n", len(cmds))
@@ -576,13 +568,12 @@ func (s *Summoner) summonRepoSpec(srcPath, specsDir string) summonOutcome {
 		return outcomeSkipped
 	}
 	// Validate spec file content
-	if err := summon.ValidateSpecFile(srcPath); err != nil {
+	f, err := summon.ValidateSpecFile(srcPath)
+	if err != nil {
 		fmt.Printf("⚠️  Skipping %s: %v\n", dstName, err)
 		return outcomeSkipped
 	}
-
-	info, _ := os.Stat(srcPath)
-	size := info.Size()
+	size := f.Info.Size()
 
 	fmt.Printf("  File: %s\n", dstName)
 	fmt.Printf("  Size: %d bytes\n", size)
@@ -596,7 +587,7 @@ func (s *Summoner) summonRepoSpec(srcPath, specsDir string) summonOutcome {
 		return outcomeCancelled
 	}
 
-	if err := installSpec(s.ConfigDir, srcPath, dstName); err != nil {
+	if err := installSpec(s.ConfigDir, f, dstName); err != nil {
 		fmt.Printf("Failed to copy %s: %v\n", dstName, err)
 		return outcomeFailed
 	}
@@ -609,15 +600,14 @@ func (s *Summoner) summonRepoSpec(srcPath, specsDir string) summonOutcome {
 func (s *Summoner) summonFromHTTP(sourceURL, dstPath string) error {
 	filename := filepath.Base(dstPath)
 
-	// Download to a temp path so validation happens before anything lands in
-	// the config dir.
-	tempFile, err := os.CreateTemp("", "drako-summon-*.toml")
+	// Download into a quarantine so validation happens before anything lands
+	// in the config dir.
+	q, err := summon.NewQuarantine()
 	if err != nil {
 		return err
 	}
-	tempPath := tempFile.Name()
-	tempFile.Close() // close immediately, downloader will open
-	defer os.Remove(tempPath)
+	defer q.Close()
+	tempPath := filepath.Join(q.Dir, "download.toml")
 
 	fmt.Printf("Downloading from %s...\n", sourceURL)
 	if err := s.Downloader.DownloadFile(sourceURL, tempPath); err != nil {
@@ -636,12 +626,12 @@ func (s *Summoner) summonFromHTTP(sourceURL, dstPath string) error {
 
 	// Validate the downloaded file
 	fmt.Printf("Validating profile...\n")
-	pf, err := validateProfile(tempPath)
+	f, err := validateProfile(tempPath)
 	if err != nil {
 		return fmt.Errorf("validation failed: %w", err)
 	}
 	if s.Show {
-		if err := printCommands(tempPath, pf.Shell); err != nil {
+		if err := printCommands(f); err != nil {
 			return err
 		}
 		if !s.UI.Confirm(fmt.Sprintf("Summon %s?", filename)) {
@@ -649,9 +639,7 @@ func (s *Summoner) summonFromHTTP(sourceURL, dstPath string) error {
 		}
 	}
 
-	// Move temp file to final destination
-	// We need to copy/move it manually since it's cross-device potentially (tmp vs home)
-	if err := installProfile(s.ConfigDir, tempPath, dstPath); err != nil {
+	if err := installProfile(s.ConfigDir, f, dstPath); err != nil {
 		return fmt.Errorf("failed to finalize file: %w", err)
 	}
 
