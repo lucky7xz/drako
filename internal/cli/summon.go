@@ -474,28 +474,33 @@ func printAssetsPlan(tempDir, srcDir string, assets []string, profileName string
 	totalPlannedBytes := int64(0)
 	totalPlannedFiles := 0
 	missingPlanned := 0
+	refusedPlanned := 0
 	for _, p := range plans {
 		status := "file"
 		if p.IsDir {
 			status = "dir"
 		}
 		dest := filepath.Join("~/.config/drako/assets", profileName, p.DestRel)
-		if p.Missing {
+		switch {
+		case p.Refused:
+			fmt.Printf("    - %s [refused: outside the repository]\n", p.AssetRel)
+			refusedPlanned++
+		case p.Missing:
 			fmt.Printf("    - %s (%s) -> %s [missing]\n", p.AssetRel, status, dest)
 			missingPlanned++
-		} else {
-			if p.IsDir {
-				fmt.Printf("    - %s (%s, %d files, %.1f MB) -> %s\n", p.AssetRel, status, p.FileCount, float64(p.Bytes)/(1024*1024), dest)
-			} else {
-				fmt.Printf("    - %s (%s, %.1f MB) -> %s\n", p.AssetRel, status, float64(p.Bytes)/(1024*1024), dest)
-			}
+		case p.IsDir:
+			fmt.Printf("    - %s (%s, %d files, %.1f MB) -> %s\n", p.AssetRel, status, p.FileCount, float64(p.Bytes)/(1024*1024), dest)
+			totalPlannedBytes += p.Bytes
+			totalPlannedFiles += p.FileCount
+		default:
+			fmt.Printf("    - %s (%s, %.1f MB) -> %s\n", p.AssetRel, status, float64(p.Bytes)/(1024*1024), dest)
 			totalPlannedBytes += p.Bytes
 			totalPlannedFiles += p.FileCount
 		}
 	}
-	fmt.Printf("  Assets summary: planned_files=%d, planned_bytes=%.1f MB, missing=%d\n",
-		totalPlannedFiles, float64(totalPlannedBytes)/(1024*1024), missingPlanned)
-	fmt.Printf("  Note: No per-asset prompts. Missing assets will be warned and skipped. Limits: %d files, total ≤ %d MB, per-file ≤ %d MB.\n",
+	fmt.Printf("  Assets summary: planned_files=%d, planned_bytes=%.1f MB, missing=%d, refused=%d\n",
+		totalPlannedFiles, float64(totalPlannedBytes)/(1024*1024), missingPlanned, refusedPlanned)
+	fmt.Printf("  Note: No per-asset prompts. Missing and refused assets are skipped. Limits: %d files, total ≤ %d MB, per-file ≤ %d MB.\n",
 		summon.AssetMaxFileCount, summon.AssetMaxTotalBytes/(1024*1024), summon.AssetMaxFileBytes/(1024*1024))
 }
 

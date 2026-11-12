@@ -66,18 +66,18 @@ func CopyAssets(repoRoot, profileDir string, assets []string, sink AssetSink) (i
 			continue
 		}
 		src := filepath.Join(profileDir, cleanRel)
+		// Missing first, as in PlanAssets, so plan and summary agree.
+		info, statErr := os.Stat(src)
+		if statErr != nil {
+			log.Printf("assets: missing %s", rel)
+			missing++
+			continue
+		}
 		// Ensure src is within repoRoot
 		ok, err := IsPathWithinBase(repoRoot, src)
 		if err != nil || !ok {
 			log.Printf("assets: skipping unsafe path %s (err=%v)", rel, err)
 			skipped++
-			continue
-		}
-
-		info, statErr := os.Stat(src)
-		if statErr != nil {
-			log.Printf("assets: missing %s", rel)
-			missing++
 			continue
 		}
 		if info.IsDir() {
@@ -115,7 +115,8 @@ type AssetPlan struct {
 	IsDir     bool
 	FileCount int
 	Bytes     int64
-	Missing   bool
+	Missing   bool // declared, but not there
+	Refused   bool // its path leaves the repository; never read, never copied
 }
 
 // PlanAssets enumerates assets to present a copy plan before confirmation
@@ -124,18 +125,20 @@ func PlanAssets(repoRoot, profileDir string, assets []string) []AssetPlan {
 	for _, rel := range assets {
 		cleanRel, safe := cleanAssetRel(rel)
 		if !safe {
-			plans = append(plans, AssetPlan{AssetRel: rel, DestRel: cleanRel, Missing: true})
+			plans = append(plans, AssetPlan{AssetRel: rel, DestRel: cleanRel, Refused: true})
 			continue
 		}
 		src := filepath.Join(profileDir, cleanRel)
-		ok, err := IsPathWithinBase(repoRoot, src)
-		if err != nil || !ok {
-			plans = append(plans, AssetPlan{AssetRel: rel, DestRel: cleanRel, Missing: true})
-			continue
-		}
+		// Missing is asked first: a path that is not there cannot be resolved,
+		// so the within-the-repository check would call it unsafe.
 		info, statErr := os.Stat(src)
 		if statErr != nil {
 			plans = append(plans, AssetPlan{AssetRel: rel, DestRel: cleanRel, Missing: true})
+			continue
+		}
+		ok, err := IsPathWithinBase(repoRoot, src)
+		if err != nil || !ok {
+			plans = append(plans, AssetPlan{AssetRel: rel, DestRel: cleanRel, Refused: true})
 			continue
 		}
 		if info.IsDir() {

@@ -1,8 +1,11 @@
 package summon
 
 import (
+	"io"
 	"os"
 	"path/filepath"
+	"runtime"
+	"slices"
 	"testing"
 )
 
@@ -58,5 +61,65 @@ func TestIsPathWithinBase_RejectsEscapeFromSymlinkedBase(t *testing.T) {
 	ok, _ := IsPathWithinBase(link, escaping)
 	if ok {
 		t.Error("a symlink pointing outside the repo was accepted")
+	}
+}
+
+// The plan and the copy say the same about every declared asset: a path that
+// leaves the repository is refused, one that is not there is missing, and
+// neither is ever opened.
+func TestAssetsRefusedAndMissingAreToldApart(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("creating links needs privileges on Windows")
+	}
+	root := t.TempDir()
+	repo := filepath.Join(root, "repo")
+	if err := os.MkdirAll(filepath.Join(repo, "scripts"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	write := func(path, content string) {
+		t.Helper()
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write(filepath.Join(root, "outside.txt"), "outside")
+	write(filepath.Join(repo, "note.txt"), "note")
+	write(filepath.Join(repo, "scripts", "run.sh"), "run")
+	if err := os.Symlink(filepath.Join(root, "outside.txt"), filepath.Join(repo, "link-out.txt")); err != nil {
+		t.Fatal(err)
+	}
+
+	declared := []string{"scripts", "note.txt", "../outside.txt", "link-out.txt", "nope.txt"}
+	want := map[string]string{
+		"scripts": "copy", "note.txt": "copy",
+		"../outside.txt": "refused", "link-out.txt": "refused", "nope.txt": "missing",
+	}
+	for _, p := range PlanAssets(repo, repo, declared) {
+		got := "copy"
+		switch {
+		case p.Refused:
+			got = "refused"
+		case p.Missing:
+			got = "missing"
+		}
+		if got != want[p.AssetRel] {
+			t.Errorf("plan: %s is %s, want %s", p.AssetRel, got, want[p.AssetRel])
+		}
+	}
+
+	var installed []string
+	copied, skipped, missing, _ := CopyAssets(repo, repo, declared, AssetSink{
+		Install: func(rel string, r io.Reader) error {
+			installed = append(installed, filepath.ToSlash(rel))
+			return nil
+		},
+		Large: func(string, int64, bool) {},
+	})
+	if copied != 2 || skipped != 2 || missing != 1 {
+		t.Errorf("copied=%d skipped=%d missing=%d, want 2, 2 (the two refused), 1", copied, skipped, missing)
+	}
+	slices.Sort(installed)
+	if !slices.Equal(installed, []string{"note.txt", "scripts/run.sh"}) {
+		t.Errorf("installed %v, want only the two files inside the repository", installed)
 	}
 }
