@@ -159,9 +159,10 @@ func checkFields(label string, m map[string]any, fields map[string]string) []Fin
 	return fs
 }
 
-// checkDrawn warns about labels drako draws without some of their
-// characters: joiners and variation selectors, which terminals draw at
-// different widths (glyph.Clean). Commands are not labels; they run as written.
+// checkDrawn warns about labels drako draws differently from how they are
+// written: joiners and variation selectors, which terminals draw at different
+// widths (glyph.Clean), and in a name, which is one line, line breaks and
+// tabs (glyph.Label). Commands are not labels; they run as written.
 func checkDrawn(label string, m map[string]any, keys ...string) []Finding {
 	var fs []Finding
 	for _, k := range keys {
@@ -171,6 +172,9 @@ func checkDrawn(label string, m map[string]any, keys ...string) []Finding {
 		}
 		if drawn := glyph.Clean(s); drawn != s {
 			fs = append(fs, warnf("%s: %s holds characters terminals draw at different widths (joiners, variation selectors); drako shows it as %q", label, k, drawn))
+		}
+		if k == "name" && strings.ContainsAny(s, "\n\r\t") {
+			fs = append(fs, warnf("%s: name holds a line break or tab; a name is one line, so drako shows it as %q", label, glyph.Label(s)))
 		}
 	}
 	return fs

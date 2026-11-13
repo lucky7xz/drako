@@ -361,7 +361,7 @@ func (c *rawCommand) UnmarshalTOML(v any) error {
 		return fmt.Errorf("command entry must be a table")
 	}
 	c.cell = Command{
-		Name:               glyph.Clean(tomlStr(m, "name")),
+		Name:               glyph.Label(tomlStr(m, "name")),
 		Description:        glyph.Clean(tomlStr(m, "description")),
 		Row:                tomlInt(m, "row"),
 		Col:                tomlStr(m, "col"),
@@ -393,7 +393,7 @@ func (c *rawCommand) UnmarshalTOML(v any) error {
 			return fmt.Errorf("command %q: items must be tables", c.cell.Name)
 		}
 		item := CommandItem{
-			Name:               glyph.Clean(tomlStr(im, "name")),
+			Name:               glyph.Label(tomlStr(im, "name")),
 			Description:        glyph.Clean(tomlStr(im, "description")),
 			AutoCloseExecution: tomlBoolPtr(im, "auto_close_execution"),
 			DebugExecution:     tomlBoolPtr(im, "debug_execution"),

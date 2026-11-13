@@ -230,3 +230,23 @@ row = 0
 		}
 	})
 }
+
+// A name is one line. The loader draws a line break or tab in it as a space,
+// and check says so (U-12, U-13).
+func TestNameWithLineBreakIsOneLine(t *testing.T) {
+	src := []byte("x = 1\ny = 1\n[[commands]]\nname = \"two\\nlines\"\ncommand = \"echo\"\ncol = \"a\"\nrow = 0\n[[commands.items]]\nname = \"tab\\there\"\ncommand = \"echo\"\n")
+	pf, problems, err := Decode(src, nil)
+	if err != nil || len(problems) > 0 {
+		t.Fatalf("the deck must load: %v %v", err, problems)
+	}
+	if got := pf.Commands[0].Name; got != "two lines" {
+		t.Errorf("cell name = %q, want %q", got, "two lines")
+	}
+	if got := pf.Commands[0].Items[0].Name; got != "tab here" {
+		t.Errorf("item name = %q, want %q", got, "tab here")
+	}
+	fs := Lint(src)
+	if !findingsContain(fs, "warning", "name holds a line break or tab") {
+		t.Errorf("check must warn about the name: %+v", fs)
+	}
+}

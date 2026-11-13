@@ -60,6 +60,18 @@ func Clean(s string) string {
 	return b.String()
 }
 
+// Label is s as drako draws it on one line: Clean, with every line break and
+// tab drawn as a space. A cell name or a folder name is one label on one row;
+// a line break in it would draw a second row that is not a second thing.
+func Label(s string) string {
+	return strings.Map(func(r rune) rune {
+		if r == '\n' || r == '\r' || r == '\t' {
+			return ' '
+		}
+		return r
+	}, Clean(s))
+}
+
 func steers(r rune) bool {
 	if r == '\n' || r == '\t' {
 		return false

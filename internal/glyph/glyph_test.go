@@ -73,3 +73,20 @@ func TestCheckName(t *testing.T) {
 		}
 	}
 }
+
+// A label is one line: line breaks and tabs are drawn as spaces (U-12, P-01).
+func TestLabel(t *testing.T) {
+	for in, want := range map[string]string{
+		"plain":      "plain",
+		"two\nlines": "two lines",
+		"tab\there":  "tab here",
+		"a‍b\nc":     "ab c",
+	} {
+		if got := Label(in); got != want {
+			t.Errorf("Label(%q) = %q, want %q", in, got, want)
+		}
+		if strings.ContainsAny(Label(in), "\n\t") {
+			t.Errorf("Label(%q) still holds a line break or tab", in)
+		}
+	}
+}
