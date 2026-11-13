@@ -302,3 +302,30 @@ func TestSummonSkipsRefusedFileName(t *testing.T) {
 		t.Error("the file name reached the terminal unescaped")
 	}
 }
+
+// The asset plan says which files arrive executable before the user confirms.
+func TestSummonPlanNamesExecutableAssets(t *testing.T) {
+	s, dir := localSummoner(t)
+	writeAll(t, dir, map[string]string{
+		"d.profile.toml": "assets = [\"run.sh\", \"bin\", \"note.txt\"]\n" + validDeck,
+		"run.sh":         "echo",
+		"bin/tool":       "echo",
+		"bin/readme.txt": "x",
+		"note.txt":       "x",
+	})
+	for _, f := range []string{"run.sh", "bin/tool"} {
+		if err := os.Chmod(filepath.Join(dir, f), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	out := captureStdout(t, func() {
+		if err := s.Summon(dir); err != nil {
+			t.Errorf("Summon: %v", err)
+		}
+	})
+	for _, want := range []string{"run.sh (file, executable,", "bin (dir, 2 files, 1 executable,", "note.txt (file, 0.0 MB)", "executable=2"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("plan lacks %q:\n%s", want, out)
+		}
+	}
+}

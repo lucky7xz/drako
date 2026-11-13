@@ -90,6 +90,10 @@ func TestAssetsRefusedAndMissingAreToldApart(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if err := os.Chmod(filepath.Join(repo, "scripts", "run.sh"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
 	declared := []string{"scripts", "note.txt", "../outside.txt", "link-out.txt", "nope.txt"}
 	want := map[string]string{
 		"scripts": "copy", "note.txt": "copy",
@@ -106,10 +110,10 @@ func TestAssetsRefusedAndMissingAreToldApart(t *testing.T) {
 		if got != want[p.AssetRel] {
 			t.Errorf("plan: %s is %s, want %s", p.AssetRel, got, want[p.AssetRel])
 		}
-	}
-
-	if err := os.Chmod(filepath.Join(repo, "scripts", "run.sh"), 0o755); err != nil {
-		t.Fatal(err)
+		// The plan names what arrives executable: the script, not the note.
+		if wantExec := map[string]int{"scripts": 1}[p.AssetRel]; p.Executable != wantExec {
+			t.Errorf("plan: %s has %d executable, want %d", p.AssetRel, p.Executable, wantExec)
+		}
 	}
 	var installed []string
 	copied, skipped, missing, _ := CopyAssets(repo, repo, declared, AssetSink{

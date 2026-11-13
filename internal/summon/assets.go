@@ -118,6 +118,8 @@ type AssetPlan struct {
 	Bytes     int64
 	Missing   bool // declared, but not there
 	Refused   bool // its path leaves the repository; never read, never copied
+
+	Executable int // files that arrive executable
 }
 
 // PlanAssets enumerates assets to present a copy plan before confirmation
@@ -144,7 +146,7 @@ func PlanAssets(repoRoot, profileDir string, assets []string) []AssetPlan {
 		}
 		if info.IsDir() {
 			// Walk dir to count files/bytes
-			var files int
+			var files, execs int
 			var bytes int64
 			filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
 				if err != nil {
@@ -159,15 +161,18 @@ func PlanAssets(repoRoot, profileDir string, assets []string) []AssetPlan {
 				}
 				files++
 				bytes += fi.Size()
+				if executable(fi.Mode()) {
+					execs++
+				}
 				return nil
 			})
 			plans = append(plans, AssetPlan{
-				AssetRel:  rel,
-				DestRel:   cleanRel,
-				IsDir:     true,
-				FileCount: files,
-				Bytes:     bytes,
-				Missing:   false,
+				AssetRel:   rel,
+				DestRel:    cleanRel,
+				IsDir:      true,
+				FileCount:  files,
+				Bytes:      bytes,
+				Executable: execs,
 			})
 		} else {
 			plans = append(plans, AssetPlan{
@@ -176,8 +181,10 @@ func PlanAssets(repoRoot, profileDir string, assets []string) []AssetPlan {
 				IsDir:     false,
 				FileCount: 1,
 				Bytes:     info.Size(),
-				Missing:   false,
 			})
+			if executable(info.Mode()) {
+				plans[len(plans)-1].Executable = 1
+			}
 		}
 	}
 	return plans
@@ -207,7 +214,13 @@ func hand(sink AssetSink, rel, src string) error {
 	if err != nil {
 		return err
 	}
-	return sink.Install(rel, in, info.Mode()&0o111 != 0)
+	return sink.Install(rel, in, executable(info.Mode()))
+}
+
+// executable is the one rule for an asset arriving executable: it is at its
+// source.
+func executable(m fs.FileMode) bool {
+	return m&0o111 != 0
 }
 
 // copyDirWithLimits recursively hands the files of srcDir to sink, with

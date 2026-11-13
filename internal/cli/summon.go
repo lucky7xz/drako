@@ -472,6 +472,7 @@ func printAssetsPlan(tempDir, srcDir string, assets []string, profileName string
 	plans := summon.PlanAssets(tempDir, srcDir, assets)
 	totalPlannedBytes := int64(0)
 	totalPlannedFiles := 0
+	totalExecutable := 0
 	missingPlanned := 0
 	refusedPlanned := 0
 	for _, p := range plans {
@@ -488,19 +489,31 @@ func printAssetsPlan(tempDir, srcDir string, assets []string, profileName string
 			fmt.Printf("    - %s (%s) -> %s [missing]\n", p.AssetRel, status, dest)
 			missingPlanned++
 		case p.IsDir:
-			fmt.Printf("    - %s (%s, %d files, %.1f MB) -> %s\n", p.AssetRel, status, p.FileCount, float64(p.Bytes)/(1024*1024), dest)
-			totalPlannedBytes += p.Bytes
-			totalPlannedFiles += p.FileCount
+			fmt.Printf("    - %s (%s, %d files%s, %.1f MB) -> %s\n", p.AssetRel, status, p.FileCount, executableNote(p), float64(p.Bytes)/(1024*1024), dest)
 		default:
-			fmt.Printf("    - %s (%s, %.1f MB) -> %s\n", p.AssetRel, status, float64(p.Bytes)/(1024*1024), dest)
+			fmt.Printf("    - %s (%s%s, %.1f MB) -> %s\n", p.AssetRel, status, executableNote(p), float64(p.Bytes)/(1024*1024), dest)
+		}
+		if !p.Refused && !p.Missing {
 			totalPlannedBytes += p.Bytes
 			totalPlannedFiles += p.FileCount
+			totalExecutable += p.Executable
 		}
 	}
-	fmt.Printf("  Assets summary: planned_files=%d, planned_bytes=%.1f MB, missing=%d, refused=%d\n",
-		totalPlannedFiles, float64(totalPlannedBytes)/(1024*1024), missingPlanned, refusedPlanned)
+	fmt.Printf("  Assets summary: planned_files=%d, executable=%d, planned_bytes=%.1f MB, missing=%d, refused=%d\n",
+		totalPlannedFiles, totalExecutable, float64(totalPlannedBytes)/(1024*1024), missingPlanned, refusedPlanned)
 	fmt.Printf("  Note: No per-asset prompts. Missing and refused assets are skipped. Limits: %d files, total ≤ %d MB, per-file ≤ %d MB.\n",
 		summon.AssetMaxFileCount, summon.AssetMaxTotalBytes/(1024*1024), summon.AssetMaxFileBytes/(1024*1024))
+}
+
+// executableNote says how many of p's files arrive executable, if any.
+func executableNote(p summon.AssetPlan) string {
+	switch {
+	case p.Executable == 0:
+		return ""
+	case p.IsDir:
+		return fmt.Sprintf(", %d executable", p.Executable)
+	}
+	return ", executable"
 }
 
 // printCommands lists every command the checked deck f holds, as written and
