@@ -82,6 +82,9 @@ func (s *Summoner) Summon(sourceURL string) error {
 	}
 
 	if kind == summon.Git {
+		if err := summon.CheckGitAddress(sourceURL); err != nil {
+			return err
+		}
 		if s.SHA256 != "" {
 			return fmt.Errorf("--sha256 pins single-file downloads; for git repositories use --rev <full-commit-hash>")
 		}

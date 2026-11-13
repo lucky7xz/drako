@@ -100,6 +100,26 @@ func TestKeepHTTPS(t *testing.T) {
 	}
 }
 
+func TestCheckGitAddress(t *testing.T) {
+	for _, addr := range []string{
+		"https://host/r.git", "HTTPS://host/r.git", "ssh://git@host/r", "git@host:u/r.git",
+		"me@host:r.git", "/tmp/decks.git", "./decks.git", "file:///tmp/d.git",
+		"http://host/r.git", "git://host/r",
+	} {
+		if err := CheckGitAddress(addr); err != nil {
+			t.Errorf("%q refused: %v", addr, err)
+		}
+	}
+	for _, addr := range []string{
+		"ext::sh -c touch% x% .git", "fd::0.git", "gcrypt::https://host/r.git",
+		"foo://host/r.git", "git+ssh://host/r.git",
+	} {
+		if err := CheckGitAddress(addr); err == nil {
+			t.Errorf("%q accepted", addr)
+		}
+	}
+}
+
 func TestGitProtocols(t *testing.T) {
 	for addr, want := range map[string]string{
 		"https://host/r.git":   "https:ssh:file",
@@ -131,9 +151,11 @@ func isolatedGit(t *testing.T, config string) {
 	t.Setenv("GIT_TERMINAL_PROMPT", "0")
 }
 
-// ext:: stays refused even when the user's git config allows it.
+// ext:: stays refused by git even when the user's git config and
+// environment allow it.
 func TestCloneRefusesExt(t *testing.T) {
 	isolatedGit(t, "[protocol \"ext\"]\n\tallow = always\n")
+	t.Setenv("GIT_ALLOW_PROTOCOL", "ext")
 	dir := t.TempDir()
 	addr := func(marker string) string { return "ext::sh -c touch% " + filepath.Join(dir, marker) }
 

@@ -194,6 +194,21 @@ func gitSummoner(t *testing.T, build func(dir string) error) (*Summoner, *yesToA
 	return &Summoner{ConfigDir: t.TempDir(), Downloader: &MockDownloader{}, Cloner: repoCloner{build}, UI: ui}, ui
 }
 
+// An address git would hand to a helper program never reaches git.
+func TestSummonRefusesUnsupportedGitAddress(t *testing.T) {
+	s, ui := gitSummoner(t, func(string) error {
+		t.Error("git ran")
+		return nil
+	})
+	err := s.Summon("ext::sh -c touch% x% .git")
+	if err == nil || !strings.Contains(err.Error(), "drako clones only") {
+		t.Errorf("Summon = %v, want refused", err)
+	}
+	if len(ui.prompts) > 0 {
+		t.Errorf("asked %q before refusing", ui.prompts)
+	}
+}
+
 // A deck changed on disk after its check (here while the user confirms) is
 // installed as checked.
 func TestSummonInstallsWhatItChecked(t *testing.T) {

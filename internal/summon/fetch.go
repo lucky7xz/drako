@@ -47,6 +47,25 @@ func Unencrypted(src string) bool {
 	return scheme == "http" || scheme == "git"
 }
 
+// CheckGitAddress refuses a git address drako does not clone. Accepted:
+// https://, ssh://, user@host:path, a local path or file://, and http:// or
+// git:// (pinned, see Unencrypted). "x::" and other schemes would make git
+// run a helper program (ext:: runs any command).
+func CheckGitAddress(addr string) error {
+	refused := fmt.Errorf("%q: drako clones only https://, ssh://, user@host:path, local paths, and pinned http:// or git:// addresses", addr)
+	if strings.Contains(addr, "::") {
+		return refused
+	}
+	if scheme, _, ok := strings.Cut(addr, "://"); ok {
+		switch strings.ToLower(scheme) {
+		case "https", "ssh", "file", "http", "git":
+			return nil
+		}
+		return refused
+	}
+	return nil
+}
+
 // IsSSHURL checks if the URL uses SSH protocol
 func IsSSHURL(urlStr string) bool {
 	return strings.HasPrefix(urlStr, "git@") || strings.HasPrefix(urlStr, "ssh://")
@@ -113,8 +132,8 @@ func (c *GitCloner) CloneRepo(url, destDir string) error {
 }
 
 // gitProtocols is the only protocols git may use, whatever the user's git
-// config says (ext:: runs commands). Plain http and git only for a pinned
-// unencrypted address; the list also bounds redirects.
+// config says: the same rule as CheckGitAddress, enforced by git, so it
+// also bounds redirects. Plain http and git only for a pinned address.
 func gitProtocols(addr string) string {
 	if Unencrypted(addr) {
 		return "https:ssh:file:http:git"
