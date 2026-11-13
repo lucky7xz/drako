@@ -162,6 +162,11 @@ func (m Model) renderProfileCounter() string {
 	if total > equip.MaxEquipped || total == 0 {
 		marker = "⚠ "
 	}
+	// A deck that loaded with flaws says so here, and names the command that
+	// lists them. No popup: the deck works, and check is where to read why.
+	if x > 0 && len(m.profile.profiles[m.profile.activeIndex].Flaws) > 0 {
+		marker = "⚠ check "
+	}
 	counter := fmt.Sprintf("< %d / %d %s>", x, total, marker)
 	return m.styles.Title.Render(counter)
 }

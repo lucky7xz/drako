@@ -1,7 +1,6 @@
 package lair
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/lucky7xz/drako/internal/profile"
@@ -112,83 +111,36 @@ func invalidProfile(name string) ProfileInfo {
 func TestBuildEffective_AppliesSelectedProfile(t *testing.T) {
 	profiles := []ProfileInfo{validProfile("alpha"), validProfile("work")}
 
-	effective, active, extraBroken, fellBack, rescue := buildEffective(settings.Config{}, profiles, 1, "")
-	if rescue != false {
-		t.Errorf("rescue = %v, want false", rescue)
-	}
-	if len(extraBroken) != 0 || fellBack {
-		t.Fatalf("clean profile should not fall back: broken=%+v fellBack=%v", extraBroken, fellBack)
-	}
-	if active != 1 {
-		t.Errorf("active index should be untouched, got %d", active)
+	effective, rescue := buildEffective(settings.Config{}, profiles, 1, "")
+	if rescue {
+		t.Error("a deck was selected; this is not the rescue grid")
 	}
 	if len(effective.Commands) != 1 || effective.Commands[0].Name != "work-cmd" {
 		t.Errorf("work overlay not applied: %+v", effective.Commands)
 	}
 }
 
-func TestBuildEffective_NoProfilesForcesFactoryDefaults(t *testing.T) {
-	effective, active, extraBroken, fellBack, rescue := buildEffective(settings.Config{}, nil, 0, "")
-	if rescue != true {
-		t.Errorf("rescue = %v, want true", rescue)
-	}
-	if len(extraBroken) != 0 || fellBack || active != 0 {
-		t.Fatalf("no profiles is not a fallback: broken=%+v fellBack=%v active=%d", extraBroken, fellBack, active)
+func TestBuildEffective_NoProfilesIsRescue(t *testing.T) {
+	effective, rescue := buildEffective(settings.Config{}, nil, 0, "")
+	if !rescue {
+		t.Error("no profiles means the rescue grid")
 	}
 	if len(effective.Commands) == 0 {
-		t.Error("factory defaults should carry the rescue helper commands")
+		t.Error("the rescue grid should carry its helper commands")
 	}
 }
 
-func TestBuildEffective_InvalidProfileFallsBackToFirst(t *testing.T) {
-	profiles := []ProfileInfo{validProfile("alpha"), invalidProfile("broken")}
+// A deck with a cell outside its grid is still the deck that was asked for:
+// it loads, and the cell that fits nowhere is simply not drawn (I-03).
+func TestBuildEffective_FlawedDeckStillLoads(t *testing.T) {
+	profiles := []ProfileInfo{validProfile("alpha"), invalidProfile("flawed")}
 
-	effective, active, extraBroken, fellBack, rescue := buildEffective(settings.Config{}, profiles, 1, "")
-	if rescue != false {
-		t.Errorf("rescue = %v, want false", rescue)
+	effective, rescue := buildEffective(settings.Config{}, profiles, 1, "")
+	if rescue {
+		t.Fatal("a flawed deck must not send the user to the rescue grid")
 	}
-	if !fellBack {
-		t.Fatal("invalid profile must report fellBack")
-	}
-	if len(extraBroken) != 1 || !strings.Contains(extraBroken[0].Err, "Grid validation failed") {
-		t.Fatalf("want one Grid validation failed entry, got %+v", extraBroken)
-	}
-	if active != 0 {
-		t.Errorf("fallback should land on the first profile, got index %d", active)
-	}
-	if len(effective.Commands) != 1 || effective.Commands[0].Name != "alpha-cmd" {
-		t.Errorf("first-profile overlay not applied: %+v", effective.Commands)
-	}
-}
-
-// Both the selected deck and the first one it falls back to are reported.
-func TestBuildEffective_SelectedAndFallbackInvalid(t *testing.T) {
-	profiles := []ProfileInfo{invalidProfile("a"), invalidProfile("b")}
-
-	_, _, extraBroken, _, rescue := buildEffective(settings.Config{}, profiles, 1, "")
-	if rescue != true {
-		t.Errorf("rescue = %v, want true", rescue)
-	}
-	if len(extraBroken) != 2 || extraBroken[0].Name != "b" || extraBroken[1].Name != "a" {
-		t.Fatalf("want b then a reported broken, got %+v", extraBroken)
-	}
-}
-
-func TestBuildEffective_AllInvalidLandsOnRescue(t *testing.T) {
-	profiles := []ProfileInfo{invalidProfile("broken")}
-
-	effective, active, extraBroken, fellBack, rescue := buildEffective(settings.Config{}, profiles, 0, "")
-	if rescue != true {
-		t.Errorf("rescue = %v, want true", rescue)
-	}
-	if !fellBack || active != 0 {
-		t.Fatalf("want fellBack at index 0, got fellBack=%v active=%d", fellBack, active)
-	}
-	if len(extraBroken) != 1 {
-		t.Fatalf("want one broken entry for the selected profile, got %+v", extraBroken)
-	}
-	if len(effective.Commands) == 0 {
-		t.Error("rescue config should carry its helper commands")
+	if len(effective.Commands) != 1 || effective.Commands[0].Name != "out-of-bounds" {
+		t.Errorf("the selected deck was not applied: %+v", effective.Commands)
 	}
 }
 

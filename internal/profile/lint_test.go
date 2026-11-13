@@ -75,7 +75,7 @@ command = "echo 2"
 col = "A"
 row = 1
 `))
-		if !findingsContain(fs, "error", "duplicate command name") {
+		if !findingsContain(fs, "warning", "duplicate command name") {
 			t.Errorf("missing duplicate-name finding: %+v", fs)
 		}
 	})
@@ -110,8 +110,8 @@ command = "echo"
 col = "C"
 row = 5
 `))
-		if !findingsContain(fs, "error", "column") || !findingsContain(fs, "error", "row") {
-			t.Errorf("missing bounds findings: %+v", fs)
+		if !findingsContain(fs, "error", "not on the grid") {
+			t.Errorf("missing bounds finding: %+v", fs)
 		}
 	})
 

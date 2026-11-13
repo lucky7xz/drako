@@ -60,10 +60,11 @@ func VariantKeys() []string {
 	return keys
 }
 
-// loaderFindings reports what the profile loader itself rejects, so check never
-// passes a deck the TUI would show as broken.
+// loaderFindings reports what the loader says about the deck: what it refuses
+// (errors), and the flaws it loads the deck with (Flaws). Check asks the
+// loader's own rules, so the two cannot disagree.
 func loaderFindings(src []byte) []Finding {
-	_, problems, err := Decode(src, nil) // the loader's verdict does not depend on the platform
+	pf, problems, err := Decode(src, nil) // the loader's verdict does not depend on the platform
 	if err != nil {
 		return []Finding{errorf("%v", err)}
 	}
@@ -71,7 +72,7 @@ func loaderFindings(src []byte) []Finding {
 	for _, p := range problems {
 		fs = append(fs, errorf("%s", p))
 	}
-	return fs
+	return append(fs, Flaws(pf)...)
 }
 
 // Lint checks raw profile TOML for authoring mistakes. It never touches the
@@ -87,7 +88,6 @@ func Lint(src []byte) []Finding {
 	}
 
 	var fs []Finding
-	x, y := rawInt(raw, "x"), rawInt(raw, "y")
 
 	cmds := rawTables(rawKey(raw, "commands"))
 	if len(cmds) == 0 {
@@ -96,56 +96,15 @@ func Lint(src []byte) []Finding {
 	fs = append(fs, loaderFindings(src)...)
 	fs = append(fs, checkDrawn("deck", raw, "header_art")...)
 
-	seenNames := map[string]bool{}
-	seenCells := map[string]string{} // cell -> first claimant
 	for i, cmd := range cmds {
 		name := strings.TrimSpace(tomlStr(cmd, "name"))
 		label := fmt.Sprintf("command %q", name)
 		if name == "" {
 			label = fmt.Sprintf("command #%d", i+1)
 			fs = append(fs, warnf("%s has no name — its cell renders empty and can never be selected", label))
-		} else if seenNames[name] {
-			fs = append(fs, errorf("duplicate command name %q — cells are looked up by name, so one of them can never run", name))
 		}
-		seenNames[name] = true
 		fs = append(fs, checkFields(label, cmd, cellFields)...)
 		fs = append(fs, checkDrawn(label, cmd, "name", "description")...)
-
-		// Cell address: parse the column, resolve 'z'/-1 against the grid
-		// when its size is known, then check bounds and collisions.
-		colStr := tomlStr(cmd, "col")
-		row := tomlInt(cmd, "row")
-		col, err := letterToColumn(colStr)
-		switch {
-		case colStr == "":
-			fs = append(fs, errorf("%s has no col", label))
-		case err != nil:
-			fs = append(fs, errorf("%s: invalid col %q: %v", label, colStr, err))
-		case row < -1:
-			fs = append(fs, errorf("%s: invalid row %d (rows start at 0; -1 is the last)", label, row))
-		default:
-			if col == -1 && x > 0 {
-				col = x - 1
-			}
-			if row == -1 && y > 0 {
-				row = y - 1
-			}
-			if x > 0 && col >= x {
-				fs = append(fs, errorf("%s sits in column %q but the grid is only %d wide (x = %d)", label, colStr, x, x))
-			}
-			if y > 0 && row >= y {
-				fs = append(fs, errorf("%s sits in row %d but the grid is only %d tall (y = %d)", label, row, y, y))
-			}
-			cell := fmt.Sprintf("%c%d", 'A'+col, row)
-			if col < 0 {
-				cell = fmt.Sprintf("z%d", row)
-			}
-			if first, taken := seenCells[cell]; taken {
-				fs = append(fs, errorf("%s and command %q share cell %s — only the last one placed is visible", label, first, cell))
-			} else {
-				seenCells[cell] = name
-			}
-		}
 
 		items := rawTables(cmd["items"])
 		fs = append(fs, checkCommandValue(label, cmd["command"], len(items) > 0)...)
@@ -311,9 +270,4 @@ func rawKey(m map[string]any, key string) any {
 		}
 	}
 	return nil
-}
-
-func rawInt(m map[string]any, key string) int {
-	n, _ := rawKey(m, key).(int64)
-	return int(n)
 }

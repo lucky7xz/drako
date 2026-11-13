@@ -111,6 +111,7 @@ func (l *Lair) discoverProfiles(targets []string) ([]ProfileInfo, []ProfileParse
 			Name:    profileName,
 			Path:    fullPath,
 			Profile: profileFile,
+			Flaws:   profile.Flaws(profileFile),
 		})
 	}
 

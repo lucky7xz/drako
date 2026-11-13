@@ -117,18 +117,17 @@ func TestResolveRunMatchesTheGrid(t *testing.T) {
 	}
 }
 
-func TestResolveRunRefusesInvalidGrid(t *testing.T) {
+// A cell outside the grid is refused by its own address; the rest of the deck
+// runs, as it does from the grid (I-03).
+func TestResolveRunRefusesOnlyTheCellOffTheGrid(t *testing.T) {
 	b := runBundle()
 	work := &b.Profiles[1].Profile
-	work.Commands = append(work.Commands, profile.Command{Name: "Off grid", Command: "true", Col: "c", Row: 0})
-	if _, _, err := resolveRun(b, "work:A0"); err == nil || !strings.Contains(err.Error(), "invalid grid") {
-		t.Errorf("work:A0 err = %v, want an invalid-grid refusal", err)
+	work.Commands = append(work.Commands, profile.Command{Name: "Off grid", Command: "true", Col: "y", Row: 0})
+	if _, _, err := resolveRun(b, "work:Y0"); err == nil || !strings.Contains(err.Error(), "not on the grid") {
+		t.Errorf("work:Y0 err = %v, want a not-on-the-grid refusal", err)
 	}
-	// Broken profile 0 still sits at ActiveIndex 0 while the TUI shows rescue.
-	b.Profiles[0], b.Profiles[1] = b.Profiles[1], b.Profiles[0]
-	b.ActiveIndex = 0
-	if _, _, err := resolveRun(b, "A0"); err == nil || !strings.Contains(err.Error(), "invalid grid") {
-		t.Errorf("bare A0 err = %v, want an invalid-grid refusal", err)
+	if _, _, err := resolveRun(b, "work:A0"); err != nil {
+		t.Errorf("work:A0 stands on the grid and must run, got %v", err)
 	}
 }
 

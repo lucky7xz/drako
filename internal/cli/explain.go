@@ -89,6 +89,9 @@ func lookupCell(bundle lair.ConfigBundle, ref string) (cellTarget, error) {
 	if cmd == nil {
 		return cellTarget{}, fmt.Errorf("no cell %s in profile %s", addr, p.Name)
 	}
+	if err := profile.Placed(p.Profile, *cmd); err != nil {
+		return cellTarget{}, fmt.Errorf("%s (%s) %v; it is not on the grid", addr, cmd.Name, err)
+	}
 	if over := profile.CoveredBy(p.Profile, cmd); over != nil {
 		return cellTarget{}, fmt.Errorf("%s (%s) is hidden on the grid behind %s (%s)", addr, cmd.Name, over.Address(), over.Name)
 	}

@@ -480,6 +480,22 @@ func TestRenderProfileCounter(t *testing.T) {
 	}
 }
 
+// A deck that loaded with flaws is marked on its own counter only, and the
+// mark names the command that lists them.
+func TestProfileCounterMarksAFlawedDeck(t *testing.T) {
+	cfg := settings.Config{X: 2, Y: 2, Theme: "default"}
+	profiles := make([]lair.ProfileInfo, 2)
+	profiles[1].Flaws = []profile.Finding{{Level: "error", Msg: "two cells share A0"}}
+	m := Model{Config: cfg, styles: BuildStyles(cfg, ""), profile: profileState{profiles: profiles}}
+
+	for idx, want := range []string{"< 1 / 2 >", "< 2 / 2 ⚠ check >"} {
+		m.profile.activeIndex = idx
+		if got := strings.TrimSpace(ansi.Strip(m.renderProfileCounter())); got != want {
+			t.Errorf("deck %d: counter = %q, want %q", idx+1, got, want)
+		}
+	}
+}
+
 // A long cwd used to drag the whole frame out of alignment. lipgloss.JoinVertical
 // rectangularizes to the widest sibling, and lipgloss.Place returns content
 // unpadded once it is wider than the box (position.go: `if gap <= 0`), so an

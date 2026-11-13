@@ -12,7 +12,6 @@ import (
 	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/proc"
-	"github.com/lucky7xz/drako/internal/profile"
 	"github.com/lucky7xz/drako/internal/settings"
 )
 
@@ -84,9 +83,6 @@ func resolveRun(bundle lair.ConfigBundle, ref string) (t cellTarget, cfg setting
 
 	cfg = settings.ApplyProfileOverlay(bundle.Base, t.p.Profile)
 	cfg.ApplyDefaults()
-	if err := profile.ValidateGrid(cfg.X, cfg.Y, cfg.Commands); err != nil {
-		return t, cfg, fmt.Errorf("profile %s has an invalid grid: %v", t.p.Name, err)
-	}
 
 	if t.item == nil && t.cmd.Command == "" && len(t.cmd.Items) > 0 {
 		return t, cfg, fmt.Errorf("cell %s is a folder; address one of its items (e.g. %s.1)", t.addr, t.addr)

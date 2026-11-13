@@ -5,30 +5,34 @@ import (
 	"testing"
 )
 
-// TestResolveCell pins the shared cell-resolution that ValidateGrid and
-// BuildGrid both rely on, including the "-1 / 'z' means last" rule.
-func TestResolveCell(t *testing.T) {
+// TestPlace pins the one rule for where a cell stands, including "-1 / 'z'
+// means last" and every way of standing nowhere.
+func TestPlace(t *testing.T) {
 	const x, y = 3, 4 // columns a,b,c ; rows 0..3
 
 	cases := []struct {
 		name             string
 		cmd              Command
 		wantRow, wantCol int
-		wantErr          bool
+		wantErr          string
 	}{
-		{"plain letter+row", Command{Col: "a", Row: 0}, 0, 0, false},
-		{"last letter", Command{Col: "c", Row: 2}, 2, 2, false},
-		{"'z' resolves to last column", Command{Col: "z", Row: 1}, 1, 2, false},  // X-1
-		{"row -1 resolves to last row", Command{Col: "a", Row: -1}, 3, 0, false}, // Y-1
-		{"unparseable column errors", Command{Col: "9", Row: 0}, 0, 0, true},
+		{"plain letter+row", Command{Col: "a", Row: 0}, 0, 0, ""},
+		{"last letter", Command{Col: "c", Row: 2}, 2, 2, ""},
+		{"'z' resolves to last column", Command{Col: "z", Row: 1}, 1, 2, ""},
+		{"row -1 resolves to last row", Command{Col: "a", Row: -1}, 3, 0, ""},
+		{"unparseable column", Command{Col: "9", Row: 0}, 0, 0, "invalid col"},
+		{"no column", Command{Row: 0}, 0, 0, "no col"},
+		{"row below -1", Command{Col: "a", Row: -2}, 0, 0, "invalid row -2"},
+		{"column past the grid", Command{Col: "d", Row: 0}, 0, 0, "only 3 wide"},
+		{"row past the grid", Command{Col: "a", Row: 4}, 0, 0, "only 4 tall"},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			row, col, err := resolveCell(tc.cmd, x, y)
-			if tc.wantErr {
-				if err == nil {
-					t.Fatalf("expected an error for column %q", tc.cmd.Col)
+			row, col, err := place(tc.cmd, x, y)
+			if tc.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+					t.Fatalf("want an error holding %q, got %v", tc.wantErr, err)
 				}
 				return
 			}
@@ -42,31 +46,45 @@ func TestResolveCell(t *testing.T) {
 	}
 }
 
-// BuildGrid drops a row below -1 silently, so validation must reject it.
-func TestValidateGridRejectsNegativeRow(t *testing.T) {
-	cmds := []Command{{Name: "gone", Command: "true", Row: -2, Col: "a"}}
-	if err := ValidateGrid(1, 1, cmds); err == nil || !strings.Contains(err.Error(), "invalid row -2") {
-		t.Errorf("want an invalid row error, got %v", err)
-	}
-	cmds[0].Row = -1
-	if err := ValidateGrid(1, 1, cmds); err != nil {
-		t.Errorf("row -1 is the last row, got %v", err)
-	}
-}
-
-func TestBuildGridSkipsInvalidCell(t *testing.T) {
+// The grid leaves out a cell that stands nowhere, and never panics on it.
+func TestBuildGridSkipsUnplacedCells(t *testing.T) {
 	cmds := []Command{
 		{Name: "good", Command: "true", Row: 0, Col: "a"},
 		{Name: "bad", Command: "true", Row: 0, Col: "!"},
+		{Name: "far", Command: "true", Row: 7, Col: "a"},
+		{Name: "deep", Command: "true", Row: -2, Col: "b"},
 	}
-	// Must not kill the process: ValidateGrid already reports this at
-	// load time; rendering skips the cell.
 	grid := BuildGrid(2, 1, cmds)
-	if grid[0][0] != "good" {
-		t.Errorf("valid cell should be placed, got %q", grid[0][0])
+	if grid[0][0] != "good" || grid[0][1] != "" {
+		t.Errorf("want only the cell that fits, got %q", grid)
 	}
-	if grid[0][1] != "" {
-		t.Errorf("invalid cell should be skipped, got %q", grid[0][1])
+}
+
+// Flaws is the list the loader carries and drako check prints: one home.
+func TestFlaws(t *testing.T) {
+	p := File{X: 2, Y: 2, Commands: []Command{
+		{Name: "same", Command: "a", Row: 0, Col: "a"},
+		{Name: "same", Command: "b", Row: 0, Col: "b"},
+		{Name: "under", Command: "c", Row: 1, Col: "a"},
+		{Name: "over", Command: "d", Row: 1, Col: "a"},
+		{Name: "far", Command: "e", Row: 5, Col: "d"},
+	}}
+	fs := Flaws(p)
+	want := []struct{ level, part string }{
+		{"warning", `duplicate command name "same"`},
+		{"error", `command "over" and command "under" share cell A1`},
+		{"error", `command "far" sits in column "d"`},
+	}
+	if len(fs) != len(want) {
+		t.Fatalf("want %d flaws, got %d: %+v", len(want), len(fs), fs)
+	}
+	for i, w := range want {
+		if fs[i].Level != w.level || !strings.Contains(fs[i].Msg, w.part) {
+			t.Errorf("flaw %d: want %s holding %q, got %+v", i, w.level, w.part, fs[i])
+		}
+	}
+	if clean := Flaws(File{X: 1, Y: 1, Commands: p.Commands[:1]}); len(clean) != 0 {
+		t.Errorf("a clean deck has no flaws, got %+v", clean)
 	}
 }
 

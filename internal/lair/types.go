@@ -10,6 +10,8 @@ type ProfileInfo struct {
 	Name    string
 	Path    string
 	Profile profile.File
+	// Flaws is what is wrong with a deck that still loads (profile.Flaws).
+	Flaws []profile.Finding
 }
 
 // ProfileParseError holds details about a broken profile file

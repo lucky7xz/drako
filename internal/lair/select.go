@@ -1,12 +1,10 @@
 package lair
 
 import (
-	"fmt"
 	"log"
 	"strings"
 
 	"github.com/lucky7xz/drako/internal/equip"
-	"github.com/lucky7xz/drako/internal/profile"
 	"github.com/lucky7xz/drako/internal/settings"
 )
 
@@ -84,56 +82,20 @@ func resolveRequested(pivotLocked, envProfile, cfgProfile string, available []Pr
 }
 
 // buildEffective produces the effective config by overlaying the active
-// profile on base. An invalid selected profile is reported in extraBroken and
-// triggers the "first available" fallback policy: try the first profile, and
-// if that fails too, land on the rescue config (always a valid grid).
-// fellBack is true whenever the selected profile had to be abandoned, so the
-// caller can drop a pivot lock that points at it. With no profiles, the
-// rescue config is used directly; rescue reports it.
-func buildEffective(base settings.Config, profiles []ProfileInfo, activeIndex int, configDir string) (effective settings.Config, newActive int, extraBroken []ProfileParseError, fellBack, rescue bool) {
+// profile on base. Every discovered deck has a grid (the loader refuses one
+// without), so the overlay cannot fail; a flawed deck loads and carries its
+// Flaws. With no profiles the rescue config is used; rescue reports it.
+func buildEffective(base settings.Config, profiles []ProfileInfo, activeIndex int, configDir string) (effective settings.Config, rescue bool) {
 	if len(profiles) == 0 {
 		effective = settings.RescueConfig(configDir)
 		effective.ApplyDefaults()
-		return effective, activeIndex, nil, false, true
+		return effective, true
 	}
-	newActive = activeIndex
 	selected := profiles[activeIndex]
-
-	applyAndValidate := func(p ProfileInfo) (settings.Config, error) {
-		temp := settings.ApplyProfileOverlay(base, p.Profile)
-		temp.ApplyDefaults()
-		if err := profile.ValidateGrid(temp.X, temp.Y, temp.Commands); err != nil {
-			return temp, err
-		}
-		return temp, nil
-	}
-
-	effective, err := applyAndValidate(selected)
-	if err == nil {
-		log.Printf("Applied profile overlay: %s", selected.Name)
-		return effective, newActive, nil, false, false
-	}
-
-	gridBroken := func(p ProfileInfo, err error) ProfileParseError {
-		return ProfileParseError{Name: p.Name, Path: p.Path, Err: fmt.Sprintf("Grid validation failed: %v", err)}
-	}
-	log.Printf("Selected profile %q is invalid: %v. Falling back to defaults.", selected.Name, err)
-	extraBroken = append(extraBroken, gridBroken(selected, err))
-	// "First available" fallback policy: try the first profile;
-	// if that fails too, fall back to rescue mode (a valid grid).
-	selected = profiles[0]
-	log.Printf("Falling back to first available profile: %s", selected.Name)
-	fallbackConfig, err2 := applyAndValidate(selected)
-	if err2 == nil {
-		return fallbackConfig, 0, extraBroken, true, false
-	}
-	log.Printf("Fallback profile %s is also invalid: %v", selected.Name, err2)
-	if activeIndex != 0 { // profile 0 was the selected one, already reported
-		extraBroken = append(extraBroken, gridBroken(selected, err2))
-	}
-	effective = settings.RescueConfig(configDir)
+	effective = settings.ApplyProfileOverlay(base, selected.Profile)
 	effective.ApplyDefaults()
-	return effective, 0, extraBroken, true, true
+	log.Printf("Applied profile overlay: %s", selected.Name)
+	return effective, false
 }
 
 // selectProfile finds requested among profiles by normalized name. An empty

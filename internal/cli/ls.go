@@ -174,6 +174,9 @@ func renderLs(out io.Writer, bundle lair.ConfigBundle, width int) {
 			headers = append(headers, "DESCRIPTION")
 		}
 		table(out, headers, rows)
+		for _, f := range p.Flaws {
+			fmt.Fprintln(out, ansi.Truncate("⚠ "+safeText(f.Msg), width, "…"))
+		}
 	}
 
 	for _, b := range bundle.Broken {

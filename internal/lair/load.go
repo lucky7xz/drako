@@ -7,7 +7,6 @@ import (
 	"log"
 	"strings"
 
-	"github.com/lucky7xz/drako/internal/profile"
 	"github.com/lucky7xz/drako/internal/settings"
 )
 
@@ -103,10 +102,6 @@ func LoadConfig(configDir string, targets []string, wanted string) (ConfigBundle
 
 	base.ApplyDefaults()
 
-	if err := profile.ValidateGrid(base.X, base.Y, base.Commands); err != nil {
-		log.Printf("Error: Base config is invalid: %v", err)
-	}
-
 	profiles, profileErrors := l.discoverProfiles(targets)
 	broken = append(broken, profileErrors...)
 
@@ -130,11 +125,7 @@ func LoadConfig(configDir string, targets []string, wanted string) (ConfigBundle
 	}
 
 	activeIndex, _ := selectProfile(profiles, req.Name) // resolveRequested only names equipped decks
-	effective, activeIndex, extraBroken, fellBack, rescue := buildEffective(base, profiles, activeIndex, configDir)
-	broken = append(broken, extraBroken...)
-	if fellBack {
-		pivotStillValid = false
-	}
+	effective, rescue := buildEffective(base, profiles, activeIndex, configDir)
 
 	return ConfigBundle{
 		Base:        base,
