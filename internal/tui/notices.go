@@ -107,13 +107,13 @@ func (m Model) presentNextBrokenProfile() Model {
 	desc := "This profile has an error and was hidden from selection.\n\n"
 	if e.Name == lair.ConfigFileName {
 		// Specific message for the main config
-		desc = "If your config.toml is invalid, **Rescue Mode** can be helpful.\n" +
-			"**Warning:** Default keybindings are in effect. Your custom keys may not work (since the config.toml which stores them is invalid).\n\n" +
+		desc = "If your config.toml is invalid, Rescue Mode can be helpful.\n" +
+			"Warning: Default keybindings are in effect. Your custom keys may not work (since the config.toml which stores them is invalid).\n\n" +
 			"Available Actions:\n" +
-			"• **Edit Config**: Open the config.toml in your default editor and fix the syntax error.\n" +
-			"• **Reset Config**: The command `drako reset -c` will delete the config.toml. Drako reinstantiates it with default settings.\n" +
-			"• **Documentation**: View default controls on Documentation website.\n\n" +
-			"• **Exit Rescue Mode**: You can still keep using drako by exiting rescue mode (the top-left button, the error will keep showing up though)."
+			"• Edit Config: Open the config.toml in your default editor and fix the syntax error.\n" +
+			"• Reset Config: The command `drako purge --config` moves the config.toml to trash/. Drako writes a new one with default settings.\n" +
+			"• Documentation: View default controls on Documentation website.\n" +
+			"• Exit Rescue Mode: You can still keep using drako by exiting rescue mode (the top-left button, the error will keep showing up though).\n\n"
 
 	} else if strings.HasPrefix(e.Err, "file name ") {
 		desc += "drako does not use a file whose name it cannot draw exactly as written: you would have to type a name you cannot see. Rename the file.\n\n"
@@ -127,7 +127,7 @@ func (m Model) presentNextBrokenProfile() Model {
 	desc += "Press any key to continue to the next error, or 'y' to copy error details to clipboard."
 
 	m.activeDetail = &DetailState{
-		Title:       fmt.Sprintf("Profile error: %s", glyph.Clean(e.Name)),
+		Title:       fmt.Sprintf("%s error: %s", errorSubject(e.Name), glyph.Clean(e.Name)),
 		KeyLabel:    "Error",
 		Value:       fmt.Sprintf("Path: %s\nError: %s", glyph.Clean(e.Path), glyph.Clean(strings.TrimSpace(e.Err))),
 		Description: desc,
@@ -178,4 +178,12 @@ func (m Model) presentDroppedProfileNote(name string) Model {
 	}
 	m.mode = infoMode
 	return m
+}
+
+// errorSubject names what a broken file is: drako's settings, or a profile.
+func errorSubject(name string) string {
+	if name == lair.ConfigFileName {
+		return "Config"
+	}
+	return "Profile"
 }

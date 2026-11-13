@@ -60,7 +60,7 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 				cmdStr := cmd.Command
 				if strings.TrimSpace(cmd.Command) == "" {
-					cmdStr = "Error: no command. ( This might be a folder of commands!)"
+					cmdStr = "A folder. Enter opens it."
 				}
 
 				m.activeDetail = newCommandDetail(selectedChoice, m.runAddress(selectedChoice, 0), cmdStr, cmd.Description, cmd.AutoCloseExecution, m.path.CurrentPath)

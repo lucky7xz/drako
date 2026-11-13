@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -38,8 +39,7 @@ func runPlan(home *lair.Lair, plan launch.Plan) {
 		fmt.Printf("Command: '%s'\n\n", selected)
 		fmt.Print(string(output))
 		if err != nil {
-			fmt.Printf("\n--- Command Failed ---\n")
-			fmt.Printf("Error: %v\n", err)
+			fmt.Print(failedText(err))
 		}
 		pauseFn("\nPress any key to return to the application.")
 		return
@@ -47,9 +47,8 @@ func runPlan(home *lair.Lair, plan launch.Plan) {
 
 	// Live: the command owns the terminal until it ends.
 	if err := proc.Run(plan); err != nil {
-		fmt.Printf("\n--- Command Failed ---\n")
+		fmt.Print(failedText(err))
 		fmt.Printf("Command: '%s'\n", selected)
-		fmt.Printf("Error: %v\n", err)
 		pauseFn("\nPress any key to return to the application.")
 		return
 	}
@@ -60,6 +59,16 @@ func runPlan(home *lair.Lair, plan launch.Plan) {
 		fmt.Printf("Command: '%s'\n", selected)
 		pauseFn("\nPress any key to return to the application.")
 	}
+}
+
+// failedText says a command failed: with its exit code when it ended with
+// one, as a batch pane does, else with the reason (a signal, a missing shell).
+func failedText(err error) string {
+	var exited interface{ ExitCode() int }
+	if errors.As(err, &exited) && exited.ExitCode() >= 0 {
+		return fmt.Sprintf("\n--- Command Failed (exit %d) ---\n", exited.ExitCode())
+	}
+	return fmt.Sprintf("\n--- Command Failed ---\nError: %v\n", err)
 }
 
 // pause prints msg and blocks until any keypress: the "press any key" beat

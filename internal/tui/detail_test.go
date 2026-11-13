@@ -55,7 +55,7 @@ func TestExplainDetail_Characterization(t *testing.T) {
 		{
 			name:          "empty command shows the folder hint",
 			cmd:           profile.Command{Name: "Tools", Command: ""},
-			wantValue:     "Error: no command. ( This might be a folder of commands!)",
+			wantValue:     "A folder. Enter opens it.",
 			wantAutoClose: "true",
 		},
 	}

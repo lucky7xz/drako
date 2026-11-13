@@ -293,11 +293,14 @@ func spaced(rows []string) []string {
 // explain overlay. The actual height is clamped down to fit small terminals.
 const infoViewportRows = 18
 
-// The explain popup's last line, plain and while the script scrolls.
-const (
-	infoHelp       = "Press y to copy command/details to clipboard • any key to close"
-	infoScrollHelp = "PgUp/PgDn scroll • y copy • any other key to close"
-)
+// infoHelp is the explain popup's last line, plain and while the script
+// scrolls. It names copy only where copy is allowed (allowCopy).
+func (m Model) infoHelp() (plain, scrolling string) {
+	if !m.allowCopy() {
+		return "any key closes", "PgUp/PgDn scroll · any other key closes"
+	}
+	return "y copy · any other key closes", "PgUp/PgDn scroll · y copy · any other key closes"
+}
 
 // infoWrapWidth is the wrap width for explain-popup content: what is left of
 // the terminal once the popup's frame, the value's padding and the scrollbar
@@ -356,7 +359,8 @@ func (m Model) explainLayout() explainLayout {
 	// The last pinned rows are a blank and the help line. Which help shows
 	// depends on whether the script scrolls, which depends on the room the
 	// help leaves — so the room is counted for the longer of the two.
-	plain, scrolling := WrapText(infoHelp, ww), WrapText(infoScrollHelp, ww)
+	plainHelp, scrollHelp := m.infoHelp()
+	plain, scrolling := WrapText(plainHelp, ww), WrapText(scrollHelp, ww)
 	pinned := len(l.head) + len(l.tail) + 1 + max(len(plain), len(scrolling))
 	room := m.termHeight - m.styles.DropdownPopup.GetVerticalFrameSize() - pinned
 	l.viewportH = max(3, min(infoViewportRows, room))

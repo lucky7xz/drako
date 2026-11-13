@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -122,5 +123,17 @@ func TestGlassrootRejectsBundle(t *testing.T) {
 		if got := glassrootRejectsBundle(tc.bundle); got != tc.want {
 			t.Errorf("%s: glassrootRejectsBundle = %v, want %v", tc.name, got, tc.want)
 		}
+	}
+}
+
+// The explain popup offers copy only where copy works.
+func TestInfoHelpNamesCopyOnlyWhereAllowed(t *testing.T) {
+	plain, scrolling := Model{GlassrootMode: true}.infoHelp()
+	if strings.Contains(plain+scrolling, "copy") {
+		t.Errorf("glassroot help offers copy: %q / %q", plain, scrolling)
+	}
+	plain, scrolling = Model{}.infoHelp()
+	if !strings.Contains(plain, "y copy") || !strings.Contains(scrolling, "y copy") {
+		t.Errorf("help does not offer copy: %q / %q", plain, scrolling)
 	}
 }

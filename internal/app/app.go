@@ -18,6 +18,7 @@ import (
 	"github.com/lucky7xz/drako/internal/multiplex"
 	"github.com/lucky7xz/drako/internal/proc"
 	"github.com/lucky7xz/drako/internal/tui"
+	"golang.org/x/term"
 )
 
 // Run wires everything together. It keeps the program running so that after a command
@@ -144,6 +145,10 @@ func Run() int {
 		result, err := program.Run()
 		current.Store(nil)
 		if err != nil {
+			if !term.IsTerminal(int(os.Stdin.Fd())) {
+				fmt.Fprintln(os.Stderr, "drako needs a terminal for its screen. Without one, use: drako ls, drako run <cell>.")
+				return 1
+			}
 			fmt.Fprintf(os.Stderr, "Alas, there's been an error: %v\n", err)
 			return 1
 		}
