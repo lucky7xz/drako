@@ -101,21 +101,25 @@ func (c *GitCloner) CheckGitAvailable() error {
 }
 
 func (c *GitCloner) CloneRepo(url, destDir string) error {
-	var args []string
-	if strings.HasPrefix(strings.ToLower(url), "https://") {
-		// An HTTPS clone may not be redirected to plain HTTP: git hands its
-		// allowed protocols to curl as the allowed redirect targets.
-		args = append(args, "-c", "protocol.http.allow=never")
-	}
 	// Use -- to prevent argument injection if repoURL starts with a hyphen
-	args = append(args, "clone", "--", url, destDir)
-	cmd := proc.Git.Command(args...)
+	cmd := proc.Git.Command("clone", "--", url, destDir)
+	cmd.Env = append(os.Environ(), "GIT_ALLOW_PROTOCOL="+gitProtocols(url))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to clone repository: %w", err)
 	}
 	return nil
+}
+
+// gitProtocols is the only protocols git may use, whatever the user's git
+// config says (ext:: runs commands). Plain http and git only for a pinned
+// unencrypted address; the list also bounds redirects.
+func gitProtocols(addr string) string {
+	if Unencrypted(addr) {
+		return "https:ssh:file:http:git"
+	}
+	return "https:ssh:file"
 }
 
 // HTTPDownloader implements FileDownloader using http package
