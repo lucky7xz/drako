@@ -42,16 +42,26 @@ var rules = []rule{
 		allowed: []string{"lair", "summon", "proc", "host", "multiplex", "cli", "app"},
 	},
 	{
-		// lair reaches drako's files through its os.Root, so nothing can
-		// leave the config directory. Opening a file by path would step
-		// around that; the few lines that must are knownExceptions. cli
-		// reaches drako's folder through lair, never by path.
-		capability: "open a file by path instead of through the lair's root",
+		// Outside its folder drako writes only in the lines listed in
+		// knownExceptions: summon's quarantine, multiplex's batch scripts,
+		// the --cwd-file you name. Inside it, lair writes through its
+		// os.Root. Every package is checked; none is allowed.
+		capability: "write a file by path",
 		calls: []string{
-			"os.ReadFile", "os.WriteFile", "os.Open", "os.OpenFile", "os.Create", "os.CreateTemp",
-			"os.Remove", "os.RemoveAll", "os.Rename", "os.Mkdir", "os.MkdirAll", "os.MkdirTemp",
-			"os.ReadDir", "os.Stat", "os.Lstat", "os.Chmod", "os.Symlink", "os.Readlink", "os.Link",
-			"os.Truncate", "os.DirFS", "github.com/BurntSushi/toml.DecodeFile",
+			"os.WriteFile", "os.Create", "os.CreateTemp", "os.OpenFile", "os.Remove", "os.RemoveAll",
+			"os.Rename", "os.Mkdir", "os.MkdirAll", "os.MkdirTemp", "os.Chmod", "os.Chown", "os.Lchown",
+			"os.Chtimes", "os.Symlink", "os.Link", "os.Truncate",
+		},
+	},
+	{
+		// lair reads drako's files through its os.Root, so nothing can
+		// leave the config directory; cli reaches drako's folder through
+		// lair. Reading by path would step around that; the few lines that
+		// must are knownExceptions.
+		capability: "read a file by path instead of through the lair's root",
+		calls: []string{
+			"os.ReadFile", "os.Open", "os.ReadDir", "os.Stat", "os.Lstat", "os.Readlink", "os.DirFS",
+			"github.com/BurntSushi/toml.DecodeFile",
 		},
 		only: []string{"lair", "cli"},
 	},
@@ -89,15 +99,24 @@ var knownExceptions = []string{
 
 	// touch files
 
-	// open a file by path instead of through the lair's root
+	// write a file by path: the complete list of where drako writes outside lair's root
+	"app/app.go os.WriteFile",           // --cwd-file: a path you name, so a shell can cd to where drako ended
+	"lair/lair.go os.MkdirAll",          // Create: the folder has to exist before it can be opened
+	"lair/lair.go os.RemoveAll",         // Destroy: a folder cannot remove itself through its own root
+	"multiplex/backend.go os.MkdirTemp", // Start: the batch's private folder in /tmp
+	"multiplex/backend.go os.MkdirAll",  // launchIn: the same folder, when a caller hands one in
+	"multiplex/backend.go os.WriteFile", // one 0700 script per cell; each deletes itself when run
+	"multiplex/backend.go os.RemoveAll", // the folder, after a failed launch
+	"summon/quarantine.go os.MkdirTemp", // the quarantine's private folder in /tmp
+	"summon/quarantine.go os.RemoveAll", // Close: the quarantine, after every summon
+	"summon/fetch.go os.Create",         // the download, into the quarantine
+	"summon/fetch.go os.Remove",         // a failed or oversized download
+
+	// read a file by path instead of through the lair's root
 	"lair/files.go os.ReadFile", // read: follows a file the user linked out of the folder
 	"lair/files.go os.Stat",     // stat, read's twin; and explain, to recognise a linked subfolder
-	"lair/lair.go os.MkdirAll",  // Create: the folder has to exist before it can be opened
-	"lair/lair.go os.RemoveAll", // Destroy: a folder cannot remove itself through its own root
-
-	// cli, bound since step 8a: only check, for files you name by path
-	"cli/check.go os.ReadFile", // stays: a file you name by path, outside drako's folder
-	"cli/check.go os.Stat",     // stays: same
+	"cli/check.go os.ReadFile",  // a file you name by path, outside drako's folder
+	"cli/check.go os.Stat",      // same
 }
 
 func TestPackagesKeepToTheirCapabilities(t *testing.T) {
