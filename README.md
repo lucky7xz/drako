@@ -11,7 +11,7 @@ https://github.com/user-attachments/assets/21fb2340-bc74-4886-a629-8e95d116e830
 ## ✨ Features
 
 -   **Harness, don't replace** — if it runs in a terminal, it can be bound to the grid: tools, TUIs, scripts
--   **The Grid** — keyboard-driven command center, up to 729 cells per profile with [Quick Navigation](#-navigation)
+-   **The Grid** — keyboard-driven command center, up to 81 cells per profile (a 9×9 grid) with [Quick Navigation](#-navigation); any cell can be a folder holding as many commands as you like
 -   **Profiles & decks** — grouped commands plus optional [assets](#-summoning-profiles) (configs, scripts) shipped alongside
 -   **Summon** — [`drako summon <repo>`](#-summoning-profiles) pulls a deck from any Git host, verifiable with `--sha256`/`--rev`
 -   **The Weaver** — [one cell, every OS](#-cross-platform-decks-the-weaver): commands resolve per platform (apt/pacman/brew/…)

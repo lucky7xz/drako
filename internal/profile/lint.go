@@ -111,7 +111,7 @@ func Lint(src []byte) []Finding {
 		fs = append(fs, checkDanger(label, cmd)...)
 
 		if len(items) > 9 {
-			fs = append(fs, warnf("%s has %d items — dropdowns support at most 9", label, len(items)))
+			fs = append(fs, warnf("%s has %d items — the digit keys reach only the first 9; the rest are picked with the cursor", label, len(items)))
 		}
 		for j, item := range items {
 			iname := strings.TrimSpace(tomlStr(item, "name"))

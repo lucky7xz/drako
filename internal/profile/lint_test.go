@@ -170,7 +170,7 @@ func TestCheckProfileShapes(t *testing.T) {
 			items[i] = `{ name = "i", command = "x" },`
 		}
 		fs := Lint([]byte("x=1\ny=1\n[[commands]]\nname = \"big\"\ncol = \"A\"\nrow = 0\nitems = [" + strings.Join(items, "\n") + "]\n"))
-		if !findingsContain(fs, "warning", "dropdowns support at most 9") {
+		if !findingsContain(fs, "warning", "digit keys reach only the first 9") {
 			t.Errorf("missing item-count warning: %+v", fs)
 		}
 	})
