@@ -2,6 +2,7 @@ package launch
 
 import (
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -36,5 +37,18 @@ func TestFallbackShell(t *testing.T) {
 		if got := fallbackShell(goos); got != "bash" {
 			t.Fatalf("%s fallback=%q, want bash", goos, got)
 		}
+	}
+}
+
+// One list: every shell check accepts is one ShellArgv runs as itself.
+func TestKnownShellsRunAsThemselves(t *testing.T) {
+	for _, name := range ShellNames() {
+		argv := ShellArgv(name, "echo hi")
+		if !KnownShell(name) || argv[len(argv)-1] != "echo hi" || !strings.HasPrefix(name, argv[0]) {
+			t.Errorf("%s: argv = %q", name, argv)
+		}
+	}
+	if KnownShell("zhs") {
+		t.Error("zhs is a typo, not a shell")
 	}
 }

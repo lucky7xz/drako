@@ -5,6 +5,8 @@ import (
 	"errors"
 	"io/fs"
 	"log"
+	"maps"
+	"slices"
 
 	"github.com/lucky7xz/drako/internal/settings"
 )
@@ -55,4 +57,10 @@ func Theme(configDir, name string) settings.DracoThemeConfig {
 		return theme
 	}
 	return settings.DefaultTheme()
+}
+
+// ThemeNames is every theme name Theme knows for configDir, sorted. Any other
+// name is drawn as dracula.
+func ThemeNames(configDir string) []string {
+	return slices.Sorted(maps.Keys(buildThemes(configDir)))
 }

@@ -70,17 +70,20 @@ func Decode(raw []byte) (base Config, unknown []string, err error) {
 	}, unknown, nil
 }
 
-// Lint checks raw config.toml: what sends the loader to rescue mode, and keys
-// it ignores (a typo, or a setting drako no longer has).
+// Lint checks raw config.toml: what sends the loader to rescue mode (an
+// error), keys it ignores (a typo, or a setting drako no longer has), and
+// bindings that cannot work as written (KeyFindings).
 func Lint(src []byte) []profile.Finding {
-	_, unknown, err := Decode(src)
+	base, unknown, err := Decode(src)
 	if err != nil {
 		return []profile.Finding{{Level: "error", Msg: fmt.Sprintf("%v", err)}}
 	}
+	var fs []profile.Finding
 	if len(unknown) > 0 {
-		return []profile.Finding{{Level: "warning", Msg: fmt.Sprintf("unrecognized key(s): %s (a typo, or a setting drako no longer has)", strings.Join(unknown, ", "))}}
+		fs = append(fs, profile.Finding{Level: "warning", Msg: fmt.Sprintf("unrecognized key(s): %s (a typo, or a setting drako no longer has)", strings.Join(unknown, ", "))})
 	}
-	return nil
+	base.ApplyDefaults()
+	return append(fs, KeyFindings(base)...)
 }
 
 // ApplyProfileOverlay layers a profile on top of the base settings: grid

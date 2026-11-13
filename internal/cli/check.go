@@ -7,9 +7,11 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strings"
 
 	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/lair"
+	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/profile"
 	"github.com/lucky7xz/drako/internal/settings"
 )
@@ -81,6 +83,7 @@ func runChecks(out io.Writer, files []string) int {
 	total := 0
 	var rows [][]string
 	clashes := nameClashes(files)
+	themes := knownThemes()
 	for _, f := range files {
 		src, err := readForCheck(f)
 		var findings []profile.Finding
@@ -89,8 +92,18 @@ func runChecks(out io.Writer, files []string) int {
 			findings = []profile.Finding{{Level: "error", Msg: fmt.Sprintf("cannot read file: %v", err)}}
 		case filepath.Base(f) == lair.ConfigFileName:
 			findings = settings.Lint(src)
+			if base, _, err := settings.Decode(src); err == nil {
+				findings = append(findings, nameFindings("default_shell", base.DefaultShell, "theme", base.Theme, themes)...)
+			}
 		default:
 			findings = profile.Lint(src)
+			if pf, _, err := profile.Decode(src, nil); err == nil {
+				shell := ""
+				if pf.Shell != nil {
+					shell = *pf.Shell
+				}
+				findings = append(findings, nameFindings("shell", shell, "theme", pf.Theme, themes)...)
+			}
 		}
 		if err := lair.CheckFileName(filepath.Base(f)); err != nil {
 			findings = append(findings, profile.Finding{Level: "error", Msg: err.Error()})
@@ -122,6 +135,31 @@ func runChecks(out io.Writer, files []string) int {
 			total, len(files), filesWithErrors)
 	}
 	return filesWithErrors
+}
+
+// knownThemes is the theme names drako can draw: the built-in ones and those
+// in the user's themes.toml.
+func knownThemes() []string {
+	dir, _ := lair.ConfigDir() // "" leaves the built-in themes
+	return lair.ThemeNames(dir)
+}
+
+// nameFindings warns about a shell or theme setting that names nothing drako
+// knows. Both fall back silently when drako runs (I-05): a typo in the shell
+// runs every cell in another shell, and an unknown theme draws as dracula.
+func nameFindings(shellKey, shell, themeKey, theme string, themes []string) []profile.Finding {
+	var fs []profile.Finding
+	warn := func(format string, args ...any) {
+		fs = append(fs, profile.Finding{Level: "warning", Msg: fmt.Sprintf(format, args...)})
+	}
+	if s := strings.TrimSpace(shell); s != "" && !launch.KnownShell(s) {
+		warn("%s = %q is not a shell drako knows (%s); cells run in %s instead",
+			shellKey, s, strings.Join(launch.ShellNames(), ", "), launch.FallbackShell())
+	}
+	if t := strings.TrimSpace(theme); t != "" && !slices.Contains(themes, t) {
+		warn("%s = %q is not a theme drako has; it draws as dracula (themes: %s)", themeKey, t, strings.Join(themes, ", "))
+	}
+	return fs
 }
 
 // readForCheck reads a file to lint. One in drako's folder is read through

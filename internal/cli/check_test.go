@@ -190,3 +190,23 @@ func TestCheckRefusedFileName(t *testing.T) {
 		t.Errorf("output:\n%s", b.String())
 	}
 }
+
+// I-05: a shell or theme that names nothing falls back silently when drako
+// runs; check says so.
+func TestNameFindings(t *testing.T) {
+	themes := []string{"dracula", "nord"}
+	if fs := nameFindings("default_shell", "zsh", "theme", "nord", themes); len(fs) != 0 {
+		t.Errorf("known names have no findings, got %+v", fs)
+	}
+	if fs := nameFindings("shell", "", "theme", "", themes); len(fs) != 0 {
+		t.Errorf("unset names have no findings, got %+v", fs)
+	}
+	fs := nameFindings("default_shell", "zhs", "theme", "nonexistent", themes)
+	if len(fs) != 2 || fs[0].Level != "warning" || fs[1].Level != "warning" {
+		t.Fatalf("want two warnings, got %+v", fs)
+	}
+	if !strings.Contains(fs[0].Msg, `default_shell = "zhs" is not a shell drako knows`) ||
+		!strings.Contains(fs[1].Msg, `theme = "nonexistent" is not a theme drako has`) {
+		t.Errorf("unexpected wording: %+v", fs)
+	}
+}
