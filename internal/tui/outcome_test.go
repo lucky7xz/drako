@@ -15,13 +15,13 @@ func TestOutcome(t *testing.T) {
 		t.Errorf("nothing asked: action %v, want Resume", got.Action)
 	}
 
-	m.selected = launch.Selection{Cell: "one"}
+	m.selected = pickNamed(m, "one")
 	got := m.Outcome()
 	if got.Action != Run || len(got.Plans) != 1 || got.Plans[0].Name != "one" || !got.Plans[0].Runnable() {
 		t.Errorf("single run: %+v, want Run with the plan for one", got)
 	}
 
-	m.selectedBatch = []launch.Selection{{Cell: "two"}, {Cell: "folder"}}
+	m.selectedBatch = []launch.Selection{pickNamed(m, "two"), pickNamed(m, "folder")}
 	m.selectedTabs = []int{2}
 	m.Config.BatchForceTmux = true
 	got = m.Outcome()

@@ -14,10 +14,12 @@ func boolPtr(b bool) *bool { return &b }
 // explainModel builds a grid model sitting on one command cell, with the
 // explain key bound, so the explain path can be driven directly.
 func explainModel(cmd profile.Command) Model {
+	cmd.Col, cmd.Row = "a", 0
 	return Model{
 		mode:    gridMode,
 		gridNav: gridNav{grid: [][]string{{cmd.Name}}},
 		Config: settings.Config{
+			X: 1, Y: 1,
 			Keys:     settings.InputConfig{Explain: "e"},
 			Commands: []profile.Command{cmd},
 		},

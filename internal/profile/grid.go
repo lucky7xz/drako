@@ -103,6 +103,21 @@ func ValidateGrid(x, y int, cmds []Command) error {
 	return nil
 }
 
+// ShownAt is the index of the command the grid shows on the square at row and
+// col (both from 0), or -1 when the square is empty. Like BuildGrid, the last
+// command placed on a square is the one that counts.
+func ShownAt(cmds []Command, x, y, row, col int) int {
+	if row < 0 || row >= y || col < 0 || col >= x {
+		return -1
+	}
+	for i := len(cmds) - 1; i >= 0; i-- {
+		if r, c, err := resolveCell(cmds[i], x, y); err == nil && r == row && c == col {
+			return i
+		}
+	}
+	return -1
+}
+
 // BuildGrid places command names into a y-by-x grid of cells.
 func BuildGrid(x, y int, cmds []Command) [][]string {
 	grid := make([][]string, y)

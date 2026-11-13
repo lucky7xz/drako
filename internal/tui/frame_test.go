@@ -37,7 +37,7 @@ func screens(t *testing.T, cols, w, h int) map[string]Model {
 	out["dropdown"] = dropdown
 
 	layout := grid(batchMode)
-	layout.batch.marked = []launch.Selection{{Cell: "R0C0"}, {Cell: "R0C1"}}
+	layout.batch.marked = []launch.Selection{pickNamed(layout, "R0C0"), pickNamed(layout, "R0C1")}
 	layout.batch.tabs = []int{2}
 	out["layout dialog"] = layout
 

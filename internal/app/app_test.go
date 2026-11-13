@@ -79,7 +79,7 @@ func TestBatchCommands_KeepOpen(t *testing.T) {
 			{Name: "loud", Command: "ls", DebugExecution: &yes},
 		}},
 	}}
-	sels := []launch.Selection{{Cell: "plain"}, {Cell: "stay"}, {Cell: "debug"}, {Cell: "folder", Item: 1}, {Cell: "folder", Item: 2}}
+	sels := []launch.Selection{{N: 1}, {N: 2}, {N: 3}, {N: 4, Item: 1}, {N: 4, Item: 2}}
 	cmds := batchCommands(plansFor(cfg, sels))
 	if len(cmds) != len(sels) {
 		t.Fatalf("got %d cells for %d marks", len(cmds), len(sels))
@@ -99,7 +99,7 @@ func TestBatchCommands_SkipsNothingToRun(t *testing.T) {
 		{Name: "empty"},
 		{Name: "blank", Command: "   "},
 	}}
-	sels := []launch.Selection{{Cell: "empty"}, {Cell: "real"}, {Cell: "blank"}, {Cell: "gone"}}
+	sels := []launch.Selection{{N: 2}, {N: 1}, {N: 3}, {N: 9}}
 	cmds := batchCommands(plansFor(cfg, sels))
 	if len(cmds) != 1 || cmds[0].Name != "real" {
 		t.Fatalf("got %+v, want only the cell with a command", cmds)
@@ -121,12 +121,12 @@ func TestRunPlan_NothingToRunPauses(t *testing.T) {
 	defer func() { pauseFn = old }()
 
 	cfg := settings.Config{Commands: []profile.Command{{Name: "test", Command: ""}, {Name: "blank", Command: "   "}}}
-	for _, sel := range []launch.Selection{{Cell: "test"}, {Cell: "blank"}, {Cell: "gone"}} {
+	for _, sel := range []launch.Selection{{N: 1}, {N: 2}, {N: 9}} {
 		paused := false
 		pauseFn = func(string) { paused = true }
 		runPlan(nil, launch.For(cfg.DefaultShell, cfg.Commands, sel, "")) // nothing to run, so nothing is logged
 		if !paused {
-			t.Errorf("%s: expected a pause", sel.Cell)
+			t.Errorf("%+v: expected a pause", sel)
 		}
 	}
 }

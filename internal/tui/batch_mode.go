@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/multiplex"
+	"github.com/lucky7xz/drako/internal/profile"
 )
 
 // Batch mode: mark several cells, launch them together in a multiplexer. All state
@@ -101,7 +102,8 @@ func (m Model) updateDropdownMarking(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) 
 			return m, m.setProfileStatus("Item not batchable", false), true
 		}
 		// By position: two items in a folder may share a name.
-		sel := launch.Selection{Cell: m.dropdownCell(), Item: m.dropdown.selectedIdx + 1}
+		_, sel := m.dropdownCell()
+		sel.Item = m.dropdown.selectedIdx + 1
 		if m.batch.mark(sel) == 0 && len(m.batch.marked) >= multiplex.MaxCommands {
 			return m, m.setProfileStatus("Batch is full (9 max)", false), true
 		}
@@ -118,9 +120,8 @@ func (m Model) updateDropdownMarking(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) 
 // markable reports whether a grid cell can join a batch: it must resolve to a
 // direct, non-empty command. Folder (dropdown) cells and platform-empty cells
 // stay out in v1.
-func (m Model) markable(name string) bool {
-	cell, _, found := launch.Selection{Cell: name}.Resolve(m.Config.Commands)
-	return found && cell.Command != "" && len(cell.Items) == 0
+func markable(cell *profile.Command) bool {
+	return cell != nil && cell.Name != "" && cell.Command != "" && len(cell.Items) == 0
 }
 
 // updateBatchMode: navigation as usual; Space toggles the cursor cell's mark,
@@ -148,11 +149,10 @@ func (m Model) updateBatchMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case key == " ":
-		name := m.currentCellName()
-		if name == "" || !m.markable(name) {
+		cell, sel := m.cursorCell()
+		if !markable(cell) {
 			return m, m.setProfileStatus("Cell not batchable", false)
 		}
-		sel := launch.Selection{Cell: name}
 		if m.batch.mark(sel) == 0 && len(m.batch.marked) >= multiplex.MaxCommands {
 			return m, m.setProfileStatus("Batch is full (9 max)", false)
 		}
@@ -166,13 +166,4 @@ func (m Model) updateBatchMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// a direction key: the cursor has moved
 	}
 	return m, nil
-}
-
-// currentCellName is the grid content under the cursor ("" for empty cells).
-func (m Model) currentCellName() string {
-	g := m.gridNav.grid
-	if m.gridNav.cursorRow >= len(g) || m.gridNav.cursorCol >= len(g[m.gridNav.cursorRow]) {
-		return ""
-	}
-	return g[m.gridNav.cursorRow][m.gridNav.cursorCol]
 }

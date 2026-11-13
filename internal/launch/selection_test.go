@@ -18,11 +18,12 @@ func TestSelectionResolve(t *testing.T) {
 		sel  Selection
 		want string // the resolved command, "" for no match
 	}{
-		{"cell", Selection{Cell: "A"}, "echo A"},
-		{"item in its own folder", Selection{Cell: "C", Item: 1}, "echo C1"},
-		{"cell sharing an item's name", Selection{Cell: "Same"}, "echo cell"},
-		{"item past the folder's end", Selection{Cell: "B", Item: 2}, ""},
-		{"no such cell", Selection{Cell: "X"}, ""},
+		{"cell", Selection{N: 1}, "echo A"},
+		{"item in its own folder", Selection{N: 3, Item: 1}, "echo C1"},
+		{"cell sharing an item's name", Selection{N: 4}, "echo cell"},
+		{"item past the folder's end", Selection{N: 2, Item: 2}, ""},
+		{"no such cell", Selection{N: 9}, ""},
+		{"nothing picked", Selection{}, ""},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -38,5 +39,16 @@ func TestSelectionResolve(t *testing.T) {
 				t.Errorf("Resolve(%+v) = %q, want %q", tc.sel, got, tc.want)
 			}
 		})
+	}
+}
+
+// Two cells may share a name; each is picked by where it stands.
+func TestSelectionTellsSameNamedCellsApart(t *testing.T) {
+	cells := []profile.Command{{Name: "same", Command: "echo first"}, {Name: "same", Command: "echo second"}}
+	for n, want := range map[int]string{1: "echo first", 2: "echo second"} {
+		cell, _, ok := Selection{N: n}.Resolve(cells)
+		if !ok || cell.Command != want {
+			t.Errorf("N=%d: got %+v, want %q", n, cell, want)
+		}
 	}
 }

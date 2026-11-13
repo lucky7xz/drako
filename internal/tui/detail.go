@@ -27,25 +27,19 @@ func newCommandDetail(title, address, value, description string, autoCloseExec *
 	}
 }
 
-// runAddress is what drako run takes for the named cell, or its item n if n > 0
+// runAddress is what drako run takes for the cell shown, or its item n if n > 0
 // ("core:A0"); "" when that wouldn't reach the cell on screen, as in rescue.
-func (m Model) runAddress(name string, n int) string {
-	if m.profile.activeIndex < 0 || m.profile.activeIndex >= len(m.profile.profiles) {
+func (m Model) runAddress(shown *profile.Command, n int) string {
+	if shown == nil || m.profile.activeIndex < 0 || m.profile.activeIndex >= len(m.profile.profiles) {
 		return ""
 	}
 	p := m.profile.profiles[m.profile.activeIndex]
-	for _, shown := range m.Config.Commands {
-		if shown.Name != name {
-			continue
-		}
-		own := profile.FindCell(p.Profile.Commands, shown.Address())
-		if own == nil || own.Name != shown.Name || own.Command != shown.Command {
-			return ""
-		}
-		if n > 0 {
-			return p.Name + ":" + own.ItemAddress(n)
-		}
-		return p.Name + ":" + own.Address()
+	own := profile.FindCell(p.Profile.Commands, shown.Address())
+	if own == nil || own.Name != shown.Name || own.Command != shown.Command {
+		return ""
 	}
-	return ""
+	if n > 0 {
+		return p.Name + ":" + own.ItemAddress(n)
+	}
+	return p.Name + ":" + own.Address()
 }

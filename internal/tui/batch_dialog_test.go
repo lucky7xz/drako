@@ -31,8 +31,8 @@ func dialogModel(t *testing.T, n int) Model {
 		styles:  BuildStyles(cfg, ""),
 		mode:    batchMode,
 		gridNav: gridNav{grid: profile.BuildGrid(cfg.X, cfg.Y, cfg.Commands)},
-		batch:   batchState{marked: cellMarks(names[:n]...)},
 	}
+	m.batch = batchState{marked: cellMarks(m, names[:n]...)}
 	next, _ := m.updateBatchMode(tea.KeyMsg{Type: tea.KeyEnter})
 	return next.(Model)
 }
@@ -73,7 +73,7 @@ func TestDialog_SkippedWhenThereIsNoChoice(t *testing.T) {
 	if m.batch.tabs != nil {
 		t.Errorf("a single cell needs no dialog, got %v", m.batch.tabs)
 	}
-	if !slices.Equal(m.selectedBatch, []launch.Selection{{Cell: "c1"}}) {
+	if !slices.Equal(m.selectedBatch, []launch.Selection{pickNamed(m, "c1")}) {
 		t.Errorf("a single cell must launch straight away, got %v", m.selectedBatch)
 	}
 }
@@ -178,7 +178,7 @@ func TestDialog_EnterLaunchesWithTheChosenLayout(t *testing.T) {
 	m, _ = pressDialog(t, m, keyUp) // [2 2 2]
 
 	m, cmd := pressDialog(t, m, keyEnter)
-	if !slices.Equal(m.selectedBatch, []launch.Selection{{Cell: "c1"}, {Cell: "c2"}, {Cell: "c3"}, {Cell: "c4"}, {Cell: "c5"}, {Cell: "c6"}}) {
+	if !slices.Equal(m.selectedBatch, []launch.Selection{pickNamed(m, "c1"), pickNamed(m, "c2"), pickNamed(m, "c3"), pickNamed(m, "c4"), pickNamed(m, "c5"), pickNamed(m, "c6")}) {
 		t.Fatalf("launch must carry the marked cells, got %v", m.selectedBatch)
 	}
 	if !slices.Equal(m.selectedTabs, []int{2, 2, 2}) {

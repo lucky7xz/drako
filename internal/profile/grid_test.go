@@ -141,3 +141,18 @@ func TestParseAddress(t *testing.T) {
 		})
 	}
 }
+
+// The grid shows the last command placed on a square; ShownAt names that one.
+func TestShownAt(t *testing.T) {
+	cmds := []Command{
+		{Name: "a", Col: "a", Row: 0},
+		{Name: "under", Col: "b", Row: 0},
+		{Name: "over", Col: "z", Row: 0}, // z: the last column, the same square as b
+		{Name: "outside", Col: "d", Row: 5},
+	}
+	for _, tc := range []struct{ row, col, want int }{{0, 0, 0}, {0, 1, 2}, {1, 0, -1}, {5, 3, -1}, {-1, 0, -1}} {
+		if got := ShownAt(cmds, 2, 2, tc.row, tc.col); got != tc.want {
+			t.Errorf("ShownAt(row %d, col %d) = %d, want %d", tc.row, tc.col, got, tc.want)
+		}
+	}
+}

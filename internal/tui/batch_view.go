@@ -73,14 +73,17 @@ func (m Model) itemMarkPrefix(i int, item profile.CommandItem) string {
 	if !m.batch.dropdown || item.Command == "" {
 		return ""
 	}
-	return m.batch.markGlyph(launch.Selection{Cell: m.dropdownCell(), Item: i + 1})
+	_, sel := m.dropdownCell()
+	sel.Item = i + 1
+	return m.batch.markGlyph(sel)
 }
 
 // batchCellPrefix returns the mark prefix for a cell, and nothing for cells a
 // batch can't include.
-func (m Model) batchCellPrefix(name string) string {
-	if m.mode != batchMode || name == "" || !m.markable(name) {
+func (m Model) batchCellPrefix(row, col int) string {
+	cell, sel := m.cellAt(row, col)
+	if m.mode != batchMode || !markable(cell) {
 		return ""
 	}
-	return m.batch.markGlyph(launch.Selection{Cell: name})
+	return m.batch.markGlyph(sel)
 }

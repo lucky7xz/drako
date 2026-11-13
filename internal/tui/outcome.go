@@ -45,7 +45,7 @@ func (m Model) Outcome() Outcome {
 			plans[i] = launch.For(m.Config.DefaultShell, m.Config.Commands, sel, profile)
 		}
 		return Outcome{Action: Batch, Plans: plans, Tabs: m.selectedTabs, ForceTmux: m.Config.BatchForceTmux}
-	case m.selected.Cell != "":
+	case m.selected.Picked():
 		return Outcome{Action: Run, Plans: []launch.Plan{launch.For(m.Config.DefaultShell, m.Config.Commands, m.selected, profile)}}
 	}
 	return Outcome{}

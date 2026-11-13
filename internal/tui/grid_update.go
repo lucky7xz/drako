@@ -7,7 +7,6 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/settings"
 )
 
@@ -54,19 +53,17 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if strings.TrimSpace(selectedChoice) == "" {
 			return m, nil
 		}
-		for _, cmd := range m.Config.Commands {
-			if cmd.Name == selectedChoice {
-				m.previousMode = m.mode
+		if cmd, _ := m.cursorCell(); cmd != nil {
+			m.previousMode = m.mode
 
-				cmdStr := cmd.Command
-				if strings.TrimSpace(cmd.Command) == "" {
-					cmdStr = "A folder. Enter opens it."
-				}
-
-				m.activeDetail = newCommandDetail(selectedChoice, m.runAddress(selectedChoice, 0), cmdStr, cmd.Description, cmd.AutoCloseExecution, m.path.CurrentPath)
-				m.mode = infoMode
-				return m, nil
+			cmdStr := cmd.Command
+			if strings.TrimSpace(cmd.Command) == "" {
+				cmdStr = "A folder. Enter opens it."
 			}
+
+			m.activeDetail = newCommandDetail(cmd.Name, m.runAddress(cmd, 0), cmdStr, cmd.Description, cmd.AutoCloseExecution, m.path.CurrentPath)
+			m.mode = infoMode
+			return m, nil
 		}
 		// Not found in config
 		m.previousMode = m.mode
@@ -91,24 +88,18 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, func() tea.Msg { return reloadProfilesMsg{} }
 		}
 
-		if selectedChoice != "" {
-			// Check if this command has dropdown items
-			for _, cmd := range m.Config.Commands {
-				if cmd.Name == selectedChoice {
-					if len(cmd.Items) > 0 {
-						// Open dropdown menu
-						m.mode = dropdownMode
-						m.dropdown.row = m.gridNav.cursorRow
-						m.dropdown.col = m.gridNav.cursorCol
-						m.dropdown.items = cmd.Items
-						m.dropdown.selectedIdx = 0
-						return m, nil
-					}
-					break
-				}
+		if cmd, sel := m.cursorCell(); cmd != nil {
+			if len(cmd.Items) > 0 {
+				// Open dropdown menu
+				m.mode = dropdownMode
+				m.dropdown.row = m.gridNav.cursorRow
+				m.dropdown.col = m.gridNav.cursorCol
+				m.dropdown.items = cmd.Items
+				m.dropdown.selectedIdx = 0
+				return m, nil
 			}
 			// Single command, execute normally
-			m.selected = launch.Selection{Cell: selectedChoice}
+			m.selected = sel
 			return m, tea.Quit
 		}
 	}

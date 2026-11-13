@@ -107,11 +107,11 @@ func TestDropdownMarkToggle(t *testing.T) {
 	m := markingModel(t)
 
 	m, _ = pressDropdown(t, m, spaceKey)
-	if m.batch.mark(launch.Selection{Cell: "folder", Item: 1}) != 1 {
+	if m.batch.mark(pickNamed(m, "folder", 1)) != 1 {
 		t.Fatal("space must mark the selected item")
 	}
 	m, _ = pressDropdown(t, m, spaceKey)
-	if m.batch.mark(launch.Selection{Cell: "folder", Item: 1}) != 0 {
+	if m.batch.mark(pickNamed(m, "folder", 1)) != 0 {
 		t.Fatal("space again must unmark")
 	}
 }
@@ -121,7 +121,7 @@ func TestDropdownBareItemNotMarkable(t *testing.T) {
 	m.dropdown.selectedIdx = 2 // "bare"
 
 	m, _ = pressDropdown(t, m, spaceKey)
-	if m.batch.mark(launch.Selection{Cell: "folder", Item: 3}) != 0 {
+	if m.batch.mark(pickNamed(m, "folder", 3)) != 0 {
 		t.Fatal("items without a command must not be markable")
 	}
 }
@@ -157,7 +157,7 @@ func TestDropdownMarksTellSameNamedItemsApart(t *testing.T) {
 		t.Errorf("only the second Logs may carry the mark:\n%s", out)
 	}
 	m, _ = pressDropdown(t, m, tea.KeyMsg{Type: tea.KeyEnter})
-	if want := []launch.Selection{{Cell: "folder", Item: 2}}; !slices.Equal(m.selectedBatch, want) {
+	if want := []launch.Selection{pickNamed(m, "folder", 2)}; !slices.Equal(m.selectedBatch, want) {
 		t.Errorf("SelectedBatch = %v, want %v", m.selectedBatch, want)
 	}
 }
@@ -192,7 +192,7 @@ func TestDropdownLaunchCollectsSelectionOrder(t *testing.T) {
 	// Enter opens the layout dialog; a second Enter accepts it and launches.
 	m, _ = pressDropdown(t, m, tea.KeyMsg{Type: tea.KeyEnter})
 	m, cmd := pressDropdown(t, m, tea.KeyMsg{Type: tea.KeyEnter})
-	want := []launch.Selection{{Cell: "folder", Item: 2}, {Cell: "folder", Item: 1}}
+	want := []launch.Selection{pickNamed(m, "folder", 2), pickNamed(m, "folder", 1)}
 	if !slices.Equal(m.selectedBatch, want) {
 		t.Fatalf("SelectedBatch = %v, want %v (selection order)", m.selectedBatch, want)
 	}
@@ -221,7 +221,7 @@ func TestDropdownLaunchWithNothingMarkedDoesNotRunItem(t *testing.T) {
 
 func TestDropdownEscExitsMarkingKeepsDropdown(t *testing.T) {
 	m := markingModel(t)
-	m.batch.marked = []launch.Selection{{Cell: "folder", Item: 1}}
+	m.batch.marked = []launch.Selection{pickNamed(m, "folder", 1)}
 
 	m, _ = pressDropdown(t, m, tea.KeyMsg{Type: tea.KeyEsc})
 	if m.batch.dropdown || len(m.batch.marked) != 0 {

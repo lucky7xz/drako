@@ -75,7 +75,7 @@ func (m Model) renderGrid(budgetLines int) string {
 			}
 
 			cellName := m.gridNav.grid[r][c]
-			truncatedContent := truncateText(m.batchCellPrefix(cellName)+cellName, maxContentWidth)
+			truncatedContent := truncateText(m.batchCellPrefix(r, c)+cellName, maxContentWidth)
 
 			// The cell style itself has padding, so we just need to render the content.
 			paddedContent := lipgloss.NewStyle().

@@ -15,12 +15,15 @@ import (
 // your position is thrown away and rebuilt -- this is the value that survives
 // that gap. It lives for the process and is never written down.
 //
-// Names, not coordinates. InitialModel re-reads the config every lap, so by the
-// time you return, row 1 column 1 may be a different command: you edited a
-// profile, or the command you ran switched one. Following the name lands you on
-// the cell you actually ran, wherever it moved to.
+// The square first, then the name. InitialModel re-reads the config every lap,
+// so by the time you return the deck may have changed: you edited a profile, or
+// the command you ran switched one. If the square still holds a cell of that
+// name, that is the cell you ran. If not, the cell moved and its name is
+// followed. The name alone would not do: two cells may share one.
 type Session struct {
 	Cell    string
+	Row     int // the square Cell stood on
+	Col     int
 	Profile string
 	// Notices are things the host wants the user told once, oldest first:
 	// each is shown as a popup and then forgotten.
@@ -37,7 +40,7 @@ func (m Model) Session() Session {
 
 	row, col := m.gridNav.cursorRow, m.gridNav.cursorCol
 	if row >= 0 && row < len(m.gridNav.grid) && col >= 0 && col < len(m.gridNav.grid[row]) {
-		s.Cell = m.gridNav.grid[row][col]
+		s.Cell, s.Row, s.Col = m.gridNav.grid[row][col], row, col
 	}
 	return s
 }
@@ -78,6 +81,11 @@ func (m *Model) Restore(s Session) {
 	}
 
 	if s.Cell == "" {
+		return
+	}
+	// The same square first: a second cell of that name elsewhere is another cell.
+	if g := m.gridNav.grid; s.Row >= 0 && s.Row < len(g) && s.Col >= 0 && s.Col < len(g[s.Row]) && g[s.Row][s.Col] == s.Cell {
+		m.gridNav.cursorRow, m.gridNav.cursorCol = s.Row, s.Col
 		return
 	}
 	for row, cells := range m.gridNav.grid {

@@ -6,17 +6,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/lucky7xz/drako/internal/launch"
 )
-
-// dropdownCell is the name of the folder cell the open dropdown belongs to.
-func (m Model) dropdownCell() string {
-	r, c := m.dropdown.row, m.dropdown.col
-	if r < 0 || c < 0 || r >= len(m.gridNav.grid) || c >= len(m.gridNav.grid[r]) {
-		return ""
-	}
-	return m.gridNav.grid[r][c]
-}
 
 func (m Model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
@@ -81,12 +71,12 @@ func (m Model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case IsExplain(m.Config.Keys, msg):
 		if m.dropdown.selectedIdx >= 0 && m.dropdown.selectedIdx < len(m.dropdown.items) {
 			item := m.dropdown.items[m.dropdown.selectedIdx]
-			parent := m.dropdownCell()
+			parent, _ := m.dropdownCell()
 			m.previousMode = m.mode
 
 			title := item.Name
-			if strings.TrimSpace(parent) != "" {
-				title = fmt.Sprintf("%s: %s", parent, item.Name)
+			if parent != nil && strings.TrimSpace(parent.Name) != "" {
+				title = fmt.Sprintf("%s: %s", parent.Name, item.Name)
 			}
 
 			cmdStr := item.Command
@@ -102,7 +92,9 @@ func (m Model) updateDropdownMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case IsConfirm(m.Config.Keys, msg):
 		// Execute the selected dropdown item
 		if m.dropdown.selectedIdx >= 0 && m.dropdown.selectedIdx < len(m.dropdown.items) {
-			m.selected = launch.Selection{Cell: m.dropdownCell(), Item: m.dropdown.selectedIdx + 1}
+			_, sel := m.dropdownCell()
+			sel.Item = m.dropdown.selectedIdx + 1
+			m.selected = sel
 			return m, tea.Quit
 		}
 	}

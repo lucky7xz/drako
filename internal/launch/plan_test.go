@@ -36,7 +36,7 @@ func testCells() []profile.Command {
 }
 
 func TestFor_TopLevelCommand(t *testing.T) {
-	plan := planFor(Selection{Cell: "hello"}, "work")
+	plan := planFor(Selection{N: 1}, "work")
 	if !plan.Runnable() {
 		t.Fatalf("plan = %+v, want something to run", plan)
 	}
@@ -52,14 +52,14 @@ func TestFor_TopLevelCommand(t *testing.T) {
 }
 
 func TestFor_FlagOverrides(t *testing.T) {
-	plan := planFor(Selection{Cell: "careful"}, "")
+	plan := planFor(Selection{N: 2}, "")
 	if plan.AutoClose || !plan.Debug {
 		t.Errorf("overrides: AutoClose=%v Debug=%v, want false/true", plan.AutoClose, plan.Debug)
 	}
 }
 
 func TestFor_DropdownItem(t *testing.T) {
-	plan := planFor(Selection{Cell: "folder", Item: 1}, "")
+	plan := planFor(Selection{N: 5, Item: 1}, "")
 	if want := []string{"bash", "-lc", "ls -la"}; !slices.Equal(plan.Argv, want) {
 		t.Fatalf("Argv = %v, want %v", plan.Argv, want)
 	}
@@ -72,7 +72,7 @@ func TestFor_DropdownItem(t *testing.T) {
 }
 
 func TestFor_ConfiguredButEmpty(t *testing.T) {
-	for _, sel := range []Selection{{Cell: "empty-cell"}, {Cell: "blank-cell"}, {Cell: "folder", Item: 2}} {
+	for _, sel := range []Selection{{N: 3}, {N: 4}, {N: 5, Item: 2}} {
 		if plan := planFor(sel, ""); plan.Runnable() {
 			t.Errorf("%+v: plan = %+v, want nothing to run", sel, plan)
 		}
@@ -80,14 +80,14 @@ func TestFor_ConfiguredButEmpty(t *testing.T) {
 }
 
 func TestFor_NotFound(t *testing.T) {
-	// A cell the config no longer has, or an item past the folder's end.
-	for _, sel := range []Selection{{Cell: "ghost"}, {Cell: "folder", Item: 9}} {
+	// A number past the profile's commands, or an item past the folder's end.
+	for _, sel := range []Selection{{N: 9}, {N: 5, Item: 9}} {
 		plan := planFor(sel, "")
 		if plan.Runnable() {
 			t.Errorf("%+v: plan = %+v, want nothing to run", sel, plan)
 		}
-		if plan.Name != sel.Cell {
-			t.Errorf("%+v: Name = %q, want the cell's name to report", sel, plan.Name)
+		if plan.Name != "" && sel.Item == 0 {
+			t.Errorf("%+v: Name = %q, want none: there is no such cell", sel, plan.Name)
 		}
 	}
 }
