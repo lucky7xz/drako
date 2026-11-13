@@ -3,8 +3,6 @@ package summon
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -21,22 +19,18 @@ func TestSummonPathsRejectBackslashTraversal(t *testing.T) {
 	}
 }
 
-func TestVerifyFileSHA256(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "f")
+func TestVerifySHA256(t *testing.T) {
 	payload := []byte("deck bytes")
-	if err := os.WriteFile(path, payload, 0o644); err != nil {
-		t.Fatal(err)
-	}
 	sum := sha256.Sum256(payload)
 	good := hex.EncodeToString(sum[:])
 
-	if err := VerifyFileSHA256(path, good); err != nil {
+	if err := VerifySHA256(payload, good); err != nil {
 		t.Errorf("correct hash rejected: %v", err)
 	}
-	if err := VerifyFileSHA256(path, strings.ToUpper(good)); err != nil {
+	if err := VerifySHA256(payload, strings.ToUpper(good)); err != nil {
 		t.Errorf("uppercase hash must match (case-insensitive): %v", err)
 	}
-	err := VerifyFileSHA256(path, strings.Repeat("0", 64))
+	err := VerifySHA256(payload, strings.Repeat("0", 64))
 	if err == nil || !strings.Contains(err.Error(), "MISMATCH") {
 		t.Errorf("wrong hash: err = %v, want MISMATCH", err)
 	}

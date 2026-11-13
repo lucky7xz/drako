@@ -11,6 +11,7 @@ package cli
 //   summon_validate.go  — validation of everything that arrives
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"log"
@@ -202,41 +203,23 @@ func warnIfNoSSHKeys() {
 	fmt.Printf("   3. Or use HTTPS URL instead: https://github.com/user/repo.git\n\n")
 }
 
-// validateProfile is summon.ValidateProfileFile, saying so when the file is
+// validateProfile is summon.ValidateProfile, saying so when the deck is
 // unusually large.
-func validateProfile(path string) (summon.File, error) {
-	f, err := summon.ValidateProfileFile(path)
-	if f.Info != nil {
-		if size := f.Info.Size(); size > summon.ProfileWarnSize && size <= summon.ProfileMaxSize {
-			fmt.Printf("⚠️  Warning: Profile is unusually large (%d KB). Validating...\n", size/1024)
-		}
+func validateProfile(f summon.File) (summon.File, error) {
+	if size := len(f.Data); size > summon.ProfileWarnSize {
+		fmt.Printf("⚠️  Warning: Profile is unusually large (%d KB). Validating...\n", size/1024)
 	}
-	return f, err
+	return summon.ValidateProfile(f)
 }
 
 // installProfile hands the checked deck f to lair, which puts it where
 // dstPath says: equipped (the config dir itself) or the inventory.
 func installProfile(configDir string, f summon.File, dstPath string) error {
-	in, err := f.Open()
-	if err != nil {
-		return err
-	}
-	defer in.Close()
 	loc := equip.Equipped
 	if filepath.Dir(dstPath) != filepath.Clean(configDir) {
 		loc = equip.Inventory
 	}
-	return lair.InstallProfile(configDir, loc, filepath.Base(dstPath), in)
-}
-
-// installSpec hands the checked spec f to lair under the name file.
-func installSpec(configDir string, f summon.File, file string) error {
-	in, err := f.Open()
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-	return lair.InstallSpec(configDir, file, in)
+	return lair.InstallProfile(configDir, loc, filepath.Base(dstPath), bytes.NewReader(f.Data))
 }
 
 // sameFile reports whether the deck at dstPath, in the config dir, and the
@@ -411,7 +394,10 @@ func (s *Summoner) summonRepoProfile(srcPath, tempDir string) (summonOutcome, er
 
 	// Validate file content before copying
 	fmt.Printf("\nValidating %s...\n", dstName)
-	f, err := validateProfile(srcPath)
+	f, err := summon.Read(srcPath)
+	if err == nil {
+		f, err = validateProfile(f)
+	}
 	if err != nil {
 		fmt.Printf("⚠️  Skipping %s: %v\n", dstName, err)
 		return outcomeSkipped, nil
@@ -423,7 +409,7 @@ func (s *Summoner) summonRepoProfile(srcPath, tempDir string) (summonOutcome, er
 		return outcomeFailed, err
 	}
 
-	size := f.Info.Size()
+	size := len(f.Data)
 
 	// Ask for confirmation (include assets plan if any)
 	fmt.Printf("  File: %s\n", dstName)
@@ -567,13 +553,15 @@ func (s *Summoner) summonRepoSpec(srcPath, specsDir string) summonOutcome {
 		fmt.Printf("⚠️  Skipping %q: file name %v\n", dstName, err)
 		return outcomeSkipped
 	}
-	// Validate spec file content
-	f, err := summon.ValidateSpecFile(srcPath)
+	f, err := summon.Read(srcPath)
+	if err == nil {
+		err = summon.ValidateSpec(f)
+	}
 	if err != nil {
 		fmt.Printf("⚠️  Skipping %s: %v\n", dstName, err)
 		return outcomeSkipped
 	}
-	size := f.Info.Size()
+	size := len(f.Data)
 
 	fmt.Printf("  File: %s\n", dstName)
 	fmt.Printf("  Size: %d bytes\n", size)
@@ -587,7 +575,7 @@ func (s *Summoner) summonRepoSpec(srcPath, specsDir string) summonOutcome {
 		return outcomeCancelled
 	}
 
-	if err := installSpec(s.ConfigDir, f, dstName); err != nil {
+	if err := lair.InstallSpec(s.ConfigDir, dstName, bytes.NewReader(f.Data)); err != nil {
 		fmt.Printf("Failed to copy %s: %v\n", dstName, err)
 		return outcomeFailed
 	}
@@ -614,19 +602,23 @@ func (s *Summoner) summonFromHTTP(sourceURL, dstPath string) error {
 		return err
 	}
 
+	f, err := summon.Read(tempPath)
+	if err != nil {
+		return err
+	}
+
 	// Verify the pin before the TOML parser ever touches the bytes: the
 	// cheap check gates the risky one.
 	if s.SHA256 != "" {
 		fmt.Printf("Verifying sha256...\n")
-		if err := summon.VerifyFileSHA256(tempPath, s.SHA256); err != nil {
+		if err := summon.VerifySHA256(f.Data, s.SHA256); err != nil {
 			return err
 		}
 		fmt.Printf("✓ sha256 verified\n")
 	}
 
-	// Validate the downloaded file
 	fmt.Printf("Validating profile...\n")
-	f, err := validateProfile(tempPath)
+	f, err = validateProfile(f)
 	if err != nil {
 		return fmt.Errorf("validation failed: %w", err)
 	}

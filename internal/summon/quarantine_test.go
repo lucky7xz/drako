@@ -1,9 +1,9 @@
 package summon
 
 import (
-	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -44,27 +44,34 @@ func TestQuarantine(t *testing.T) {
 	}
 }
 
-// A checked deck opens for installing and lists its commands.
+// A checked deck is the bytes read once: a change on disk afterwards does
+// not reach it.
 func TestCheckedFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "d.profile.toml")
 	deck := "x = 1\ny = 1\n[[commands]]\nname = \"A\"\ncommand = { linux_arch = \"pacman\", macos = \"brew\" }\n"
 	if err := os.WriteFile(path, []byte(deck), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	f, err := ValidateProfileFile(path)
-	if err != nil || f.Info == nil || f.Info.Size() != int64(len(deck)) || len(f.Profile.Commands) != 1 {
-		t.Fatalf("ValidateProfileFile = %+v, %v", f, err)
+	f, err := Read(path)
+	if err == nil {
+		f, err = ValidateProfile(f)
 	}
-	r, err := f.Open()
-	if err != nil {
+	if err != nil || f.Info == nil || len(f.Profile.Commands) != 1 {
+		t.Fatalf("Read, ValidateProfile = %+v, %v", f, err)
+	}
+	if err := os.WriteFile(path, []byte("swapped"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	got, _ := io.ReadAll(r)
-	r.Close()
-	if string(got) != deck {
-		t.Errorf("Open read %q", got)
+	if string(f.Data) != deck {
+		t.Errorf("Data = %q, want the deck as read", f.Data)
 	}
 	if cmds, err := f.Commands(); err != nil || len(cmds) != 2 {
 		t.Errorf("Commands = %v, %v; want both platforms", cmds, err)
+	}
+}
+
+func TestReadRefusesAFolder(t *testing.T) {
+	if _, err := Read(t.TempDir()); err == nil || !strings.Contains(err.Error(), "not a regular file") {
+		t.Errorf("Read(folder) = %v, want refused", err)
 	}
 }

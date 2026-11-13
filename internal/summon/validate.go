@@ -7,8 +7,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"io"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -32,20 +30,11 @@ func IsHexString(s string, n int) bool {
 	return true
 }
 
-// VerifyFileSHA256 hashes path and compares it (case-insensitively) against
-// the expected hex digest. A mismatch is an error that names both hashes.
-func VerifyFileSHA256(path, expected string) error {
-	f, err := os.Open(path)
-	if err != nil {
-		return fmt.Errorf("could not open file for verification: %w", err)
-	}
-	defer f.Close()
-
-	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
-		return fmt.Errorf("could not hash file: %w", err)
-	}
-	got := hex.EncodeToString(h.Sum(nil))
+// VerifySHA256 compares data's hash, case-insensitively, with the expected
+// hex digest.
+func VerifySHA256(data []byte, expected string) error {
+	sum := sha256.Sum256(data)
+	got := hex.EncodeToString(sum[:])
 	if !strings.EqualFold(got, expected) {
 		return fmt.Errorf("sha256 MISMATCH\n  expected %s\n  got      %s\nnothing was written to the inventory", strings.ToLower(expected), got)
 	}
@@ -58,29 +47,9 @@ const (
 	ProfileMaxSize  = 2 * 1024 * 1024 // 2MB - reject if larger
 )
 
-// ValidateProfileFile checks that a file is a valid drako profile and returns
-// it as a checked File, decoded. Info is set whenever the file could be
-// looked at, failed or not: a size over ProfileWarnSize is unusual, and the
-// caller may want to say so.
-func ValidateProfileFile(path string) (File, error) {
-	f := File{Path: path}
-	info, err := os.Stat(path)
-	if err != nil {
-		return f, fmt.Errorf("failed to stat file: %w", err)
-	}
-	f.Info = info
-
-	if size := info.Size(); size > ProfileMaxSize {
-		return f, fmt.Errorf("file too large (%d bytes, max %d bytes). This is not a valid profile", size, ProfileMaxSize)
-	}
-
-	// Read and parse as TOML
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return f, fmt.Errorf("failed to read file: %w", err)
-	}
-
-	pf, problems, err := profile.Decode(data, nil) // validating only: no platform needed
+// ValidateProfile checks that f is a valid drako deck and returns it decoded.
+func ValidateProfile(f File) (File, error) {
+	pf, problems, err := profile.Decode(f.Data, nil) // validating only: no platform needed
 	if err != nil {
 		return f, fmt.Errorf("invalid TOML format: %w", err)
 	}
@@ -111,38 +80,19 @@ func ValidateFilename(filename string) error {
 	return nil
 }
 
-// ValidateSpecFile checks if a file is a valid drako spec, and returns it as
-// a checked File.
-func ValidateSpecFile(path string) (File, error) {
-	f := File{Path: path}
-	info, err := os.Stat(path)
-	if err != nil {
-		return f, err
-	}
-	f.Info = info
-	if info.Size() > ProfileMaxSize {
-		return f, fmt.Errorf("file too large")
-	}
-
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return f, err
-	}
-
-	// Basic TOML validation
+// ValidateSpec checks that f is a valid drako spec.
+func ValidateSpec(f File) error {
 	var temp map[string]any
-	if _, err := toml.Decode(string(data), &temp); err != nil {
-		return f, fmt.Errorf("invalid TOML: %w", err)
+	if _, err := toml.Decode(string(f.Data), &temp); err != nil {
+		return fmt.Errorf("invalid TOML: %w", err)
 	}
-
 	// Spec files should expect a 'profiles' key (list of strings)
-	if profiles, ok := temp["profiles"]; ok {
-		if _, isList := profiles.([]any); !isList {
-			return f, fmt.Errorf("missing or invalid 'profiles' list")
-		}
-	} else {
-		return f, fmt.Errorf("missing 'profiles' key")
+	profiles, ok := temp["profiles"]
+	if !ok {
+		return fmt.Errorf("missing 'profiles' key")
 	}
-
-	return f, nil
+	if _, isList := profiles.([]any); !isList {
+		return fmt.Errorf("missing or invalid 'profiles' list")
+	}
+	return nil
 }

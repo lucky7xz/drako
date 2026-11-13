@@ -194,6 +194,30 @@ func gitSummoner(t *testing.T, build func(dir string) error) (*Summoner, *yesToA
 	return &Summoner{ConfigDir: t.TempDir(), Downloader: &MockDownloader{}, Cloner: repoCloner{build}, UI: ui}, ui
 }
 
+// A deck changed on disk after its check (here while the user confirms) is
+// installed as checked.
+func TestSummonInstallsWhatItChecked(t *testing.T) {
+	var src string
+	s, _ := gitSummoner(t, func(dir string) error {
+		src = filepath.Join(dir, "deck.profile.toml")
+		return os.WriteFile(src, []byte(validDeck), 0o644)
+	})
+	s.UI = &MockUI{ConfirmFunc: func(prompt string) bool {
+		if strings.HasPrefix(prompt, "Summon ") {
+			if err := os.WriteFile(src, []byte("swapped = true\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return true
+	}}
+	if err := s.Summon("git@host:repo.git"); err != nil {
+		t.Fatalf("Summon: %v", err)
+	}
+	if got, err := os.ReadFile(filepath.Join(s.ConfigDir, "deck.profile.toml")); err != nil || string(got) != validDeck {
+		t.Errorf("installed %q (%v), want the deck as checked", got, err)
+	}
+}
+
 func TestSummonGitSkipsSymlinkedProfiles(t *testing.T) {
 	outside := filepath.Join(t.TempDir(), "secret.profile.toml")
 	if err := os.WriteFile(outside, []byte(validDeck), 0o644); err != nil {
