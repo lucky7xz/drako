@@ -233,7 +233,7 @@ func (m Model) belowMinimum() (bool, int, int) {
 	// long text cannot raise the demand past a constant; naturally narrower
 	// cells lower it.
 	reqW := appStyle.GetHorizontalMargins() + maxRowNumWidth + 1 +
-		minCols*min(cellFootprint(m.gridNav.grid), MinCellFootprint)
+		minCols*min(m.cellFootprint(), MinCellFootprint)
 	if totalCols > minCols {
 		reqW += 2 // the appended ▸ marker
 	}

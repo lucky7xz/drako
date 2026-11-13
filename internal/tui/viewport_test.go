@@ -70,15 +70,17 @@ func TestCellFootprint(t *testing.T) {
 	tests := []struct {
 		name string
 		grid [][]string
+		mark int
 		want int
 	}{
-		{"empty grid", nil, 4},
-		{"narrow cells", [][]string{{"ab", "abcd"}}, 8},
-		{"width capped at GridMaxTextWidth", [][]string{{"this cell content is far too long to fit"}}, GridMaxTextWidth + 4},
+		{"empty grid keeps room for the header label", nil, 0, 5},
+		{"narrow cells", [][]string{{"ab", "abcd"}}, 0, 8},
+		{"a batch mark gets its own room", [][]string{{"ab", "abcd"}}, 2, 10},
+		{"width capped at GridMaxTextWidth", [][]string{{"this cell content is far too long to fit"}}, 2, GridMaxTextWidth + 4},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := cellFootprint(tt.grid); got != tt.want {
+			if got := cellFootprint(tt.grid, tt.mark); got != tt.want {
 				t.Errorf("cellFootprint = %d, want %d", got, tt.want)
 			}
 		})

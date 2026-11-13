@@ -1,6 +1,9 @@
 package tui
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"github.com/charmbracelet/lipgloss"
+	"github.com/lucky7xz/drako/internal/launch"
+)
 
 // The grid viewport is stateless: the visible window on each axis is derived
 // from the cursor at render time, so no offset needs to be stored or kept in
@@ -53,9 +56,11 @@ func visibleCount(budget, cellSize, total, reserve int) int {
 }
 
 // cellFootprint is the on-screen width of one rendered cell: the widest
-// content across ALL cells (so the grid keeps its shape while scrolling),
-// capped at GridMaxTextWidth, plus padding (1+1) and border (1+1).
-func cellFootprint(grid [][]string) int {
+// content across ALL cells (so the grid keeps its shape while scrolling) plus
+// mark, the room a batch mark takes in front of a name; capped at
+// GridMaxTextWidth, plus padding (1+1) and border (1+1). The content is never
+// narrower than one column, so the header label [A] always fits its cell.
+func cellFootprint(grid [][]string, mark int) int {
 	widest := 0
 	for _, row := range grid {
 		for _, cell := range row {
@@ -64,7 +69,18 @@ func cellFootprint(grid [][]string) int {
 			}
 		}
 	}
-	return min(widest, GridMaxTextWidth) + 4
+	return max(min(widest+mark, GridMaxTextWidth), 1) + 4
+}
+
+// cellFootprint is the cell width for the grid as it is drawn now. In batch
+// mode every cell makes room for its mark, so a short name is not cut to
+// nothing by the sign in front of it.
+func (m Model) cellFootprint() int {
+	mark := 0
+	if m.mode == batchMode {
+		mark = lipgloss.Width(m.batch.markGlyph(launch.Selection{}))
+	}
+	return cellFootprint(m.gridNav.grid, mark)
 }
 
 // fitFootprint clamps the content-preferred cell footprint to what the

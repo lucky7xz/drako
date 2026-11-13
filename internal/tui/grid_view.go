@@ -26,7 +26,7 @@ func (m Model) renderGrid(budgetLines int) string {
 	maxRowNumWidth := rowLabelWidth(totalRows)
 
 	widthBudget := m.termWidth - appStyle.GetHorizontalMargins() - (maxRowNumWidth + 1)
-	totalCellWidth := fitFootprint(cellFootprint(m.gridNav.grid), widthBudget, totalCols)
+	totalCellWidth := fitFootprint(m.cellFootprint(), widthBudget, totalCols)
 	maxContentWidth := totalCellWidth - 4
 
 	// reserve 2: the right scroll marker appended to the header line
