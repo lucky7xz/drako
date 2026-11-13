@@ -50,8 +50,8 @@ type DetailState struct {
 	Description string
 	Meta        []DetailMeta // Extra fields like "CWD", "Exec Mode"
 
-	// ScrollOffset is the first visible script line when the Value overflows
-	// the explain viewport. Zero on every fresh detail, so no reset is needed.
+	// ScrollOffset is the first visible row of the popup's body when it is
+	// taller than the terminal. Zero on every fresh detail, so no reset is needed.
 	ScrollOffset int
 }
 

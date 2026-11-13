@@ -201,12 +201,9 @@ func (m Model) opensKeySheet(msg tea.KeyMsg) bool {
 // any other key closes it and does nothing else.
 func (m Model) updateKeySheet(msg tea.KeyMsg) Model {
 	_, viewportH, maxOffset := m.sheetMetrics()
-	offset := m.sheet.offset
+	offset, paged := pageOffset(msg.String(), m.sheet.offset, viewportH, maxOffset)
 	switch {
-	case msg.String() == "pgup":
-		offset -= viewportH - 1
-	case msg.String() == "pgdown":
-		offset += viewportH - 1
+	case paged:
 	case IsUp(m.Config.Keys, msg):
 		offset--
 	case IsDown(m.Config.Keys, msg):
@@ -215,7 +212,7 @@ func (m Model) updateKeySheet(msg tea.KeyMsg) Model {
 		m.sheet = nil
 		return m
 	}
-	m.sheet = &sheetState{offset: min(max(offset, 0), maxOffset)}
+	m.sheet = &sheetState{offset: clampOffset(offset, maxOffset)}
 	return m
 }
 
@@ -234,8 +231,8 @@ func (m Model) sheetWidth() int {
 func (m Model) sheetMetrics() (lines []string, viewportH, maxOffset int) {
 	lines = m.sheetLines(m.sheetWidth())
 	frame := m.styles.DropdownPopup.GetVerticalFrameSize() + 4 // + title, two spacers, hint
-	viewportH = max(3, min(len(lines), m.termHeight-frame))
-	return lines, viewportH, max(0, len(lines)-viewportH)
+	viewportH, maxOffset = fitRows(len(lines), m.termHeight-frame)
+	return lines, viewportH, maxOffset
 }
 
 // sheetLines lays the sections out width columns wide: a blank line, then
@@ -288,17 +285,10 @@ func (m Model) renderKeySheet() string {
 	lines, viewportH, maxOffset := m.sheetMetrics()
 	width := m.sheetWidth()
 	bg := m.styles.DropdownPopup.GetBackground()
-	fill := m.popupFill()
 
-	scrolling := maxOffset > 0
-	offset := min(m.sheet.offset, maxOffset)
-	body := padLinesTo(lines[offset:offset+viewportH], width, fill)
+	body := m.scrollRows(lines, m.sheet.offset, viewportH, width)
 	hint := "any key closes"
-	if scrolling {
-		bars := scrollbarColumn(len(lines), offset, viewportH, fill.Bold(true), fill.Foreground(hlComment))
-		for i := range body {
-			body[i] += fill.Render(" ") + bars[i]
-		}
+	if maxOffset > 0 {
 		hint = "PgUp/PgDn scroll · any other key closes"
 	}
 

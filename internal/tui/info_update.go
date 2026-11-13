@@ -24,19 +24,14 @@ func (m Model) updateInfoMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m = m.presentNextBrokenProfile()
 		return m, tea.Batch(cmds...)
 	}
+	if m.activeDetail != nil {
+		l := m.explainLayout()
+		if next, paged := pageOffset(key, m.activeDetail.ScrollOffset, l.viewportH, l.maxOffset); paged {
+			m.activeDetail.ScrollOffset = next
+			return m, nil
+		}
+	}
 	switch key {
-	case "pgup":
-		if m.activeDetail != nil {
-			l := m.explainLayout()
-			m.activeDetail.ScrollOffset = max(0, m.activeDetail.ScrollOffset-(l.viewportH-1))
-		}
-		return m, nil
-	case "pgdown":
-		if m.activeDetail != nil {
-			l := m.explainLayout()
-			m.activeDetail.ScrollOffset = min(l.maxOffset, m.activeDetail.ScrollOffset+(l.viewportH-1))
-		}
-		return m, nil
 	case "y":
 		if !m.allowCopy() {
 			return m, nil

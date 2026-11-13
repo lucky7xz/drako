@@ -41,6 +41,37 @@ func TestExplainLayout_ClampsAndOffset(t *testing.T) {
 	}
 }
 
+// E-01: a long description used to push the title and the command off the
+// top. Now the popup fits, opens on the command, and pages to the end of the
+// description.
+func TestExplainLayout_LongDescriptionScrollsToo(t *testing.T) {
+	m := Model{
+		mode: infoMode, previousMode: gridMode, termWidth: 100, termHeight: 30,
+		activeDetail: &DetailState{
+			Title: "Title", KeyLabel: "Command", Value: "echo THE-COMMAND",
+			Description: strings.ReplaceAll(scriptOf(40), "line", "desc") + "\nLAST-LINE",
+		},
+	}
+	first := m.renderInfoPopup()
+	if h := lipgloss.Height(first); h > 30 {
+		t.Fatalf("popup is %d rows tall on a 30-row terminal", h)
+	}
+	if !strings.Contains(first, "Title") || !strings.Contains(first, "THE-COMMAND") {
+		t.Error("the popup must open showing its title and the command")
+	}
+	if !strings.Contains(first, "PgUp/PgDn scroll") {
+		t.Error("a scrolling popup must say how to scroll")
+	}
+	for range 10 {
+		tm, _ := m.updateInfoMode(tea.KeyMsg{Type: tea.KeyPgDown})
+		m = tm.(Model)
+	}
+	last := m.renderInfoPopup()
+	if !strings.Contains(last, "LAST-LINE") || !strings.Contains(last, "Title") {
+		t.Error("paging down must reach the end of the description, title still pinned")
+	}
+}
+
 func TestExplainLayout_ShortFits(t *testing.T) {
 	m := Model{
 		termWidth:    100,
