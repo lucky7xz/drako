@@ -91,7 +91,6 @@ func (m Model) handleMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		key := msg.String()
-		log.Printf("Key pressed: %q", key)
 
 		// Fixed order, each step can fully short-circuit the ones below it:
 		// 1. ctrl+c always quits, even locked.
