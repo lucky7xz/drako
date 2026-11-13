@@ -1,9 +1,11 @@
-# dR4ko - Global Settings
+# drako - global settings
+#
+# Lines that start with # are comments. A setting shown commented out is at
+# its default; remove the # and change the value to override it.
+# `drako check` reports a setting drako does not know.
 
-# ┌─ Theme ──────────────────────────────────────────────────────────┐
-# │ Select the color palette for the UI.
-# │ Available themes:
-# └──────────────────────────────────────────────────────────────────┘
+# ── Theme ────────────────────────────────────────────────────────────
+# The colour palette. Palettes live in themes.toml.
 
 theme = "dracula"
 #theme = "jade"
@@ -13,31 +15,38 @@ theme = "dracula"
 #theme = "orasaka"
 #theme = "viper"
 
-# ┌─ Auto Lock Session ──────────────────────────────────────────────────┐
-# │ When enabled, drako will automatically lock after a period of inactivity.
-# │ This prevents accidental key presses after a period of idle periods.
-# │
-# │ Recommended: Keep it enabled (default)
-# └────────────────────────────────────────────────────────────┘
+# ── Auto lock ────────────────────────────────────────────────────────
+# After a while without a key press drako locks its screen, so a stray key
+# cannot run a cell. On by default, after 5 minutes. To unlock, alternate
+# left and right.
+
 #auto_lock_enabled = false
-#lock_timeout_minutes = 1 #
+#lock_timeout_minutes = 5
 
-# ┌─ Key Bindings ─────────────────────────────────────────────┐
-# │ Customize your control scheme.
-# │ Arrows are always enabled.
-# │ Defaults are shown commented out.
-# └────────────────────────────────────────────────────────────┘
+# ── Profile switch modifier ──────────────────────────────────────────
+# <modifier> + 1-9 switches profile, <modifier> + session_lock locks the
+# session. "alt" is the default; "ctrl" also works but your terminal or
+# window manager may take it first.
+# The leader key (see below) does the same without a modifier: m, then 1-9.
 
-# ┌─ Keybinding Modifier ────────────────────────────────────┐
-# │ Modifier for the profile-switch chord: <modifier> + 1-9.
-# │ This is the legacy chord. The leader key 'm' (see below)
-# │ is the modern way to switch profiles (m then 1-9) and the
-# │ only way into batch mode (m then b).
-# │ "alt" is the default; "ctrl" also works but may be
-# │ intercepted by your terminal or window manager.
-# │ Function keys (F1-F9) are not configured via this string.
-# └───────────────────────────────────────────────────────────┘
 numb_modifier = "alt"
+
+# ── Shell ────────────────────────────────────────────────────────────
+# The shell cells run in. A profile may set its own.
+# "bash" (default), "zsh", "fish", "sh";
+# on Windows "powershell" (5.1, default) or "pwsh" (7+).
+
+#default_shell = "bash"
+
+# ── Batch multiplexer ────────────────────────────────────────────────
+# A batch runs the cells you marked side by side, in the multiplexer drako
+# is already inside: herdr if you started drako from a herdr pane, else
+# tmux. Set this to use tmux even from inside herdr.
+
+#batch_force_tmux = true
+
+# ── Keys ─────────────────────────────────────────────────────────────
+# Arrows always work. Defaults are shown commented out.
 
 [keys]
 #disable_wasd_bindings = true
@@ -46,14 +55,14 @@ numb_modifier = "alt"
 #explain = "e"
 #inventory = "i"
 #path_grid_mode = "tab"
-#lock = "r"
 
-# Two different locks, one modifier apart:
-#   lock          (r)      pins the active profile so launches stay on it
-#   session_lock  (alt+r)  blanks the session behind the pump slider
-# The session lock uses numb_modifier above, works from any screen, and does
-# not need auto_lock_enabled — that setting only governs the idle timer.
+# Two different things, one modifier apart:
+#   lock          (r)      pins the active profile, so drako starts on it
+#   session_lock  (alt+r)  locks the screen; uses numb_modifier above and
+#                          works from any screen, with auto lock on or off
+#lock = "r"
 #session_lock = "r"
+
 profile_prev = "o"
 profile_next = "p"
 
@@ -62,40 +71,16 @@ profile_next = "p"
 #edit_file = "e"
 #delete = "delete"
 
-# In path mode: filter the directory listing as you type, or show hidden
-# entries. path_search shares 'e' with edit_file by default — they never
-# collide, since one is only live in the inventory and the other only in
-# path mode — but they are separate settings, so rebind whichever you mean.
+# In path mode: filter the folder list as you type, or show hidden entries.
+# path_search and edit_file both default to "e"; they never meet, since one
+# works only in path mode and the other only in the inventory.
 #path_search = "e"
 #toggle_hidden = "."
 
-# The leader arms a two-key sequence in the grid:
-#   leader, 1-9  -> switch to profile 1-9
-#   leader, b    -> batch mode (mark cells, launch them together)
-# The legacy Alt+1-9 chord still works alongside it.
+# The leader starts a two-key sequence in the grid:
+#   leader, 1-9  switch to profile 1-9
+#   leader, b    batch mode (mark cells, launch them together)
 #leader = "m"
 
 # Opens the key sheet: every key for every screen, your remaps included.
 #help = "?"
-
-# ┌─ Batch Multiplexer ──────────────────────────────────────┐
-# │ Batch mode runs the cells you marked side by side, in
-# │ whichever multiplexer drako is already inside — herdr if
-# │ you launched drako from a herdr pane, otherwise tmux.
-# │ That way a batch never nests one inside the other.
-# │
-# │ Set this to run batches through tmux even from inside
-# │ herdr. Everywhere else it changes nothing: outside herdr,
-# │ tmux is already the only option.
-# └──────────────────────────────────────────────────────────┘
-#batch_force_tmux = true
-
-# ┌─ Shell ────────────────────────────────────────┐
-# | For each Profile (including the default), you
-# | can set a custom shell to run the commands.
-# | The default is bash (powershell on Windows),
-# | though some profiles are POSIX compatible by
-# | design, eg. for minimal server distros.
-# └────────────────────────────────────────────────
-
-#default_shell = "bash"   # or "zsh", "fish", "sh"; on Windows: "powershell" (5.1) or "pwsh" (7+)

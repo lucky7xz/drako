@@ -18,6 +18,36 @@ func TestCheckSettings_TemplateIsClean(t *testing.T) {
 	}
 }
 
+// A setting the template shows commented out must work when its # is removed
+// where it stands: a top-level setting below [keys] would land in that table.
+func TestSettingsTemplate_EverySettingWorksWhereItStands(t *testing.T) {
+	src, err := bootstrapFS.ReadFile("bootstrap/settings_template.toml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := map[string]bool{}
+	var out []string
+	for _, line := range strings.Split(string(src), "\n") {
+		set := strings.TrimPrefix(line, "#")
+		key, _, isSetting := strings.Cut(set, " = ")
+		if strings.HasPrefix(line, "[") {
+			seen = map[string]bool{} // a new table: its own keys
+		}
+		if !isSetting || strings.ContainsAny(key, " #") {
+			out = append(out, line)
+			continue
+		}
+		if seen[key] { // an alternative value for a setting already set (the themes)
+			continue
+		}
+		seen[key] = true
+		out = append(out, set)
+	}
+	if fs := settings.Lint([]byte(strings.Join(out, "\n"))); len(fs) != 0 {
+		t.Errorf("with every setting uncommented where it stands: %+v", fs)
+	}
+}
+
 // A key the loader ignores is a typo or a removed setting: one warning names them all.
 func TestCheckSettings_NamesTheKeysTheLoaderIgnores(t *testing.T) {
 	src := "env_whitelist = [\"PATH\"]\nthme = \"nord\"\ntheme = \"nord\"\n[keys]\nlader = \"m\"\n"
