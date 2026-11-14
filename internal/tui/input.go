@@ -16,14 +16,23 @@ func (m Model) act(msg tea.KeyMsg) settings.Action {
 	return m.Config.Screen(m.keyScreen()).Act(msg.String())
 }
 
-// keyScreen is the key table's name for the state the model is in.
+// keyScreen is the key table's name for the state the model is in: the
+// screen it shows, unless the keyboard is not the table's right now.
 func (m Model) keyScreen() settings.ScreenID {
+	if m.capturingText() || m.mode == lockedMode || (m.mode == inventoryMode && m.inventory.err != nil) {
+		return settings.Typing
+	}
+	return m.shownScreen()
+}
+
+// shownScreen is the screen of the key table the model is showing. The key
+// sheet and the footer file the user's place by it.
+func (m Model) shownScreen() settings.ScreenID {
 	switch m.mode {
 	case gridMode:
 		if m.leader.pending {
 			return settings.GridLeader
 		}
-		return settings.Grid
 	case dropdownMode:
 		switch {
 		case m.batch.choosing():
@@ -39,26 +48,19 @@ func (m Model) keyScreen() settings.ScreenID {
 			return settings.BatchLayout
 		}
 		return settings.BatchMarking
-	case pathMode, childMode:
-		if m.path.Searching {
-			return settings.Typing
-		}
-		if m.mode == childMode {
-			return settings.PathChildren
-		}
+	case pathMode:
 		return settings.PathBar
+	case childMode:
+		return settings.PathChildren
 	case inventoryMode:
-		switch {
-		case m.inventory.err != nil, m.inventory.pending != nil:
-			return settings.Typing
-		case m.inventory.specs != nil:
+		if m.inventory.specs != nil {
 			return settings.InventorySpecs
 		}
 		return settings.Inventory
 	case infoMode:
 		return settings.ExplainPopup
 	}
-	return settings.Typing
+	return settings.Grid
 }
 
 // digit is the 0-based number a 1-9 key, bare or in a chord, ends in.

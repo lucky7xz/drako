@@ -6,10 +6,9 @@ import (
 )
 
 // handleDeckKeys applies the keys that act on the deck in use: pinning it and
-// switching to another. The key table offers them only on the screens that
-// show that deck (the grid, and the folders under the path bar); from the
-// inventory a pin would land on something other than the item under the
-// cursor. Returns handled=false to let the caller go on to the screen's own
+// switching to another. The key table offers them only on the grid; from the
+// inventory or path mode a pin would land on something other than what is
+// under the cursor. Returns handled=false to let the caller go on to the screen's own
 // handler.
 func (m Model) handleDeckKeys(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 	switch m.act(msg) {

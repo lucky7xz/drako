@@ -77,6 +77,8 @@ func (b Bind) claims(key string) bool {
 // A Screen is a state of the TUI with its own answer to a key.
 type Screen struct {
 	Name  string // as drako check calls it
+	Sheet string // the key sheet section it is listed in
+	Q     string // what q does here, for the footer; "" when q is not its own key
 	Binds []Bind
 }
 
@@ -172,7 +174,7 @@ func (c Config) Screen(id ScreenID) Screen {
 		{Keys: []string{mod + "+" + k.SessionLock}, Act: LockSession, Does: "lock session"},
 	}
 	help := set("help", k.Help, Help, "this sheet")
-	// These act on the deck in use, so they belong to the screens that show it.
+	// These act on the deck in use, so they belong to the grid alone.
 	decks := []Bind{
 		gate(set("lock", k.Lock, PinDeck, "pin deck")),
 		{Keys: chords, Act: SwitchDeck, Show: mod + "+1-9", Does: "switch deck"},
@@ -194,14 +196,16 @@ func (c Config) Screen(id ScreenID) Screen {
 	}
 	pathBack := Bind{Keys: []string{"q", "esc"}, Act: Back, Show: k.PathGridMode + " esc q", Does: "back to grid"}
 
-	var name string
+	var name, sheet, q string
 	var binds [][]Bind
 	one := func(b ...Bind) []Bind { return b }
 	switch id {
 	case Typing:
 		name = "a text field"
+		sheet, q = "GRID", "quit"
 	case Grid:
 		name = "the grid"
+		sheet, q = "GRID", "quit"
 		binds = [][]Bind{one(help), decks, one(
 			leader,
 			jump("1-9 1-9", "jump: column, row"),
@@ -214,37 +218,46 @@ func (c Config) Screen(id ScreenID) Screen {
 		)}
 	case GridLeader:
 		name = "the grid"
+		sheet, q = "GRID", "quit"
 		binds = [][]Bind{decks, one(
 			Bind{Keys: digits, Act: PickDeck, Show: k.Leader + " 1-9", Does: "switch deck"},
 			gate(Bind{Keys: []string{"b"}, Act: Batch, Show: k.Leader + " b", Does: "batch mode"}),
 		)}
 	case Folder:
 		name = "a folder"
+		sheet, q = "FOLDER", "close"
 		binds = [][]Bind{one(help, leader, jump("1-9", "jump to item"), back("close"), moveV("select"), explain, confirm("run"))}
 	case FolderLeader:
 		name = "a folder"
+		sheet, q = "FOLDER", "close"
 		binds = [][]Bind{one(gate(Bind{Keys: []string{"b"}, Act: Batch, Show: k.Leader + " b", Does: "batch these"}))}
 	case FolderMarking:
 		name = "a folder"
+		sheet, q = "BATCH", "cancel"
 		binds = [][]Bind{one(help, leader, back("cancel"), mark, launch("lay out"), jump("1-9", "jump to item"), moveV("select"), explain)}
 	case BatchMarking:
 		name = "batch mode"
+		sheet, q = "BATCH", "cancel"
 		binds = [][]Bind{one(help, jump("1-9 1-9", "jump: column, row"), back("cancel"), mark, launch("lay out, launch"),
 			Bind{Keys: keys(k.NavUp, k.NavDown, k.NavLeft, k.NavRight), Act: Move, Show: k.moveLabel("←↑↓→", "wasd", "hjkl"), Does: "move"})}
 	case BatchLayout:
 		name = "the batch layout"
+		sheet, q = "BATCH", "back"
 		binds = [][]Bind{one(help, back("back"), launch("launch"), moveH("pick layout field"), moveV("adjust it"))}
 	case PathBar:
 		name = "path mode"
+		sheet, q = "PATH", "back"
 		binds = [][]Bind{one(help, pathBack), pathKeys, one(
 			moveH("pick folder"),
 			Bind{Keys: k.NavDown, Act: Descend, Show: k.moveLabel("↓", "s", "j"), Does: "children"},
 		), pathRest}
 	case PathChildren:
 		name = "path mode"
-		binds = [][]Bind{one(help), decks, one(pathBack), pathKeys, one(moveV("pick child")), pathRest}
+		sheet, q = "PATH", "back"
+		binds = [][]Bind{one(help, pathBack), pathKeys, one(moveV("pick child")), pathRest}
 	case Inventory:
 		name = "the inventory"
+		sheet, q = "INVENTORY", "back"
 		binds = [][]Bind{one(help, back("back"), moveV("switch list"), moveH("move along"),
 			set("path_grid_mode", k.PathGridMode, Specs, "specs"),
 			set("edit_file", k.EditFile, Edit, "edit"),
@@ -253,9 +266,11 @@ func (c Config) Screen(id ScreenID) Screen {
 		)}
 	case InventorySpecs:
 		name = "the spec picker"
+		sheet, q = "INVENTORY", "back"
 		binds = [][]Bind{one(help, set("path_grid_mode", k.PathGridMode, Back, "close"), back("close"), moveV("pick spec"), confirm("stage"))}
 	case ExplainPopup:
 		name = "the explain popup"
+		sheet, q = "EXPLAIN", ""
 		binds = [][]Bind{one(
 			Bind{Keys: []string{"pgup", "pgdown"}, Act: Scroll, Show: "pgup pgdn", Does: "scroll"},
 			gate(Bind{Keys: []string{"y"}, Act: Copy, Does: "copy"}),
@@ -263,7 +278,7 @@ func (c Config) Screen(id ScreenID) Screen {
 		)}
 	}
 
-	s := Screen{Name: name, Binds: always}
+	s := Screen{Name: name, Sheet: sheet, Q: q, Binds: always}
 	for _, b := range binds {
 		s.Binds = append(s.Binds, b...)
 	}

@@ -53,3 +53,20 @@ func TestDefaultsNeverShareAKey(t *testing.T) {
 		}
 	}
 }
+
+// The deck keys (pin, switch, previous, next) belong to the grid. Path mode
+// is about folders: neither of its two parts answers them.
+func TestDeckKeysActOnlyOnTheGrid(t *testing.T) {
+	c := defaults()
+	deck := map[Action]bool{PinDeck: true, SwitchDeck: true, PrevDeck: true, NextDeck: true}
+	for _, key := range []string{c.Keys.Lock, c.Keys.ProfilePrev, c.Keys.ProfileNext, "alt+2"} {
+		if !deck[c.Screen(Grid).Act(key)] {
+			t.Errorf("grid: %q should be a deck key", key)
+		}
+		for _, id := range []ScreenID{PathBar, PathChildren, Inventory, Folder} {
+			if s := c.Screen(id); deck[s.Act(key)] {
+				t.Errorf("%s: %q must not act on the deck", s.Name, key)
+			}
+		}
+	}
+}

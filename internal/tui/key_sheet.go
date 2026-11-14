@@ -10,25 +10,13 @@ import (
 // key (? by default). It replaces the per-screen help lines, so the footer
 // only carries keyHint.
 
-// here is the screen the user is on, as the key sheet files it and as q
-// treats it: q quits only from the grid and backs out one step elsewhere
-// (Back in the key table). Explain closes on any key, so it has no q of its own.
+// here is the screen the user is on, as the key table files it: its section
+// of the key sheet, and what q does there. q quits only from the grid and
+// backs out one step elsewhere; explain closes on any key, so it has no q of
+// its own.
 func (m Model) here() (section, q string) {
-	switch {
-	case m.mode == infoMode:
-		return "EXPLAIN", ""
-	case m.batch.choosing():
-		return "BATCH", "back"
-	case m.batch.dropdown, m.mode == batchMode:
-		return "BATCH", "cancel"
-	case m.mode == dropdownMode:
-		return "FOLDER", "close"
-	case m.mode == pathMode, m.mode == childMode:
-		return "PATH", "back"
-	case m.mode == inventoryMode:
-		return "INVENTORY", "back"
-	}
-	return "GRID", "quit"
+	s := m.Config.Screen(m.shownScreen())
+	return s.Sheet, s.Q
 }
 
 // keyHint is the footer's reminder of the two keys everyone needs: the key
