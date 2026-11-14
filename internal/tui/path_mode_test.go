@@ -358,7 +358,7 @@ func TestEnterDir_RefusalIsVisible(t *testing.T) {
 	t.Run("the refusal renders under the listing", func(t *testing.T) {
 		pm := pathTestModel(t)
 		pm.DeniedDir = "root"
-		out := pm.RenderChildDirs(childMode, BuildStyles(settings.Config{}, ""), 80)
+		out := pm.RenderChildDirs(childMode, BuildStyles(settings.Config{}, ""), 80, maxChildDirRows)
 		if !strings.Contains(out, "cannot enter root") {
 			t.Errorf("RenderChildDirs missing the refusal. Got:\n%s", out)
 		}
@@ -546,7 +546,7 @@ func TestPathSearch_CommittedFilterIsVisibleAndScoped(t *testing.T) {
 	pm.UpdatePathMode(keyRune("al"), cfg)
 	pm.UpdatePathMode(tea.KeyMsg{Type: tea.KeyEnter}, cfg)
 
-	if out := ansi.Strip(pm.RenderChildDirs(pathMode, BuildStyles(cfg, ""), 80)); !strings.Contains(out, "Search: al") || len(pm.ChildDirs) != 1 {
+	if out := ansi.Strip(pm.RenderChildDirs(pathMode, BuildStyles(cfg, ""), 80, maxChildDirRows)); !strings.Contains(out, "Search: al") || len(pm.ChildDirs) != 1 {
 		t.Errorf("filter %q narrows the list to %v but is not shown:\n%s", pm.Filter, pm.ChildDirs, out)
 	}
 
@@ -561,7 +561,7 @@ func TestPathSearch_CommittedFilterIsVisibleAndScoped(t *testing.T) {
 func TestPathModeDrawsFolderNamesCleaned(t *testing.T) {
 	pm := pathTestModel(t)
 	pm.ChildDirs = []string{"x\x1b[31mred", "\U0001f469\u200d\U0001f4bb notes"}
-	out := ansi.Strip(pm.RenderChildDirs(childMode, BuildStyles(settings.Config{}, ""), 80))
+	out := ansi.Strip(pm.RenderChildDirs(childMode, BuildStyles(settings.Config{}, ""), 80, maxChildDirRows))
 	if !strings.Contains(out, "x\ufffd[31mred") || !strings.Contains(out, "\U0001f469\U0001f4bb notes") {
 		t.Errorf("folder names not cleaned:\n%q", out)
 	}

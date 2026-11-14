@@ -21,7 +21,7 @@ func (m Model) viewInventoryMode(hint string) string {
 		return m.frame(errorText)
 	}
 
-	// Calculate layout to determine visibility of header/footer. This
+	// The title asks for a roomy terminal, like the grid's header art. This
 	// view's header is the "Inventory Management" title, not the ASCII-art
 	// logo, so the width gate measures that string's actual length.
 	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config, "Inventory Management")
@@ -41,22 +41,25 @@ func (m Model) viewInventoryMode(hint string) string {
 	equippedHeader := m.styles.ListHeader.Render(equippedLabel)
 	inventoryHeader := m.styles.ListHeader.Render("Inventory Items")
 
-	applyButton := m.styles.Button.Render("[ Apply Changes ]")
-	if m.inventory.focusedList == focusApply {
-		applyButton = m.styles.SelectedButton.Render("[ Apply Changes ]")
+	// The two buttons, each under margin blank lines. Lifting, placing and
+	// specs only stage; while something is staged the Apply button says so.
+	// Trash and edit act at once and say so themselves.
+	buttons := func(margin int) (apply, rescue string) {
+		apply = m.styles.Button.MarginTop(margin).Render("[ Apply Changes ]")
+		if m.inventory.focusedList == focusApply {
+			apply = m.styles.SelectedButton.MarginTop(margin).PaddingLeft(1).Render(buttonMark + "[ Apply Changes ]")
+		}
+		if staged := m.inventory.staged(); staged != "" {
+			note := truncateText("  "+staged+" waiting — nothing changes until Apply", max(1, m.termWidth-LayoutSideMargin-lipgloss.Width(apply)))
+			apply = lipgloss.JoinHorizontal(lipgloss.Bottom, apply, m.styles.Help.Render(note))
+		}
+		rescue = m.styles.RescueButton.MarginTop(margin).Render("[ Rescue Mode ]")
+		if m.inventory.focusedList == focusRescue {
+			rescue = m.styles.SelectedRescueButton.MarginTop(margin).PaddingLeft(1).Render(buttonMark + "[ Rescue Mode ]")
+		}
+		return apply, rescue
 	}
-
-	// Lifting, placing and specs only stage; while something is staged the
-	// button says so. Trash and edit act at once and say so themselves.
-	if staged := m.inventory.staged(); staged != "" {
-		note := truncateText("  "+staged+" waiting — nothing changes until Apply", max(1, m.termWidth-LayoutSideMargin-lipgloss.Width(applyButton)))
-		applyButton = lipgloss.JoinHorizontal(lipgloss.Bottom, applyButton, m.styles.Help.Render(note))
-	}
-
-	rescueButton := m.styles.RescueButton.Render("[ Rescue Mode ]")
-	if m.inventory.focusedList == focusRescue {
-		rescueButton = m.styles.SelectedRescueButton.Render("[ Rescue Mode ]")
-	}
+	applyButton, rescueButton := buttons(1)
 
 	// One line under the buttons carries every piece of inventory feedback — a
 	// rejected action, and the delete confirmation prompt. It is reserved
@@ -79,46 +82,59 @@ func (m Model) viewInventoryMode(hint string) string {
 		statusLine = m.styles.Help.Render(truncateText(about, m.termWidth-LayoutSideMargin))
 	}
 
-	var footer string
-	if layout.ShowFooter {
-		// Trimmed like the HOST bar: the version shortens, the hint stays.
-		tail := " | " + hint
-		room := max(1, m.termWidth-appStyle.GetHorizontalMargins()-lipgloss.Width(tail))
-		label := truncateText(version.AppName+" | "+version.String(), room)
-		footer = m.styles.Footer.Render(m.styles.Help.Render(label + tail))
-	}
+	// The footer line carries the key hint, so it is always there. Trimmed
+	// like the HOST bar: the version shortens, the hint stays.
+	tail := " | " + hint
+	room := max(1, m.termWidth-appStyle.GetHorizontalMargins()-lipgloss.Width(tail))
+	label := truncateText(version.AppName+" | "+version.String(), room)
+	footer := m.styles.Footer.PaddingTop(0).Render(m.styles.Help.Render(label + tail))
 
 	// Everything except the two grids is fixed-height chrome — measure it
-	// first (gridRowBudget sums lipgloss.Height of each piece, exactly like
-	// the main grid's own budget calc) so the grids get whatever vertical
-	// room is actually left. Section headers, buttons, and the held-item and
-	// status lines are unconditional; title/footer follow the existing
-	// layout.ShowHeader/ShowFooter gates.
-	var chrome []string
-	if layout.ShowHeader {
-		chrome = append(chrome, title)
+	// (gridRowBudget sums lipgloss.Height of each piece, exactly like the
+	// main grid's own budget calc) so the grids get whatever vertical room is
+	// actually left. Section headers, buttons, the status line and the footer
+	// line are unconditional; the title follows layout.ShowHeader.
+	budget := func() int {
+		var chrome []string
+		if layout.ShowHeader {
+			chrome = append(chrome, title)
+		}
+		chrome = append(chrome, equippedHeader, inventoryHeader, applyButton, rescueButton, statusLine, footer)
+		return gridRowBudget(m.termHeight, chrome...)
 	}
-	chrome = append(chrome, equippedHeader, inventoryHeader, applyButton, rescueButton, statusLine)
-	if layout.ShowFooter {
-		chrome = append(chrome, footer)
+	fixedBudget := budget()
+
+	// The screen's blank lines take only room the lists can spare. The ones
+	// over the buttons go when a list would otherwise not get a row with its
+	// scroll marker. The three over the footer take only room the lists do
+	// not need at all: with every deck on screen they are there, as before.
+	rowHeight := lipgloss.Height(m.styles.Cell.Render("x"))
+	equippedWhole := lipgloss.Height(m.renderInventoryGrid(visible, equip.ListVisible, unlimitedRowBudget))
+	inventoryWhole := lipgloss.Height(m.renderInventoryGrid(inventory, equip.ListInventory, unlimitedRowBudget))
+	if fixedBudget < min(equippedWhole, rowHeight+1)+min(inventoryWhole, rowHeight+1) {
+		applyButton, rescueButton = buttons(0)
+		fixedBudget = budget()
 	}
-	fixedBudget := gridRowBudget(m.termHeight, chrome...)
+	footerPad := min(max(fixedBudget-equippedWhole-inventoryWhole, 0), m.styles.Footer.GetPaddingTop())
+	footer = m.styles.Footer.PaddingTop(footerPad).Render(m.styles.Help.Render(label + tail))
+	fixedBudget -= footerPad
 
 	// Split the remaining room between the two grids: whichever list is
 	// focused gets priority (most of the space), the other is capped to a
-	// small fixed row count. This is what stops a large Equipped Items
-	// list (e.g. a big custom grid with many equipped slots) from
-	// stranding a selected-but-invisible item at narrow widths, where both
-	// lists' renderInventoryGrid wrap math drops to one item per row.
-	rowHeight := lipgloss.Height(m.styles.Cell.Render("x"))
+	// small fixed row count, or to its own height when it is shorter. This
+	// is what stops a large Equipped Items list (e.g. a big custom grid with
+	// many equipped slots) from stranding a selected-but-invisible item at
+	// narrow widths, where a row holds one item.
+	// The focused list keeps at least a row and its scroll marker.
 	secondaryBudget := minSecondaryListRows * rowHeight
-
-	equippedBudget, inventoryBudget := secondaryBudget, secondaryBudget
+	equippedBudget, inventoryBudget := min(secondaryBudget, equippedWhole), min(secondaryBudget, inventoryWhole)
 	switch m.inventory.focusedList {
 	case equip.ListVisible:
-		equippedBudget = fixedBudget - secondaryBudget
+		inventoryBudget = min(inventoryBudget, fixedBudget-min(equippedWhole, rowHeight+1))
+		equippedBudget = fixedBudget - inventoryBudget
 	case equip.ListInventory:
-		inventoryBudget = fixedBudget - secondaryBudget
+		equippedBudget = min(equippedBudget, fixedBudget-min(inventoryWhole, rowHeight+1))
+		inventoryBudget = fixedBudget - equippedBudget
 	}
 
 	equippedGrid := m.renderInventoryGrid(visible, equip.ListVisible, equippedBudget)
@@ -128,13 +144,17 @@ func (m Model) viewInventoryMode(hint string) string {
 	if layout.ShowHeader {
 		sections = append(sections, title)
 	}
-	sections = append(sections, equippedHeader, equippedGrid, inventoryHeader, inventoryGrid, applyButton, rescueButton, statusLine)
-	if layout.ShowFooter {
-		sections = append(sections, footer)
-	}
-	// The spec picker floats over this screen (View's popups), not inside it.
-	return m.frame(lipgloss.JoinVertical(lipgloss.Left, sections...))
+	sections = append(sections, equippedHeader, equippedGrid, inventoryHeader, inventoryGrid, applyButton, rescueButton, statusLine, footer)
+	// The screen is as wide as the terminal, so its left edge stays where it
+	// is whatever the lists hold. The spec picker floats over this screen
+	// (View's popups), not inside it.
+	avail := m.termWidth - appStyle.GetHorizontalMargins()
+	return m.frame(lipgloss.NewStyle().Width(avail).Render(lipgloss.JoinVertical(lipgloss.Left, sections...)))
 }
+
+// buttonMark stands before the button the cursor is on, in the place of two
+// columns of its padding: a sign that does not depend on colour.
+const buttonMark = "► "
 
 // activeMark stands before the deck the grid is showing.
 const activeMark = "▸ "
@@ -241,22 +261,28 @@ func (m Model) renderInventoryGrid(items []string, listID, rowBudget int) string
 		return ""
 	}
 
-	// Wrap cells into rows of however many fit inside appStyle's margin.
-	cellWidth := lipgloss.Width(cells[0])
-	maxCellsPerLine := (m.termWidth - appStyle.GetHorizontalMargins()) / cellWidth
-	if maxCellsPerLine < 1 {
-		maxCellsPerLine = 1
+	// Wrap cells into rows of however many fit inside appStyle's margin, by
+	// each cell's own width: deck names differ in length.
+	room := m.termWidth - appStyle.GetHorizontalMargins()
+	cursorCell := -1
+	if isFocused {
+		cursorCell = min(max(m.inventory.cursor, 0), len(cells)-1)
 	}
 	var rows []string
-	for i := 0; i < len(cells); i += maxCellsPerLine {
-		end := min(i+maxCellsPerLine, len(cells))
-		rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Left, cells[i:end]...))
+	cursorRow, start, used := 0, 0, 0
+	for i, c := range cells {
+		w := lipgloss.Width(c)
+		if i > start && used+w > room {
+			rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Left, cells[start:i]...))
+			start, used = i, 0
+		}
+		used += w
+		if i == cursorCell {
+			cursorRow = len(rows)
+		}
 	}
+	rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Left, cells[start:]...))
 
-	cursorRow := 0
-	if isFocused {
-		cursorRow = m.inventory.cursor / maxCellsPerLine
-	}
 	rowHeight := lipgloss.Height(m.styles.Cell.Render("x"))
 	// reserve 1: the marker line while scrolling
 	rowWin := window(cursorRow, len(rows), visibleCount(rowBudget, rowHeight, len(rows), 1))

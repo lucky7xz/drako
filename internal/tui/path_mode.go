@@ -395,11 +395,13 @@ func (pm *PathModel) RenderPathBar(active bool, styles Styles, width int) string
 	rendered := make([]string, len(pm.PathComponents))
 	widths := make([]int, len(pm.PathComponents))
 	for i, component := range pm.PathComponents {
-		style := styles.Path
+		label := glyph.Label(component) // a folder name is drawn, never trusted
+		rendered[i] = styles.Path.Render(label)
 		if active && i == pm.SelectedPathIndex {
-			style = styles.SelectedPath
+			// Brackets in the place of the padding: the selected folder shows
+			// without colour, and no folder moves.
+			rendered[i] = styles.SelectedPath.Padding(0).Render("[" + label + "]")
 		}
-		rendered[i] = style.Render(glyph.Label(component)) // a folder name is drawn, never trusted
 		widths[i] = lipgloss.Width(rendered[i])
 	}
 
@@ -420,7 +422,13 @@ func (pm *PathModel) RenderPathBar(active bool, styles Styles, width int) string
 	return styles.StatusBar.Render(truncateText(strings.Join(parts, separator), width))
 }
 
-func (pm *PathModel) RenderChildDirs(mode navMode, styles Styles, width int) string {
+// maxChildDirRows is how many folders path mode lists at once when there is
+// room; the list scrolls with the selection.
+const maxChildDirRows = 5
+
+// RenderChildDirs lists the folders under the path bar, at most maxVisible of
+// them, with the search line and the last refusal under it.
+func (pm *PathModel) RenderChildDirs(mode navMode, styles Styles, width, maxVisible int) string {
 	if mode != childMode && mode != pathMode {
 		return ""
 	}
@@ -445,7 +453,7 @@ func (pm *PathModel) RenderChildDirs(mode navMode, styles Styles, width int) str
 			rows = append(rows, truncateText(style.Render(marker+glyph.Label(dir)), width))
 		}
 
-		maxVisible := 5
+		maxVisible = max(maxVisible, 1)
 		start := 0
 		if mode == childMode && pm.SelectedChildIndex >= maxVisible {
 			start = pm.SelectedChildIndex - maxVisible + 1

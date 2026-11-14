@@ -141,8 +141,23 @@ func BuildStyles(cfg settings.Config, configDir string) Styles {
 		Bold(true).
 		Padding(0, 1)
 
+	// The cell under the cursor is a closed box: sides and square corners
+	// where the others are open. The cursor is then a shape as well as a
+	// colour, so it shows without colour (NO_COLOR) and in a theme whose
+	// accent is close to its text. Same size as retroBorder: nothing moves.
+	cursorBorder := lipgloss.Border{
+		Top:         "━",
+		Bottom:      "━",
+		Left:        "┃",
+		Right:       "┃",
+		TopLeft:     "┏",
+		TopRight:    "┓",
+		BottomLeft:  "┗",
+		BottomRight: "┛",
+	}
+
 	s.SelectedCell = lipgloss.NewStyle().
-		Border(retroBorder).
+		Border(cursorBorder).
 		BorderForeground(lipgloss.Color(ui.GridSelBorder)).
 		Foreground(lipgloss.Color(ui.GridSelText)).
 		Bold(true).

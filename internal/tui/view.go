@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
@@ -99,56 +100,130 @@ func (m Model) frame(content string) string {
 }
 
 // viewGrid is the grid screen: header, deck counter, grid and footer.
+//
+// The grid comes first: it keeps its minimum window (gridMinHeight). The deck
+// counter and the footer's hint line are always there too. Every other line
+// of the screen is taken only while it fits beside those, in a fixed order of
+// importance (renderCombinedFooter), and the grid then gets what is left.
 func (m Model) viewGrid(hint string) string {
-	layout := CalculateLayout(m.termWidth, m.termHeight, m.Config, m.styles.HeaderArt)
-
-	header := ""
-	if layout.ShowHeader {
-		header = m.styles.renderHeaderArt(m.spinner.View())
-	}
 	counter := m.renderProfileCounter()
 	if m.mode == batchMode {
 		counter = m.renderBatchCounter()
 	}
+	room := m.termHeight - appStyle.GetVerticalMargins() - lipgloss.Height(counter) - m.gridMinHeight()
 
-	footer := m.renderCombinedFooter(hint)
+	// The header art asks for a roomy terminal (CalculateLayout); it is the
+	// one piece decided by that estimate, since it is decoration.
+	header := ""
+	showHeader := CalculateLayout(m.termWidth, m.termHeight, m.Config, m.styles.HeaderArt).ShowHeader
+	if showHeader {
+		header = m.styles.renderHeaderArt(m.spinner.View())
+		room -= lipgloss.Height(header)
+	}
 
-	// Respect layout.ShowFooter
-	if !layout.ShowFooter {
-		footer = ""
+	footer, room := m.renderCombinedFooter(hint, room)
+
+	// Without the art its place stays a blank line, the last thing to get one.
+	top := []string{counter}
+	if showHeader || room > 0 {
+		top = []string{header, counter}
 	}
 
 	// The grid gets whatever vertical space the chrome leaves over.
-	grid := m.renderGrid(gridRowBudget(m.termHeight, header, counter, footer))
-	mainContent := lipgloss.JoinVertical(lipgloss.Center, header, counter, grid)
+	grid := m.renderGrid(gridRowBudget(m.termHeight, append(top, footer)...))
+	mainContent := lipgloss.JoinVertical(lipgloss.Center, append(top, grid)...)
 
 	return m.frame(lipgloss.JoinVertical(lipgloss.Center, mainContent, footer))
 }
 
-// renderCombinedFooter creates the standard bottom block: Status | Profile |
-// Path, the profile bar ending in hint. Every bar trims to the width rather
-// than wrapping: m.net.traffic and m.net.online already carry ANSI color codes
-// and can contain internal spaces (e.g. "↓ 1.2kb/s ↑ 3.4kb/s"), so
-// word-wrapping a joined line risks splitting an ANSI start/reset pair across
-// lines and bleeding color into unrelated text.
-func (m Model) renderCombinedFooter(hint string) string {
-	availWidth := m.termWidth - LayoutSideMargin
-
-	networkStatusBar := lipgloss.NewStyle().PaddingTop(1).Render(m.renderNetworkBar(availWidth))
-
-	// JoinVertical rectangularizes to the widest sibling and Place will not pad
-	// content wider than the box, so one unbounded line skews the whole frame.
-	profileBar := lipgloss.NewStyle().PaddingTop(1).Render(m.renderProfileBar(availWidth, hint))
-	pathBar := m.path.RenderPathBar(m.mode == pathMode, m.styles, availWidth)
-	childDirs := m.path.RenderChildDirs(m.mode, m.styles, availWidth)
-
-	items := []string{networkStatusBar, profileBar}
-	if statusMsg := m.renderStatusMessage(availWidth); statusMsg != "" {
-		items = append(items, statusMsg)
+// gridMinHeight is the lines the grid's minimum window takes: the column
+// labels, MinVisibleGridRows rows (or all of a smaller grid), and the scroll
+// marker line when there are more.
+func (m Model) gridMinHeight() int {
+	rows := len(m.gridNav.grid)
+	h := 1 + min(rows, MinVisibleGridRows)*lipgloss.Height(m.styles.Cell.Render("x"))
+	if rows > MinVisibleGridRows {
+		h++
 	}
-	items = append(items, pathBar, childDirs)
+	return h
+}
 
-	return lipgloss.JoinVertical(lipgloss.Left, items...)
+// renderCombinedFooter is the bottom block: NET | hint line | status message
+// | path bar | folders. room is how many lines it may fill while the grid
+// keeps its minimum window; it returns the block and the room left over.
+//
+// Always there, whatever the room: the hint line (how to find every other
+// key) and a status message, when there is one (the answer to the last key).
+// In path mode also the path bar and one folder row, since that is where the
+// cursor is. The rest is taken while it fits, most useful first: more folder
+// rows, the path bar, NET, then the blank lines that set the bars apart.
+//
+// Every bar trims to its width rather than wrapping: m.net.traffic and
+// m.net.online already carry ANSI color codes and can contain internal spaces
+// (e.g. "↓ 1.2kb/s ↑ 3.4kb/s"), so word-wrapping a joined line risks splitting
+// an ANSI start/reset pair across lines and bleeding color into unrelated text.
+func (m Model) renderCombinedFooter(hint string, room int) (string, int) {
+	availWidth := m.termWidth - LayoutSideMargin
+	hintBar := m.renderProfileBar(availWidth, hint)
+
+	// The block's left edge is set by the hint line alone, centred; every
+	// other bar starts there and trims at the right. A path growing longer
+	// or a traffic figure changing width moves nothing.
+	left := max(0, (availWidth-lipgloss.Width(hintBar))/2)
+	width := availWidth - left
+
+	take := func(lines int) bool {
+		if lines > room {
+			return false
+		}
+		room -= lines
+		return true
+	}
+
+	status := m.renderStatusMessage(width)
+	room-- // the hint line
+	if status != "" {
+		room--
+	}
+
+	// RenderPathBar comes with a blank line above it; that one is taken apart.
+	pathBar := m.path.RenderPathBar(m.mode == pathMode, m.styles, width)
+	pathBar = pathBar[strings.LastIndex(pathBar, "\n")+1:]
+	dirs, showPath := "", false
+	if m.mode == pathMode || m.mode == childMode {
+		showPath = true
+		least := lipgloss.Height(m.path.RenderChildDirs(m.mode, m.styles, width, 1))
+		room -= 1 + least
+		dirs = m.path.RenderChildDirs(m.mode, m.styles, width, 1+min(max(room, 0), maxChildDirRows-1))
+		room -= lipgloss.Height(dirs) - least
+	} else if pathBar != "" {
+		showPath = take(1)
+	}
+	showNet := take(1)
+	padPath := showPath && take(1)
+	padHint := showNet && take(1)
+	padTop := take(1)
+	// Outside path mode the folders' place stays a blank line.
+	trailing := dirs == "" && take(1)
+
+	var lines []string
+	add := func(show bool, line string) {
+		if show {
+			lines = append(lines, line)
+		}
+	}
+	add(padTop, "")
+	add(showNet, m.renderNetworkBar(width))
+	add(padHint, "")
+	add(true, hintBar)
+	add(status != "", status)
+	add(padPath, "")
+	add(showPath, pathBar)
+	add(dirs != "", dirs)
+	add(trailing, "")
+
+	block := lipgloss.JoinVertical(lipgloss.Left, lines...)
+	return lipgloss.NewStyle().PaddingLeft(left).Width(availWidth).Render(block), room
 }
 
 // renderNetworkBar shows NET | STATUS | THEME. When it doesn't fit

@@ -541,7 +541,7 @@ func TestRenderCombinedFooter_LongPathFitsBudget(t *testing.T) {
 	for _, termWidth := range []int{40, 60, 80, 200} {
 		m := longPathModel(pathMode, termWidth)
 		availWidth := termWidth - LayoutSideMargin
-		footer := m.renderCombinedFooter(m.keyHint())
+		footer, _ := m.renderCombinedFooter(m.keyHint(), 40)
 		for i, line := range strings.Split(footer, "\n") {
 			if w := lipgloss.Width(line); w > availWidth {
 				t.Errorf("termWidth=%d: footer line %d is %d wide (budget %d):\n%q",

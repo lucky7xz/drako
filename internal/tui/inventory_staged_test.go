@@ -122,7 +122,7 @@ func TestHeldDeckIsDrawnWhereItLands(t *testing.T) {
 	row := func(m Model) string {
 		for _, line := range strings.Split(ansi.Strip(m.viewInventoryMode("")), "\n") {
 			if strings.Contains(line, "beta.profile.toml") {
-				return strings.Join(strings.Fields(line), " ")
+				return strings.Join(strings.Fields(strings.ReplaceAll(line, "┃", " ")), " ")
 			}
 		}
 		return ""

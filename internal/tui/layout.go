@@ -35,10 +35,11 @@ const (
 	MinVisibleGridCols = 3
 )
 
-// Layout controls the visibility of UI elements based on terminal size.
+// Layout says whether the terminal is roomy enough for the header: the art
+// on the grid screen, the title on the inventory. Everything else on screen
+// is fitted line by line where it is drawn (viewGrid, viewInventoryMode).
 type Layout struct {
 	ShowHeader bool
-	ShowFooter bool
 }
 
 // widestLineWidth is the on-screen width of the widest line in s. Used to
@@ -53,8 +54,9 @@ func widestLineWidth(s string) int {
 	return widest
 }
 
-// CalculateLayout determines which UI elements should be visible.
-// It prioritizes the Grid and Footer information. headerArt is the
+// CalculateLayout decides whether the header is shown: only when the grid's
+// minimum window, a full footer and the header all fit with room to spare,
+// and the terminal is wide enough for the art. headerArt is the
 // resolved header template (m.styles.HeaderArt for the ASCII-art views; a
 // view-specific title string, e.g. inventory mode's; "" if the view has no
 // header-equivalent element) — used only to measure its width.
@@ -71,27 +73,12 @@ func CalculateLayout(termW, termH int, cfg settings.Config, headerArt string) La
 	// Total height needed for everything including header
 	fullHeight := gridHeight + LayoutHeaderHeight + footerHeight + LayoutVertPadding
 
-	l := Layout{
-		ShowHeader: true,
-		ShowFooter: true,
-	}
-
-	// If terminal is too short, hide the header first
-	if termH < fullHeight {
-		l.ShowHeader = false
-
-		// If still too short, hide the footer
-		neededWithoutHeader := gridHeight + footerHeight + LayoutVertPadding
-		if termH < neededWithoutHeader {
-			l.ShowFooter = false
-		}
-	}
+	l := Layout{ShowHeader: termH >= fullHeight}
 
 	// If terminal is too narrow, hide the header too — before the grid
 	// would need to compress cells below their comfortable footprint
 	// (fitFootprint, viewport.go), and before the terminal is narrower than
-	// the header art itself. The footer is never hidden by width: its bars
-	// trim to fit instead.
+	// the header art itself. The footer's bars trim to fit instead.
 	neededWidth := min(cfg.X, MinVisibleGridCols)*comfortableCellFootprint + LayoutSideMargin
 	if hw := widestLineWidth(headerArt) + LayoutSideMargin; hw > neededWidth {
 		neededWidth = hw

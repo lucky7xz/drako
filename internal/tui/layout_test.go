@@ -24,12 +24,9 @@ func TestCalculateLayout_TallGridKeepsHeader(t *testing.T) {
 	if !l.ShowHeader {
 		t.Error("tall grid in a 40-line terminal should keep the header and scroll the grid")
 	}
-	if !l.ShowFooter {
-		t.Error("tall grid in a 40-line terminal should keep the footer")
-	}
 }
 
-func TestCalculateLayout_NarrowTerminalHidesHeaderNotFooter(t *testing.T) {
+func TestCalculateLayout_NarrowTerminalHidesHeader(t *testing.T) {
 	cfg := settings.Config{X: 3, Y: 10}
 	// termH is generous (won't trigger the height-based hide on its own);
 	// termW is narrow enough that the grid-width estimate should hide the
@@ -37,9 +34,6 @@ func TestCalculateLayout_NarrowTerminalHidesHeaderNotFooter(t *testing.T) {
 	l := CalculateLayout(50, 40, cfg, "")
 	if l.ShowHeader {
 		t.Error("narrow terminal should hide the header even when tall enough")
-	}
-	if !l.ShowFooter {
-		t.Error("width-based hiding must never take the footer down with it")
 	}
 }
 
