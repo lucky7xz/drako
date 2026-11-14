@@ -252,7 +252,7 @@ func TestInventoryDelete_PromptSharesTheStatusRow(t *testing.T) {
 		*m = next.(Model)
 		next, _ = m.updateInventoryMode(keyRune("e"))
 		*m = next.(Model)
-	}, "Type 'eq' to confirm: e_")
+	}, "Type 'eq' to trash it now: e_")
 
 	if promptRow != statusRow {
 		t.Errorf("prompt on line %d, status on line %d — they must share the row", promptRow, statusRow)

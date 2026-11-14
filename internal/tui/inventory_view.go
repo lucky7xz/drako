@@ -46,6 +46,13 @@ func (m Model) viewInventoryMode(hint string) string {
 		applyButton = m.styles.SelectedButton.Render("[ Apply Changes ]")
 	}
 
+	// Lifting, placing and specs only stage; while something is staged the
+	// button says so. Trash and edit act at once and say so themselves.
+	if staged := m.inventory.staged(); staged != "" {
+		note := truncateText("  "+staged+" waiting — nothing changes until Apply", max(1, m.termWidth-LayoutSideMargin-lipgloss.Width(applyButton)))
+		applyButton = lipgloss.JoinHorizontal(lipgloss.Bottom, applyButton, m.styles.Help.Render(note))
+	}
+
 	rescueButton := m.styles.RescueButton.Render("[ Rescue Mode ]")
 	if m.inventory.focusedList == focusRescue {
 		rescueButton = m.styles.SelectedRescueButton.Render("[ Rescue Mode ]")
@@ -65,7 +72,7 @@ func (m Model) viewInventoryMode(hint string) string {
 	// keystroke, and the prompt has to survive the whole name being typed.
 	statusLine := " " // Reserve space
 	if pd := m.inventory.pending; pd != nil {
-		prompt := fmt.Sprintf("Type '%s' to confirm: %s_", pd.name, pd.typed)
+		prompt := fmt.Sprintf("Type '%s' to trash it now: %s_", pd.name, pd.typed)
 		statusLine = m.styles.StatusNegative.Render(truncateText(prompt, m.termWidth-LayoutSideMargin))
 	} else if m.inventory.status != "" {
 		style := m.styles.StatusNegative
@@ -73,6 +80,8 @@ func (m Model) viewInventoryMode(hint string) string {
 			style = m.styles.StatusPositive
 		}
 		statusLine = style.Render(truncateText(m.inventory.status, m.termWidth-LayoutSideMargin))
+	} else if about := m.aboutSelected(); about != "" {
+		statusLine = m.styles.Help.Render(truncateText(about, m.termWidth-LayoutSideMargin))
 	}
 
 	var footer string
@@ -132,6 +141,38 @@ func (m Model) viewInventoryMode(hint string) string {
 	return m.frame(lipgloss.JoinVertical(lipgloss.Left, sections...))
 }
 
+// activeMark stands before the deck the grid is showing.
+const activeMark = "▸ "
+
+// isActiveProfile reports whether name is the deck the grid is showing.
+func (m Model) isActiveProfile(name string) bool {
+	active := m.ActiveProfileName()
+	return active != "" && equip.NormalizeName(active) == equip.NormalizeName(name)
+}
+
+// aboutSelected says what is special about the deck under the cursor: the one
+// in use, the pinned one. It reads off the status line while nothing else has
+// something to say there.
+func (m Model) aboutSelected() string {
+	inv := m.inventory
+	if inv.focusedList != equip.ListVisible && inv.focusedList != equip.ListInventory {
+		return ""
+	}
+	listPtr, err := inv.State.GetList(inv.focusedList)
+	if err != nil || inv.cursor < 0 || inv.cursor >= len(*listPtr) {
+		return ""
+	}
+	name := strings.TrimSuffix((*listPtr)[inv.cursor], equip.ProfileSuffix)
+	var about []string
+	if m.isActiveProfile(name) {
+		about = append(about, "active deck")
+	}
+	if m.isLockedProfile(name) {
+		about = append(about, "pinned — unpin with "+m.Config.Keys.Lock+" in the grid")
+	}
+	return strings.Join(about, " · ")
+}
+
 // unlimitedRowBudget is a large sentinel that makes visibleCount always
 // return the full row count, so no scrolling logic engages — used by tests
 // to verify renderInventoryGrid's unwindowed behavior.
@@ -172,6 +213,9 @@ func (m Model) renderInventoryGrid(items []string, listID, rowBudget int) string
 				style = m.styles.SelectedCell
 			case locked:
 				style = m.styles.LockedCell
+			}
+			if m.isActiveProfile(strings.TrimSuffix(p, equip.ProfileSuffix)) {
+				p = activeMark + p
 			}
 			cells = append(cells, style.Render(p))
 		}

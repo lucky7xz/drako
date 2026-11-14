@@ -52,6 +52,52 @@ type inventoryModel struct {
 	// seen is both lists as last read from disk, so refreshInventory can tell
 	// a change on disk from a staged move.
 	seen [2][]string
+
+	// leaving is set by a first press to leave while moves are staged; the
+	// same press again discards them. Any other key takes it back.
+	leaving bool
+}
+
+// staged says what Apply would change, in a few words: "" when the lists are
+// as they are on disk. Lifting and placing, and a spec, only stage; trash and
+// edit act on the file at once and never show here.
+func (inv inventoryModel) staged() string {
+	if inv.State == nil {
+		return ""
+	}
+	moves := 0
+	for i, list := range [][]string{inv.State.Visible, inv.State.Inventory} {
+		for _, f := range list {
+			if !slices.Contains(inv.seen[i], f) {
+				moves++
+			}
+		}
+	}
+	if inv.State.HeldItem != nil {
+		moves++
+	}
+	switch {
+	case moves == 1:
+		return "1 move"
+	case moves > 1:
+		return fmt.Sprintf("%d moves", moves)
+	case !slices.Equal(inv.State.Visible, inv.seen[0]):
+		return "new order"
+	}
+	return ""
+}
+
+// keepStaged is asked by every way out of the inventory that drops staged
+// moves. The first press stays and says what would be lost; the same press
+// again goes.
+func (inv *inventoryModel) keepStaged(armed bool, again string) bool {
+	staged := inv.staged()
+	if staged == "" || armed {
+		return false
+	}
+	inv.leaving = true
+	inv.status = staged + " not applied — " + again + " again to discard"
+	return true
 }
 
 // pendingDelete is a delete waiting on confirmation: the user types the
@@ -180,9 +226,14 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Each keystroke starts from a clean slate, so a rejected action's message
 	// reads as feedback on the last key rather than lingering over later ones.
 	inv.status, inv.statusOK = "", false
+	armed := inv.leaving
+	inv.leaving = false
 
 	switch m.Config.Screen(settings.Inventory).Act(msg.String()) {
 	case settings.Back:
+		if inv.keepStaged(armed, "Esc") {
+			return m, nil
+		}
 		m = m.presentNextBrokenProfile() // Return to next error or grid
 		return m, nil
 	case settings.Quit:
@@ -265,6 +316,9 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, ApplyInventoryChangesCmd(m.profile.configDir, m.inventory)
 		}
 		if inv.focusedList == focusRescue {
+			if inv.keepStaged(armed, "Enter") {
+				return m, nil
+			}
 			m.mode = gridMode
 			m.enterRescue()
 			return m, nil

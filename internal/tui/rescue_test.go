@@ -17,7 +17,8 @@ func TestRescueButtonLeavesNoActiveProfile(t *testing.T) {
 	m := Model{Config: cfg, styles: BuildStyles(cfg, ""), mode: inventoryMode,
 		profile: profileState{profiles: []lair.ProfileInfo{{Name: "alpha"}, {Name: "beta"}}},
 		inventory: inventoryModel{State: equip.NewInventoryState(
-			[]string{"alpha.profile.toml", "beta.profile.toml"}, nil, 9), focusedList: focusRescue}}
+			[]string{"alpha.profile.toml", "beta.profile.toml"}, nil, 9), focusedList: focusRescue,
+			seen: [2][]string{{"alpha.profile.toml", "beta.profile.toml"}, nil}}}
 
 	next, _ := m.updateInventoryMode(tea.KeyMsg{Type: tea.KeyEnter})
 	m = next.(Model)
