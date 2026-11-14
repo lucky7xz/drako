@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"strconv"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -22,11 +21,6 @@ type leaderState struct {
 
 type leaderTimeoutMsg struct{ seq int }
 
-// IsLeader reports whether the key is the configured leader.
-func IsLeader(c settings.InputConfig, msg tea.KeyMsg) bool {
-	return msg.String() == c.Leader
-}
-
 // armLeader starts a sequence: mark pending and schedule the timeout.
 func (m Model) armLeader() (tea.Model, tea.Cmd) {
 	m.leader.pending = true
@@ -45,19 +39,16 @@ func (m *Model) disarmLeader() {
 // handleLeaderContinuation consumes the key after the leader. Every path
 // returns with the sequence disarmed; unknown keys are swallowed on purpose.
 func (m Model) handleLeaderContinuation(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	act := m.Config.Screen(settings.GridLeader).Act(msg.String())
 	m.disarmLeader()
-	key := msg.String()
 
-	if num, err := strconv.Atoi(key); err == nil && num >= 1 && num <= 9 {
-		if updated, ok := m.switchToProfileIndex(num - 1); ok {
+	switch act {
+	case settings.PickDeck:
+		if updated, ok := m.switchToProfileIndex(digit(msg)); ok {
 			return updated, nil
 		}
-		return m, nil
-	}
-
-	if key == "b" {
+	case settings.Batch:
 		return m.enterBatchMode()
 	}
-
 	return m, nil
 }

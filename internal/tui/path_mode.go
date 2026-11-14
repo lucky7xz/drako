@@ -245,32 +245,29 @@ func (pm *PathModel) UpdatePathMode(msg tea.KeyMsg, cfg settings.Config) navMode
 		return pathMode
 	}
 
-	switch {
-	case IsCancel(cfg.Keys, msg):
-		return gridMode // Return to grid mode (no brainer improvement)
-	case IsPathSearch(cfg.Keys, msg):
+	switch cfg.Screen(settings.PathBar).Act(msg.String()) {
+	case settings.Back, settings.PathMode:
+		return gridMode
+	case settings.Search:
 		pm.startSearch()
-	// Quit is handled by parent, usually
-	case IsLeft(cfg.Keys, msg):
-		if pm.SelectedPathIndex > 0 {
+	case settings.MoveH:
+		// Either way relists, and a filter belongs to the directory it was typed in.
+		if IsLeft(cfg.Keys, msg) && pm.SelectedPathIndex > 0 {
 			pm.SelectedPathIndex--
-			pm.clearSearch() // relists; a filter belongs to the directory it was typed in
+			pm.clearSearch()
 		}
-	case IsRight(cfg.Keys, msg):
-		if pm.SelectedPathIndex < len(pm.PathComponents)-1 {
+		if IsRight(cfg.Keys, msg) && pm.SelectedPathIndex < len(pm.PathComponents)-1 {
 			pm.SelectedPathIndex++
 			pm.clearSearch()
 		}
-	case IsDown(cfg.Keys, msg):
+	case settings.Descend:
 		if len(pm.ChildDirs) > 0 {
 			pm.SelectedChildIndex = 0
 			return childMode
 		}
-	case IsPathGridMode(cfg.Keys, msg):
-		return gridMode
-	case IsConfirm(cfg.Keys, msg):
+	case settings.Confirm:
 		pm.enterDir(pm.BuildPathFromComponents(pm.SelectedPathIndex))
-	case IsToggleHidden(cfg.Keys, msg):
+	case settings.ToggleHidden:
 		pm.toggleHidden()
 	}
 	return pathMode
@@ -313,24 +310,23 @@ func (pm *PathModel) UpdateChildMode(msg tea.KeyMsg, cfg settings.Config) navMod
 		return childMode
 	}
 
-	switch {
-	case IsCancel(cfg.Keys, msg):
-		return gridMode // Return to grid mode
-	case IsPathSearch(cfg.Keys, msg):
+	switch cfg.Screen(settings.PathChildren).Act(msg.String()) {
+	case settings.Back, settings.PathMode:
+		return gridMode
+	case settings.Search:
 		pm.startSearch()
-	case IsUp(cfg.Keys, msg):
-		if pm.SelectedChildIndex > 0 {
+	case settings.MoveV:
+		switch {
+		case IsDown(cfg.Keys, msg):
+			if pm.SelectedChildIndex < len(pm.ChildDirs)-1 {
+				pm.SelectedChildIndex++
+			}
+		case pm.SelectedChildIndex > 0:
 			pm.SelectedChildIndex--
-		} else {
+		default:
 			return pathMode
 		}
-	case IsDown(cfg.Keys, msg):
-		if pm.SelectedChildIndex < len(pm.ChildDirs)-1 {
-			pm.SelectedChildIndex++
-		}
-	case IsPathGridMode(cfg.Keys, msg):
-		return gridMode
-	case IsConfirm(cfg.Keys, msg):
+	case settings.Confirm:
 		target, ok := pm.selectedChild()
 		if !ok {
 			return pathMode
@@ -338,7 +334,7 @@ func (pm *PathModel) UpdateChildMode(msg tea.KeyMsg, cfg settings.Config) navMod
 		if pm.enterDir(target) {
 			return pm.descendMode()
 		}
-	case IsToggleHidden(cfg.Keys, msg):
+	case settings.ToggleHidden:
 		pm.toggleHidden()
 	}
 	return childMode

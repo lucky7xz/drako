@@ -331,3 +331,16 @@ func TestExplainFooterSaysAnyKeyCloses(t *testing.T) {
 		t.Errorf("the footer under explain should say any key closes:\n%s", out)
 	}
 }
+
+// The sheet prints binds of the key table; a pick the table does not have
+// would print an empty chip.
+func TestSheetPicksAreInTheKeyTable(t *testing.T) {
+	cfg := sheetConfig(func(*settings.InputConfig) {})
+	for _, l := range sheetLayout {
+		for _, p := range l.picks {
+			if b, ok := cfg.Screen(p.screen).Bind(p.act); !ok || b.Label() == "" || b.Does == "" {
+				t.Errorf("%s: screen %v has no bind to show for action %v", l.title, p.screen, p.act)
+			}
+		}
+	}
+}

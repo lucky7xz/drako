@@ -2,12 +2,12 @@ package tui
 
 import (
 	"slices"
-	"strconv"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/multiplex"
 	"github.com/lucky7xz/drako/internal/profile"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // Batch mode: mark several cells, launch them together in a multiplexer. All state
@@ -83,38 +83,22 @@ func (m Model) enterDropdownBatch() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// updateDropdownMarking consumes a key while a dropdown batch is active.
-// handled=false hands the key back for the dropdown's normal behavior
-// (navigation, digit jumps, explain).
-func (m Model) updateDropdownMarking(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
-	if IsCancel(m.Config.Keys, msg) {
-		// End marking, keep the dropdown open; the next esc/q closes it.
-		m.batch = batchState{}
-		return m, nil, true
+// markDropdownItem toggles the mark on the folder item under the selector.
+func (m Model) markDropdownItem() (tea.Model, tea.Cmd) {
+	if m.dropdown.selectedIdx < 0 || m.dropdown.selectedIdx >= len(m.dropdown.items) {
+		return m, nil
 	}
-
-	switch msg.String() {
-	case " ":
-		if m.dropdown.selectedIdx < 0 || m.dropdown.selectedIdx >= len(m.dropdown.items) {
-			return m, nil, true
-		}
-		if m.dropdown.items[m.dropdown.selectedIdx].Command == "" {
-			return m, m.setProfileStatus("Item not batchable", false), true
-		}
-		// By position: two items in a folder may share a name.
-		_, sel := m.dropdownCell()
-		sel.Item = m.dropdown.selectedIdx + 1
-		if m.batch.mark(sel) == 0 && len(m.batch.marked) >= multiplex.MaxCommands {
-			return m, m.setProfileStatus("Batch is full (9 max)", false), true
-		}
-		m.batch.toggle(sel)
-		return m, nil, true
-
-	case "enter":
-		next, cmd := m.beginLaunch()
-		return next, cmd, true
+	if m.dropdown.items[m.dropdown.selectedIdx].Command == "" {
+		return m, m.setProfileStatus("Item not batchable", false)
 	}
-	return m, nil, false
+	// By position: two items in a folder may share a name.
+	_, sel := m.dropdownCell()
+	sel.Item = m.dropdown.selectedIdx + 1
+	if m.batch.mark(sel) == 0 && len(m.batch.marked) >= multiplex.MaxCommands {
+		return m, m.setProfileStatus("Batch is full (9 max)", false)
+	}
+	m.batch.toggle(sel)
+	return m, nil
 }
 
 // markable reports whether a grid cell can join a batch: it must resolve to a
@@ -128,27 +112,26 @@ func markable(cell *profile.Command) bool {
 // Enter launches everything marked, Esc cancels. Marks live only in
 // batchState — the grid itself never learns about them.
 func (m Model) updateBatchMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	key := msg.String()
-
 	// The layout dialog owns every key once it is open.
 	if m.batch.choosing() {
 		return m.updateBatchDialog(msg)
 	}
 
 	// Quick navigation works exactly like grid mode: digits jump the cursor.
-	if num, err := strconv.Atoi(key); err == nil && num >= 1 && num <= 9 {
-		return m.quickNav(num - 1)
+	act := m.Config.Screen(settings.BatchMarking).Act(msg.String())
+	if act == settings.Jump {
+		return m.quickNav(digit(msg))
 	}
 	// Any non-numeric key ends a quick-nav sequence in progress.
 	m.gridNav.cancel()
 
-	switch {
-	case IsCancel(m.Config.Keys, msg):
+	switch act {
+	case settings.Back:
 		m.batch = batchState{}
 		m.mode = gridMode
 		return m, nil
 
-	case key == " ":
+	case settings.Mark:
 		cell, sel := m.cursorCell()
 		if !markable(cell) {
 			return m, m.setProfileStatus("Cell not batchable", false)
@@ -159,11 +142,11 @@ func (m Model) updateBatchMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.batch.toggle(sel)
 		return m, nil
 
-	case key == "enter":
+	case settings.Launch:
 		return m.beginLaunch()
 
-	case m.gridNav.step(m.Config.Keys, msg):
-		// a direction key: the cursor has moved
+	case settings.Move:
+		m.gridNav.step(m.Config.Keys, msg)
 	}
 	return m, nil
 }

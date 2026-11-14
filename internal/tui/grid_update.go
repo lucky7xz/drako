@@ -2,7 +2,6 @@ package tui
 
 import (
 	"math"
-	"strconv"
 	"strings"
 	"time"
 
@@ -11,44 +10,39 @@ import (
 )
 
 func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	key := msg.String()
-
 	// A pending leader sequence consumes the next key, whatever it is.
 	if m.leader.pending {
 		return m.handleLeaderContinuation(msg)
 	}
-	if IsLeader(m.Config.Keys, msg) {
+	act := m.Config.Screen(settings.Grid).Act(msg.String())
+	switch act {
+	case settings.Leader:
 		return m.armLeader()
-	}
-
-	// Handle number-based navigation (1-9)
-	if num, err := strconv.Atoi(key); err == nil && num >= 1 && num <= 9 {
-		return m.quickNav(num - 1)
+	case settings.Jump:
+		return m.quickNav(digit(msg))
 	}
 
 	// Any non-numeric key cancels a navigation sequence in progress.
 	m.gridNav.cancel()
 
-	switch {
-	case IsQuit(m.Config.Keys, msg):
+	switch act {
+	case settings.Quit, settings.Back:
 		m.quitting = true
 		return m, tea.Quit
 
-	// Glassroot Cases - handled in update.go
-	// ====================
-	case IsInventory(m.Config.Keys, msg):
+	// Glassroot blocks these two in update.go.
+	case settings.OpenInventory:
 		m.mode = inventoryMode
 		m.inventory = InitInventoryModel(m.profile.configDir)
 		return m, nil
 
-	case IsPathGridMode(m.Config.Keys, msg):
+	case settings.PathMode:
 		m.mode = pathMode
 		m.path.clearSearch() // a filter left from the last visit would hide directories
-	// ====================
 
-	case m.gridNav.step(m.Config.Keys, msg):
-		// a direction key: the cursor has moved
-	case IsExplain(m.Config.Keys, msg):
+	case settings.Move:
+		m.gridNav.step(m.Config.Keys, msg)
+	case settings.Explain:
 		selectedChoice := m.gridNav.grid[m.gridNav.cursorRow][m.gridNav.cursorCol]
 		if strings.TrimSpace(selectedChoice) == "" {
 			return m, nil
@@ -78,7 +72,7 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		m.mode = infoMode
 		return m, nil
-	case IsConfirm(m.Config.Keys, msg):
+	case settings.Confirm:
 		selectedChoice := m.gridNav.grid[m.gridNav.cursorRow][m.gridNav.cursorCol]
 
 		// Special handling for Exit Rescue Mode command

@@ -10,49 +10,10 @@ import (
 	"github.com/lucky7xz/drako/internal/profile"
 )
 
-// What drako check says about [keys]. The TUI takes a binding as written and
-// the first action that asks for a key gets it; nothing here changes that.
-// These are warnings for the person editing config.toml.
-
-// keyScreens lists, per screen, the settings whose keys are live there. Two
-// of them on one key cannot both act.
-var keyScreens = []struct {
-	screen  string
-	actions []string
-}{
-	{"the grid", []string{"help", "leader", "explain", "inventory", "path_grid_mode", "lock", "profile_prev", "profile_next"}},
-	{"a folder", []string{"help", "leader", "explain"}},
-	{"the inventory", []string{"help", "path_grid_mode", "edit_file", "delete"}},
-	{"path mode", []string{"help", "path_grid_mode", "path_search", "toggle_hidden", "lock", "profile_prev", "profile_next"}},
-}
-
-// bindings is every single-key setting by its name in config.toml.
-func (c InputConfig) bindings() map[string]string {
-	return map[string]string{
-		"explain": c.Explain, "inventory": c.Inventory, "path_grid_mode": c.PathGridMode,
-		"lock": c.Lock, "profile_prev": c.ProfilePrev, "profile_next": c.ProfileNext,
-		"edit_file": c.EditFile, "delete": c.Delete, "path_search": c.PathSearch,
-		"toggle_hidden": c.ToggleHidden, "leader": c.Leader, "help": c.Help,
-	}
-}
-
-// fixedKeys are the keys drako uses itself on every screen, with what for.
-func (c InputConfig) fixedKeys() map[string]string {
-	fixed := map[string]string{
-		"ctrl+c": "quit", "q": "quit or go back", "esc": "go back",
-		"enter": "run or confirm", " ": "run, confirm or mark",
-		"pgup": "scroll", "pgdown": "scroll",
-	}
-	for _, set := range [][]string{c.NavUp, c.NavDown, c.NavLeft, c.NavRight} {
-		for _, k := range set {
-			fixed[k] = "move the cursor"
-		}
-	}
-	for d := '1'; d <= '9'; d++ {
-		fixed[string(d)] = "quick navigation"
-	}
-	return fixed
-}
+// What drako check says about [keys]. It reads the key table (keymap.go), the
+// one the TUI acts on, so a warning here is what the TUI will do. Nothing
+// here changes a binding; these are warnings for the person editing
+// config.toml.
 
 // KeyFindings checks the bindings of c, which must have its defaults applied.
 func KeyFindings(c Config) []profile.Finding {
@@ -60,36 +21,78 @@ func KeyFindings(c Config) []profile.Finding {
 	warn := func(format string, args ...any) {
 		fs = append(fs, profile.Finding{Level: "warning", Msg: fmt.Sprintf(format, args...)})
 	}
-	keys := c.Keys.bindings()
+	screens := c.Screens()
+
+	// A setting that is not a key press can never be reached.
+	keys := map[string]string{}
+	for _, s := range screens {
+		for _, b := range s.Binds {
+			if b.Setting != "" {
+				keys[b.Setting] = b.Keys[0]
+			}
+		}
+	}
 	names := make([]string, 0, len(keys))
 	for name := range keys {
 		names = append(names, name)
 	}
 	slices.Sort(names)
-
-	fixed := c.Keys.fixedKeys()
 	for _, name := range names {
-		key := keys[name]
-		if why := unknownKey(key); why != "" {
-			warn("keys.%s = %q: %s, so this action cannot be reached", name, key, why)
-			continue
-		}
-		if use, taken := fixed[key]; taken {
-			warn("keys.%s = %q: drako uses %s itself (%s); one of the two stops working", name, key, keyName(key), use)
+		if why := unknownKey(keys[name]); why != "" {
+			warn("keys.%s = %q: %s, so this action cannot be reached", name, keys[name], why)
 		}
 	}
 
-	seen := map[string]bool{}
-	for _, s := range keyScreens {
-		for i, a := range s.actions {
-			for _, b := range s.actions[i+1:] {
-				first, second := min(a, b), max(a, b)
-				if keys[a] != keys[b] || seen[first+" "+second] {
+	// Two binds on one key: the screen gives it to the first, the other never
+	// acts there. One warning per pair, naming every screen where they meet.
+	type clash struct{ key, winner, loser string }
+	var order []clash
+	found := map[clash]*struct {
+		does    string // what drako uses the key for, when one side is drako's own
+		screens []string
+	}{}
+	for _, s := range screens {
+		for _, b := range s.Binds {
+			for _, key := range b.Keys {
+				first, _ := s.Find(key)
+				if first.Act == b.Act && first.Setting == b.Setting || first.Setting == "" && b.Setting == "" ||
+					unknownKey(key) != "" {
 					continue
 				}
-				seen[first+" "+second] = true
-				warn("keys.%s and keys.%s are both %q: on %s only one of them can act", first, second, keys[a], s.screen)
+				cl := clash{key, first.Setting, b.Setting}
+				f := found[cl]
+				if f == nil {
+					f = &struct {
+						does    string
+						screens []string
+					}{}
+					found[cl] = f
+					order = append(order, cl)
+					if first.Setting == "" {
+						f.does = first.Does
+					} else {
+						f.does = b.Does
+					}
+				}
+				if !slices.Contains(f.screens, s.Name) {
+					f.screens = append(f.screens, s.Name)
+				}
 			}
+		}
+	}
+	for _, cl := range order {
+		f := found[cl]
+		where := strings.Join(f.screens, ", ")
+		switch {
+		case cl.winner == "":
+			warn("keys.%s = %q: drako uses %s itself (%s), so keys.%s does nothing on %s",
+				cl.loser, cl.key, keyName(cl.key), f.does, cl.loser, where)
+		case cl.loser == "":
+			warn("keys.%s = %q: drako uses %s itself (%s), which stops working on %s",
+				cl.winner, cl.key, keyName(cl.key), f.does, where)
+		default:
+			warn("keys.%s and keys.%s are both %q: on %s only keys.%s acts",
+				cl.winner, cl.loser, cl.key, where, cl.winner)
 		}
 	}
 

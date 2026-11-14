@@ -5,6 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/multiplex"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // The layout dialog: after Enter, before launch. It edits one value — how the
@@ -36,24 +37,27 @@ func (m Model) launchBatch() (tea.Model, tea.Cmd) {
 
 // updateBatchDialog consumes a key while the layout dialog is open.
 func (m Model) updateBatchDialog(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch {
-	case IsCancel(m.Config.Keys, msg):
+	switch m.Config.Screen(settings.BatchLayout).Act(msg.String()) {
+	case settings.Back:
 		m.batch.tabs, m.batch.focus = nil, 0
 		return m, nil
 
-	case msg.String() == "enter":
+	case settings.Launch:
 		return m.launchBatch()
 
 	// The fields sit in a row, so left/right picks one and up/down changes
 	// the value it holds.
-	case IsLeft(m.Config.Keys, msg):
-		m.batch.focus = max(m.batch.focus-1, 0)
-	case IsRight(m.Config.Keys, msg):
-		m.batch.focus = min(m.batch.focus+1, len(m.batch.tabs))
+	case settings.MoveH:
+		if IsLeft(m.Config.Keys, msg) {
+			m.batch.focus = max(m.batch.focus-1, 0)
+		} else {
+			m.batch.focus = min(m.batch.focus+1, len(m.batch.tabs))
+		}
 
-	case IsUp(m.Config.Keys, msg):
-		return m.adjustLayout(+1)
-	case IsDown(m.Config.Keys, msg):
+	case settings.MoveV:
+		if IsUp(m.Config.Keys, msg) {
+			return m.adjustLayout(+1)
+		}
 		return m.adjustLayout(-1)
 	}
 	return m, nil

@@ -2,41 +2,29 @@ package tui
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
-// handleCrossModeBindings applies the key bindings that reach across every
-// mode from the grid: the profile lock and profile switch/cycle keys. They
-// only fire outside a text field (so a typed character is never stolen)
-// and only from the grid/child mode they act on. Returns handled=false to
-// let the caller fall through to the normal mode dispatch.
-func (m Model) handleCrossModeBindings(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
-	if m.capturingText() {
-		return m, nil, false
-	}
-	// Both the lock and profile switching act on the *active* profile, so
-	// they belong to the grid. Offering the lock from the inventory would
-	// silently pin something other than the item under the cursor.
-	if m.mode != gridMode && m.mode != childMode {
-		return m, nil, false
-	}
-
-	if IsLock(m.Config.Keys, msg) {
+// handleDeckKeys applies the keys that act on the deck in use: pinning it and
+// switching to another. The key table offers them only on the screens that
+// show that deck (the grid, and the folders under the path bar); from the
+// inventory a pin would land on something other than the item under the
+// cursor. Returns handled=false to let the caller go on to the screen's own
+// handler.
+func (m Model) handleDeckKeys(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
+	switch m.act(msg) {
+	case settings.PinDeck:
 		cmd := m.toggleProfileLock()
 		return m, cmd, true
-	}
-
-	// Profile switching with configurable modifier + Number or ~ (Shift + `)
-	if ok, target := IsProfileSwitch(m.Config.Keys, msg, m.Config.NumbModifier); ok {
-		if updated, ok := m.switchToProfileIndex(target); ok {
+	case settings.SwitchDeck:
+		if updated, ok := m.switchToProfileIndex(digit(msg)); ok {
 			return updated, nil, true
 		}
 		return m, nil, true
-	}
-	if IsProfilePrev(m.Config.Keys, msg) {
+	case settings.PrevDeck:
 		next, cmd := m.handleProfileCycle(-1)
 		return next.(Model), cmd, true
-	}
-	if IsProfileNext(m.Config.Keys, msg) {
+	case settings.NextDeck:
 		next, cmd := m.handleProfileCycle(1)
 		return next.(Model), cmd, true
 	}

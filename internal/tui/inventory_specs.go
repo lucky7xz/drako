@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/lair"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // This file owns the spec-function picker end to end: what a spec function is,
@@ -322,26 +323,24 @@ func (m Model) updateSpecsOverlay(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	inv := &m.inventory
 	ov := inv.specs
 
-	switch {
-	case Matches(m.Config.Keys, msg, "ctrl+c"):
+	switch m.Config.Screen(settings.InventorySpecs).Act(msg.String()) {
+	case settings.Quit:
 		m.quitting = true
 		return m, tea.Quit
 
 	// Tab both opens and closes: the overlay is a place you step into and
 	// back out of, not a mode you have to remember how to leave.
-	case IsPathGridMode(m.Config.Keys, msg), IsCancel(m.Config.Keys, msg):
+	case settings.Back:
 		inv.specs = nil
 
-	case IsUp(m.Config.Keys, msg):
-		if ov.cursor > 0 {
-			ov.cursor--
-		}
-	case IsDown(m.Config.Keys, msg):
-		if ov.cursor < len(ov.plans)-1 {
+	case settings.MoveV:
+		if IsUp(m.Config.Keys, msg) {
+			ov.cursor = max(ov.cursor-1, 0)
+		} else if ov.cursor < len(ov.plans)-1 {
 			ov.cursor++
 		}
 
-	case IsConfirm(m.Config.Keys, msg):
+	case settings.Confirm:
 		plan, ok := ov.selected()
 		if !ok {
 			return m, nil

@@ -381,7 +381,7 @@ func TestView_NarrowTerminalKeepsTheKeyHint(t *testing.T) {
 }
 
 // q only quits from the grid; everywhere else it backs out one step
-// (IsCancel), so the hint names what it does on this screen.
+// (Back in the key table), so the hint names what it does on this screen.
 func TestView_KeyHintSaysWhatQDoesHere(t *testing.T) {
 	folder := []profile.CommandItem{{Name: "a", Command: "true"}}
 	for _, tt := range []struct {

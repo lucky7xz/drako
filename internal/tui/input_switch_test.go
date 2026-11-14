@@ -7,7 +7,7 @@ import (
 	"github.com/lucky7xz/drako/internal/settings"
 )
 
-func TestIsProfileSwitchMatchesOnlyModifierDigit(t *testing.T) {
+func TestDeckChordMatchesOnlyModifierDigit(t *testing.T) {
 	cases := []struct {
 		msg  tea.KeyMsg
 		want bool
@@ -18,8 +18,9 @@ func TestIsProfileSwitchMatchesOnlyModifierDigit(t *testing.T) {
 		{tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("3")}, false},
 	}
 	for _, tc := range cases {
-		if got, _ := IsProfileSwitch(settings.InputConfig{}, tc.msg, "alt"); got != tc.want {
-			t.Errorf("IsProfileSwitch(%q) = %v, want %v", tc.msg.String(), got, tc.want)
+		grid := settings.Config{NumbModifier: "alt"}.Screen(settings.Grid)
+		if got := grid.Act(tc.msg.String()) == settings.SwitchDeck; got != tc.want {
+			t.Errorf("%q switches deck = %v, want %v", tc.msg.String(), got, tc.want)
 		}
 	}
 }

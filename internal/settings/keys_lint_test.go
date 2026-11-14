@@ -39,8 +39,8 @@ toggle_hidden = "space"
 session_lock = "rr"
 `)
 	for _, want := range []string{
-		`keys.explain and keys.inventory are both "i": on the grid`,
-		`keys.leader = "q": drako uses q itself`,
+		`keys.inventory and keys.explain are both "i": on the grid only keys.inventory acts`,
+		`keys.leader = "q": drako uses q itself (quit), which stops working on the grid, a folder`,
 		`keys.help = "enter": drako uses enter itself`,
 		`keys.path_grid_mode = "tabb": it is not a key name`,
 		`keys.toggle_hidden = "space": the space key is written " "`,
@@ -60,7 +60,7 @@ func TestKeyFindings_ScreensDoNotCollide(t *testing.T) {
 		t.Errorf("delete (inventory) and explain (grid) never meet, got:\n%s", got)
 	}
 	// A nav key is fixed only while its set is on.
-	if got := keyWarnings(t, "[keys]\nexplain = \"w\"\n"); !strings.Contains(got, "move the cursor") {
+	if got := keyWarnings(t, "[keys]\nexplain = \"w\"\n"); !strings.Contains(got, "drako uses w itself (move), so keys.explain does nothing on the grid, a folder") {
 		t.Errorf("w moves the cursor by default, got:\n%s", got)
 	}
 	if got := keyWarnings(t, "[keys]\ndisable_wasd_bindings = true\nexplain = \"w\"\n"); got != "" {

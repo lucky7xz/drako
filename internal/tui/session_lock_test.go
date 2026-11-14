@@ -34,7 +34,7 @@ func update(t *testing.T, m Model, msg tea.KeyMsg) Model {
 	return out
 }
 
-func TestIsSessionLock(t *testing.T) {
+func TestSessionLockChord(t *testing.T) {
 	keys := settings.InputConfig{Lock: "r", SessionLock: "r"}
 	cases := []struct {
 		name     string
@@ -47,18 +47,23 @@ func TestIsSessionLock(t *testing.T) {
 		{"a different letter", altRunes("q"), "alt", false},
 		{"the wrong modifier", altRunes("r"), "ctrl", false},
 	}
+	// The lock is one of the keys that work everywhere, typing included.
+	locks := func(keys settings.InputConfig, msg tea.KeyMsg, modifier string) bool {
+		cfg := settings.Config{Keys: keys, NumbModifier: modifier}
+		return cfg.Screen(settings.Typing).Act(msg.String()) == settings.LockSession
+	}
 	for _, c := range cases {
-		if got := IsSessionLock(keys, c.msg, c.modifier); got != c.want {
-			t.Errorf("%s: IsSessionLock(%q, %q) = %v, want %v", c.name, c.msg.String(), c.modifier, got, c.want)
+		if got := locks(keys, c.msg, c.modifier); got != c.want {
+			t.Errorf("%s: %q with modifier %q locks = %v, want %v", c.name, c.msg.String(), c.modifier, got, c.want)
 		}
 	}
 
 	// It follows a rebound letter, independently of the profile lock.
 	rebound := settings.InputConfig{Lock: "r", SessionLock: "x"}
-	if !IsSessionLock(rebound, altRunes("x"), "alt") {
+	if !locks(rebound, altRunes("x"), "alt") {
 		t.Error("session_lock = \"x\" should answer to alt+x")
 	}
-	if IsSessionLock(rebound, altRunes("r"), "alt") {
+	if locks(rebound, altRunes("r"), "alt") {
 		t.Error("alt+r must not lock once session_lock has been moved")
 	}
 }

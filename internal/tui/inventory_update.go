@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/lair"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // reloadProfilesMsg signals the app to reload the configuration.
@@ -180,40 +181,36 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// reads as feedback on the last key rather than lingering over later ones.
 	inv.status, inv.statusOK = "", false
 
-	switch {
-	case IsCancel(m.Config.Keys, msg):
+	switch m.Config.Screen(settings.Inventory).Act(msg.String()) {
+	case settings.Back:
 		m = m.presentNextBrokenProfile() // Return to next error or grid
 		return m, nil
-	case Matches(m.Config.Keys, msg, "ctrl+c"):
+	case settings.Quit:
 		m.quitting = true
 		return m, tea.Quit
 
 	// Navigation
-	case IsUp(m.Config.Keys, msg):
-		if inv.focusedList > 0 {
-			inv.focusedList--
-			inv.cursor = 0
-		}
-	case IsDown(m.Config.Keys, msg):
-		if inv.focusedList < focusLast {
+	case settings.MoveV:
+		if IsUp(m.Config.Keys, msg) {
+			if inv.focusedList > 0 {
+				inv.focusedList--
+				inv.cursor = 0
+			}
+		} else if inv.focusedList < focusLast {
 			inv.focusedList++
 			inv.cursor = 0
 		}
-	case IsLeft(m.Config.Keys, msg):
-		if inv.focusedList < focusApply && inv.cursor > 0 {
-			inv.cursor--
-		}
-	case IsRight(m.Config.Keys, msg):
+	case settings.MoveH:
 		if inv.focusedList < focusApply {
-			listPtr, _ := inv.State.GetList(inv.focusedList)
-			list := *listPtr
-			if inv.cursor < len(list)-1 {
+			if IsLeft(m.Config.Keys, msg) {
+				inv.cursor = max(inv.cursor-1, 0)
+			} else if listPtr, _ := inv.State.GetList(inv.focusedList); inv.cursor < len(*listPtr)-1 {
 				inv.cursor++
 			}
 		}
 	// Open the spec picker. Tab used to cycle focus, which is the walk up/down
 	// already do — so it was free to take.
-	case IsPathGridMode(m.Config.Keys, msg):
+	case settings.Specs:
 		if inv.State.HeldItem != nil {
 			inv.status = "Place the held item before choosing a spec"
 			return m, nil
@@ -221,7 +218,7 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		inv.specs = &specsOverlay{plans: m.buildSpecPlans()}
 
 	// Edit the selected profile file in the user's editor
-	case IsEditFile(m.Config.Keys, msg):
+	case settings.Edit:
 		if m.GlassrootMode {
 			// Unreachable (glassroot gates inventory itself), kept as
 			// defense in depth: an editor is a shell.
@@ -238,7 +235,7 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, openInEditorCmd(filepath.Join(m.profile.configDir, rel))
 
 	// Arm a delete; the trashing itself waits on the typed name.
-	case IsDelete(m.Config.Keys, msg):
+	case settings.Trash:
 		if m.GlassrootMode {
 			// Unreachable (glassroot gates inventory itself), kept as
 			// defense in depth: this destroys a file.
@@ -259,7 +256,7 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		inv.pending = &pendingDelete{rel: rel, name: name}
 
 	// Lift and Place
-	case IsConfirm(m.Config.Keys, msg):
+	case settings.Confirm:
 		if inv.focusedList == focusApply {
 			if inv.State.HeldItem != nil {
 				inv.status = "Place the held item before applying"
@@ -307,7 +304,7 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // updatePendingDelete drives the typed-name confirmation. Cancel is esc alone,
-// not IsCancel, which also matches 'q' — while typing a name every letter has
+// not the table's Back, which also takes 'q' — while typing a name every letter has
 // to stay a literal.
 func (m Model) updatePendingDelete(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	inv := &m.inventory

@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/host"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 func (m Model) Init() tea.Cmd {
@@ -90,7 +91,7 @@ func (m Model) handleMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case tea.KeyMsg:
-		key := msg.String()
+		act := m.act(msg)
 
 		// Fixed order, each step can fully short-circuit the ones below it:
 		// 1. ctrl+c always quits, even locked.
@@ -99,11 +100,13 @@ func (m Model) handleMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// 4. the session-lock chord works everywhere — mid-search, in glassroot.
 		// 5. the key sheet: open, it owns every key; the help key opens it.
 		// 6. glassroot vetoes its restricted keys before anything below acts.
-		// 7. cross-mode bindings (profile lock/switch), skipped while typing.
+		// 7. the deck keys (pin, switch), on the screens that have them.
 		// 8. the mode-specific handler.
+		// What each key means is the key table's to say (settings/keymap.go);
+		// this order is the table's order too.
 
 		// Global Emergency Exit: Ctrl+C should always quit (except in Locked Mode, handled below)
-		if key == "ctrl+c" {
+		if act == settings.Quit {
 			m.quitting = true
 			return m, tea.Quit
 		}
@@ -123,7 +126,7 @@ func (m Model) handleMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// sits above the text guard. It is a chord, so nothing was typing it.
 		// Glassroot keeps it too: it hides the screen rather than exposing
 		// anything, and the guest pumps straight back in.
-		if IsSessionLock(m.Config.Keys, msg, m.Config.NumbModifier) {
+		if act == settings.LockSession {
 			return m.enterLockedMode(), nil
 		}
 
@@ -132,7 +135,7 @@ func (m Model) handleMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.sheet != nil {
 			return m.updateKeySheet(msg), nil
 		}
-		if m.opensKeySheet(msg) {
+		if act == settings.Help {
 			m.sheet = &sheetState{}
 			return m, nil
 		}
@@ -143,7 +146,7 @@ func (m Model) handleMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		if next, cmd, handled := m.handleCrossModeBindings(msg); handled {
+		if next, cmd, handled := m.handleDeckKeys(msg); handled {
 			return next, cmd
 		}
 

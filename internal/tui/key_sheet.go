@@ -12,7 +12,7 @@ import (
 
 // here is the screen the user is on, as the key sheet files it and as q
 // treats it: q quits only from the grid and backs out one step elsewhere
-// (IsCancel). Explain closes on any key, so it has no q of its own.
+// (Back in the key table). Explain closes on any key, so it has no q of its own.
 func (m Model) here() (section, q string) {
 	switch {
 	case m.mode == infoMode:
@@ -54,110 +54,75 @@ type sheetSection struct {
 	here     bool // the screen the sheet was opened from
 }
 
-func bind(keys, does string) binding  { return binding{keys: keys, does: does} }
-func gated(keys, does string) binding { return binding{keys: keys, does: does, gated: true} }
-
-// sheetSections is every screen's keys, read off the config so a remapped key
-// shows as remapped. Each section mirrors what that screen's handler does.
-// Glassroot leaves out what it blocks (glassroot.go), so the
-// sheet never offers a key that does nothing.
-func sheetSections(cfg settings.Config, glassroot bool) []sheetSection {
-	k := cfg.Keys
-	upDown := moveLabel(k, "↑↓", "ws", "kj")
-	leftRight := moveLabel(k, "←→", "ad", "hl")
-
-	secs := []sheetSection{
-		{title: "GRID", bindings: []binding{
-			bind("enter", "run cell, open folder"),
-			bind(k.Explain, "explain"),
-			bind("1-9 1-9", "jump: column, row"),
-			bind(moveLabel(k, "←↑↓→", "wasd", "hjkl"), "move"),
-			gated(k.PathGridMode, "path mode"),
-			gated(k.Inventory, "inventory"),
-			gated(k.Lock, "pin deck"),
-			bind(k.ProfilePrev, "previous deck"),
-			bind(k.ProfileNext, "next deck"),
-			bind(k.Leader+" 1-9", "switch deck"),
-			bind(cfg.NumbModifier+"+1-9", "switch deck"),
-			gated(k.Leader+" b", "batch mode"),
-			bind("q", "quit"),
-		}},
-		{title: "FOLDER", bindings: []binding{
-			bind(upDown, "select"),
-			bind("1-9", "jump to item"),
-			bind("enter", "run"),
-			bind(k.Explain, "explain"),
-			gated(k.Leader+" b", "batch these"),
-			bind("esc q", "close"),
-		}},
-		{title: "BATCH", gated: true, bindings: []binding{
-			bind("space", "mark"),
-			bind("enter", "lay out, launch"),
-			bind(leftRight, "pick layout field"),
-			bind(upDown, "adjust it"),
-			bind("esc q", "back"),
-		}},
-		{title: "PATH", gated: true, bindings: []binding{
-			bind(leftRight, "pick folder"),
-			bind(moveLabel(k, "↓", "s", "j"), "children"),
-			bind(upDown, "pick child"),
-			bind("enter", "cd"),
-			bind(k.PathSearch, "search"),
-			bind(k.ToggleHidden, "hidden files"),
-			bind(k.PathGridMode+" esc q", "back to grid"),
-		}},
-		{title: "INVENTORY", gated: true, bindings: []binding{
-			bind(upDown, "switch list"),
-			bind(leftRight, "move along"),
-			bind("enter", "lift, place"),
-			bind(k.PathGridMode, "specs"),
-			bind(k.EditFile, "edit"),
-			bind(k.Delete, "trash"),
-			bind("esc q", "back"),
-		}},
-		{title: "EXPLAIN", bindings: []binding{
-			bind("pgup pgdn", "scroll"),
-			gated("y", "copy"),
-			bind("any key", "close"),
-		}},
-		{title: "ANYWHERE", bindings: []binding{
-			bind(k.Help, "this sheet"),
-			bind(cfg.NumbModifier+"+"+k.SessionLock, "lock session"),
-			bind("ctrl+c", "quit"),
-		}},
-	}
-	if !glassroot {
-		return secs
-	}
-
-	var open []sheetSection
-	for _, s := range secs {
-		if s.gated {
-			continue
-		}
-		var bs []binding
-		for _, b := range s.bindings {
-			if !b.gated {
-				bs = append(bs, b)
-			}
-		}
-		s.bindings = bs
-		open = append(open, s)
-	}
-	return open
+// sheetLayout is the order the sheet prints in: its sections, and in each the
+// binds it shows, named by the screen of the key table they stand on. Only
+// the order is the sheet's own; the keys and the words come from the table
+// (settings/keymap.go), so the sheet cannot say something the handlers do not
+// do.
+var sheetLayout = []struct {
+	title string
+	gated bool // glassroot blocks the whole screen
+	picks []sheetPick
+}{
+	{title: "GRID", picks: []sheetPick{
+		{settings.Grid, settings.Confirm}, {settings.Grid, settings.Explain}, {settings.Grid, settings.Jump},
+		{settings.Grid, settings.Move}, {settings.Grid, settings.PathMode}, {settings.Grid, settings.OpenInventory},
+		{settings.Grid, settings.PinDeck}, {settings.Grid, settings.PrevDeck}, {settings.Grid, settings.NextDeck},
+		{settings.GridLeader, settings.PickDeck}, {settings.Grid, settings.SwitchDeck},
+		{settings.GridLeader, settings.Batch}, {settings.Grid, settings.Back},
+	}},
+	{title: "FOLDER", picks: []sheetPick{
+		{settings.Folder, settings.MoveV}, {settings.Folder, settings.Jump}, {settings.Folder, settings.Confirm},
+		{settings.Folder, settings.Explain}, {settings.FolderLeader, settings.Batch}, {settings.Folder, settings.Back},
+	}},
+	{title: "BATCH", gated: true, picks: []sheetPick{
+		{settings.BatchMarking, settings.Mark}, {settings.BatchMarking, settings.Launch},
+		{settings.BatchLayout, settings.MoveH}, {settings.BatchLayout, settings.MoveV}, {settings.BatchLayout, settings.Back},
+	}},
+	{title: "PATH", gated: true, picks: []sheetPick{
+		{settings.PathBar, settings.MoveH}, {settings.PathBar, settings.Descend}, {settings.PathChildren, settings.MoveV},
+		{settings.PathBar, settings.Confirm}, {settings.PathBar, settings.Search}, {settings.PathBar, settings.ToggleHidden},
+		{settings.PathBar, settings.Back},
+	}},
+	{title: "INVENTORY", gated: true, picks: []sheetPick{
+		{settings.Inventory, settings.MoveV}, {settings.Inventory, settings.MoveH}, {settings.Inventory, settings.Confirm},
+		{settings.Inventory, settings.Specs}, {settings.Inventory, settings.Edit}, {settings.Inventory, settings.Trash},
+		{settings.Inventory, settings.Back},
+	}},
+	{title: "EXPLAIN", picks: []sheetPick{
+		{settings.ExplainPopup, settings.Scroll}, {settings.ExplainPopup, settings.Copy}, {settings.ExplainPopup, settings.Close},
+	}},
+	{title: "ANYWHERE", picks: []sheetPick{
+		{settings.Grid, settings.Help}, {settings.Grid, settings.LockSession}, {settings.Grid, settings.Quit},
+	}},
 }
 
-// moveLabel names a set of direction keys: the arrows, then the wasd and vim
-// equivalents unless the config disables them, as InitControls does.
-func moveLabel(k settings.InputConfig, arrows, wasd, vim string) string {
-	label := arrows
-	if !k.DisableWasd {
-		label += " " + wasd
+// A sheetPick is one bind of the key table: what act does on screen.
+type sheetPick struct {
+	screen settings.ScreenID
+	act    settings.Action
+}
+
+// sheetSections is every screen's keys as the key table has them under cfg,
+// so a remapped key shows as remapped. Glassroot leaves out what it blocks
+// (glassroot.go), so the sheet never offers a key that does nothing.
+func sheetSections(cfg settings.Config, glassroot bool) []sheetSection {
+	var secs []sheetSection
+	for _, l := range sheetLayout {
+		if glassroot && l.gated {
+			continue
+		}
+		sec := sheetSection{title: l.title, gated: l.gated}
+		for _, p := range l.picks {
+			b, _ := cfg.Screen(p.screen).Bind(p.act)
+			if glassroot && b.Gated {
+				continue
+			}
+			sec.bindings = append(sec.bindings, binding{keys: b.Label(), does: b.Does, gated: b.Gated})
+		}
+		secs = append(secs, sec)
 	}
-	if !k.DisableVim {
-		label += " " + vim
-	}
-	return label
+	return secs
 }
 
 // sheetHere is the sheet as this screen shows it: the current screen's
@@ -179,22 +144,6 @@ func (m Model) sheetHere() []sheetSection {
 // sheetState is the open key sheet; Model.sheet is nil while it is closed.
 type sheetState struct {
 	offset int // first visible row when the sheet is taller than the screen
-}
-
-// opensKeySheet reports whether msg opens the sheet: the help key, on a screen
-// the sheet lists, when nothing else owns the key — not while typing, not
-// mid-leader-sequence. Explain and the lock screen keep their own rules.
-func (m Model) opensKeySheet(msg tea.KeyMsg) bool {
-	if !IsHelp(m.Config.Keys, msg) || m.capturingText() || m.leader.pending {
-		return false
-	}
-	switch m.mode {
-	case gridMode, pathMode, childMode, dropdownMode, batchMode:
-		return true
-	case inventoryMode:
-		return m.inventory.err == nil
-	}
-	return false
 }
 
 // updateKeySheet scrolls the open sheet a line (up/down) or a page (PgUp/PgDn);

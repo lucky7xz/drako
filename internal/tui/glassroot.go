@@ -1,9 +1,12 @@
 package tui
 
 import (
+	"slices"
+
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/lucky7xz/drako/internal/lair"
+	"github.com/lucky7xz/drako/internal/settings"
 )
 
 // Glassroot is drako's kiosk lockdown (--glassroot): the session may only see
@@ -24,17 +27,22 @@ import (
 // explain popup. Operator contract: every profile equipped on a glassroot box
 // must be kiosk-safe, because a session can reach all of them.
 //
-// The key sheet follows this list: sheetSections leaves out every key blocked
-// here.
+// Which keys those are is marked in the key table (Gated, settings/keymap.go);
+// the key sheet leaves the same ones out.
 
 // glassrootBlocksKey reports whether glassroot suppresses this keypress.
 func (m Model) glassrootBlocksKey(msg tea.KeyMsg) bool {
 	if !m.GlassrootMode {
 		return false
 	}
-	return IsLock(m.Config.Keys, msg) ||
-		IsInventory(m.Config.Keys, msg) ||
-		IsPathGridMode(m.Config.Keys, msg)
+	// The grid's gated keys, whichever screen the guest is on: a key that
+	// leaves the kiosk does nothing anywhere.
+	for _, b := range m.Config.Screen(settings.Grid).Binds {
+		if b.Gated && slices.Contains(b.Keys, msg.String()) {
+			return true
+		}
+	}
+	return false
 }
 
 // allowCopy reports whether clipboard copy is permitted. Copy execs
