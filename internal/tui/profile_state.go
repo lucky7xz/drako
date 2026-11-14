@@ -52,6 +52,12 @@ func (m *Model) scheduleStatusClearTimer() tea.Cmd {
 	m.profile.nextTimerID++
 	id := m.profile.nextTimerID
 	m.profile.statusClearTimerID = id
+	return statusClearTick(id)
+}
+
+// statusClearTick clears the status line set under timer id, once it has
+// been up long enough.
+func statusClearTick(id int) tea.Cmd {
 	return tea.Tick(profileStatusDuration, func(time.Time) tea.Msg {
 		return profileStatusClearMsg{id: id}
 	})

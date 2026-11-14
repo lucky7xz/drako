@@ -77,10 +77,6 @@ type profileState struct {
 	pendingErrors      []lair.ProfileParseError
 	errorQueueActive   bool
 	acknowledged       map[string]bool
-	// pendingDroppedProfile defers presentDroppedProfileNote's mode change
-	// while locked, same idea as pendingErrors but for a single string.
-	pendingDroppedProfile string
-	droppedNoted          string // dropped profile already explained; quiet until that changes
 	// sessionProfile is the profile the user explicitly switched to this
 	// session; config reloads re-select it (unless a pivot lock wins).
 	sessionProfile string

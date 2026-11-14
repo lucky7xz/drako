@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/lucky7xz/drako/internal/equip"
 	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/settings"
 )
@@ -35,11 +36,8 @@ func (m *Model) applyBundle(bundle lair.ConfigBundle) {
 	m.profile.configDir = bundle.ConfigDir
 	m.profile.pivotName = bundle.LockedName
 	m.profile.locked = strings.TrimSpace(bundle.LockedName) != ""
-	if bundle.DroppedProfile == m.profile.sessionProfile {
+	if !loads(bundle, m.profile.sessionProfile) {
 		m.profile.sessionProfile = "" // the deck switched to is gone; stop requesting it
-	}
-	if bundle.DroppedProfile != m.profile.droppedNoted {
-		m.profile.droppedNoted = "" // resolved, or a different drop: that one is news
 	}
 	m.pruneAcknowledged(bundle.Broken)
 }
@@ -70,15 +68,12 @@ func (p profileState) notShown(broken []lair.ProfileParseError) []lair.ProfilePa
 	return rest
 }
 
-// applyReloadedBundle applies a reload and shows any broken/dropped-profile
-// notice. presentNextBrokenProfile/presentDroppedProfileNote defer instead
-// of presenting while protectsMode() is true.
+// applyReloadedBundle applies a reload and shows any broken-profile notice.
+// presentNextBrokenProfile defers instead of presenting while protectsMode()
+// is true.
 func (m Model) applyReloadedBundle(bundle lair.ConfigBundle) Model {
 	m.applyBundle(bundle)
 	if len(bundle.Broken) > 0 {
-		if bundle.DroppedProfile != "" && bundle.DroppedProfile != m.profile.droppedNoted {
-			m.profile.pendingDroppedProfile = bundle.DroppedProfile // shown once the queue is dismissed
-		}
 		if m.showingQueue() {
 			// A notice waits for its key: a reload racing it (often drako's own
 			// pivot.toml write) only updates what is queued behind it.
@@ -93,9 +88,6 @@ func (m Model) applyReloadedBundle(bundle lair.ConfigBundle) Model {
 	// as a cell's popup has when the grid is replaced. Any other note stays.
 	outdated := m.showingQueue() || m.showsGridCells(m.mode)
 	m.profile.pendingErrors, m.profile.errorQueueActive = nil, false
-	if bundle.DroppedProfile != "" && bundle.DroppedProfile != m.profile.droppedNoted {
-		return m.presentDroppedProfileNote(bundle.DroppedProfile)
-	}
 	if outdated {
 		m.mode = gridMode
 	}
@@ -126,5 +118,50 @@ func (m Model) reloadAndApply() (next Model, cmd tea.Cmd, applied bool) {
 		next, cmd = m.failGlassroot()
 		return next, cmd, false
 	}
-	return m.applyReloadedBundle(bundle), nil, true
+	before, pin := m.profile.deckName(), m.profile.pivotName
+	next = m.applyReloadedBundle(bundle)
+	if note := goneNote(before, pin, bundle); note != "" {
+		cmd = next.setProfileStatus(note, false)
+	}
+	return next, cmd, true
+}
+
+// loads reports whether bundle still has a deck file of that name, working
+// or broken.
+func loads(bundle lair.ConfigBundle, name string) bool {
+	name = equip.NormalizeName(name)
+	for _, p := range bundle.Profiles {
+		if equip.NormalizeName(p.Name) == name {
+			return true
+		}
+	}
+	for _, b := range bundle.Broken {
+		if equip.NormalizeName(b.Name) == name {
+			return true
+		}
+	}
+	return false
+}
+
+// goneNote is the status line for a load that no longer has the deck the
+// screen was on (before; "" when there was none), or "". It compares before
+// with after and keeps nothing, so a second load of the same files has
+// nothing to say. pin is the deck pinned before the load.
+func goneNote(before, pin string, bundle lair.ConfigBundle) string {
+	if before == "" || loads(bundle, before) {
+		return ""
+	}
+	note := before + " is no longer equipped · " + nowOn(bundle)
+	if equip.NormalizeName(pin) == equip.NormalizeName(before) && bundle.LockedName == "" {
+		note += " · pin cleared"
+	}
+	return note
+}
+
+// nowOn says which deck a load ended on.
+func nowOn(bundle lair.ConfigBundle) string {
+	if bundle.Rescue || bundle.ActiveIndex < 0 || bundle.ActiveIndex >= len(bundle.Profiles) {
+		return "nothing is equipped: this is the rescue grid"
+	}
+	return "now on " + bundle.Profiles[bundle.ActiveIndex].Name
 }

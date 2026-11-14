@@ -2,6 +2,9 @@ package tui
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -156,26 +159,6 @@ func TestApplyReloadedBundle_BrokenProfileStaysLockedUntilUnlock(t *testing.T) {
 	}
 }
 
-// Same deferral for the single dropped-profile note.
-func TestApplyReloadedBundle_DroppedProfileStaysLockedUntilUnlock(t *testing.T) {
-	m := lockTestModel(t)
-	m.mode = lockedMode
-
-	m = m.applyReloadedBundle(lair.ConfigBundle{DroppedProfile: "work"})
-
-	if m.mode != lockedMode {
-		t.Fatalf("a dropped-profile reload must not leave lockedMode, got %v", m.mode)
-	}
-	if m.profile.pendingDroppedProfile != "work" {
-		t.Fatalf("dropped profile should be deferred, got %q", m.profile.pendingDroppedProfile)
-	}
-
-	m = pumpUnlock(t, m)
-	if m.mode != infoMode || m.activeDetail == nil {
-		t.Fatalf("unlocking should present the deferred note, mode=%v detail=%v", m.mode, m.activeDetail)
-	}
-}
-
 // pumpUnlock drives a full alternating pump sequence through Update(), the
 // same path a real unlock takes (so presentDeferredIfSafe runs too).
 func pumpUnlock(t *testing.T, m Model) Model {
@@ -281,25 +264,50 @@ func TestUnlockAfterReloadLeavesTheStaleDropdown(t *testing.T) {
 }
 
 // Stashing the deck in use reloads twice: Apply's own reload, then the
-// watcher's for the same file moves. The second finds nothing wrong and must
-// not take the note away; it says "press any key".
-func TestDroppedProfileNote_StaysThroughTheNextReload(t *testing.T) {
-	m := lockTestModel(t)
-	m.mode = gridMode
-	m.profile.sessionProfile = "work"
-
-	m = m.applyReloadedBundle(lair.ConfigBundle{DroppedProfile: "work"})
-	if m.mode != infoMode {
-		t.Fatalf("the note should be up, mode=%v", m.mode)
+// watcher's for the same file moves. The first says the deck is gone, by
+// comparing before with after; the second has nothing to compare and says
+// nothing, so the line stands.
+func TestGoneLine_SaidOnceHoweverTheDeckWasReached(t *testing.T) {
+	dir := freshConfigDir(t)
+	deck := []byte("x = 1\ny = 1\n[[commands]]\nname = \"a\"\ncol = \"a\"\nrow = 0\ncommand = \"true\"\n")
+	for _, name := range []string{"aaa", "zzz"} {
+		if err := os.WriteFile(filepath.Join(dir, name+".profile.toml"), deck, 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
-	m = m.applyReloadedBundle(lair.ConfigBundle{})
-	if m.mode != infoMode || m.activeDetail == nil {
-		t.Fatalf("a reload closed the note, mode=%v", m.mode)
+	// On aaa only because it is first: nothing asked for it.
+	m := InitialModel(setupFromEnv(false), Session{})
+	if got := m.profile.deckName(); got != "aaa" {
+		t.Fatalf("started on %q, want aaa", got)
+	}
+	if err := os.Rename(filepath.Join(dir, "aaa.profile.toml"), filepath.Join(dir, "inventory", "aaa.profile.toml")); err != nil {
+		t.Fatal(err)
 	}
 
-	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
-	if got := next.(Model).mode; got != gridMode {
-		t.Fatalf("a key should close the note, mode=%v", got)
+	next, _ := m.Update(reloadProfilesMsg{})
+	m = next.(Model)
+	if m.mode != gridMode || !strings.HasPrefix(m.profile.statusMessage, "aaa is no longer equipped · now on ") {
+		t.Fatalf("mode %v, status %q: want the grid and the gone line", m.mode, m.profile.statusMessage)
+	}
+	said := m.profile.statusMessage
+	next, _ = m.Update(ConfigChangedMsg{Path: filepath.Join(dir, "pivot.toml")})
+	if got := next.(Model).profile.statusMessage; got != said {
+		t.Fatalf("the second reload changed the line to %q", got)
+	}
+}
+
+// A deck that is pinned and then stashed: the line says the pin went too.
+func TestGoneLine_NamesAClearedPin(t *testing.T) {
+	bundle := lair.ConfigBundle{Profiles: []lair.ProfileInfo{{Name: "core"}}}
+	if got, want := goneNote("work", "work", bundle), "work is no longer equipped · now on core · pin cleared"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+	if got := goneNote("core", "", bundle); got != "" {
+		t.Errorf("a deck still equipped got the line %q", got)
+	}
+	bundle.Broken = []lair.ProfileParseError{{Name: "work"}}
+	if got := goneNote("work", "", bundle); got != "" {
+		t.Errorf("a broken deck is not gone; its own notice speaks, got %q", got)
 	}
 }
 

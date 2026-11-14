@@ -3,7 +3,6 @@ package tui
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -78,9 +77,9 @@ func twoDecks(t *testing.T) string {
 	return dir
 }
 
-// Stashing the session's profile explains itself once, accurately: drako moved
-// to another equipped deck. Later reloads must not repeat the note.
-func TestDroppedSessionProfileIsExplainedOnce(t *testing.T) {
+// Stashing the session's profile says so once, accurately: drako moved to
+// another equipped deck. Later reloads must not say it again.
+func TestGoneSessionProfileIsSaidOnce(t *testing.T) {
 	dir := twoDecks(t)
 	m := InitialModel(setupFromEnv(false), Session{Profile: "work"})
 	if m.ActiveProfileName() != "work" {
@@ -93,23 +92,21 @@ func TestDroppedSessionProfileIsExplainedOnce(t *testing.T) {
 
 	next, _ := m.Update(ConfigChangedMsg{})
 	m = next.(Model)
-	if m.mode != infoMode || m.activeDetail == nil {
-		t.Fatalf("the first reload should explain the drop, mode = %v", m.mode)
-	}
-	if d := m.activeDetail.Description; strings.Contains(d, "Rescue Mode") || !strings.Contains(d, "switched to alpha") {
-		t.Errorf("note should say drako switched to alpha, says: %q", d)
+	if got, want := m.profile.statusMessage, "work is no longer equipped · now on alpha"; m.mode != gridMode || got != want {
+		t.Fatalf("mode %v, status %q; want the grid and %q", m.mode, got, want)
 	}
 
-	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter}) // dismiss
-	next, _ = next.(Model).Update(ConfigChangedMsg{})  // any later change
-	if m = next.(Model); m.mode != gridMode {
-		t.Errorf("a later reload repeated the note: mode = %v, title %q", m.mode, m.activeDetail.Title)
+	m.profile.statusMessage = ""           // its time is up
+	next, _ = m.Update(ConfigChangedMsg{}) // any later change
+	if m = next.(Model); m.profile.statusMessage != "" {
+		t.Errorf("a later reload said it again: %q", m.profile.statusMessage)
 	}
 }
 
 // config.toml can name a deck that was later stashed; nothing rewrites it, so
-// every reload and every lap requests it again. One explanation is enough.
-func TestDroppedConfigProfileIsExplainedOnce(t *testing.T) {
+// every load requests it again. A fresh start says so; a reload and a lap of
+// the same session, which were never on that deck, do not.
+func TestUnequippedConfigProfileIsSaidAtTheStart(t *testing.T) {
 	dir := twoDecks(t)
 	first := InitialModel(setupFromEnv(false), Session{}) // bootstraps config.toml
 	_ = first
@@ -126,17 +123,16 @@ func TestDroppedConfigProfileIsExplainedOnce(t *testing.T) {
 	}
 
 	m := InitialModel(setupFromEnv(false), Session{})
-	if m.mode != infoMode {
-		t.Fatalf("setup: the drop should be explained once, mode = %v", m.mode)
+	if got, want := m.profile.statusMessage, "work is not equipped · now on alpha"; m.mode != gridMode || got != want {
+		t.Fatalf("mode %v, status %q; want the grid and %q", m.mode, got, want)
 	}
-	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
-	next, _ = next.(Model).Update(ConfigChangedMsg{})
-	if m = next.(Model); m.mode != gridMode {
-		t.Errorf("a reload repeated the note, mode = %v", m.mode)
+	m.profile.statusMessage = "" // its time is up
+	next, _ := m.Update(ConfigChangedMsg{})
+	if m = next.(Model); m.profile.statusMessage != "" {
+		t.Errorf("a reload said it again: %q", m.profile.statusMessage)
 	}
-	lap := InitialModel(setupFromEnv(false), m.Session())
-	if lap.mode != gridMode {
-		t.Errorf("the next lap repeated the note, mode = %v", lap.mode)
+	if lap := InitialModel(setupFromEnv(false), m.Session()); lap.profile.statusMessage != "" {
+		t.Errorf("the next lap said it again: %q", lap.profile.statusMessage)
 	}
 }
 

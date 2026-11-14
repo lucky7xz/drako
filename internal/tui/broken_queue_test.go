@@ -224,28 +224,6 @@ func TestCleanReloadEndsTheErrorQueue(t *testing.T) {
 	}
 }
 
-// A dropped-profile note deferred under the lock waits its turn: it must not
-// replace a broken-profile popup the user hasn't dismissed yet.
-func TestDeferredDroppedNoteWaitsForTheQueue(t *testing.T) {
-	m := queueModel(brokenErr("alpha"), brokenErr("beta"))
-	m.profile.pendingDroppedProfile = "work"
-	m = m.presentNextBrokenProfile()
-
-	next, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40}) // any background message
-	m = next.(Model)
-	if m.activeDetail == nil || !strings.Contains(m.activeDetail.Title, "alpha") || !m.profile.errorQueueActive {
-		t.Fatalf("the queue was interrupted: showing %q, queue active %v", m.activeDetail.Title, m.profile.errorQueueActive)
-	}
-
-	for range 2 { // dismiss alpha, then beta
-		next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
-		m = next.(Model)
-	}
-	if m.activeDetail == nil || m.activeDetail.Title != "Profile no longer available" {
-		t.Errorf("after the queue the deferred note should show, got %+v", m.activeDetail)
-	}
-}
-
 // freshConfigDir bootstraps a config dir the way a first launch does.
 func freshConfigDir(t *testing.T) (dir string) {
 	t.Helper()
@@ -295,40 +273,35 @@ func ownPivotWrite(m Model, dir string) Model {
 	return next.(Model)
 }
 
-func expectBrokenThenDropped(t *testing.T, m Model) {
+func expectBrokenThenGoneLine(t *testing.T, m Model, line string) {
 	t.Helper()
 	if m.activeDetail == nil || !strings.Contains(m.activeDetail.Title, "bad") {
-		t.Fatalf("want the broken-deck notice first, got %+v", m.activeDetail)
+		t.Fatalf("want the broken-deck notice, got %+v", m.activeDetail)
 	}
 	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m = next.(Model)
-	if m.activeDetail == nil || m.activeDetail.Title != "Profile no longer available" {
-		t.Fatalf("after the broken-deck notice, want the dropped-deck note, got %+v", m.activeDetail)
-	}
-	// Dismissing the queue entered Rescue, so there is no deck to name.
-	if !strings.Contains(m.activeDetail.Description, "Rescue Mode") {
-		t.Errorf("the note must say drako is in Rescue Mode, got %q", m.activeDetail.Description)
-	}
-	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
-	m = next.(Model)
 	if m.mode != gridMode || m.profile.activeName() != "Rescue" {
-		t.Errorf("after both notes: mode = %v on %q, want the Rescue grid", m.mode, m.profile.activeName())
+		t.Errorf("after the notice: mode = %v on %q, want the Rescue grid", m.mode, m.profile.activeName())
+	}
+	if !strings.HasPrefix(m.profile.statusMessage, line) {
+		t.Errorf("status line = %q, want it to start %q", m.profile.statusMessage, line)
 	}
 }
 
-// Deleting the active deck while another is broken: both get explained, the
-// broken one first, whether a reload or a new lap finds them.
-func TestDroppedNoteFollowsBrokenNoticeOnReload(t *testing.T) {
+// Deleting the active deck while another is broken: the broken one gets its
+// notice and the status line says the deck is gone, whether a reload or a new
+// lap finds them.
+func TestGoneLineWithBrokenNoticeOnReload(t *testing.T) {
 	dir := pinnedWorkDeck(t)
 	m := InitialModel(setupFromEnv(false), Session{})
 	dropWorkAndBreakAnother(t, dir)
 	next, _ := m.Update(ConfigChangedMsg{Path: filepath.Join(dir, "bad.profile.toml")})
-	expectBrokenThenDropped(t, ownPivotWrite(next.(Model), dir))
+	expectBrokenThenGoneLine(t, ownPivotWrite(next.(Model), dir), "work is no longer equipped")
 }
 
 // The watcher starts after the first lap's InitialModel, so only later laps
 // see a reload for InitialModel's own pivot.toml write.
-func TestDroppedNoteFollowsBrokenNoticeOnNewLap(t *testing.T) {
+func TestGoneLineWithBrokenNoticeOnNewLap(t *testing.T) {
 	for _, lap := range []string{"first", "later"} {
 		t.Run(lap, func(t *testing.T) {
 			dir := pinnedWorkDeck(t)
@@ -337,7 +310,7 @@ func TestDroppedNoteFollowsBrokenNoticeOnNewLap(t *testing.T) {
 			if lap == "later" {
 				m = ownPivotWrite(m, dir)
 			}
-			expectBrokenThenDropped(t, m)
+			expectBrokenThenGoneLine(t, m, "work is not equipped")
 		})
 	}
 }

@@ -22,11 +22,6 @@ func (m Model) presentDeferredIfSafe() Model {
 	if len(m.profile.pendingErrors) > 0 {
 		return m.presentNextBrokenProfile()
 	}
-	if m.profile.pendingDroppedProfile != "" {
-		name := m.profile.pendingDroppedProfile
-		m.profile.pendingDroppedProfile = ""
-		return m.presentDroppedProfileNote(name)
-	}
 	if m.mode != infoMode { // a popup already up keeps the screen
 		return m.presentNextNotice()
 	}
@@ -130,47 +125,6 @@ func (m Model) presentNextBrokenProfile() Model {
 		Title:       fmt.Sprintf("%s error: %s", errorSubject(e.Name), glyph.Clean(e.Name)),
 		KeyLabel:    "Error",
 		Value:       fmt.Sprintf("Path: %s\nError: %s", glyph.Clean(e.Path), glyph.Clean(strings.TrimSpace(e.Err))),
-		Description: desc,
-		Meta: []DetailMeta{
-			{Label: "CWD", Value: m.profile.configDir},
-		},
-	}
-	m.mode = infoMode
-	return m
-}
-
-// presentDroppedProfileNote shows a one-time overlay explaining that the active
-// profile was deleted or moved to the inventory, which is why drako just dropped
-// into Rescue Mode. Without it the rescue drop is silent (this path carries no
-// broken-profile error). Dismissed by any key, returning to the grid (the rescue
-// grid).
-func (m Model) presentDroppedProfileNote(name string) Model {
-	if m.protectsMode() {
-		m.profile.pendingDroppedProfile = name
-		return m
-	}
-	m.previousMode = gridMode
-	m.profile.errorQueueActive = false
-	m.profile.droppedNoted = name
-	desc := "This profile is no longer available — it was deleted or moved to " +
-		"the inventory. drako has dropped into Rescue Mode (any lock on it has been " +
-		"cleared).\n\n" +
-		"To get back to work:\n" +
-		"• Inventory (i): equip a profile.\n" +
-		"• Cycle (o / p): jump to a still-equipped profile.\n" +
-		"• Exit Rescue Mode: the top-left button of the grid.\n\n" +
-		"Press any key to dismiss."
-	if active := m.ActiveProfileName(); active != "" { // none in Rescue
-		desc = "This profile is no longer available — it was deleted or moved to " +
-			"the inventory. drako switched to " + active + " (any lock " +
-			"on it has been cleared).\n\n" +
-			"Inventory (i) can equip it again.\n\n" +
-			"Press any key to dismiss."
-	}
-	m.activeDetail = &DetailState{
-		Title:       "Profile no longer available",
-		KeyLabel:    "Profile",
-		Value:       name,
 		Description: desc,
 		Meta: []DetailMeta{
 			{Label: "CWD", Value: m.profile.configDir},

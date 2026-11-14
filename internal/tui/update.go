@@ -11,7 +11,12 @@ import (
 )
 
 func (m Model) Init() tea.Cmd {
+	var clearStatus tea.Cmd
+	if m.profile.statusMessage != "" { // a line the model started with
+		clearStatus = statusClearTick(m.profile.statusClearTimerID)
+	}
 	return tea.Batch(
+		clearStatus,
 		tea.EnterAltScreen,
 		checkNetworkStatusCmd(),
 		m.spinner.tick(),

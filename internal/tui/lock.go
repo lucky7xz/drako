@@ -41,7 +41,7 @@ func (m Model) enterLockedMode() Model {
 }
 
 // exitLockedMode restores the mode locked from. Anything that piled up
-// while locked (pendingErrors/pendingDroppedProfile) surfaces afterward via
+// while locked (pendingErrors) surfaces afterward via
 // presentDeferredIfSafe, run by Update() after every message.
 func (m Model) exitLockedMode() Model {
 	if m.mode == lockedMode {

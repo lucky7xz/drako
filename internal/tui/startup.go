@@ -29,13 +29,12 @@ type Session struct {
 	// each is shown as a popup and then forgotten.
 	Notices      []DetailState
 	acknowledged map[string]bool // broken-profile errors already shown
-	droppedNoted string          // dropped profile already explained
 }
 
 // Session snapshots the position for Restore to re-establish once the config
 // has been re-read.
 func (m Model) Session() Session {
-	s := Session{Profile: m.profile.deckName(), acknowledged: maps.Clone(m.profile.acknowledged), droppedNoted: m.profile.droppedNoted}
+	s := Session{Profile: m.profile.deckName(), acknowledged: maps.Clone(m.profile.acknowledged)}
 	s.Notices = slices.Clone(m.notices) // not shown yet: carried to the next lap
 
 	row, col := m.gridNav.cursorRow, m.gridNav.cursorCol
@@ -147,10 +146,19 @@ func InitialModel(setup Setup, carried Session) Model {
 		m.profile.acknowledged[path] = true
 	}
 	m.pruneAcknowledged(bundle.Broken) // an error dismissed last lap stays dismissed while still broken
-	if bundle.DroppedProfile == carried.droppedNoted {
-		m.profile.droppedNoted = carried.droppedNoted
-	}
 	m.Restore(carried)
+	// The deck the last lap was on is gone; or, on a fresh start, the pin,
+	// DRAKO_PROFILE or config.toml asks for one that is not equipped. Init
+	// starts the timer that clears the line.
+	note := goneNote(carried.Profile, "", bundle)
+	if carried.Profile == "" && bundle.DroppedProfile != "" {
+		note = bundle.DroppedProfile + " is not equipped · " + nowOn(bundle)
+	}
+	if note != "" {
+		m.profile.statusMessage = note
+		m.profile.nextTimerID++
+		m.profile.statusClearTimerID = m.profile.nextTimerID
+	}
 	if !glassrootMode { // a glassroot visitor is told nothing about the host
 		m.notices = slices.Clone(carried.Notices)
 	}
@@ -158,14 +166,7 @@ func InitialModel(setup Setup, carried Session) Model {
 	if len(bundle.Broken) > 0 {
 		m.profile.pendingErrors = append(m.profile.pendingErrors, bundle.Broken...)
 		m.profile.errorQueueActive = true
-		if bundle.DroppedProfile != "" && bundle.DroppedProfile != m.profile.droppedNoted {
-			m.profile.pendingDroppedProfile = bundle.DroppedProfile // shown once the queue is dismissed
-		}
 		m = m.presentNextBrokenProfile()
-	} else if bundle.DroppedProfile != "" && bundle.DroppedProfile != m.profile.droppedNoted {
-		// Relaunched after the active profile was deleted out from under us:
-		// explain the rescue drop instead of showing a bare rescue grid.
-		m = m.presentDroppedProfileNote(bundle.DroppedProfile)
 	} else {
 		m = m.presentNextNotice()
 	}
