@@ -87,6 +87,16 @@ func (inv inventoryModel) staged() string {
 	return ""
 }
 
+// slotForHeld is the one extra place the cursor has while a deck is held: the
+// held deck is drawn at the cursor, between the others, and may go after the
+// last of them.
+func (inv inventoryModel) slotForHeld() int {
+	if inv.State != nil && inv.State.HeldItem != nil {
+		return 1
+	}
+	return 0
+}
+
 // keepStaged is asked by every way out of the inventory that drops staged
 // moves. The first press stays and says what would be lost; the same press
 // again goes.
@@ -247,6 +257,10 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				inv.focusedList--
 				inv.cursor = 0
 			}
+		} else if inv.State.HeldItem != nil && inv.focusedList == equip.ListInventory {
+			// A held deck is drawn in a list, where it will land. Below the
+			// lists there is nowhere to show it.
+			inv.status = "Place the deck first"
 		} else if inv.focusedList < focusLast {
 			inv.focusedList++
 			inv.cursor = 0
@@ -255,7 +269,7 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if inv.focusedList < focusApply {
 			if IsLeft(m.Config.Keys, msg) {
 				inv.cursor = max(inv.cursor-1, 0)
-			} else if listPtr, _ := inv.State.GetList(inv.focusedList); inv.cursor < len(*listPtr)-1 {
+			} else if listPtr, _ := inv.State.GetList(inv.focusedList); inv.cursor < len(*listPtr)-1+inv.slotForHeld() {
 				inv.cursor++
 			}
 		}
@@ -336,14 +350,10 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			// Pick up
+			// The cursor stays: it now stands for the held deck, drawn where
+			// it was lifted from, which is where Enter would put it back.
 			if err := inv.State.PickUpItem(inv.focusedList, inv.cursor); err != nil {
 				inv.status = err.Error()
-			} else {
-				// Adjust cursor if it's now out of bounds
-				listPtr, _ := inv.State.GetList(inv.focusedList)
-				if inv.cursor >= len(*listPtr) && len(*listPtr) > 0 {
-					inv.cursor = len(*listPtr) - 1
-				}
 			}
 		} else {
 			// Place

@@ -39,7 +39,7 @@ func TestStagedSaysWhatApplyWouldChange(t *testing.T) {
 	if got := m.inventory.staged(); got != "" {
 		t.Errorf("alpha back in its place is no change, got %q", got)
 	}
-	m = send(t, m, keyType(tea.KeyRight), keyType(tea.KeyEnter), keyType(tea.KeyEnter)) // lift beta, place it before alpha
+	m = send(t, m, keyType(tea.KeyRight), keyType(tea.KeyEnter), keyType(tea.KeyLeft), keyType(tea.KeyEnter)) // lift beta, place it before alpha
 	if got := m.inventory.staged(); got != "new order" {
 		t.Errorf("beta before alpha is a new order, got %q", got)
 	}
@@ -108,5 +108,62 @@ func TestInventoryMarksTheActiveAndPinnedDeck(t *testing.T) {
 	m = send(t, m, keyType(tea.KeyRight))
 	if out := ansi.Strip(m.viewInventoryMode("")); !strings.Contains(out, "pinned — unpin with r in the grid") {
 		t.Errorf("the cursor is on beta, the pinned deck:\n%s", out)
+	}
+}
+
+// A held deck is drawn where Enter will put it, and left/right carry it one
+// place at a time, the place after the last deck included. It used to land
+// before the deck under the cursor, which could never be past the last one.
+func TestHeldDeckIsDrawnWhereItLands(t *testing.T) {
+	m := stagedModel()
+	m.inventory.State.Visible = append(m.inventory.State.Visible, "delta.profile.toml")
+	m.inventory.seen[0] = append(m.inventory.seen[0], "delta.profile.toml")
+
+	row := func(m Model) string {
+		for _, line := range strings.Split(ansi.Strip(m.viewInventoryMode("")), "\n") {
+			if strings.Contains(line, "beta.profile.toml") {
+				return strings.Join(strings.Fields(line), " ")
+			}
+		}
+		return ""
+	}
+	m = send(t, m, keyType(tea.KeyEnter)) // lift alpha: it stays drawn where it was
+	if got, want := row(m), "« ▸ alpha.profile.toml » beta.profile.toml delta.profile.toml"; got != want {
+		t.Errorf("lifted:\n got %s\nwant %s", got, want)
+	}
+	m = send(t, m, keyType(tea.KeyRight))
+	if got, want := row(m), "beta.profile.toml « ▸ alpha.profile.toml » delta.profile.toml"; got != want {
+		t.Errorf("one right:\n got %s\nwant %s", got, want)
+	}
+	m = send(t, m, keyType(tea.KeyRight), keyType(tea.KeyRight), keyType(tea.KeyRight)) // the end, and no further
+	if got, want := row(m), "beta.profile.toml delta.profile.toml « ▸ alpha.profile.toml »"; got != want {
+		t.Errorf("at the end:\n got %s\nwant %s", got, want)
+	}
+	m = send(t, m, keyType(tea.KeyEnter))
+	want := []string{"beta.profile.toml", "delta.profile.toml", "alpha.profile.toml"}
+	if got := m.inventory.State.Visible; strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Errorf("placed: %v, want %v", got, want)
+	}
+	if got, want := row(m), "beta.profile.toml delta.profile.toml ▸ alpha.profile.toml"; got != want {
+		t.Errorf("after placing the cursor is on the deck:\n got %s\nwant %s", got, want)
+	}
+}
+
+// The held deck goes with the cursor into the other list, an empty one too,
+// but not down to the buttons, where there is nowhere to draw it.
+func TestHeldDeckFollowsIntoTheOtherList(t *testing.T) {
+	m := stagedModel()
+	m.inventory.State.Inventory, m.inventory.seen[1] = nil, nil
+	m = send(t, m, keyType(tea.KeyEnter), keyType(tea.KeyDown)) // lift alpha, carry it to the empty stash
+	out := ansi.Strip(m.viewInventoryMode(""))
+	if strings.Contains(out, "(empty)") || strings.Count(out, "« ▸ alpha.profile.toml »") != 1 {
+		t.Errorf("the held deck stands in the empty list, once:\n%s", out)
+	}
+	m = send(t, m, keyType(tea.KeyDown))
+	if m.inventory.focusedList != equip.ListInventory || m.inventory.status != "Place the deck first" {
+		t.Errorf("focus = %d, status = %q", m.inventory.focusedList, m.inventory.status)
+	}
+	if strings.Contains(out, "Holding") {
+		t.Error("the Holding line is gone: the list shows the held deck")
 	}
 }

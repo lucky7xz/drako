@@ -58,12 +58,7 @@ func (m Model) viewInventoryMode(hint string) string {
 		rescueButton = m.styles.SelectedRescueButton.Render("[ Rescue Mode ]")
 	}
 
-	heldItemStatus := " " // Reserve space
-	if m.inventory.State.HeldItem != nil {
-		heldItemStatus = m.styles.Help.Render("Holding: ") + m.styles.SelectedItem.Render(*m.inventory.State.HeldItem)
-	}
-
-	// One line under Holding: carries every piece of inventory feedback — a
+	// One line under the buttons carries every piece of inventory feedback — a
 	// rejected action, and the delete confirmation prompt. It is reserved
 	// either way so the lists below don't jump when a message appears, and
 	// truncated rather than wrapped to keep it exactly one row.
@@ -103,7 +98,7 @@ func (m Model) viewInventoryMode(hint string) string {
 	if layout.ShowHeader {
 		chrome = append(chrome, title)
 	}
-	chrome = append(chrome, equippedHeader, inventoryHeader, applyButton, rescueButton, heldItemStatus, statusLine)
+	chrome = append(chrome, equippedHeader, inventoryHeader, applyButton, rescueButton, statusLine)
 	if layout.ShowFooter {
 		chrome = append(chrome, footer)
 	}
@@ -133,7 +128,7 @@ func (m Model) viewInventoryMode(hint string) string {
 	if layout.ShowHeader {
 		sections = append(sections, title)
 	}
-	sections = append(sections, equippedHeader, equippedGrid, inventoryHeader, inventoryGrid, applyButton, rescueButton, heldItemStatus, statusLine)
+	sections = append(sections, equippedHeader, equippedGrid, inventoryHeader, inventoryGrid, applyButton, rescueButton, statusLine)
 	if layout.ShowFooter {
 		sections = append(sections, footer)
 	}
@@ -157,6 +152,9 @@ func (m Model) aboutSelected() string {
 	inv := m.inventory
 	if inv.focusedList != equip.ListVisible && inv.focusedList != equip.ListInventory {
 		return ""
+	}
+	if inv.State.HeldItem != nil {
+		return "" // the cursor stands for the held deck, not for one in the list
 	}
 	listPtr, err := inv.State.GetList(inv.focusedList)
 	if err != nil || inv.cursor < 0 || inv.cursor >= len(*listPtr) {
@@ -193,32 +191,50 @@ func (m Model) renderInventoryGrid(items []string, listID, rowBudget int) string
 	var cells []string
 	isFocused := m.inventory.focusedList == listID
 
-	// Add a placeholder cell for dropping if the list is empty
-	if len(items) == 0 {
+	// A held deck is drawn at the cursor, where Enter will put it: between
+	// the decks either side of it, or after the last.
+	held := -1
+	if isFocused && m.inventory.State.HeldItem != nil {
+		held = min(max(m.inventory.cursor, 0), len(items))
+	}
+	name := func(p string) string {
+		if m.isActiveProfile(strings.TrimSuffix(p, equip.ProfileSuffix)) {
+			return activeMark + p
+		}
+		return p
+	}
+	heldCell := func() string {
+		return m.styles.SelectedCell.Render("« " + name(*m.inventory.State.HeldItem) + " »")
+	}
+
+	for i, p := range items {
+		if i == held {
+			cells = append(cells, heldCell())
+		}
+		selected := isFocused && held < 0 && i == m.inventory.cursor
+		locked := m.isLockedProfile(strings.TrimSuffix(p, equip.ProfileSuffix))
+
+		style := m.styles.Cell
+		switch {
+		case selected && locked:
+			style = m.styles.LockedSelectedCell
+		case selected:
+			style = m.styles.SelectedCell
+		case locked:
+			style = m.styles.LockedCell
+		}
+		cells = append(cells, style.Render(name(p)))
+	}
+	switch {
+	case held == len(items):
+		cells = append(cells, heldCell())
+	case len(items) == 0:
+		// A placeholder to stand on while the list is empty.
 		style := m.styles.Cell
 		if isFocused {
 			style = m.styles.SelectedCell
 		}
 		cells = append(cells, style.Render(" (empty) "))
-	} else {
-		for i, p := range items {
-			selected := isFocused && i == m.inventory.cursor
-			locked := m.isLockedProfile(strings.TrimSuffix(p, equip.ProfileSuffix))
-
-			style := m.styles.Cell
-			switch {
-			case selected && locked:
-				style = m.styles.LockedSelectedCell
-			case selected:
-				style = m.styles.SelectedCell
-			case locked:
-				style = m.styles.LockedCell
-			}
-			if m.isActiveProfile(strings.TrimSuffix(p, equip.ProfileSuffix)) {
-				p = activeMark + p
-			}
-			cells = append(cells, style.Render(p))
-		}
 	}
 
 	if len(cells) == 0 {
