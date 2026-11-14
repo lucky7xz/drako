@@ -24,6 +24,7 @@ func newCommandDetail(title, address, value, description string, autoCloseExec *
 		Value:       value,
 		Description: description,
 		Meta:        meta,
+		OfCell:      true,
 	}
 }
 

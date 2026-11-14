@@ -50,6 +50,10 @@ type DetailState struct {
 	Description string
 	Meta        []DetailMeta // Extra fields like "CWD", "Exec Mode"
 
+	// OfCell: the popup explains a cell. A reload replaces the grid, so it
+	// closes such a popup; a note about what happened stays until its key.
+	OfCell bool
+
 	// ScrollOffset is the first visible row of the popup's body when it is
 	// taller than the terminal. Zero on every fresh detail, so no reset is needed.
 	ScrollOffset int

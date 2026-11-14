@@ -29,7 +29,7 @@ func (m *Model) applyBundle(bundle lair.ConfigBundle) {
 	m.applyConfig(bundle.Config)
 	m.profile.rescue = bundle.Rescue
 	m.batch = batchState{} // marks name cells of the grid being replaced
-	if showsGridCells(m.lock.modeBefore) {
+	if m.showsGridCells(m.lock.modeBefore) {
 		m.lock.modeBefore = gridMode // and so would the mode unlocking returns to
 	}
 	m.profile.configDir = bundle.ConfigDir
@@ -89,11 +89,14 @@ func (m Model) applyReloadedBundle(bundle lair.ConfigBundle) Model {
 		m.profile.errorQueueActive = true
 		return m.presentNextBrokenProfile()
 	}
-	m.profile.pendingErrors, m.profile.errorQueueActive = nil, false // nothing is broken any more
+	// Nothing is broken any more, so a broken-file notice has lost its subject,
+	// as a cell's popup has when the grid is replaced. Any other note stays.
+	outdated := m.showingQueue() || m.showsGridCells(m.mode)
+	m.profile.pendingErrors, m.profile.errorQueueActive = nil, false
 	if bundle.DroppedProfile != "" && bundle.DroppedProfile != m.profile.droppedNoted {
 		return m.presentDroppedProfileNote(bundle.DroppedProfile)
 	}
-	if showsGridCells(m.mode) {
+	if outdated {
 		m.mode = gridMode
 	}
 	return m

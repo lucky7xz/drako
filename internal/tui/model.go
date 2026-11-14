@@ -154,7 +154,8 @@ func (m Model) protectsMode() bool {
 }
 
 // showsGridCells reports whether mode displays cells of the grid, which a reload
-// replaces; inventory, path and the lock screen stay put.
-func showsGridCells(mode navMode) bool {
-	return mode == dropdownMode || mode == batchMode || mode == infoMode
+// replaces; inventory, path, the lock screen and a note stay put.
+func (m Model) showsGridCells(mode navMode) bool {
+	explains := mode == infoMode && m.activeDetail != nil && m.activeDetail.OfCell
+	return mode == dropdownMode || mode == batchMode || explains
 }

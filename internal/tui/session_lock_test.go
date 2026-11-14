@@ -279,3 +279,39 @@ func TestUnlockAfterReloadLeavesTheStaleDropdown(t *testing.T) {
 		t.Errorf("unlock reopened a dropdown listing %q from the replaced config", m.dropdown.items[0].Name)
 	}
 }
+
+// Stashing the deck in use reloads twice: Apply's own reload, then the
+// watcher's for the same file moves. The second finds nothing wrong and must
+// not take the note away; it says "press any key".
+func TestDroppedProfileNote_StaysThroughTheNextReload(t *testing.T) {
+	m := lockTestModel(t)
+	m.mode = gridMode
+	m.profile.sessionProfile = "work"
+
+	m = m.applyReloadedBundle(lair.ConfigBundle{DroppedProfile: "work"})
+	if m.mode != infoMode {
+		t.Fatalf("the note should be up, mode=%v", m.mode)
+	}
+	m = m.applyReloadedBundle(lair.ConfigBundle{})
+	if m.mode != infoMode || m.activeDetail == nil {
+		t.Fatalf("a reload closed the note, mode=%v", m.mode)
+	}
+
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
+	if got := next.(Model).mode; got != gridMode {
+		t.Fatalf("a key should close the note, mode=%v", got)
+	}
+}
+
+// A cell's explain popup describes a grid the reload replaced, so it closes.
+func TestExplainPopup_ClosesOnReload(t *testing.T) {
+	m := lockTestModel(t)
+	m.previousMode = gridMode
+	m.activeDetail = newCommandDetail("a", "", "true", "", nil, "/")
+	m.mode = infoMode
+
+	m = m.applyReloadedBundle(lair.ConfigBundle{})
+	if m.mode != gridMode {
+		t.Fatalf("explain should close on a reload, mode=%v", m.mode)
+	}
+}

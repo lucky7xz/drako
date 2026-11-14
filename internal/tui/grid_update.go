@@ -69,6 +69,7 @@ func (m Model) updateGridMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			Meta: []DetailMeta{
 				{Label: "CWD", Value: m.path.CurrentPath},
 			},
+			OfCell: true,
 		}
 		m.mode = infoMode
 		return m, nil
