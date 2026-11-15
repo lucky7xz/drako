@@ -98,13 +98,13 @@ Accent     = "#C9A227" # Venom Gold
 # Foreground stays light on purpose: it is the text inside drako's popups,
 # which are always a dark box.
 [paper]
-Primary    = "#2173e6" # Ink Blue
-Secondary  = "#07838e" # Deep Teal
+Primary    = "#d04a11" # Rust Ink
+Secondary  = "#8962cb" # Violet Ink
 Background = "#fdf6e3" # Paper
 Foreground = "#f0f0f0" # Very Light Gray
-Comment    = "#727781" # Pencil Gray
+Comment    = "#7f7668" # Pencil
 Success    = "#127d36" # Leaf Green
-Warning    = "#9d5d04" # Dark Amber
-Error      = "#d41e1e" # Red Ink
-Info       = "#07768d" # Deep Teal
-Accent     = "#2173e6" # Ink Blue
+Warning    = "#846900" # Ochre
+Error      = "#d2175c" # Crimson
+Info       = "#1a6fb9" # Blue Ink
+Accent     = "#d04a11" # Rust Ink
