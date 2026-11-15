@@ -3,6 +3,7 @@ package cli
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/lucky7xz/drako/internal/lair"
@@ -144,4 +145,36 @@ func TestStashSpecFailedMoveKeepsLockAndFails(t *testing.T) {
 	if got := lockedName(t, cfg); got != "work" {
 		t.Errorf("lock = %q, want work: the profile is still equipped", got)
 	}
+}
+
+// Every command that lifts the anchor says so. strip did it silently.
+func TestStripSaysItLiftsTheAnchor(t *testing.T) {
+	t.Run("anchored", func(t *testing.T) {
+		cfg := t.TempDir()
+		writeProfile(t, cfg, "work")
+		lock(t, cfg, "work")
+
+		out := captureStdout(t, func() {
+			if err := StripAllProfiles(cfg); err != nil {
+				t.Fatalf("StripAllProfiles: %v", err)
+			}
+		})
+		if want := "Lifting the anchor on profile: work"; !strings.Contains(out, want) {
+			t.Errorf("output lacks %q:\n%s", want, out)
+		}
+	})
+
+	t.Run("nothing anchored", func(t *testing.T) {
+		cfg := t.TempDir()
+		writeProfile(t, cfg, "work")
+
+		out := captureStdout(t, func() {
+			if err := StripAllProfiles(cfg); err != nil {
+				t.Fatalf("StripAllProfiles: %v", err)
+			}
+		})
+		if strings.Contains(out, "anchor") {
+			t.Errorf("no anchor was set, yet the output mentions one:\n%s", out)
+		}
+	})
 }

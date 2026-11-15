@@ -286,6 +286,7 @@ func StripAllProfiles(configDir string) error {
 		log.Printf("Warning: could not read pivot profile: %v", err)
 	}
 	if pf.Locked != "" {
+		fmt.Printf("  ! Lifting the anchor on profile: %s\n", pf.Locked)
 		if err := lair.WritePivotLocked(configDir, ""); err != nil {
 			log.Printf("Warning: failed to unlock profile: %v", err)
 		}
