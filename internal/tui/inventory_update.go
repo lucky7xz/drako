@@ -117,6 +117,7 @@ func (inv *inventoryModel) keepStaged(armed bool, again string) bool {
 type pendingDelete struct {
 	rel   string // path relative to the config dir, for profiles.MoveToTrash
 	name  string // display name the user has to type
+	link  bool   // the file is a link: only the link goes, and the texts say so
 	typed string
 }
 
@@ -318,7 +319,7 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			inv.status = m.lockedRefusal()
 			return m, nil
 		}
-		inv.pending = &pendingDelete{rel: rel, name: name}
+		inv.pending = &pendingDelete{rel: rel, name: name, link: lair.LinkTarget(m.profile.configDir, rel) != ""}
 
 	// Lift and Place
 	case settings.Confirm:
@@ -415,6 +416,9 @@ func (m Model) updatePendingDelete(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			inv.seen[i] = slices.DeleteFunc(inv.seen[i], func(f string) bool { return f == filepath.Base(pd.rel) })
 		}
 		inv.status, inv.statusOK = "Trashed "+pd.name+" → trash/", true
+		if pd.link {
+			inv.status = "Trashed the link " + pd.name + " → trash/ · the file stays"
+		}
 		return m, nil
 
 	// A space arrives as KeySpace on unix and KeyRunes on Windows, but both

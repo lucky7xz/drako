@@ -71,6 +71,9 @@ func (m Model) viewInventoryMode(hint string) string {
 	statusLine := " " // Reserve space
 	if pd := m.inventory.pending; pd != nil {
 		prompt := fmt.Sprintf("Type '%s' to trash it now: %s_", pd.name, pd.typed)
+		if pd.link {
+			prompt = fmt.Sprintf("Type '%s' to trash its link (the file stays): %s_", pd.name, pd.typed)
+		}
 		statusLine = m.styles.StatusNegative.Render(truncateText(prompt, m.termWidth-LayoutSideMargin))
 	} else if m.inventory.status != "" {
 		style := m.styles.StatusNegative

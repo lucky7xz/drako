@@ -362,3 +362,29 @@ func TestInventoryDelete_GlassrootCannotConfirm(t *testing.T) {
 		t.Error("the prompt should be discarded under glassroot")
 	}
 }
+
+// A deck that is a link: the prompt and the result say only the link goes.
+func TestInventoryDelete_LinkedDeck(t *testing.T) {
+	m, dir := editInventoryModel(t)
+	orig := filepath.Join(t.TempDir(), "eq.profile.toml")
+	inDir := filepath.Join(dir, "eq.profile.toml")
+	if err := os.Rename(inDir, orig); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(orig, inDir); err != nil {
+		t.Fatal(err)
+	}
+
+	m.termWidth = 100
+	m = send(t, m, keyType(tea.KeyDelete))
+	if view := m.viewInventoryMode(m.keyHint()); !strings.Contains(view, "Type 'eq' to trash its link (the file stays): _") {
+		t.Errorf("the prompt should say only the link goes:\n%s", view)
+	}
+	m = send(t, m, keyRune("eq"), keyType(tea.KeyEnter))
+	if want := "Trashed the link eq → trash/ · the file stays"; m.inventory.status != want {
+		t.Errorf("status = %q, want %q", m.inventory.status, want)
+	}
+	if _, err := os.Stat(orig); err != nil {
+		t.Errorf("the linked file should stay: %v", err)
+	}
+}
