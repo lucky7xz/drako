@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/lucky7xz/drako/internal/lair"
 )
 
 func luaScript(t *testing.T, body string) string {
@@ -84,5 +86,48 @@ func TestRunLuaFailures(t *testing.T) {
 func TestRunLuaIsNotAFolderCommand(t *testing.T) {
 	if worksInFolder([]string{"drako", "run-lua", "x.lua"}) {
 		t.Error("run-lua must work without drako's folder")
+	}
+}
+
+// The shipped example (luadeck_example/demo.lua) writes profiles drako
+// accepts: one per flag, both with none, and never over a file that exists.
+func TestLuadeckExample(t *testing.T) {
+	dir := t.TempDir()
+	if _, err := lair.RestoreBootstrap(dir); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(dir)
+	grid := filepath.Join("inventory", "demo-grid.profile.toml")
+	hello := filepath.Join("inventory", "demo-hello.profile.toml")
+	script := filepath.Join("luadeck_example", "demo.lua")
+
+	if code, out, errOut := runLua(t, script, "--grid"); code != 0 || !strings.Contains(out, "wrote") {
+		t.Fatalf("--grid: code %d, out %q, stderr %q", code, out, errOut)
+	}
+	if _, err := os.Stat(hello); err == nil {
+		t.Fatal("--grid also wrote demo-hello")
+	}
+
+	// A file that is there is kept as it is.
+	if err := os.WriteFile(grid, []byte("X = 1\nY = 1\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	code, out, errOut := runLua(t, script)
+	if code != 0 || !strings.Contains(out, "kept") || !strings.Contains(out, "wrote") {
+		t.Fatalf("no flags: code %d, out %q, stderr %q", code, out, errOut)
+	}
+	if b, _ := os.ReadFile(grid); string(b) != "X = 1\nY = 1\n" {
+		t.Error("an existing file was overwritten")
+	}
+
+	// What it writes passes drako check.
+	if err := os.Remove(grid); err != nil {
+		t.Fatal(err)
+	}
+	runLua(t, script, "--grid")
+	var checked int
+	captureStdout(t, func() { checked = HandleCheckCommand([]string{"drako", "check", grid, hello}) })
+	if checked != 0 {
+		t.Errorf("drako check on the generated profiles exits %d", checked)
 	}
 }

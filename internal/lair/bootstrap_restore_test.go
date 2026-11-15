@@ -22,6 +22,7 @@ func TestRestoreBootstrap_FullSetIntoEmptyDir(t *testing.T) {
 		"themes.toml",
 		"config.toml",
 		"specs/example.spec.toml",
+		"luadeck_example/demo.lua",
 	} {
 		if !slices.Contains(restored, want) {
 			t.Errorf("restored list missing %q; got %v", want, restored)
