@@ -197,7 +197,7 @@ func (m Model) renderProfileBar(availWidth int, hint string) string {
 	if m.GlassrootMode {
 		badges += lipgloss.NewStyle().Foreground(lipgloss.Color("#A8E6CF")).Render("🧊 G-ROOT")
 	}
-	tail := m.styles.Help.Render(hint)
+	tail := hint // not dimmed: the terminal's own text colour, like PROFILE
 	if badges != "" {
 		tail = badges + sep + tail
 	}

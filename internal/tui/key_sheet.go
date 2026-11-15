@@ -231,6 +231,6 @@ func (m Model) renderKeySheet() string {
 
 	// The title and hint start in the ▸ column, one level out from the sections.
 	raw := append([]string{m.styles.Title.Padding(0).Background(bg).Render("Keys"), ""}, body...)
-	raw = append(raw, "", m.styles.Help.Background(bg).Render(truncateText(hint, width)))
+	raw = append(raw, "", lipgloss.NewStyle().Background(bg).Foreground(m.styles.DropdownPopup.GetForeground()).Render(truncateText(hint, width)))
 	return m.framePopup(raw)
 }

@@ -90,7 +90,9 @@ func (m Model) viewInventoryMode(hint string) string {
 	tail := " | " + hint
 	room := max(1, m.termWidth-appStyle.GetHorizontalMargins()-lipgloss.Width(tail))
 	label := truncateText(version.AppName+" | "+version.String(), room)
-	footer := m.styles.Footer.PaddingTop(0).Render(m.styles.Help.Render(label + tail))
+	// The hint is not dimmed: it takes the terminal's own text colour.
+	footerLine := m.styles.Help.Render(label+" | ") + hint
+	footer := m.styles.Footer.UnsetForeground().PaddingTop(0).Render(footerLine)
 
 	// Everything except the two grids is fixed-height chrome — measure it
 	// (gridRowBudget sums lipgloss.Height of each piece, exactly like the
@@ -119,7 +121,7 @@ func (m Model) viewInventoryMode(hint string) string {
 		fixedBudget = budget()
 	}
 	footerPad := min(max(fixedBudget-equippedWhole-inventoryWhole, 0), m.styles.Footer.GetPaddingTop())
-	footer = m.styles.Footer.PaddingTop(footerPad).Render(m.styles.Help.Render(label + tail))
+	footer = m.styles.Footer.UnsetForeground().PaddingTop(footerPad).Render(footerLine)
 	fixedBudget -= footerPad
 
 	// Split the remaining room between the two grids: whichever list is
