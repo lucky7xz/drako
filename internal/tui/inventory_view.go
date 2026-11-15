@@ -36,7 +36,7 @@ func (m Model) viewInventoryMode(hint string) string {
 	// The count is of the staged list, so the budget updates while arranging.
 	equippedLabel := fmt.Sprintf("Equipped Items (%d/%d)", len(visible), equip.MaxEquipped)
 	if len(visible) > equip.MaxEquipped {
-		equippedLabel += " ⚠"
+		equippedLabel += fmt.Sprintf(" ⚠ (%d max)", equip.MaxEquipped)
 	}
 	equippedHeader := m.styles.ListHeader.Render(equippedLabel)
 	inventoryHeader := m.styles.ListHeader.Render("Inventory Items")

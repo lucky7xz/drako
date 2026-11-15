@@ -159,13 +159,16 @@ func (m Model) renderProfileCounter() string {
 	// every profile but only the first MaxEquipped have a 1-9 chord; at zero
 	// there is nothing to switch to and the grid is the rescue fallback.
 	marker := ""
-	if total > equip.MaxEquipped || total == 0 {
-		marker = "⚠ "
+	switch {
+	case total == 0:
+		marker = fmt.Sprintf("⚠ (press [%s]) ", m.Config.Keys.Inventory)
+	case total > equip.MaxEquipped:
+		marker = fmt.Sprintf("⚠ (%d max) ", equip.MaxEquipped)
 	}
-	// A deck that loaded with flaws says so here, and names the command that
-	// lists them. No popup: the deck works, and check is where to read why.
+	// A profile that loaded with flaws says so here. No popup: it works, and
+	// drako check lists what is wrong.
 	if x > 0 && len(m.profile.profiles[m.profile.activeIndex].Flaws) > 0 {
-		marker = "⚠ check "
+		marker = "⚠ (flawed) "
 	}
 	counter := fmt.Sprintf("< %d / %d %s>", x, total, marker)
 	return m.styles.Title.Render(counter)

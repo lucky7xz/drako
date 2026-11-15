@@ -460,13 +460,13 @@ func TestRenderProfileCounter(t *testing.T) {
 	}{
 		{name: "under the cap", total: 4, activeIndex: 2, want: "< 3 / 4 >"},
 		{name: "at the cap", total: 9, activeIndex: 8, want: "< 9 / 9 >"},
-		{name: "past the cap is flagged", total: 15, activeIndex: 11, want: "< 12 / 15 ⚠ >"},
-		{name: "no profiles is the rescue grid", total: 0, activeIndex: 0, want: "< 0 / 0 ⚠ >"},
+		{name: "past the cap is flagged", total: 15, activeIndex: 11, want: "< 12 / 15 ⚠ (9 max) >"},
+		{name: "no profiles is the rescue grid", total: 0, activeIndex: 0, want: "< 0 / 0 ⚠ (press [i]) >"},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			cfg := settings.Config{X: 2, Y: 2, Theme: "default"}
+			cfg := settings.Config{X: 2, Y: 2, Theme: "default", Keys: settings.InputConfig{Inventory: "i"}}
 			m := Model{
 				Config:  cfg,
 				styles:  BuildStyles(cfg, ""),
@@ -488,7 +488,7 @@ func TestProfileCounterMarksAFlawedDeck(t *testing.T) {
 	profiles[1].Flaws = []profile.Finding{{Level: "error", Msg: "two cells share A0"}}
 	m := Model{Config: cfg, styles: BuildStyles(cfg, ""), profile: profileState{profiles: profiles}}
 
-	for idx, want := range []string{"< 1 / 2 >", "< 2 / 2 ⚠ check >"} {
+	for idx, want := range []string{"< 1 / 2 >", "< 2 / 2 ⚠ (flawed) >"} {
 		m.profile.activeIndex = idx
 		if got := strings.TrimSpace(ansi.Strip(m.renderProfileCounter())); got != want {
 			t.Errorf("deck %d: counter = %q, want %q", idx+1, got, want)

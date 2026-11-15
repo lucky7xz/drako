@@ -82,7 +82,7 @@ func TestKeyHintShowsTheWaitingLeader(t *testing.T) {
 	usual := m.keyHint()
 	m.leader.pending = true
 	waiting := m.keyHint()
-	if !strings.HasPrefix(waiting, "m …") {
+	if !strings.HasPrefix(waiting, "m + [...]") {
 		t.Errorf("hint = %q, want it to show the waiting leader", waiting)
 	}
 	if lipgloss.Width(waiting) != lipgloss.Width(usual) {
