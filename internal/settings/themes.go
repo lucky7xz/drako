@@ -28,7 +28,7 @@ var dracula = DracoThemeConfig{
 	Secondary:  "#ff8c00",
 	Background: "#0d0221",
 	Foreground: "#f0f0f0",
-	Comment:    "#5c527f",
+	Comment:    "#776ca0",
 	Success:    "#00f5d4",
 	Warning:    "#f9f871",
 	Error:      "#ff2e63",
