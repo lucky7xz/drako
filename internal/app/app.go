@@ -181,7 +181,9 @@ func Run() int {
 			case strings.HasPrefix(plan.Name, "drako open"):
 				cli.HandleOpenCommand(plan.Name)
 			default:
-				runPlan(home, plan)
+				if code, end := runPlan(home, plan); end {
+					return code
+				}
 			}
 			clearScreen()
 		}

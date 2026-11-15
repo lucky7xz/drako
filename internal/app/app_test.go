@@ -3,8 +3,10 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
+	"github.com/lucky7xz/drako/internal/lair"
 	"github.com/lucky7xz/drako/internal/launch"
 	"github.com/lucky7xz/drako/internal/profile"
 	"github.com/lucky7xz/drako/internal/settings"
@@ -127,6 +129,30 @@ func TestRunPlan_NothingToRunPauses(t *testing.T) {
 		runPlan(nil, launch.For(cfg.DefaultShell, cfg.Commands, sel, "")) // nothing to run, so nothing is logged
 		if !paused {
 			t.Errorf("%+v: expected a pause", sel)
+		}
+	}
+}
+
+// drako told to end (TERM) while a cell runs: the cell ends with it, and
+// runPlan says to exit with the signal's code, without asking for a key.
+func TestRunPlan_ToldToEndDoesNotPause(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("no kill on Windows")
+	}
+	old := pauseFn
+	defer func() { pauseFn = old }()
+	pauseFn = func(string) { t.Error("asked for a key after drako was told to end") }
+
+	home, err := lair.Create(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer home.Close()
+
+	for _, debug := range []bool{false, true} {
+		plan := launch.Plan{Name: "long", Argv: []string{"sh", "-c", "kill -TERM $PPID; exec sleep 5"}, Debug: debug}
+		if code, end := runPlan(home, plan); !end || code != 143 {
+			t.Errorf("debug=%v: got code %d, end %v; want 143, true", debug, code, end)
 		}
 	}
 }

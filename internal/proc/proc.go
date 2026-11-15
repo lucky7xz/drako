@@ -52,8 +52,18 @@ func command(plan launch.Plan, env []string) *exec.Cmd {
 	return cmd
 }
 
+// ToldToEnd is what Run and Capture return when drako itself was sent TERM or
+// HUP while the command ran. The signal was passed on and the command has
+// ended; drako is to end too, with Code, and not go back to the grid.
+type ToldToEnd struct {
+	Code int // 128 + the signal's number, as a shell reports a death by signal
+}
+
+func (e *ToldToEnd) Error() string { return "drako was told to end" }
+
 // runRelayed runs cmd and keeps drako alive until it exits: Ctrl-C and Ctrl-\
-// already reach it through the terminal, TERM and HUP are passed on.
+// already reach it through the terminal, TERM and HUP are passed on. After a
+// TERM or HUP the result is a *ToldToEnd, however the command ended.
 func runRelayed(cmd *exec.Cmd) error {
 	sigs := make(chan os.Signal, 1)
 	// Registered before Start, so no signal can take drako's default exit.
@@ -63,18 +73,28 @@ func runRelayed(cmd *exec.Cmd) error {
 		return err
 	}
 	done := make(chan struct{})
-	defer close(done)
+	told := make(chan *ToldToEnd, 1)
 	go func() {
+		var end *ToldToEnd
+		defer func() { told <- end }()
 		for {
 			select {
 			case sig := <-sigs:
 				if sig == syscall.SIGTERM || sig == syscall.SIGHUP {
 					cmd.Process.Signal(sig)
+					if end == nil {
+						end = &ToldToEnd{Code: 128 + int(sig.(syscall.Signal))}
+					}
 				}
 			case <-done:
 				return
 			}
 		}
 	}()
-	return cmd.Wait()
+	err := cmd.Wait()
+	close(done)
+	if end := <-told; end != nil {
+		return end
+	}
+	return err
 }

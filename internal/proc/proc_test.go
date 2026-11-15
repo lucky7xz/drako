@@ -7,6 +7,7 @@ import (
 	"slices"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/lucky7xz/drako/internal/launch"
 )
@@ -72,16 +73,31 @@ func TestRunRelayedOutlivesInterrupt(t *testing.T) {
 	}
 }
 
-func TestRunRelayedPassesTerm(t *testing.T) {
+// TERM sent to drako is passed on to the command, and the result says drako
+// is to end too.
+func TestRunRelayedPassesTermAndEnds(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("no kill on Windows")
 	}
+	// The command would run 5 s and exit 0; only a passed-on TERM ends it early.
+	start := time.Now()
 	err := runRelayed(exec.Command("sh", "-c", "kill -TERM $PPID; exec sleep 5"))
-	var exitErr *exec.ExitError
-	if !errors.As(err, &exitErr) {
-		t.Fatalf("want the command killed by TERM, got %v", err)
+	var end *ToldToEnd
+	if !errors.As(err, &end) || end.Code != 128+int(syscall.SIGTERM) {
+		t.Fatalf("want ToldToEnd with code 143, got %v", err)
 	}
-	if ws, ok := exitErr.Sys().(syscall.WaitStatus); !ok || !ws.Signaled() || ws.Signal() != syscall.SIGTERM {
-		t.Errorf("want death by SIGTERM, got %v", err)
+	if time.Since(start) > 3*time.Second {
+		t.Error("the command was not ended by the passed-on TERM")
+	}
+}
+
+func TestRunRelayedHangUpEnds(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("no kill on Windows")
+	}
+	err := runRelayed(exec.Command("sh", "-c", "kill -HUP $PPID; exec sleep 5"))
+	var end *ToldToEnd
+	if !errors.As(err, &end) || end.Code != 128+int(syscall.SIGHUP) {
+		t.Fatalf("want ToldToEnd with code 129, got %v", err)
 	}
 }
