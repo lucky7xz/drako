@@ -105,9 +105,9 @@ func TestGridScreen_StatusMessageAtTheSmallestSize(t *testing.T) {
 		if small, _, _ := m.belowMinimum(); small {
 			continue
 		}
-		m.profile.statusMessage = "Pinned core"
+		m.profile.statusMessage = "Anchored core"
 		lines := plain(m)
-		if i, _ := lineWith(lines, "Pinned core"); i < 0 || len(lines) != h {
+		if i, _ := lineWith(lines, "Anchored core"); i < 0 || len(lines) != h {
 			t.Errorf("80x%d: status at line %d of %d", h, i, len(lines))
 		}
 	}

@@ -90,14 +90,14 @@ func TestSheetHidesWhatGlassrootBlocks(t *testing.T) {
 		}
 	}
 	for _, c := range []struct{ title, does string }{
-		{"GRID", "path mode"}, {"GRID", "inventory"}, {"GRID", "pin deck"},
+		{"GRID", "path mode"}, {"GRID", "inventory"}, {"GRID", "anchor profile"},
 		{"GRID", "batch mode"}, {"FOLDER", "batch these"}, {"EXPLAIN", "copy"},
 	} {
 		if does(secs, c.title, c.does) {
 			t.Errorf("glassroot sheet offers %s %q", c.title, c.does)
 		}
 	}
-	if !does(secs, "GRID", "explain") || !does(secs, "GRID", "previous deck") {
+	if !does(secs, "GRID", "explain") || !does(secs, "GRID", "previous profile") {
 		t.Error("glassroot allows explain and deck switching; the sheet should keep them")
 	}
 }
@@ -279,7 +279,7 @@ func TestSheetDrawsKeysAsChips(t *testing.T) {
 	for _, want := range []string{
 		"▸ GRID", "  FOLDER",
 		"[enter] run cell, open folder · [e] explain",
-		"[o] previous deck · [p] next deck",
+		"[o] previous profile · [p] next profile",
 		"[esc q] close",
 	} {
 		if !strings.Contains(out, want) {

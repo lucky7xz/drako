@@ -75,12 +75,12 @@ func (m *Model) setProfileStatus(message string, positive bool) tea.Cmd {
 
 func (m *Model) toggleProfileLock() tea.Cmd {
 	if strings.TrimSpace(m.profile.configDir) == "" {
-		return m.setProfileStatus("Pivot unavailable", false)
+		return m.setProfileStatus("Cannot anchor: no config folder", false)
 	}
 
 	currentName := m.ActiveProfileName()
 	if currentName == "" {
-		return m.setProfileStatus("Nothing to pin in Rescue Mode", false)
+		return m.setProfileStatus("Nothing to anchor in Rescue Mode", false)
 	}
 	normCurrent := equip.NormalizeName(currentName)
 	normPivot := equip.NormalizeName(m.profile.pivotName)
@@ -93,20 +93,20 @@ func (m *Model) toggleProfileLock() tea.Cmd {
 		if err == nil {
 			m.profile.locked = false
 			m.profile.pivotName = ""
-			messageCmd = m.setProfileStatus("Pivot cleared", false)
+			messageCmd = m.setProfileStatus("Anchor lifted", false)
 		}
 	} else {
 		err = lair.WritePivotLocked(m.profile.configDir, currentName)
 		if err == nil {
 			m.profile.locked = true
 			m.profile.pivotName = currentName
-			messageCmd = m.setProfileStatus(fmt.Sprintf("Pinned %s", currentName), true)
+			messageCmd = m.setProfileStatus(fmt.Sprintf("Anchored %s", currentName), true)
 		}
 	}
 
 	if err != nil {
 		log.Printf("pivot update failed: %v", err)
-		return m.setProfileStatus("Pivot error", false)
+		return m.setProfileStatus("Could not save the anchor", false)
 	}
 	return messageCmd
 }

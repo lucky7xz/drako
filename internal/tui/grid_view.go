@@ -192,7 +192,7 @@ func (m Model) renderProfileBar(availWidth int, hint string) string {
 
 	var badges string
 	if m.profile.pivotName != "" {
-		badges += m.styles.LockBadge.Render(fmt.Sprintf("🔒 %s", m.profile.pivotName))
+		badges += m.styles.LockBadge.Render(fmt.Sprintf("⚓ %s", m.profile.pivotName))
 	}
 	if m.GlassrootMode {
 		badges += lipgloss.NewStyle().Foreground(lipgloss.Color("#A8E6CF")).Render("🧊 G-ROOT")

@@ -58,7 +58,7 @@ numb_modifier = "alt"
 #path_grid_mode = "tab"
 
 # Two different things, one modifier apart:
-#   lock          (r)      pins the active profile, so drako starts on it
+#   lock          (r)      anchors the active profile, so drako starts on it
 #   session_lock  (alt+r)  locks the screen; uses numb_modifier above and
 #                          works from any screen, with auto lock on or off
 #lock = "r"

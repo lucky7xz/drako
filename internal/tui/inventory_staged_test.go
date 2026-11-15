@@ -102,12 +102,12 @@ func TestInventoryMarksTheActiveAndPinnedDeck(t *testing.T) {
 	if !strings.Contains(out, "▸ alpha.profile.toml") || strings.Contains(out, "▸ beta") {
 		t.Errorf("only alpha, the deck in use, carries the mark:\n%s", out)
 	}
-	if !strings.Contains(out, "active deck") {
-		t.Errorf("the cursor is on alpha; the status line should say it is the active deck:\n%s", out)
+	if !strings.Contains(out, "active profile") {
+		t.Errorf("the cursor is on alpha; the status line should say it is the active profile:\n%s", out)
 	}
 	m = send(t, m, keyType(tea.KeyRight))
-	if out := ansi.Strip(m.viewInventoryMode("")); !strings.Contains(out, "pinned — unpin with r in the grid") {
-		t.Errorf("the cursor is on beta, the pinned deck:\n%s", out)
+	if out := ansi.Strip(m.viewInventoryMode("")); !strings.Contains(out, "anchored — lift it with r in the grid") {
+		t.Errorf("the cursor is on beta, the anchored profile:\n%s", out)
 	}
 }
 
@@ -160,7 +160,7 @@ func TestHeldDeckFollowsIntoTheOtherList(t *testing.T) {
 		t.Errorf("the held deck stands in the empty list, once:\n%s", out)
 	}
 	m = send(t, m, keyType(tea.KeyDown))
-	if m.inventory.focusedList != equip.ListInventory || m.inventory.status != "Place the deck first" {
+	if m.inventory.focusedList != equip.ListInventory || m.inventory.status != "Place the profile first" {
 		t.Errorf("focus = %d, status = %q", m.inventory.focusedList, m.inventory.status)
 	}
 	if strings.Contains(out, "Holding") {

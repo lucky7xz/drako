@@ -186,10 +186,10 @@ func (m Model) aboutSelected() string {
 	name := strings.TrimSuffix((*listPtr)[inv.cursor], equip.ProfileSuffix)
 	var about []string
 	if m.isActiveProfile(name) {
-		about = append(about, "active deck")
+		about = append(about, "active profile")
 	}
 	if m.isLockedProfile(name) {
-		about = append(about, "pinned — unpin with "+m.Config.Keys.Lock+" in the grid")
+		about = append(about, "anchored — lift it with "+m.Config.Keys.Lock+" in the grid")
 	}
 	return strings.Join(about, " · ")
 }

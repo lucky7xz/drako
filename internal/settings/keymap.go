@@ -176,10 +176,10 @@ func (c Config) Screen(id ScreenID) Screen {
 	help := set("help", k.Help, Help, "this sheet")
 	// These act on the deck in use, so they belong to the grid alone.
 	decks := []Bind{
-		gate(set("lock", k.Lock, PinDeck, "pin deck")),
-		{Keys: chords, Act: SwitchDeck, Show: mod + "+1-9", Does: "switch deck"},
-		set("profile_prev", k.ProfilePrev, PrevDeck, "previous deck"),
-		set("profile_next", k.ProfileNext, NextDeck, "next deck"),
+		gate(set("lock", k.Lock, PinDeck, "anchor profile")),
+		{Keys: chords, Act: SwitchDeck, Show: mod + "+1-9", Does: "switch profile"},
+		set("profile_prev", k.ProfilePrev, PrevDeck, "previous profile"),
+		set("profile_next", k.ProfileNext, NextDeck, "next profile"),
 	}
 	leader := set("leader", k.Leader, Leader, "leader")
 	explain := set("explain", k.Explain, Explain, "explain")
@@ -220,7 +220,7 @@ func (c Config) Screen(id ScreenID) Screen {
 		name = "the grid"
 		sheet, q = "GRID", "quit"
 		binds = [][]Bind{decks, one(
-			Bind{Keys: digits, Act: PickDeck, Show: k.Leader + " 1-9", Does: "switch deck"},
+			Bind{Keys: digits, Act: PickDeck, Show: k.Leader + " 1-9", Does: "switch profile"},
 			gate(Bind{Keys: []string{"b"}, Act: Batch, Show: k.Leader + " b", Does: "batch mode"}),
 		)}
 	case Folder:

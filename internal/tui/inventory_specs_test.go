@@ -422,8 +422,8 @@ func TestSpecsOverlay_LockedProfileNeverMoves(t *testing.T) {
 		if got := names(m.inventory.State.Visible); got != "eq st" {
 			t.Errorf("Visible = %q, want the locked deck kept alongside the spec", got)
 		}
-		if !strings.Contains(m.inventory.status, "locked") {
-			t.Errorf("status = %q, want it to say the locked deck was kept", m.inventory.status)
+		if !strings.Contains(m.inventory.status, "Kept eq (anchored).") {
+			t.Errorf("status = %q, want it to say the anchored profile was kept", m.inventory.status)
 		}
 	})
 
@@ -626,7 +626,8 @@ func TestSpecDetailFit(t *testing.T) {
 		{"fits untouched", "git rust k8s", 40, "git rust k8s"},
 		{"exactly fits", "git rust k8s", 12, "git rust k8s"},
 		{"drops whole names and counts them", "alpha bravo charlie delta echo", 20, "alpha bravo +3"},
-		{"counts every name when none fit", "aaaaaaaaaaaa bbbbbbbbbbbb", 8, "2 decks"},
+		{"counts every name when none fit", "aaaaaaaaaaaa bbbbbbbbbbbb", 10, "2 profiles"},
+		{"the count alone when even that is too wide", "aaaaaaaaaaaa bbbbbbbbbbbb", 8, "+2"},
 		{"single long name still truncates", "aaaaaaaaaaaaaaaaaaaa", 8, "aaaaa..."},
 		{"empty stays empty", "", 20, ""},
 	}

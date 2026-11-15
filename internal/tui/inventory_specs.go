@@ -97,7 +97,7 @@ func (p specPlan) label() string {
 func (p specPlan) detail() string {
 	switch {
 	case p.verb == specStrip:
-		return "stash every equipped deck"
+		return "stash every equipped profile"
 	case p.parseErr != nil:
 		return "unreadable"
 	}
@@ -298,7 +298,7 @@ func (m Model) planVerdict(p specPlan) (string, verdictKind) {
 		return fmt.Sprintf("%s does not parse: %v", p.subject(), p.parseErr), verdictBlocked
 
 	case p.verb == specEquip && len(p.profiles) == 0:
-		return fmt.Sprintf("%s lists no decks", p.subject()), verdictBlocked
+		return fmt.Sprintf("%s lists no profiles", p.subject()), verdictBlocked
 
 	case p.verb == specEquip && len(p.missing) == len(p.profiles):
 		// Equipping it would stash every deck; strip is the row for that.
@@ -382,7 +382,7 @@ func (m Model) stagedSummary(p specPlan) string {
 		msg += fmt.Sprintf(" Skipped %s (not installed).", summarizeNames(p.missing))
 	}
 	if locked := m.lockedFile(); locked != "" {
-		msg += fmt.Sprintf(" Kept %s (locked).", strings.TrimSuffix(locked, equip.ProfileSuffix))
+		msg += fmt.Sprintf(" Kept %s (anchored).", strings.TrimSuffix(locked, equip.ProfileSuffix))
 	}
 	return msg + " Apply to commit."
 }
@@ -453,7 +453,10 @@ func specDetailFit(detail string, width int) string {
 
 	// Too narrow for even one name and its counter: give the count alone.
 	if shown == 0 {
-		return truncateText(fmt.Sprintf("%d decks", len(names)), width)
+		if count := fmt.Sprintf("%d profiles", len(names)); lipgloss.Width(count) <= width {
+			return count
+		}
+		return truncateText(fmt.Sprintf("+%d", len(names)), width)
 	}
 	return fmt.Sprintf("%s +%d", strings.Join(names[:shown], " "), len(names)-shown)
 }

@@ -159,7 +159,7 @@ func (m Model) isLockedProfile(name string) bool {
 
 // lockedRefusal is the message both guards show, naming the configured key.
 func (m Model) lockedRefusal() string {
-	return "Locked profile — unlock it with " + m.Config.Keys.Lock + " in the grid"
+	return "Anchored profile — lift the anchor with " + m.Config.Keys.Lock + " in the grid"
 }
 
 // selectedFile finds where the highlighted deck really is: staged moves leave
@@ -204,7 +204,7 @@ func ApplyInventoryChangesCmd(configDir string, m inventoryModel) tea.Cmd {
 
 		// Persist the visible order into pivot.toml as equipped_order.
 		if err := lair.WritePivotEquippedOrder(configDir, desired); err != nil {
-			return inventoryErrorMsg{err: fmt.Errorf("could not save the deck order: pivot.toml: %w", err)}
+			return inventoryErrorMsg{err: fmt.Errorf("could not save the profile order: pivot.toml: %w", err)}
 		}
 
 		return reloadProfilesMsg{}
@@ -261,7 +261,7 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		} else if inv.State.HeldItem != nil && inv.focusedList == equip.ListInventory {
 			// A held deck is drawn in a list, where it will land. Below the
 			// lists there is nowhere to show it.
-			inv.status = "Place the deck first"
+			inv.status = "Place the profile first"
 		} else if inv.focusedList < focusLast {
 			inv.focusedList++
 			inv.cursor = 0
@@ -449,7 +449,7 @@ func (m Model) refreshInventory() Model {
 		if listPtr, err := fresh.State.GetList(prev.focusedList); err == nil && m.inventory.cursor >= len(*listPtr) {
 			m.inventory.cursor = max(len(*listPtr)-1, 0)
 		}
-		m.inventory.status = "Decks changed on disk — inventory reloaded"
+		m.inventory.status = "Profiles changed on disk — inventory reloaded"
 	}
 	return m
 }

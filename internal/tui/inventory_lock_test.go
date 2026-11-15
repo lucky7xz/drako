@@ -28,8 +28,8 @@ func TestInventoryLock_RefusesToLiftTheLockedProfile(t *testing.T) {
 	if len(m.inventory.State.Visible) != 1 || m.inventory.State.Visible[0] != "eq.profile.toml" {
 		t.Errorf("Visible = %v, want it untouched", m.inventory.State.Visible)
 	}
-	if !strings.Contains(m.inventory.status, "Locked") {
-		t.Errorf("status = %q, want it to mention the lock", m.inventory.status)
+	if !strings.Contains(m.inventory.status, "Anchored profile") {
+		t.Errorf("status = %q, want it to mention the anchor", m.inventory.status)
 	}
 	// The remedy has to point at the grid, since r no longer works here.
 	if !strings.Contains(m.inventory.status, "grid") {

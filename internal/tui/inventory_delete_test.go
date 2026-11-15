@@ -172,8 +172,8 @@ func TestInventoryDelete_Guards(t *testing.T) {
 		if m.inventory.pending != nil {
 			t.Error("the locked profile must not be deletable")
 		}
-		if !strings.Contains(m.inventory.status, "Locked") {
-			t.Errorf("status = %q, want it to mention the lock", m.inventory.status)
+		if !strings.Contains(m.inventory.status, "Anchored profile") {
+			t.Errorf("status = %q, want it to mention the anchor", m.inventory.status)
 		}
 	})
 
