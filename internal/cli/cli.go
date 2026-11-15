@@ -53,6 +53,8 @@ func HandleCLI(args []string) (handled bool, code int) {
 		return true, HandleExplainCommand(args)
 	case "run":
 		return true, HandleRunCommand(args)
+	case "run-lua":
+		return true, HandleRunLuaCommand(args)
 	case "agents":
 		return true, HandleAgentsCommand(args)
 	case "check", "--check":
@@ -87,7 +89,8 @@ func worksInFolder(args []string) bool {
 }
 
 // folderCommands names the commands, aliases included, that always work in
-// drako's folder. The others (version, help, open, check-terminal, agents)
+// drako's folder. The others (version, help, open, check-terminal, agents,
+// run-lua)
 // do not need it.
 var folderCommands = map[string]bool{
 	"ls": true, "list": true,
@@ -109,6 +112,7 @@ func PrintUsage() {
 		{"ls", "List equipped profiles and their cell addresses"},
 		{"explain [profile:]<addr>", "Show one cell's command, description, flags"},
 		{"run [profile:]<addr>", "Run one cell; exits with its exit code"},
+		{"run-lua <script.lua> [args...]", "Run a Lua script (Lua 5.1)"},
 		{"agents", "Brief an AI agent on driving drako (ls, explain, run)"},
 		{"check [path ...]", "Validate profile files for authoring errors"},
 		{"check-terminal", "Show the color profile drako will render with"},

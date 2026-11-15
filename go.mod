@@ -12,6 +12,7 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/muesli/termenv v0.16.0
 	github.com/shirou/gopsutil/v3 v3.24.5
+	github.com/yuin/gopher-lua v1.1.2
 	golang.org/x/term v0.36.0
 )
 

@@ -73,6 +73,15 @@ var rules = []rule{
 		allowed:    []string{"cli", "app", "tui"},
 	},
 	{
+		// A Lua script has the user's full rights: the interpreter's own
+		// os and io libraries start programs and write files, which the
+		// rules above cannot see inside a dependency. So the interpreter
+		// has one door, drako run-lua.
+		capability: "run a Lua script",
+		imports:    []string{"github.com/yuin/gopher-lua"},
+		allowed:    []string{"cli"},
+	},
+	{
 		capability: "step around Go's memory safety",
 		imports:    []string{"unsafe", "C"},
 	},
