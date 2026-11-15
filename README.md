@@ -171,6 +171,7 @@ Beyond the TUI, drako gives you CLI commands for managing decks at scale:
 | `drako ls`                  | Print every equipped deck as a table — pipe it, grep it, or feed it to an AI |
 | `drako explain [profile:]<addr>` | Zoom into one cell: name, actual command, description, auto_close (e.g. `A0`, `work:A1.2`) |
 | `drako run [profile:]<addr>` | Run one cell from the shell and exit with its exit code; `danger` cells refuse |
+| `drako run-lua <script.lua> [args]` | Run a Lua 5.1 script with drako's built-in interpreter — see [Lua Scripts](#-lua-scripts) |
 | `drako agents`              | Print a brief that teaches an AI agent to drive the deck — `drako agents >> AGENTS.md` |
 | `drako summon <repo>`       | Pull the decks from any Git host; pin with `--sha256`/`--rev`                 |
 | `drako summon <folder>`     | Bring in the decks (and their assets) from a folder on disk, e.g. `drako summon .` |
@@ -178,7 +179,7 @@ Beyond the TUI, drako gives you CLI commands for managing decks at scale:
 | `drako spec <name>`         | Equip the profiles a spec lists; stash the rest (context switch)             |
 | `drako stash <name>`        | Move a spec's profiles to the inventory                                      |
 | `drako strip`               | Move every profile to the inventory (next launch: Rescue Mode)               |
-| `drako restore-bootstrap`   | Restore any missing bootstrap files (core deck, ssh-utils, themes, specs)     |
+| `drako restore-bootstrap`   | Restore any missing bootstrap files (core profile, starter profiles, themes, specs) |
 | `drako purge`               | Reset or remove configuration — trash-first, `--interactive` available       |
 | `drako open <path>`         | Open a file, directory, or URL with the OS default application              |
 | `drako --glassroot`         | Launch a sealed surface for SSH/Wish hosting                                 |
@@ -197,7 +198,7 @@ Run any of these with no arguments for usage. Details in [Power Tools](#-power-t
 - **Batch Launch:** `m` then `b`, then `Space` to mark cells and `Enter` to lay them out and launch — see [Batch Launch](#-batch-launch). Not available in Glassroot Mode. Works inside a folder's dropdown too — `m`, `b` there batches that folder's items.
 - **Cycle Profile:** `o` (prev) and `p` (next).
 - **Profile Inventory:** `i`. Inside, `e` opens the highlighted profile file in your editor (`$VISUAL`/`$EDITOR`), and `Del` moves it to `trash/` once you type its name to confirm. 9 profiles can be equipped at once, so each one keeps a `1-9` chord; the rest wait in the inventory. (A spec can go past 9 if you confirm it — see Profile Specs.)
-- **Lock Current Profile (for launching):** `r`.
+- **Anchor Current Profile:** `r` — drako starts on the anchored profile (⚓ in the header); `r` again lifts the anchor.
 - **Lock the Session:** `Alt` + `r` — blanks the screen behind the pump slider; `a`/`d` (or `h`/`l`, or arrows) back and forth to unlock. Works from any screen, and doesn't need `auto_lock_enabled`, which only governs the idle timeout.
 - **Grid/Path Toggle:** `Tab`.
 - **Path Mode:**
@@ -289,7 +290,7 @@ row = 2
 danger = true                      # Only the grid runs it; drako run refuses.
 ```
 
-Every cell in a deck needs its own `name`: drako finds cells by name, so of two cells with the same name only one could ever run. `drako check` reports it as an error.
+Every cell and folder item needs a `name`; `drako check` reports a missing one as an error. Two cells may share a name, since drako picks a cell by where it stands, but they look the same on the grid and in the history, so `check` warns.
 
 ## 🧶 Cross-Platform Decks (The Weaver)
 
@@ -317,7 +318,7 @@ On first run, `drako` creates:
 
 - `config.toml`: Global settings (Input Keys, Global Theme).
 - `core.profile.toml`: The default command profile (Process Monitor, System Info, etc.) — a variant deck shipped inside the binary, so the same file works on every OS. Deleted or stashed it? `drako restore-bootstrap` restores it — along with any other missing bootstrap file — any time.
-- `themes.toml`: Color palettes. The built-in `dracula` theme lives in the binary as the fallback, so it no longer needs to be defined here.
+- `themes.toml`: Color palettes. The built-in `dracula` theme lives in the binary as the fallback, so it no longer needs to be defined here. On a light terminal, set `theme = "paper"`.
 
 **NOTE:** If you've customized your color schemes, keep a backup of your `themes.toml` — how themes are configured may change in a future release.
 
@@ -352,8 +353,9 @@ cd ~/dotfiles && stow --no-folding drako
 links when the subfolder does not exist yet; `--no-folding` stops it from
 doing that.
 
-> **Decks and profiles.** This README and drako's messages use the two words
-> interchangeably: both mean a `*.profile.toml` file.
+> **Decks and profiles.** A *profile* is one `*.profile.toml` file, and it is
+> the word drako's own messages use. A *deck* is the set of commands it
+> carries. This README uses the two interchangeably.
 
 > drako never writes through a link. A file it rewrites itself, such as
 > `pivot.toml`, becomes a regular file in the folder, and the file the link
@@ -393,6 +395,16 @@ drako agents >> AGENTS.md   # or CLAUDE.md, GEMINI.md, …
 ```
 
 The brief is static — it reads no config — so it never goes stale in a file. The live map is always one `drako ls` away.
+
+### 🌙 Lua Scripts
+
+`drako run-lua` runs a Lua script with an interpreter built into drako, so the same script runs wherever drako does, with no bash or PowerShell needed for the script itself:
+
+```bash
+drako run-lua path/to/script.lua --some-flag
+```
+
+A cell uses it like any other command line. The interpreter is stock Lua 5.1 with its standard libraries open, so a script has your full rights, exactly like a shell command; it is not a sandbox. Arguments arrive in `arg`, and the script's exit code is the command's. `drako check` does not look inside scripts. The path is taken as written, and the cell still starts through your shell, so `drako` must be on your `PATH`.
 
 ### 🪄 Summoning Profiles
 
@@ -502,7 +514,7 @@ If your configuration breaks (syntax error, invalid grid), Drako won't crash. It
 Over Wish the running program *is* the connection, so glassroot tucks away the local escape hatches that don't belong in a remote session:
 
 - **No Rescue Mode.** A broken profile/config ends the session quietly rather than dropping a guest into Rescue Mode (which would reveal host paths and TOML).
-- **No filesystem, inventory, or locking.** Path mode (`Tab`), Inventory (`i`), and Lock (`r`) are off.
+- **No filesystem, inventory, or anchoring.** Path mode (`Tab`), Inventory (`i`), and Anchor (`r`) are off.
 - **No clipboard.** Copy (`y`) is disabled.
 - A `🧊 G-ROOT` badge shows in the header.
 
