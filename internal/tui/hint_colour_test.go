@@ -50,3 +50,26 @@ func TestKeyHintIsNotDimmed(t *testing.T) {
 		t.Error("inventory: the version label should stay dim")
 	}
 }
+
+// The logo's marks and the spinner were pure white, whatever the theme, and
+// vanished on a light terminal. They carry no colour now.
+func TestLogoMarksCarryNoColour(t *testing.T) {
+	old := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.TrueColor)
+	defer lipgloss.SetColorProfile(old)
+
+	m := Model{}
+	m.spinner = newSpinner()
+	m.spinner.style = lipgloss.NewStyle()
+	s := BuildStyles(settings.Config{Theme: "dracula"}, "")
+	out := s.renderHeaderArt(m.spinner.View())
+	if strings.Contains(out, "255;255;255") {
+		t.Error("the logo still draws something in pure white")
+	}
+	if c := colourAt(t, out, "z"); strings.Contains(c, "38;2") {
+		t.Errorf("the mark z is coloured %q, want the terminal's own text colour", c)
+	}
+	if c := colourAt(t, out, "╭"); !strings.Contains(c, "38;2") {
+		t.Errorf("the frame should keep the theme's primary colour, got %q", c)
+	}
+}

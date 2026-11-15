@@ -128,7 +128,7 @@ func (m *Model) applyConfig(cfg settings.Config) {
 	if m.spinner.frames == nil {
 		m.spinner = newSpinner()
 	}
-	m.spinner.style = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF"))
+	m.spinner.style = lipgloss.NewStyle() // no colour; the header draws it as a mark
 
 	// Initialize lock timeout (default minutes if not set)
 	if cfg.LockTimeoutMinutes != nil && *cfg.LockTimeoutMinutes > 0 {

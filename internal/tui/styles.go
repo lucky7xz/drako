@@ -74,7 +74,7 @@ type Styles struct {
 	ErrorTitle    lipgloss.Style
 	ErrorText     lipgloss.Style
 	ThemeName     lipgloss.Style
-	White         lipgloss.Style
+	Mark          lipgloss.Style // the logo's marks and spinner: bold, no colour
 	Footer        lipgloss.Style
 	DropdownPopup lipgloss.Style
 
@@ -274,8 +274,9 @@ func BuildStyles(cfg settings.Config, configDir string) Styles {
 		Foreground(lipgloss.Color(ui.TitleFG)).
 		Bold(true)
 
-	s.White = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#FFFFFF")).
+	// No colour: the terminal's own text colour, so the logo's marks show on
+	// a dark and on a light terminal alike.
+	s.Mark = lipgloss.NewStyle().
 		Bold(true)
 
 	s.Footer = lipgloss.NewStyle().
@@ -296,7 +297,8 @@ func BuildStyles(cfg settings.Config, configDir string) Styles {
 	return s
 }
 
-// renderHeaderArt renders the header with x and Chinese characters in white
+// renderHeaderArt renders the header: the art in the primary colour, its
+// marks (logoMarks) and the spinner in the terminal's own text colour.
 func (s Styles) renderHeaderArt(spinnerView string) string {
 	var formattedArt string
 	placeholder := "SPINNERPLACEHOLDER"
@@ -333,8 +335,8 @@ func (s Styles) renderHeaderArt(spinnerView string) string {
 				styledLine.WriteString(s.styleLineSegment(parts[0], primaryStyle))
 			}
 
-			// Add white-styled spinner
-			styledLine.WriteString(s.White.Render(spinnerView))
+			// The spinner is a mark too
+			styledLine.WriteString(s.Mark.Render(spinnerView))
 
 			// Process part after spinner
 			if len(parts) > 1 {
@@ -354,23 +356,23 @@ func (s Styles) renderHeaderArt(spinnerView string) string {
 	return lipgloss.NewStyle().PaddingBottom(1).Render(result)
 }
 
-// whiteAccents lists the header-art glyphs rendered in white instead of
-// the theme's Primary color, longest pattern first so a multi-rune match
+// logoMarks lists the header-art glyphs drawn in the terminal's own text
+// colour instead of the theme's Primary color, longest pattern first so a multi-rune match
 // (e.g. "╱╲") is tried before any of its runes could match individually.
-var whiteAccents = []string{"啸龙志", "╱╲", "✘", "◄", "►", "/", "\\", "z", ":", " ━━ ", "."}
+var logoMarks = []string{"啸龙志", "╱╲", "✘", "◄", "►", "/", "\\", "z", ":", " ━━ ", "."}
 
-// styleLineSegment renders segment with whiteAccents in white and
+// styleLineSegment renders segment with logoMarks as marks and
 // everything else in primaryStyle.
 func (s Styles) styleLineSegment(segment string, primaryStyle lipgloss.Style) string {
 	var styledLine strings.Builder
 	runes := []rune(segment)
 	for i := 0; i < len(runes); {
 		matched := false
-		for _, pat := range whiteAccents {
+		for _, pat := range logoMarks {
 			patRunes := []rune(pat)
 			end := i + len(patRunes)
 			if end <= len(runes) && string(runes[i:end]) == pat {
-				styledLine.WriteString(s.White.Render(pat))
+				styledLine.WriteString(s.Mark.Render(pat))
 				i = end
 				matched = true
 				break
