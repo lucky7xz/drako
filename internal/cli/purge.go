@@ -66,10 +66,11 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 	// Case 1: Reset Core Config (config.toml)
 	if opts.TargetConfig {
 		log.Printf("Purging Core config (config.toml)")
+		target := lair.LinkTarget(configDir, lair.ConfigFileName)
 		if err := lair.MoveToTrash(configDir, lair.ConfigFileName); err != nil {
 			failed = append(failed, fmt.Errorf("could not move %s to trash: %w", lair.ConfigFileName, err))
 		} else {
-			fmt.Printf("  ✓ Moved %s to trash\n", lair.ConfigFileName)
+			fmt.Println(trashedLine(lair.ConfigFileName, target))
 			failed = append(failed, resetCore(configDir)...)
 		}
 	}
@@ -77,9 +78,13 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 	// Case 2: Purge Logs
 	if opts.TargetLogs {
 		log.Printf("Purging Logs (Permanent Delete)")
+		targets := map[string]string{}
+		for _, name := range lair.LogFileNames {
+			targets[name] = lair.LinkTarget(configDir, name)
+		}
 		deleted, err := lair.DeleteLogs(configDir)
 		for _, name := range deleted {
-			fmt.Printf("  💀 Deleted %s\n", name)
+			fmt.Println(deletedLine(name, targets[name]))
 		}
 		if err != nil {
 			failed = append(failed, err)
@@ -89,10 +94,11 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 	// Case 3: Target Specific Profiles
 	for _, file := range opts.TargetProfiles {
 		log.Printf("Purging Profile: %s", file)
+		target := lair.LinkTarget(configDir, file)
 		if err := lair.MoveToTrash(configDir, file); err != nil {
 			failed = append(failed, fmt.Errorf("could not move %s to trash: %w", file, err))
 		} else {
-			fmt.Printf("  ✓ Moved %s to trash\n", file)
+			fmt.Println(trashedLine(file, target))
 			// A purged profile is no longer equipped, so a lock still aimed at
 			// it would drop the next launch into rescue. Covers --interactive
 			// too: it appends into this same target list.
@@ -103,9 +109,37 @@ func PurgeConfig(configDir string, opts PurgeOptions) error {
 	return errors.Join(failed...)
 }
 
+// trashedLine says that file went to trash; target is what it linked to, ""
+// for an ordinary file.
+func trashedLine(file, target string) string {
+	if target != "" {
+		return fmt.Sprintf("  ✓ Moved the link %s to trash (%s is untouched)", file, target)
+	}
+	return fmt.Sprintf("  ✓ Moved %s to trash", file)
+}
+
+// deletedLine is trashedLine for a file that is deleted for good.
+func deletedLine(name, target string) string {
+	if target != "" {
+		return fmt.Sprintf("  💀 Removed the link %s (%s is untouched)", name, target)
+	}
+	return fmt.Sprintf("  💀 Deleted %s", name)
+}
+
+// destroyedLine says the config folder is gone; target is what it linked to,
+// "" for an ordinary folder.
+func destroyedLine(configDir, target string) string {
+	if target != "" {
+		return fmt.Sprintf("✓ Removed the link %s (%s and its files are untouched)", configDir, target)
+	}
+	return fmt.Sprintf("✓ Full destruction completed - %s has been deleted", configDir)
+}
+
 // performFullNuke implements the "Destroy Everything" logic (Old --all)
 func performFullNuke(configDir string) error {
-	fmt.Printf("\n💀 DESTROYING EVERYTHING in %s\n", configDir)
+	if lair.DirLinkTarget(configDir) == "" {
+		fmt.Printf("\n💀 DESTROYING EVERYTHING in %s\n", configDir)
+	}
 	// The caller (HandlePurgeCommand) should have asked for confirmation.
 
 	if err := lair.Destroy(configDir); err != nil {
@@ -176,13 +210,14 @@ func ExecutePurge(args []string) error {
 		return ErrPurgeCancelled
 	}
 
+	dirTarget := lair.DirLinkTarget(configDir) // asked while the folder is still there
 	if err := PurgeConfig(configDir, *opts); err != nil {
 		log.Printf("Purge failed: %v", err)
 		return err
 	}
 
 	if opts.DestroyEverything {
-		fmt.Printf("\n✓ Full destruction completed - %s has been deleted\n", configDir)
+		fmt.Printf("\n%s\n", destroyedLine(configDir, dirTarget))
 	} else {
 		fmt.Printf("\n✓ Purge completed successfully\n")
 		fmt.Printf("  Items moved to %s/trash/\n", configDir)
@@ -218,17 +253,45 @@ func purgeFile(configDir, target string) (string, error) {
 // purgeConfirmMessage names every scope the flags selected; "" when none did.
 func purgeConfirmMessage(configDir string, opts PurgeOptions) string {
 	if opts.DestroyEverything {
-		return fmt.Sprintf("💀 This will DESTROY EVERYTHING in %s.\n   NO UNDO. NO TRASH.\n   Are you absolutely sure?", configDir)
+		if target := lair.DirLinkTarget(configDir); target != "" {
+			return fmt.Sprintf("💀 %s is a link to %s.\n   This removes the link only. Everything in %s stays.\n   Proceed?", configDir, target, target)
+		}
+		links := ""
+		switch n := lair.CountLinks(configDir); {
+		case n == 1:
+			links = "   1 file in it is a link: it loses only the link, the file it points to stays.\n"
+		case n > 1:
+			links = fmt.Sprintf("   %d files in it are links: those lose only the link, the files they point to stay.\n", n)
+		}
+		return fmt.Sprintf("💀 This will DESTROY EVERYTHING in %s.\n   NO UNDO. NO TRASH.\n%s   Are you absolutely sure?", configDir, links)
 	}
+	// A link gets its own line: what goes is the link, and the file stays.
 	var lines []string
 	if opts.TargetConfig {
-		lines = append(lines, "⚠️  reset your Core Configuration (config.toml goes to trash)")
+		if target := lair.LinkTarget(configDir, lair.ConfigFileName); target != "" {
+			lines = append(lines, "⚠️  reset your Core Configuration",
+				fmt.Sprintf("    %s is a link to %s.", lair.ConfigFileName, target),
+				fmt.Sprintf("    The link goes to trash and a fresh %s takes its place.", lair.ConfigFileName),
+				"    The linked file stays as it is; drako stops reading it.")
+		} else {
+			lines = append(lines, "⚠️  reset your Core Configuration (config.toml goes to trash)")
+		}
 	}
 	if opts.TargetLogs {
 		lines = append(lines, "💀 PERMANENTLY DELETE your log files (history.log, drako.log)")
+		for _, name := range lair.LogFileNames {
+			if target := lair.LinkTarget(configDir, name); target != "" {
+				lines = append(lines, fmt.Sprintf("    %s is a link: only the link is removed, %s stays", name, target))
+			}
+		}
 	}
 	if n := len(opts.TargetProfiles); n > 0 {
 		lines = append(lines, fmt.Sprintf("⚠️  move %d profile(s) to trash: %s", n, strings.Join(opts.TargetProfiles, ", ")))
+		for _, file := range opts.TargetProfiles {
+			if target := lair.LinkTarget(configDir, file); target != "" {
+				lines = append(lines, fmt.Sprintf("    %s is a link: the link goes to trash, %s stays", file, target))
+			}
+		}
 	}
 	if len(lines) == 0 {
 		return ""
@@ -372,6 +435,9 @@ func runInteractivePurgeSelection(configDir string, opts *PurgeOptions, input io
 		profile := validProfiles[idx-1]
 
 		// Individual Confirmation
+		if target := lair.LinkTarget(configDir, profile.RelativePath); target != "" {
+			fmt.Fprintf(output, "%s is a link: the link goes to trash, %s stays\n", profile.RelativePath, target)
+		}
 		fmt.Fprintf(output, "Delete %s (%s)? [y/N]: ", profile.Name, profile.Location)
 		confirmRaw, _ := bufReader.ReadString('\n')
 		confirm := strings.ToLower(strings.TrimSpace(confirmRaw))

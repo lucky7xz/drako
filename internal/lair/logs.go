@@ -59,6 +59,9 @@ func (l *Lair) rotate(name, archive string, maxBytes int64) {
 	}
 }
 
+// LogFileNames is every log drako keeps, archives included.
+var LogFileNames = []string{LogFileName, LogArchiveName, HistoryFileName, HistoryArchiveName}
+
 // DeleteLogs deletes drako's logs and their archives and names those it
 // deleted. A log that is not there is skipped; one that is a link loses the
 // link, never what it points to.
@@ -72,7 +75,7 @@ func DeleteLogs(configDir string) (deleted []string, err error) {
 	}
 	defer l.Close()
 	var failed []error
-	for _, name := range []string{LogFileName, LogArchiveName, HistoryFileName, HistoryArchiveName} {
+	for _, name := range LogFileNames {
 		switch err := l.root.Remove(name); {
 		case err == nil:
 			deleted = append(deleted, name)

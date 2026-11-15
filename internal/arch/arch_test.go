@@ -113,10 +113,11 @@ var knownExceptions = []string{
 	"summon/fetch.go os.Remove",         // a failed or oversized download
 
 	// read a file by path instead of through the lair's root
-	"lair/files.go os.ReadFile", // read: follows a file the user linked out of the folder
-	"lair/files.go os.Stat",     // stat, read's twin; and explain, to recognise a linked subfolder
-	"cli/check.go os.ReadFile",  // a file you name by path, outside drako's folder
-	"cli/check.go os.Stat",      // same
+	"lair/files.go os.ReadFile",      // read: follows a file the user linked out of the folder
+	"lair/files.go os.Stat",          // stat, read's twin; and explain, to recognise a linked subfolder
+	"lair/linktarget.go os.Readlink", // DirLinkTarget: whether the folder itself is a link cannot be asked through its own root
+	"cli/check.go os.ReadFile",       // a file you name by path, outside drako's folder
+	"cli/check.go os.Stat",           // same
 }
 
 func TestPackagesKeepToTheirCapabilities(t *testing.T) {
