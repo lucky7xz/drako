@@ -25,8 +25,9 @@ theme = "dracula"
 
 # ── Profile switch modifier ──────────────────────────────────────────
 # <modifier> + 1-9 switches profile, <modifier> + session_lock locks the
-# session. "alt" is the default; "ctrl" also works but your terminal or
-# window manager may take it first.
+# session. "alt" is the default.
+# Note: "ctrl" does not work for 1-9. A terminal cannot send ctrl+1-9 to a
+# program, so only the session lock would answer.
 # The leader key (see below) does the same without a modifier: m, then 1-9.
 
 numb_modifier = "alt"
