@@ -153,7 +153,7 @@ func goneNote(before, pin string, bundle lair.ConfigBundle) string {
 	}
 	note := before + " is no longer equipped · " + nowOn(bundle)
 	if equip.NormalizeName(pin) == equip.NormalizeName(before) && bundle.LockedName == "" {
-		note += " · pin cleared"
+		note += " · anchor lifted"
 	}
 	return note
 }

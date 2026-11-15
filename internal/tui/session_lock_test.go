@@ -299,7 +299,7 @@ func TestGoneLine_SaidOnceHoweverTheDeckWasReached(t *testing.T) {
 // A deck that is pinned and then stashed: the line says the pin went too.
 func TestGoneLine_NamesAClearedPin(t *testing.T) {
 	bundle := lair.ConfigBundle{Profiles: []lair.ProfileInfo{{Name: "core"}}}
-	if got, want := goneNote("work", "work", bundle), "work is no longer equipped · now on core · pin cleared"; got != want {
+	if got, want := goneNote("work", "work", bundle), "work is no longer equipped · now on core · anchor lifted"; got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
 	if got := goneNote("core", "", bundle); got != "" {
