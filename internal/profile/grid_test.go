@@ -174,3 +174,42 @@ func TestShownAt(t *testing.T) {
 		}
 	}
 }
+
+// Everything a user can run has a name: a cell or a folder item without one
+// is a flaw, an error, and the deck still loads.
+func TestFlawsNameless(t *testing.T) {
+	p := File{X: 2, Y: 1, Commands: []Command{
+		{Name: "  ", Command: "a", Row: 0, Col: "a"},
+		{Name: "folder", Row: 0, Col: "b", Items: []CommandItem{
+			{Name: "ok", Command: "b"},
+			{Name: "", Command: "c"},
+		}},
+	}}
+	fs := Flaws(p)
+	want := []string{
+		`command #1 has no name`,
+		`command "folder", item #2 has no name`,
+	}
+	if len(fs) != len(want) {
+		t.Fatalf("want %d flaws, got %d: %+v", len(want), len(fs), fs)
+	}
+	for i, w := range want {
+		if fs[i].Level != "error" || !strings.Contains(fs[i].Msg, w) {
+			t.Errorf("flaw %d: want error holding %q, got %+v", i, w, fs[i])
+		}
+	}
+}
+
+// drako check says it once, as the loader does.
+func TestLintNamelessOnce(t *testing.T) {
+	src := []byte("x = 1\ny = 1\n[[commands]]\nname = \"\"\ncommand = \"a\"\ncol = \"a\"\nrow = 0\n")
+	var hits []Finding
+	for _, f := range Lint(src) {
+		if strings.Contains(f.Msg, "has no name") {
+			hits = append(hits, f)
+		}
+	}
+	if len(hits) != 1 || hits[0].Level != "error" {
+		t.Errorf("want one error about the missing name, got %+v", hits)
+	}
+}

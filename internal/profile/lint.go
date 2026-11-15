@@ -100,8 +100,7 @@ func Lint(src []byte) []Finding {
 		name := strings.TrimSpace(tomlStr(cmd, "name"))
 		label := fmt.Sprintf("command %q", name)
 		if name == "" {
-			label = fmt.Sprintf("command #%d", i+1)
-			fs = append(fs, warnf("%s has no name — its cell renders empty and can never be selected", label))
+			label = fmt.Sprintf("command #%d", i+1) // Flaws says the name is missing
 		}
 		fs = append(fs, checkFields(label, cmd, cellFields)...)
 		fs = append(fs, checkDrawn(label, cmd, "name", "description")...)
@@ -118,7 +117,6 @@ func Lint(src []byte) []Finding {
 			ilabel := fmt.Sprintf("%s, item %q", label, iname)
 			if iname == "" {
 				ilabel = fmt.Sprintf("%s, item #%d", label, j+1)
-				fs = append(fs, warnf("%s has no name", ilabel))
 			}
 			fs = append(fs, checkFields(ilabel, item, itemFields)...)
 			fs = append(fs, checkDrawn(ilabel, item, "name", "description")...)

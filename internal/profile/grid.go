@@ -126,8 +126,9 @@ func BuildGrid(x, y int, cmds []Command) [][]string {
 	return grid
 }
 
-// Flaws lists what is wrong with a deck that still loads: cells that stand on
-// no square, cells sharing a square, and names used twice. The loader keeps
+// Flaws lists what is wrong with a deck that still loads: cells and folder
+// items without a name, cells that stand on no square, cells sharing a
+// square, and names used twice. The loader keeps
 // such a deck and passes these on; drako check prints the same list.
 func Flaws(p File) []Finding {
 	var fs []Finding
@@ -136,6 +137,17 @@ func Flaws(p File) []Finding {
 			return fmt.Sprintf("command %q", name)
 		}
 		return fmt.Sprintf("command #%d", i+1)
+	}
+
+	for i, c := range p.Commands {
+		if strings.TrimSpace(c.Name) == "" {
+			fs = append(fs, errorf("%s has no name — it draws empty", label(i)))
+		}
+		for j, item := range c.Items {
+			if strings.TrimSpace(item.Name) == "" {
+				fs = append(fs, errorf("%s, item #%d has no name — it draws empty", label(i), j+1))
+			}
+		}
 	}
 
 	seenNames := map[string]bool{}
