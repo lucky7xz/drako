@@ -118,7 +118,7 @@ func withoutConfirmations(calls [][]string) [][]string {
 }
 
 func isProbe(c []string) bool {
-	return len(c) > 4 && c[2] == "run" && strings.HasPrefix(c[4], "printf 'DRAKO-")
+	return len(c) > 4 && c[2] == "run" && strings.HasPrefix(c[4], " printf 'DRAKO-")
 }
 
 func launchHerdr(t *testing.T, n int, tabs []int) ([][]string, []string) {
@@ -141,10 +141,10 @@ func TestHerdr_CreatesEveryPaneBeforeRunningInThem(t *testing.T) {
 	want := [][]string{
 		{"herdr", "tab", "create", "--label", "cell 1·cell 2", "--cwd", wd, "--focus"},
 		{"herdr", "pane", "split", "--pane", "w1:p1", "--direction", "right", "--cwd", wd, "--no-focus"},
-		{"herdr", "pane", "run", "w1:p1", "exec sh " + posixSingleQuote(paths[0])},
-		{"herdr", "pane", "run", "w1:p2", "exec sh " + posixSingleQuote(paths[1])},
+		{"herdr", "pane", "run", "w1:p1", " exec sh " + posixSingleQuote(paths[0])},
+		{"herdr", "pane", "run", "w1:p2", " exec sh " + posixSingleQuote(paths[1])},
 		{"herdr", "tab", "create", "--label", "cell 3", "--cwd", wd, "--no-focus"},
-		{"herdr", "pane", "run", "w1:p3", "exec sh " + posixSingleQuote(paths[2])},
+		{"herdr", "pane", "run", "w1:p3", " exec sh " + posixSingleQuote(paths[2])},
 	}
 	if len(got) != len(want) {
 		t.Fatalf("ran %d calls, want %d:\n%v", len(got), len(want), got)
@@ -188,7 +188,7 @@ func TestHerdr_SendsExecSoAPaneClosesWithItsCell(t *testing.T) {
 		if c[2] != "run" || isProbe(c) {
 			continue
 		}
-		if !slices.Equal(c[4:], []string{"exec sh " + posixSingleQuote(paths[0])}) {
+		if !slices.Equal(c[4:], []string{" exec sh " + posixSingleQuote(paths[0])}) {
 			t.Errorf("pane run must exec the script, got %v", c)
 		}
 		return
@@ -289,5 +289,23 @@ func TestHerdr_TreatsAVanishedPaneAsStarted(t *testing.T) {
 	if err := launchIn(NewHerdr(), "drako-t", cells(1), []int{1},
 		filepath.Join(t.TempDir(), "batch")); err != nil {
 		t.Errorf("a pane that already closed means the cell ran: %v", err)
+	}
+}
+
+// Every line drako types into a pane's shell is led by a space, so a shell
+// set to ignore such lines keeps drako's plumbing out of the user's history.
+func TestHerdrTypedLinesLeadWithASpace(t *testing.T) {
+	calls, _ := launchHerdr(t, 3, []int{2, 1})
+	typedLines := 0
+	for _, c := range calls {
+		if len(c) > 4 && c[1] == "pane" && c[2] == "run" {
+			typedLines++
+			if !strings.HasPrefix(c[4], " ") {
+				t.Errorf("typed without a leading space: %q", c[4])
+			}
+		}
+	}
+	if typedLines == 0 {
+		t.Fatal("no typed lines seen")
 	}
 }

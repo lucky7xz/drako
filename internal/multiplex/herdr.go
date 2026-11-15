@@ -87,7 +87,7 @@ func runCell(id, path string) error {
 		return fmt.Errorf("%s did not start in pane %s: %w", path, id, err)
 	}
 	// Typed at the login shell, so the path is quoted; sh also reads a noexec mount.
-	if _, err := herdrExec([]string{"herdr", "pane", "run", id, "exec sh " + posixSingleQuote(path)}); err != nil {
+	if _, err := herdrExec([]string{"herdr", "pane", "run", id, typed("exec sh " + posixSingleQuote(path))}); err != nil {
 		return err
 	}
 	started, err := confirmCell(id, path)
@@ -100,10 +100,15 @@ func runCell(id, path string) error {
 	return nil
 }
 
+// typed is a line as drako types it into a pane's shell: led by a space, which
+// bash (HISTCONTROL=ignorespace) and zsh (HIST_IGNORE_SPACE) take as "keep
+// this out of history". A shell not set that way runs it all the same.
+func typed(line string) string { return " " + line }
+
 // waitForShell types a harmless probe until the shell runs one: a dropped probe
 // is resent, a queued one runs later. Its output differs from its echoed text.
 func waitForShell(id string) error {
-	probe := fmt.Sprintf(`printf 'DRAKO-%%s\n' '%s'`, id)
+	probe := typed(fmt.Sprintf(`printf 'DRAKO-%%s\n' '%s'`, id))
 	for range herdrSendAttempts {
 		if _, err := herdrExec([]string{"herdr", "pane", "run", id, probe}); err != nil {
 			return err

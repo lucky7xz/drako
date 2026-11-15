@@ -34,7 +34,7 @@ func shellHerdr(t *testing.T, readyAfter int, drops bool) map[string]*fakeShell 
 	step := func(p *fakeShell) {
 		p.polls++
 		for p.polls >= readyAfter && len(p.queue) > 0 {
-			line := p.queue[0]
+			line := strings.TrimLeft(p.queue[0], " ") // a shell drops the leading space
 			p.queue = p.queue[1:]
 			if p.running != "" {
 				p.typedIn++
@@ -61,7 +61,7 @@ func shellHerdr(t *testing.T, readyAfter int, drops bool) map[string]*fakeShell 
 		case "run":
 			p := panes[argv[3]]
 			line := strings.Join(argv[4:], " ")
-			if strings.HasPrefix(line, "exec ") {
+			if strings.HasPrefix(line, " exec ") {
 				p.sentExec++
 			} else {
 				p.probes++
