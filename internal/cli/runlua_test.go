@@ -120,6 +120,23 @@ func TestLuadeckExample(t *testing.T) {
 		t.Error("an existing file was overwritten")
 	}
 
+	// It finds the inventory from its own place, not from the current folder.
+	if err := os.Remove(hello); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir("luadeck_example")
+	if code, _, errOut := runLua(t, "demo.lua", "--hello"); code != 0 {
+		t.Fatalf("from inside its folder: code %d, stderr %q", code, errOut)
+	}
+	t.Chdir(t.TempDir())
+	if err := os.Remove(filepath.Join(dir, hello)); err != nil {
+		t.Fatalf("run from inside its folder, it did not write demo-hello: %v", err)
+	}
+	if code, _, errOut := runLua(t, filepath.Join(dir, script), "--hello"); code != 0 {
+		t.Fatalf("by full path from elsewhere: code %d, stderr %q", code, errOut)
+	}
+	t.Chdir(dir)
+
 	// What it writes passes drako check.
 	if err := os.Remove(grid); err != nil {
 		t.Fatal(err)

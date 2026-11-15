@@ -5,40 +5,46 @@
 --   inventory/demo-grid.profile.toml     a 3x3 grid, made by a loop
 --   inventory/demo-hello.profile.toml    one folder, made from a list
 --
--- Every cell only prints a line of text. Run it from drako's folder:
+-- Every cell only prints a line of text. Run it from any folder:
 --
---   cd ~/.config/drako
---   drako run-lua luadeck_example/demo.lua            both profiles
---   drako run-lua luadeck_example/demo.lua --grid     only demo-grid
---   drako run-lua luadeck_example/demo.lua --hello    only demo-hello
+--   cd ~/.config/drako/luadeck_example
+--   drako run-lua demo.lua            both profiles
+--   drako run-lua demo.lua --grid     only demo-grid
+--   drako run-lua demo.lua --hello    only demo-hello
 --
 -- Then start drako, press i, and equip them. A file that already exists is
 -- left alone. drako does not load Lua: this script only writes TOML files,
 -- which drako reads like any other profile. Copy it and make your own.
+
+-- The inventory is the folder beside this script's own folder, wherever the
+-- script is run from. arg[0] is the script's path as it was typed.
+local here = arg[0]:match("^(.*)[/\\]") or "."
+local inventory = here .. "/../inventory"
 
 -- A TOML string: quotes around it, and \ and " escaped.
 local function q(s)
   return '"' .. s:gsub('\\', '\\\\'):gsub('"', '\\"') .. '"'
 end
 
--- Writes one profile file into inventory/, unless it is already there.
+-- Writes one profile file into the inventory, unless it is already there.
 local function write(name, lines)
-  local path = "inventory/" .. name .. ".profile.toml"
+  local shown = "inventory/" .. name .. ".profile.toml"
+  local path = inventory .. "/" .. name .. ".profile.toml"
   local there = io.open(path, "r")
   if there then
     there:close()
-    print("kept     " .. path .. " (already there)")
+    print("kept     " .. shown .. " (already there)")
     return
   end
   local f, err = io.open(path, "w")
   if not f then
     io.stderr:write("cannot write " .. path .. ": " .. err .. "\n")
-    io.stderr:write("Run this from drako's folder (cd ~/.config/drako).\n")
+    io.stderr:write("This script expects to sit in a folder inside drako's folder (~/.config/drako).\n")
     os.exit(1)
   end
   f:write(table.concat(lines, "\n"), "\n")
   f:close()
-  print("wrote    " .. path)
+  print("wrote    " .. shown)
 end
 
 -- Profile 1: a 3x3 grid. Two loops make the nine cells.
@@ -92,7 +98,7 @@ local picked = {}
 for _, flag in ipairs(arg) do
   if not makers[flag] then
     io.stderr:write("unknown flag: " .. flag .. "\n")
-    io.stderr:write("usage: drako run-lua luadeck_example/demo.lua [--grid] [--hello]\n")
+    io.stderr:write("usage: drako run-lua demo.lua [--grid] [--hello]\n")
     os.exit(1)
   end
   picked[#picked + 1] = makers[flag]
