@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"strings"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucky7xz/drako/internal/settings"
@@ -21,11 +23,21 @@ func (m Model) here() (section, q string) {
 
 // keyHint is the footer's reminder of the two keys everyone needs: the key
 // sheet, and what q does here.
+//
+// While the leader waits for its second key the hint shows the leader and
+// nothing else, so a press is seen to have landed; what may follow is on the
+// key sheet. It is padded to the usual hint's width: the footer is centred
+// on this line and must not move for half a second.
 func (m Model) keyHint() string {
+	hint := "any key closes"
 	if _, q := m.here(); q != "" {
-		return m.Config.Keys.Help + " help · q " + q
+		hint = m.Config.Keys.Help + " help · q " + q
 	}
-	return "any key closes"
+	if m.leader.pending {
+		waiting := m.Config.Keys.Leader + " …"
+		return waiting + strings.Repeat(" ", max(0, lipgloss.Width(hint)-lipgloss.Width(waiting)))
+	}
+	return hint
 }
 
 // A binding is one entry on the key sheet: what you press, and what it does.

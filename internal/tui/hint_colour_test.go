@@ -73,3 +73,19 @@ func TestLogoMarksCarryNoColour(t *testing.T) {
 		t.Errorf("the frame should keep the theme's primary colour, got %q", c)
 	}
 }
+
+// While the leader waits, the hint shows it, at the same width as before.
+func TestKeyHintShowsTheWaitingLeader(t *testing.T) {
+	m, _ := editInventoryModel(t)
+	m.mode = gridMode
+	m.Config.Keys.Leader, m.Config.Keys.Help = "m", "?"
+	usual := m.keyHint()
+	m.leader.pending = true
+	waiting := m.keyHint()
+	if !strings.HasPrefix(waiting, "m …") {
+		t.Errorf("hint = %q, want it to show the waiting leader", waiting)
+	}
+	if lipgloss.Width(waiting) != lipgloss.Width(usual) {
+		t.Errorf("hint widths differ (%q, %q): the footer would move", usual, waiting)
+	}
+}
