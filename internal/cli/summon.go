@@ -105,7 +105,7 @@ func (s *Summoner) Summon(sourceURL string) error {
 		fmt.Printf("  Action: Find and copy the .profile.toml files at its top level\n\n")
 
 		if s.Rev == "" {
-			fmt.Printf("⚠️  Unverified summon: no --rev given. drako cannot confirm this deck\n")
+			fmt.Printf("⚠️  Unverified summon: no --rev given. drako cannot confirm this profile\n")
 			fmt.Printf("    is what its author published. To pin it:\n")
 			fmt.Printf("    drako summon <url> --rev <full-40-hex-commit>\n\n")
 		}
@@ -181,7 +181,7 @@ func destinationLabel(loc equip.Location, name string, replaces bool) string {
 	case replaces:
 		return "replaces your equipped " + name
 	case loc == equip.Inventory:
-		return fmt.Sprintf("inventory (%d decks are equipped)", equip.MaxEquipped)
+		return fmt.Sprintf("inventory (%d profiles are equipped)", equip.MaxEquipped)
 	}
 	return "equipped"
 }
@@ -290,7 +290,7 @@ func (s *Summoner) summonFromFolder(dir string) error {
 	inside, _ := summon.IsPathWithinBase(s.ConfigDir, root)
 	around, _ := summon.IsPathWithinBase(root, s.ConfigDir)
 	if inside || around {
-		return fmt.Errorf("%s is or holds drako's config dir; summon from your deck's own folder", root)
+		return fmt.Errorf("%s is or holds drako's config dir; summon from your profiles' own folder", root)
 	}
 
 	fmt.Printf("\nYou are about to summon from a folder:\n")

@@ -106,7 +106,7 @@ func PrintUsage() {
 	fmt.Printf("%s %s\n", version.AppName, version.String())
 	fmt.Printf("Usage: drako <command> [arguments]\n\n")
 	table(os.Stdout, []string{"Command", "Description"}, [][]string{
-		{"ls", "List equipped decks and their cell addresses"},
+		{"ls", "List equipped profiles and their cell addresses"},
 		{"explain [profile:]<addr>", "Show one cell's command, description, flags"},
 		{"run [profile:]<addr>", "Run one cell; exits with its exit code"},
 		{"agents", "Brief an AI agent on driving drako (ls, explain, run)"},
@@ -127,7 +127,7 @@ func PrintUsage() {
 	// row above.
 	fmt.Printf("\nFlags: drako [flags]\n\n")
 	table(os.Stdout, []string{"Flag", "Description"}, [][]string{
-		{"--glassroot", "Kiosk mode: only the equipped decks, nothing else"},
+		{"--glassroot", "Kiosk mode: only the equipped profiles, nothing else"},
 		{"--cwd-file <path>", "Write the directory drako ends in to <path>"},
 	})
 }
@@ -237,20 +237,20 @@ func parseSummonArgs(args []string) (sourceURL, sha, rev string, err error) {
 // PrintSummonUsage prints the usage information for the summon command
 func PrintSummonUsage() {
 	fmt.Fprintf(os.Stderr, "Usage: drako summon <url|folder> [--sha256 <hex64> | --rev <commit40>] [--show]\n")
-	fmt.Fprintf(os.Stderr, "\nA summoned deck replaces the copy you have, equipped or in the inventory;\n")
+	fmt.Fprintf(os.Stderr, "\nA summoned profile replaces the copy you have, equipped or in the inventory;\n")
 	fmt.Fprintf(os.Stderr, "a new one is equipped, or goes to ~/.config/drako/inventory/ once 9 are.\n")
 	fmt.Fprintf(os.Stderr, "Only files at the top level of the folder or repo are summoned.\n")
 	fmt.Fprintf(os.Stderr, "Pins verify that what arrived is what the author published;\n")
 	fmt.Fprintf(os.Stderr, "without one, drako warns and proceeds unverified. An unencrypted\n")
 	fmt.Fprintf(os.Stderr, "address (http://, git://) must be pinned.\n")
-	fmt.Fprintf(os.Stderr, "--show lists every command a deck holds before you confirm it.\n")
+	fmt.Fprintf(os.Stderr, "--show lists every command a profile holds before you confirm it.\n")
 	fmt.Fprintf(os.Stderr, "\nExamples:\n")
 	fmt.Fprintf(os.Stderr, "  # Summon a single profile file (pin with its sha256):\n")
 	fmt.Fprintf(os.Stderr, "  drako summon https://example.com/deck.profile.toml --sha256 9f2a...\n")
 	fmt.Fprintf(os.Stderr, "\n  # Summon from a git repository (pin with a full commit hash):\n")
 	fmt.Fprintf(os.Stderr, "  drako summon git@github.com:user/repo.git --rev 3f81c2d...\n")
 	fmt.Fprintf(os.Stderr, "  drako summon https://github.com/user/repo.git\n")
-	fmt.Fprintf(os.Stderr, "\n  # Summon the decks you're writing, with their assets (no pins):\n")
+	fmt.Fprintf(os.Stderr, "\n  # Summon the profiles you're writing, with their assets (no pins):\n")
 	fmt.Fprintf(os.Stderr, "  drako summon .\n")
 }
 

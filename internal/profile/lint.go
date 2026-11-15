@@ -94,7 +94,7 @@ func Lint(src []byte) []Finding {
 		return append(fs, errorf("no [[commands]] found"))
 	}
 	fs = append(fs, loaderFindings(src)...)
-	fs = append(fs, checkDrawn("deck", raw, "header_art")...)
+	fs = append(fs, checkDrawn("profile", raw, "header_art")...)
 
 	for i, cmd := range cmds {
 		name := strings.TrimSpace(tomlStr(cmd, "name"))

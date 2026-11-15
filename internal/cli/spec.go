@@ -29,7 +29,7 @@ func unlockIfLocked(configDir, name string) {
 	if equip.NormalizeName(pf.Locked) != equip.NormalizeName(filepath.Base(name)) {
 		return
 	}
-	fmt.Printf("  ! Unlocking profile: %s\n", pf.Locked)
+	fmt.Printf("  ! Lifting the anchor on profile: %s\n", pf.Locked)
 	if err := lair.WritePivotLocked(configDir, ""); err != nil {
 		log.Printf("Warning: failed to unlock profile %s: %v", pf.Locked, err)
 	}

@@ -444,8 +444,8 @@ func TestPurgeTrashesAStashedDeckByName(t *testing.T) {
 func TestPurgeUnknownTargetFailsBeforeAsking(t *testing.T) {
 	purgeFixture(t, "") // a prompt would read EOF and cancel
 	err := ExecutePurge([]string{"--target", "nonexist"})
-	if err == nil || !strings.Contains(err.Error(), "no deck named nonexist") {
-		t.Errorf("err = %v, want no deck named nonexist", err)
+	if err == nil || !strings.Contains(err.Error(), "no profile named nonexist") {
+		t.Errorf("err = %v, want no profile named nonexist", err)
 	}
 }
 

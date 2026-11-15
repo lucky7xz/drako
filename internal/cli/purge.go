@@ -247,7 +247,7 @@ func purgeFile(configDir, target string) (string, error) {
 			}
 		}
 	}
-	return "", fmt.Errorf("no deck named %s", target)
+	return "", fmt.Errorf("no profile named %s", target)
 }
 
 // purgeConfirmMessage names every scope the flags selected; "" when none did.

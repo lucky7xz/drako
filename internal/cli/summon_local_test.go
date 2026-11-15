@@ -274,7 +274,7 @@ func TestSummonSaysWhereADeckLands(t *testing.T) {
 	// Once nine are equipped, a new deck waits in the inventory.
 	s := &Summoner{ConfigDir: cfg}
 	equipDecks(t, s, 8)
-	if _, got, _ := placeFor(cfg, "new.profile.toml"); got != "inventory (9 decks are equipped)" {
+	if _, got, _ := placeFor(cfg, "new.profile.toml"); got != "inventory (9 profiles are equipped)" {
 		t.Errorf("new deck with nine equipped: %q", got)
 	}
 }

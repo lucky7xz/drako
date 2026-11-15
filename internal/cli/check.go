@@ -194,7 +194,7 @@ func nameClashes(files []string) map[string][]string {
 			case filepath.Base(other) == base:
 				msg = "also in " + filepath.Base(filepath.Dir(other)) + "/; remove one copy"
 			default:
-				msg = "clashes with " + filepath.Base(other) + ": drako ignores case in deck names"
+				msg = "clashes with " + filepath.Base(other) + ": drako ignores case in profile names"
 			}
 			if !slices.Contains(clashes[f], msg) {
 				clashes[f] = append(clashes[f], msg)
