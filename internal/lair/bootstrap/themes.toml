@@ -92,3 +92,19 @@ Warning    = "#FFB300" # Amber
 Error      = "#ff2a52" # Fang Red
 Info       = "#C0C0C0" # Steel
 Accent     = "#C9A227" # Venom Gold
+
+# Use this if you have a light terminal (white, cream, Solarized Light).
+# The other palettes are made for dark terminals and turn pale on a light one.
+# Foreground stays light on purpose: it is the text inside drako's popups,
+# which are always a dark box.
+[paper]
+Primary    = "#2173e6" # Ink Blue
+Secondary  = "#07838e" # Deep Teal
+Background = "#fdf6e3" # Paper
+Foreground = "#f0f0f0" # Very Light Gray
+Comment    = "#727781" # Pencil Gray
+Success    = "#127d36" # Leaf Green
+Warning    = "#9d5d04" # Dark Amber
+Error      = "#d41e1e" # Red Ink
+Info       = "#07768d" # Deep Teal
+Accent     = "#2173e6" # Ink Blue

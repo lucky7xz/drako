@@ -14,6 +14,7 @@ theme = "dracula"
 #theme = "everforest"
 #theme = "orasaka"
 #theme = "viper"
+#theme = "paper"      # for a light terminal
 
 # ── Auto lock ────────────────────────────────────────────────────────
 # After a while without a key press drako locks its screen, so a stray key

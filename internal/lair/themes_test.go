@@ -23,7 +23,7 @@ func TestDraculaFoundation(t *testing.T) {
 // TestEmbeddedThemesLoad: the themes shipped in the binary load alongside it.
 func TestEmbeddedThemesLoad(t *testing.T) {
 	themes := buildThemes(t.TempDir())
-	for _, name := range []string{"nord", "jade", "everforest", "viper"} {
+	for _, name := range []string{"nord", "jade", "everforest", "viper", "paper"} {
 		if _, ok := themes[name]; !ok {
 			t.Errorf("embedded theme %q should be loaded", name)
 		}
