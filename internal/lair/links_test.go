@@ -177,7 +177,7 @@ func TestCheckLayout(t *testing.T) {
 	if err == nil || !strings.HasPrefix(err.Error(), "specs and trash are linked folders") {
 		t.Fatalf("two linked folders: %v", err)
 	}
-	if !strings.Contains(err.Error(), `See "Linking Your Config" in the README.`) {
+	if !strings.Contains(err.Error(), `See https://chronyx.xyz/docs/drako/first-run/#linking-your-config`) {
 		t.Errorf("no pointer to the README: %v", err)
 	}
 }

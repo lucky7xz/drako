@@ -43,7 +43,7 @@ func CheckLayout(configDir string) error {
 	}
 }
 
-const layoutHint = `Link the whole drako folder or single files instead. See "Linking Your Config" in the README.`
+const layoutHint = `Link the whole drako folder or single files instead. See https://chronyx.xyz/docs/drako/first-run/#linking-your-config`
 
 // linksOut reports whether name is a link to a folder outside the directory.
 // A link that stays inside is fine: the directory follows it.
