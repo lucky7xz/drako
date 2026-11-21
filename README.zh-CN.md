@@ -1,16 +1,20 @@
+<div align="center">
+
 # drako
 
-[English](README.md) · [简体中文](README.zh-CN.md)
+**可定制的命令面板启动器（Command-Deck Launcher）。**
+
+把你常用的每一条命令放进终端里的一张网格，按一个键即可运行。
 
 [![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/lucky7xz/drako?color=007D9C&label=version)](https://github.com/lucky7xz/drako/tags)
 [![License](https://img.shields.io/github/license/lucky7xz/drako?color=orange)](https://github.com/lucky7xz/drako/blob/main/LICENCE)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/lucky7xz/drako?color=00ADD8&logo=go&logoColor=white)](https://go.dev/)
 
-https://github.com/user-attachments/assets/21fb2340-bc74-4886-a629-8e95d116e830
+[English](README.md) · [简体中文](README.zh-CN.md)
 
-**可定制的命令面板启动器（Command-Deck Launcher）。**
+<img width="100%" alt="drako 在 tmux 中批量启动" src="https://github.com/user-attachments/assets/274abaed-1cd8-4c35-8b96-4b37b85556e6" />
 
-把你常用的每一条命令放进终端里的一张网格，按一个键即可运行。
+</div>
 
 - **整合，而非取代。** 只要能在终端里运行，就能绑定到一个格子：工具、TUI、脚本。
 - **先看再运行。** 按 `e` 显示格子背后的确切命令。按下 Enter 之前，什么都不会运行。
@@ -125,7 +129,7 @@ profile 是你载入 drako 的一张网格。面板（deck）是你分享的东�
 
 ## 安全
 
-面板是一组将在你的机器上运行的命令。请像对待可执行文件一样对待 summon 来的面板：先阅读（`--show`，然后按 `e`），只使用来自可信来源的面板，并固定（pin）你拉取的版本。
+面板是一组将在你的机器上运行的命令。请像对待可执行文件一样对待 summon 来的面板：只下载和运行你信任的内容！先阅读（`--show`）。不确定某条命令的作用？运行之前先问问懂行的人。
 
 ## 给 AI 代理的说明
 

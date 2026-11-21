@@ -1,16 +1,20 @@
+<div align="center">
+
 # drako
 
-[English](README.md) · [简体中文](README.zh-CN.md)
+**The customizable Command-Deck Launcher.**
+
+Every command you rely on, one keypress away, on a grid in your terminal.
 
 [![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/lucky7xz/drako?color=007D9C&label=version)](https://github.com/lucky7xz/drako/tags)
 [![License](https://img.shields.io/github/license/lucky7xz/drako?color=orange)](https://github.com/lucky7xz/drako/blob/main/LICENCE)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/lucky7xz/drako?color=00ADD8&logo=go&logoColor=white)](https://go.dev/)
 
-https://github.com/user-attachments/assets/21fb2340-bc74-4886-a629-8e95d116e830
+[English](README.md) · [简体中文](README.zh-CN.md)
 
-**The customizable Command-Deck Launcher.**
+<img width="100%" alt="drako batch launch in tmux" src="https://github.com/user-attachments/assets/274abaed-1cd8-4c35-8b96-4b37b85556e6" />
 
-Every command you rely on, one keypress away, on a grid in your terminal.
+</div>
 
 - **Harness, don't replace.** If it runs in a terminal, it can be bound to a cell: tools, TUIs, scripts.
 - **Look before you run.** `e` shows the exact command behind a cell. Nothing runs until you press Enter.
@@ -125,7 +129,7 @@ Your own: a folder of `.profile.toml` files in Git, summoned onto any machine.
 
 ## Safety
 
-A deck is a set of commands that will run on your machine. Treat a summoned deck like an executable: read it first (`--show`, then `e`), take decks only from sources you trust, and pin what you pull.
+A deck is a set of commands that will run on your machine. Treat a summoned deck like an executable: only download and run what you trust! Read it first (`--show`). Unsure what a command does? Ask someone who knows before you run it.
 
 ## Agent instructions
 
