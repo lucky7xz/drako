@@ -23,7 +23,7 @@ Every command you rely on, one keypress away, on a grid in your terminal.
 
 Full docs: **[chronyx.xyz/docs/drako](https://chronyx.xyz/docs/drako/)**
 
-## install
+## Install
 
 ```bash
 go install github.com/lucky7xz/drako@latest
@@ -35,15 +35,16 @@ Living on the edge? `@dev` installs the newest changes from the `dev` branch: ne
 go install github.com/lucky7xz/drako@dev
 ```
 
-Requires Go 1.25+. Common ways to get it:
+Requires Go 1.25+. Go 1.21 or newer downloads a newer version by itself, unless your distro has turned that off. Common ways to get it:
 
 | Platform | Command |
 | --- | --- |
+| Debian, Ubuntu | `sudo apt install golang` |
 | Arch | `sudo pacman -S go` |
 | Fedora | `sudo dnf install golang` |
 | macOS | `brew install go` |
 | Windows | `winget install GoLang.Go` |
-| Debian, Ubuntu, others | [go.dev/dl](https://go.dev/dl/) (distro packages are often older than 1.25) |
+| Others | [go.dev/dl](https://go.dev/dl/) |
 
 Then start it. The first time, by its full path, since `~/go/bin` is usually not on your `PATH` yet:
 
@@ -63,8 +64,6 @@ No Go? Prebuilt static binaries for Linux, macOS and FreeBSD are on the [Release
 | Arch | `sudo pacman -U ./drako_*.pkg.tar.zst` |
 | Alpine | `doas apk add --allow-untrusted ./drako_*.apk` |
 
-Arrows move, `Enter` runs, `e` explains, `?` shows every key, `q` quits.
-
 **Termux (Android):** build without cgo, since Termux ships no C toolchain by default:
 
 ```bash
@@ -73,26 +72,26 @@ CGO_ENABLED=0 go install github.com/lucky7xz/drako@latest
 
 Termux has no `sudo`, so run the **🚨 Sudo Switch** (Core profile, **Settings** cell) once after first launch. A physical keyboard is recommended but not required.
 
-**Emoji:** decks use emoji as visual markers. Modern terminals (Ghostty, WezTerm, …) show them out of the box; older ones may need a [Nerd Font](https://www.nerdfonts.com/) or an emoji font package such as `fonts-noto-color-emoji`.
+**Emoji:** profiles use emoji as visual markers. Modern terminals (Ghostty, WezTerm, …) show them out of the box; older ones may need a [Nerd Font](https://www.nerdfonts.com/) or an emoji font package such as `fonts-noto-color-emoji`.
 
 drako is Linux-first. macOS and Windows are supported by design and less tested.
 
-## optional dependencies
+## Optional dependencies
 
 drako itself is one binary. These are looked up when a feature needs them; a missing one costs you that feature, never a crash.
 
 | Tool | Used for | Without it |
 | --- | --- | --- |
-| `bash` | running cells (`bash -lc` is the default shell) | cells fail, unless you set `default_shell` (`sh`, `zsh`, `fish`, `pwsh`, `cmd`) |
+| `bash` | running cells (`bash -lc` is the default; `powershell` on Windows) | cells fail; set `default_shell = "sh"` or `"zsh"`, which the shipped profiles also run under |
 | `git` | summoning a deck from a repository | summoning a single file or a local folder still works |
 | `tmux` or `herdr` | batch launch | batch launch tells you what is missing |
 | `wl-copy`, `xclip` or `xsel` | copying a command (`y`) | drako falls back to OSC 52, which many terminals understand |
 | `xdg-open` | `drako open`, opening paths | that action fails |
-| `$VISUAL` / `$EDITOR` | editing a deck from the inventory (`e`) | drako tries `nano`, `vim`, `vi` |
+| `$VISUAL` / `$EDITOR` | editing a profile from the inventory (`e`) | drako tries `nano`, `vim`, `vi` |
 
 Decks bring their own tools (`btop`, `mpv`, `distrobox`, …). Core's **📦 Install Tools** cell installs the common ones.
 
-## try it live
+## Try it live
 
 ```bash
 ssh chronyx.xyz
@@ -100,47 +99,47 @@ ssh chronyx.xyz
 
 drako served over SSH in Glassroot Mode, which locks the interface down for guests. Experimental and shared: treat it as a public terminal. The deck behind it is [groot demo](https://github.com/lucky7xz/groot_demo).
 
-## decks
+## Decks
 
-A deck is a runnable cheat sheet: every cell carries a command and a note on what it does, so the know-how travels with the keys.
+A profile is one grid you load into drako. A deck is what you share: a folder or repo of profiles, plus the scripts and tools they bring. (Decks and profiles can be used interchangeably at times.)
 
 **Shipped with drako.** Core is equipped on first launch; the rest wait in the inventory (`i`).
 
-| Deck | What you get |
+| Profile | What you get |
 | --- | --- |
 | **Core** | System update for your distro, cleanup and virus scan, process monitor, file finder, bandwidth, system status, a tool installer, and settings |
 | **ssh-101** | Run and secure an SSH server: service, firewall, config and logs, keys, key-only login, transfers, tunnels |
 | **tmux-101** | Sessions, panes and copy mode: the tmux basics, and the engine batch launch runs on |
 | **jukebox** | Terminal radio: SomaFM, world news, hand-picked stations, offline noise (mpv), and your own music (cliamp) |
-| **distrobox** | Create, enter, export and remove containers; throwaway boxes for testing something risky |
+| **distrobox** | Boxes running other distros: create, enter, stop, upgrade, export and remove them, or start a throwaway one that is removed on exit. Boxes share your home folder: what you delete inside is gone outside too (!) |
 
 **Summon more.** `drako summon <repo>`, or from Core's **📦 Install Tools** cell.
 
 | Deck | What you get |
 | --- | --- |
-| [**101 Series**](https://github.com/lucky7xz/101-deck) | Four starter decks: docker, git, network and unix |
+| [**101 Series**](https://github.com/lucky7xz/101-deck) | Four starter profiles: docker, git, network and unix |
 | [**GGML**](https://github.com/lucky7xz/ggml-deck) | Local AI with llama.cpp and whisper.cpp: setup, models, web UI, transcription |
 | [**groot demo**](https://github.com/lucky7xz/groot_demo) | The deck behind `ssh chronyx.xyz` |
 
 Your own: a folder of `.profile.toml` files in Git, summoned onto any machine.
 
-## safety
+## Safety
 
 A deck is a set of commands that will run on your machine. Treat a summoned deck like an executable: read it first (`--show`, then `e`), take decks only from sources you trust, and pin what you pull.
 
-## agent instructions
+## Agent instructions
 
-`drako agents` prints a short brief that teaches an AI agent to drive your decks. Add it to the agent's instructions file:
+`drako agents` prints a short brief that teaches an AI agent to drive your decks. Add it to the agent's instructions file. Commands are logged, but not sandboxed. Make sure you understand what is equipped.
 
 ```bash
 drako agents >> AGENTS.md
 ```
 
-## contributing
+## Contributing
 
-Ideas and bug reports are welcome as issues. Pull requests are not accepted for now; see [CONTRIBUTING](docs/CONTRIBUTING.md). drako is in early beta.
+Ideas and bug reports are welcome as issues. Pull requests are not accepted for now; see [CONTRIBUTING](docs/CONTRIBUTING.md). drako is in beta.
 
-## development
+## Development
 
 ```bash
 git clone https://github.com/lucky7xz/drako && cd drako
@@ -149,7 +148,7 @@ go vet ./... && go test ./...
 
 drako is developed with heavy AI assistance. The codebase is kept small and modular so one person can audit it end to end.
 
-## built with
+## Built with
 
 - [`charmbracelet/bubbletea`](https://github.com/charmbracelet/bubbletea): the TUI
 - [`charmbracelet/lipgloss`](https://github.com/charmbracelet/lipgloss): styling
@@ -159,9 +158,9 @@ drako is developed with heavy AI assistance. The codebase is kept small and modu
 - [`yuin/gopher-lua`](https://github.com/yuin/gopher-lua): Lua
 - [`golang.org/x/term`](https://pkg.go.dev/golang.org/x/term): terminal handling
 
-## license
+## License
 
-The engine is [AGPL-3.0](LICENCE). The bootstrap decks are MIT.
+The engine is [AGPL-3.0](LICENCE). The bootstrap profiles are MIT.
 
 <div align="center">
 

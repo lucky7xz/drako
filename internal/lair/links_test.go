@@ -178,7 +178,7 @@ func TestCheckLayout(t *testing.T) {
 		t.Fatalf("two linked folders: %v", err)
 	}
 	if !strings.Contains(err.Error(), `See https://chronyx.xyz/docs/drako/first-run/#linking-your-config`) {
-		t.Errorf("no pointer to the README: %v", err)
+		t.Errorf("no pointer to the docs: %v", err)
 	}
 }
 

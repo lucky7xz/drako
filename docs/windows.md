@@ -28,7 +28,7 @@ On Windows, as everywhere, your configuration lives in `.config\drako` under you
 
 - **Native Path Handling:** Drako understands drive letters (`C:\`) and backslashes.
 - **Shell Integration:** Commands run via `powershell.exe` by default. Users with PowerShell 7 can set `default_shell = "pwsh"` in `config.toml`.
-- **Cross-Platform Decks:** Profile authors can give a cell a `windows` command variant alongside the Linux/macOS ones — see "Cross-Platform Decks" in the README. The generated Core profile already uses Windows-native commands.
+- **Cross-Platform Decks:** Profile authors can give a cell a `windows` command variant alongside the Linux/macOS ones — see [platform variants](https://chronyx.xyz/docs/drako/weaver/). The generated Core profile already uses Windows-native commands.
 
 ## Scoop
 

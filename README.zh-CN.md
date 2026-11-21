@@ -35,15 +35,16 @@ go install github.com/lucky7xz/drako@latest
 go install github.com/lucky7xz/drako@dev
 ```
 
-需要 Go 1.25 或更高版本。常见的安装方式：
+需要 Go 1.25 或更高版本。Go 1.21 及以上版本会自行下载更新的版本，除非你的发行版关闭了这一功能。常见的安装方式：
 
 | 平台 | 命令 |
 | --- | --- |
+| Debian、Ubuntu | `sudo apt install golang` |
 | Arch | `sudo pacman -S go` |
 | Fedora | `sudo dnf install golang` |
 | macOS | `brew install go` |
 | Windows | `winget install GoLang.Go` |
-| Debian、Ubuntu 及其他 | [go.dev/dl](https://go.dev/dl/)（发行版自带的版本常常低于 1.25） |
+| 其他 | [go.dev/dl](https://go.dev/dl/) |
 
 然后启动它。第一次请使用完整路径，因为 `~/go/bin` 通常还不在你的 `PATH` 中：
 
@@ -63,8 +64,6 @@ go install github.com/lucky7xz/drako@dev
 | Arch | `sudo pacman -U ./drako_*.pkg.tar.zst` |
 | Alpine | `doas apk add --allow-untrusted ./drako_*.apk` |
 
-方向键移动，`Enter` 运行，`e` 查看说明，`?` 显示所有按键，`q` 退出。
-
 **Termux（Android）：** 请关闭 cgo 构建，因为 Termux 默认不带 C 工具链：
 
 ```bash
@@ -73,7 +72,7 @@ CGO_ENABLED=0 go install github.com/lucky7xz/drako@latest
 
 Termux 没有 `sudo`，所以首次启动后请运行一次 **🚨 Sudo Switch**（Core profile 的 **Settings** 格子）。推荐使用实体键盘，但不是必需的。
 
-**Emoji：** 面板用 emoji 作为视觉标记。现代终端（Ghostty、WezTerm 等）开箱即可显示；较旧的终端可能需要 [Nerd Font](https://www.nerdfonts.com/) 或 emoji 字体包，例如 `fonts-noto-color-emoji`。
+**Emoji：** profile 用 emoji 作为视觉标记。现代终端（Ghostty、WezTerm 等）开箱即可显示；较旧的终端可能需要 [Nerd Font](https://www.nerdfonts.com/) 或 emoji 字体包，例如 `fonts-noto-color-emoji`。
 
 drako 以 Linux 为先。macOS 和 Windows 在设计上受支持，但测试较少。
 
@@ -83,12 +82,12 @@ drako 本身只是一个二进制文件。下列工具在某项功能需要时�
 
 | 工具 | 用途 | 缺少时 |
 | --- | --- | --- |
-| `bash` | 运行格子（默认 shell 为 `bash -lc`） | 格子运行失败，除非设置 `default_shell`（`sh`、`zsh`、`fish`、`pwsh`、`cmd`） |
+| `bash` | 运行格子（默认 shell 为 `bash -lc`；Windows 上为 `powershell`） | 格子运行失败；可设置 `default_shell = "sh"` 或 `"zsh"`，随附的 profile 在这两者下同样能运行 |
 | `git` | 从仓库 summon 面板 | 仍可 summon 单个文件或本地文件夹 |
 | `tmux` 或 `herdr` | 批量启动 | 批量启动会提示缺少什么 |
 | `wl-copy`、`xclip` 或 `xsel` | 复制命令（`y`） | drako 改用 OSC 52，许多终端都支持 |
 | `xdg-open` | `drako open`、打开路径 | 该操作失败 |
-| `$VISUAL` / `$EDITOR` | 在库存中编辑面板（`e`） | drako 依次尝试 `nano`、`vim`、`vi` |
+| `$VISUAL` / `$EDITOR` | 在库存中编辑 profile（`e`） | drako 依次尝试 `nano`、`vim`、`vi` |
 
 面板会用到各自的工具（`btop`、`mpv`、`distrobox` 等）。Core 的 **📦 Install Tools** 格子可以安装常用的那些。
 
@@ -102,23 +101,23 @@ ssh chronyx.xyz
 
 ## 面板
 
-面板是一份可运行的速查表：每个格子都带着一条命令和一段说明，知识随按键一起流转。
+profile 是你载入 drako 的一张网格。面板（deck）是你分享的东西：一个装有若干 profile 的文件夹或仓库，外加它们附带的脚本和工具。（面板和 profile 有时可以互换使用。）
 
 **随 drako 附带。** Core 在首次启动时装备；其余的在库存（`i`）中等待。
 
-| 面板 | 内容 |
+| Profile | 内容 |
 | --- | --- |
 | **Core** | 按发行版更新系统、清理与病毒扫描、进程监视器、文件查找、带宽、系统状态、工具安装器和设置 |
 | **ssh-101** | 运行并加固 SSH 服务器：服务、防火墙、配置与日志、密钥、仅密钥登录、传输、隧道 |
 | **tmux-101** | 会话、窗格与复制模式：tmux 基础，也是批量启动所依赖的引擎 |
 | **jukebox** | 终端收音机：SomaFM、世界新闻、精选电台、离线噪音（mpv），以及你自己的音乐（cliamp） |
-| **distrobox** | 创建、进入、导出和删除容器；用完即弃的容器，适合测试有风险的操作 |
+| **distrobox** | 运行其他发行版的容器：创建、进入、停止、升级、导出和删除，或启动一个退出即删除的临时容器。容器与你共享主目录：在里面删除的文件，在外面也就没了（!） |
 
 **Summon 更多。** 使用 `drako summon <repo>`，或通过 Core 的 **📦 Install Tools** 格子。
 
 | 面板 | 内容 |
 | --- | --- |
-| [**101 Series**](https://github.com/lucky7xz/101-deck) | 四个入门面板：docker、git、网络和 unix |
+| [**101 Series**](https://github.com/lucky7xz/101-deck) | 四个入门 profile：docker、git、网络和 unix |
 | [**GGML**](https://github.com/lucky7xz/ggml-deck) | 用 llama.cpp 和 whisper.cpp 运行本地 AI：安装、模型、Web UI、语音转写 |
 | [**groot demo**](https://github.com/lucky7xz/groot_demo) | `ssh chronyx.xyz` 背后的面板 |
 
@@ -130,7 +129,7 @@ ssh chronyx.xyz
 
 ## 给 AI 代理的说明
 
-`drako agents` 会输出一份简短说明，教 AI 代理如何使用你的面板。把它加入代理的指令文件：
+`drako agents` 会输出一份简短说明，教 AI 代理如何使用你的面板。把它加入代理的指令文件。命令会被记录，但不在沙盒中运行。请确保你了解已装备的内容。
 
 ```bash
 drako agents >> AGENTS.md
@@ -138,7 +137,7 @@ drako agents >> AGENTS.md
 
 ## 参与贡献
 
-欢迎通过 issue 提出想法和报告缺陷。目前不接受 pull request；详见 [CONTRIBUTING](docs/CONTRIBUTING.md)。drako 处于早期测试（beta）阶段。
+欢迎通过 issue 提出想法和报告缺陷。目前不接受 pull request；详见 [CONTRIBUTING](docs/CONTRIBUTING.md)。drako 处于测试（beta）阶段。
 
 ## 开发
 
@@ -161,7 +160,7 @@ drako 的开发大量借助 AI。代码库刻意保持小而模块化，使一�
 
 ## 许可证
 
-引擎采用 [AGPL-3.0](LICENCE) 许可。随附的 bootstrap 面板采用 MIT 许可。
+引擎采用 [AGPL-3.0](LICENCE) 许可。随附的 bootstrap profile 采用 MIT 许可。
 
 <div align="center">
 

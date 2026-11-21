@@ -84,7 +84,7 @@ auto_close_execution = false
 
 [[commands]]
 name = "🧪 Ephemeral"
-description = "A box that exists only for as long as you're inside it — the moment you exit, it's gone, no trace left. Perfect for testing something risky without committing to it. (This is the same shape of box THE FORGE spins up for an agent to work in.)"
+description = "A box that exists only for as long as you're inside it — the moment you exit, the box is gone. It still shares your home folder: what you delete inside is gone outside too (!). Good for trying packages or other distros. (This is the same shape of box THE FORGE spins up for an agent to work in.)"
 command = { linux_generic = """
 echo "Base image — 1) ubuntu  2) fedora  3) arch  4) custom"
 printf "Choice [1]: "; read c

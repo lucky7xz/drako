@@ -12,8 +12,8 @@ form.**
   faster the fix.
 - 💡 **Feature ideas and design discussion** — yes. Describe the behavior
   you want and the problem behind it.
-- 🔍 **Security reports** — yes, privately first (see SECURITY/README
-  contact). drako takes its trust model seriously.
+- 🔍 **Security reports** — yes, privately first: the repository's
+  Security tab, "Report a vulnerability". drako takes its trust model seriously.
 - 🚫 **Pull requests** — closed without review, with thanks.
 - 🚫 **Patches, diffs, or code snippets pasted into issues** — please
   don't. Describe *what* should happen, not *how* in code. If an issue
