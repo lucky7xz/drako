@@ -502,11 +502,13 @@ case "$choice" in
     ;;
 esac
 ''', macos = "echo 'Not applicable on macOS: sudo is always here, and the deck macOS variants use brew, which must never run under sudo.'", windows = "Write-Host 'Not applicable on Windows: the deck windows variants use winget and never call sudo.'" }, auto_close_execution = false },
-    { name = "Add go/bin to PATH (<-- Very Recommended)", description = "Adds ~/go/bin to your PATH so Go binaries run from anywhere. Makes the tools globally accessible.", command = { linux_generic = '''
+    { name = "Add drako to PATH", description = "Might help when plain 'drako' says command not found: adds ~/.local/bin (install script) and ~/go/bin (go install) to your PATH.", command = { linux_generic = '''
+echo 'export PATH=$PATH:~/.local/bin' >> ~/.bashrc
 echo 'export PATH=$PATH:~/go/bin' >> ~/.bashrc
 echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
 echo "Path added to ~/.bashrc. Restart shell to take effect."
 ''', macos = '''
+echo 'export PATH=$PATH:~/.local/bin' >> ~/.zshrc
 echo 'export PATH=$PATH:~/go/bin' >> ~/.zshrc
 echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.zshrc
 echo "Path added to ~/.zshrc. Restart shell to take effect."
@@ -516,12 +518,24 @@ Add-Content $PROFILE '$env:PATH += ";$env:USERPROFILE\go\bin"'
 Add-Content $PROFILE '$env:PATH += ";C:\Program Files\Go\bin"'
 Write-Host "Path added to PowerShell Profile. Restart shell to take effect."
 ''' }, auto_close_execution = false },
-    { name = "Alias x=drako (<-- Recommended)", description = "Adds 'alias x=drako' to ~/.bashrc. Launch with just 'x'. Quick access to the den.", command = { linux_generic = '''
-echo "alias x='~/go/bin/drako'" >> ~/.bashrc
-echo "Alias added to ~/.bashrc. Restart shell to use 'x'."
+    { name = "Alias x=drako (<-- Recommended)", description = "Adds alias x for drako to ~/.bashrc (~/.zshrc on macOS), pointing at the drako it finds. Launch with just 'x'. Quick access to the den.", command = { linux_generic = '''
+d=$(command -v drako)
+for f in ~/.local/bin/drako ~/go/bin/drako; do [ -n "$d" ] || { [ -x "$f" ] && d=$f; }; done
+if [ -n "$d" ]; then
+  echo "alias x='$d'" >> ~/.bashrc
+  echo "Alias x -> $d added to ~/.bashrc. Restart shell to use 'x'."
+else
+  echo "drako not found on PATH, in ~/.local/bin or in ~/go/bin. Nothing added."
+fi
 ''', macos = '''
-echo "alias x='~/go/bin/drako'" >> ~/.zshrc
-echo "Alias added. Restart shell to use 'x'."
+d=$(command -v drako)
+for f in ~/.local/bin/drako ~/go/bin/drako; do [ -n "$d" ] || { [ -x "$f" ] && d=$f; }; done
+if [ -n "$d" ]; then
+  echo "alias x='$d'" >> ~/.zshrc
+  echo "Alias x -> $d added to ~/.zshrc. Restart shell to use 'x'."
+else
+  echo "drako not found on PATH, in ~/.local/bin or in ~/go/bin. Nothing added."
+fi
 ''', windows = '''
 if (!(Test-Path $PROFILE)) { New-Item -ItemType File -Path $PROFILE -Force | Out-Null }
 Add-Content $PROFILE 'Function x { & "$env:USERPROFILE\go\bin\drako.exe" }'

@@ -55,7 +55,7 @@ Then start it. The first time, by its full path, since `~/go/bin` is usually not
 ~/go/bin/drako
 ```
 
-To fix that for good, run **Add go/bin to PATH** from the **🐉 Settings** cell in the Core profile. It adds `~/go/bin` to `~/.bashrc` (`~/.zshrc` on macOS, your PowerShell profile on Windows). Open a new shell and plain `drako` works.
+To fix that for good, run **Add drako to PATH** from the **🐉 Settings** cell in the Core profile. It adds `~/.local/bin` and `~/go/bin` to `~/.bashrc` (`~/.zshrc` on macOS, your PowerShell profile on Windows). Open a new shell and plain `drako` works.
 
 Binaries and Linux packages (.deb, .rpm, .apk, Arch) are on the [Releases](https://github.com/lucky7xz/drako/releases) page. [Install](https://chronyx.xyz/docs/drako/install/) covers all of these, Termux included.
 

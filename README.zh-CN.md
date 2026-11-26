@@ -55,7 +55,7 @@ go install github.com/lucky7xz/drako@dev
 ~/go/bin/drako
 ```
 
-要一劳永逸地解决，请在 Core profile 的 **🐉 Settings** 格子中运行 **Add go/bin to PATH**。它会把 `~/go/bin` 加入 `~/.bashrc`（macOS 上为 `~/.zshrc`，Windows 上为 PowerShell 配置文件）。打开一个新的 shell，直接输入 `drako` 即可。
+要一劳永逸地解决，请在 Core profile 的 **🐉 Settings** 格子中运行 **Add drako to PATH**。它会把 `~/.local/bin` 和 `~/go/bin` 加入 `~/.bashrc`（macOS 上为 `~/.zshrc`，Windows 上为 PowerShell 配置文件）。打开一个新的 shell，直接输入 `drako` 即可。
 
 二进制文件和 Linux 安装包（.deb、.rpm、.apk、Arch）在 [Releases](https://github.com/lucky7xz/drako/releases) 页面。[安装](https://chronyx.xyz/docs/drako/install/)页面（英文）介绍了所有这些方式，包括 Termux。
 
