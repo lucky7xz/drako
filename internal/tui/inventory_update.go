@@ -328,6 +328,12 @@ func (m Model) updateInventoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				inv.status = "Place the held item before applying"
 				return m, nil
 			}
+			// Apply rearranges profiles, it does not switch them: when nothing
+			// has asked for a profile yet, the reload asks for the one on
+			// screen instead of taking the first in the new order.
+			if m.profile.sessionProfile == "" && m.setup.Profile == "" && !m.profile.rescue {
+				m.profile.sessionProfile = m.profile.deckName()
+			}
 			return m, ApplyInventoryChangesCmd(m.profile.configDir, m.inventory)
 		}
 		if inv.focusedList == focusRescue {

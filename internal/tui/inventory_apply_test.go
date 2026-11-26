@@ -113,3 +113,37 @@ func TestApplyReportsAnUnsavedOrder(t *testing.T) {
 		t.Errorf("after Apply: mode = %v, err = %v; want the unsaved order on screen", m.mode, m.inventory.err)
 	}
 }
+
+// Apply rearranges profiles; it does not switch them. Equipping a profile in
+// front of the one on screen used to land on the newcomer, because the reload
+// asked for no profile and got the first in the new order.
+func TestApplyKeepsTheProfileOnScreen(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	m := InitialModel(setupFromEnv(false), Session{})
+	press := func(k tea.KeyMsg) {
+		next, cmd := m.Update(k)
+		m = next.(Model)
+		if cmd != nil {
+			if msg, ok := cmd().(reloadProfilesMsg); ok {
+				next, _ = m.Update(msg)
+				m = next.(Model)
+			}
+		}
+	}
+	press(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}})
+	// Lift the first inventory profile and drop it in front of core, then Apply.
+	for _, k := range []tea.KeyType{tea.KeyDown, tea.KeySpace, tea.KeyUp, tea.KeySpace, tea.KeyDown, tea.KeyDown, tea.KeyEnter} {
+		press(tea.KeyMsg{Type: k})
+	}
+	if len(m.profile.profiles) != 2 || m.profile.profiles[1].Name != "core" {
+		t.Fatalf("setup: want a profile equipped in front of core, got %+v", m.profile.profiles)
+	}
+	if got := m.profile.activeName(); got != "core" {
+		t.Errorf("after Apply the screen shows %q, want core, where the user was", got)
+	}
+	// Apply's own pivot.toml write comes back through the watcher.
+	next, _ := m.Update(ConfigChangedMsg{Path: lair.PivotFile(m.profile.configDir)})
+	if got := next.(Model).profile.activeName(); got != "core" {
+		t.Errorf("after the watcher's reload the screen shows %q, want core", got)
+	}
+}
