@@ -270,6 +270,8 @@ done
 echo
 [ -n "$installed" ] && echo "✅ Ready:$installed"
 [ -n "$skipped" ]   && echo "❗ Missing:$skipped"
+# The exit status says it too: 0 when everything is ready.
+[ -z "$skipped" ]
 ''', linux_generic = """
 # Install the tools this deck relies on. Best-effort: a package that's
 # missing on your distro is skipped, not fatal. Each tool is marked, and a
@@ -332,6 +334,8 @@ try fastfetch neofetch
 echo
 [ -n "$installed" ] && echo "✅ Ready:$installed"
 [ -n "$skipped" ]   && echo "❗ Missing:$skipped"
+# The exit status says it too: 0 when everything is ready.
+[ -z "$skipped" ]
 """, macos = "brew install btop bmon fastfetch fzf duf tmux mpv", windows = "winget install -e --id junegunn.fzf; winget install -e --id aristocratos.btop4win; winget install -e --id muesli.duf; winget install -e --id Fastfetch-cli.Fastfetch; winget install -e --id shinchiro.mpv" }, auto_close_execution = false },
     { name = "Install micro", description = "Installs micro, a modern terminal text editor. Clean interface, easy to use. Set it as your default EDITOR via Settings if you want.", command = { linux_immutable = "brew install micro", linux_debian = "sudo apt install micro", linux_arch = "sudo pacman -S micro", linux_fedora = "sudo dnf install micro", linux_suse = "sudo zypper install micro", linux_void = "sudo xbps-install -S micro", linux_nixos = '''
 # A profile built by nix-env (manifest.nix) refuses nix profile, so use nix-env there.
