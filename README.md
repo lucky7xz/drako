@@ -29,6 +29,16 @@ Full docs: **[chronyx.xyz/docs/drako](https://chronyx.xyz/docs/drako/)**
 
 ## Install
 
+Linux, macOS, FreeBSD:
+
+```bash
+curl -fsSL https://github.com/lucky7xz/drako/releases/latest/download/install.sh | sh
+```
+
+It downloads the release for your system, checks its checksum and puts `drako` in `~/.local/bin`. No root needed.
+
+With Go 1.25+:
+
 ```bash
 go install github.com/lucky7xz/drako@latest
 ```
@@ -39,17 +49,6 @@ Living on the edge? `@dev` installs the newest changes from the `dev` branch: ne
 go install github.com/lucky7xz/drako@dev
 ```
 
-Requires Go 1.25+. Go 1.21 or newer downloads a newer version by itself, unless your distro has turned that off. Common ways to get it:
-
-| Platform | Command |
-| --- | --- |
-| Debian, Ubuntu | `sudo apt install golang` |
-| Arch | `sudo pacman -S go` |
-| Fedora | `sudo dnf install golang` |
-| macOS | `brew install go` |
-| Windows | `winget install GoLang.Go` |
-| Others | [go.dev/dl](https://go.dev/dl/) |
-
 Then start it. The first time, by its full path, since `~/go/bin` is usually not on your `PATH` yet:
 
 ```bash
@@ -58,27 +57,11 @@ Then start it. The first time, by its full path, since `~/go/bin` is usually not
 
 To fix that for good, run **Add go/bin to PATH** from the **🐉 Settings** cell in the Core profile. It adds `~/go/bin` to `~/.bashrc` (`~/.zshrc` on macOS, your PowerShell profile on Windows). Open a new shell and plain `drako` works.
 
-No Go? Prebuilt static binaries for Linux, macOS and FreeBSD are on the [Releases](https://github.com/lucky7xz/drako/releases) page, and so are Linux packages. Install the one you downloaded:
-
-| Distro | Command |
-| --- | --- |
-| Debian, Ubuntu | `sudo apt install ./drako_*.deb` |
-| Fedora, RHEL | `sudo dnf install ./drako_*.rpm` |
-| openSUSE | `sudo zypper install --allow-unsigned-rpm ./drako_*.rpm` |
-| Arch | `sudo pacman -U ./drako_*.pkg.tar.zst` |
-| Alpine | `doas apk add --allow-untrusted ./drako_*.apk` |
-
-**Termux (Android):** build without cgo, since Termux ships no C toolchain by default:
-
-```bash
-CGO_ENABLED=0 go install github.com/lucky7xz/drako@latest
-```
-
-Termux has no `sudo`, so run the **🚨 Sudo Switch** (Core profile, **Settings** cell) once after first launch. A physical keyboard is recommended but not required.
+Binaries and Linux packages (.deb, .rpm, .apk, Arch) are on the [Releases](https://github.com/lucky7xz/drako/releases) page. [Install](https://chronyx.xyz/docs/drako/install/) covers all of these, Termux included.
 
 **Emoji:** profiles use emoji as visual markers. Modern terminals (Ghostty, WezTerm, …) show them out of the box; older ones may need a [Nerd Font](https://www.nerdfonts.com/) or an emoji font package such as `fonts-noto-color-emoji`.
 
-drako is Linux-first. macOS and Windows are supported by design and less tested.
+drako is Linux-first. macOS and FreeBSD work and are less tested. Windows is not supported yet: `go install` builds it, but expect rough edges.
 
 ## Optional dependencies
 

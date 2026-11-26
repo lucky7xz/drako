@@ -29,6 +29,16 @@
 
 ## 安装
 
+Linux、macOS、FreeBSD：
+
+```bash
+curl -fsSL https://github.com/lucky7xz/drako/releases/latest/download/install.sh | sh
+```
+
+它会下载适合你系统的版本，校验 checksum，并把 `drako` 放到 `~/.local/bin`。不需要 root。
+
+使用 Go 1.25 或更高版本：
+
 ```bash
 go install github.com/lucky7xz/drako@latest
 ```
@@ -39,17 +49,6 @@ go install github.com/lucky7xz/drako@latest
 go install github.com/lucky7xz/drako@dev
 ```
 
-需要 Go 1.25 或更高版本。Go 1.21 及以上版本会自行下载更新的版本，除非你的发行版关闭了这一功能。常见的安装方式：
-
-| 平台 | 命令 |
-| --- | --- |
-| Debian、Ubuntu | `sudo apt install golang` |
-| Arch | `sudo pacman -S go` |
-| Fedora | `sudo dnf install golang` |
-| macOS | `brew install go` |
-| Windows | `winget install GoLang.Go` |
-| 其他 | [go.dev/dl](https://go.dev/dl/) |
-
 然后启动它。第一次请使用完整路径，因为 `~/go/bin` 通常还不在你的 `PATH` 中：
 
 ```bash
@@ -58,27 +57,11 @@ go install github.com/lucky7xz/drako@dev
 
 要一劳永逸地解决，请在 Core profile 的 **🐉 Settings** 格子中运行 **Add go/bin to PATH**。它会把 `~/go/bin` 加入 `~/.bashrc`（macOS 上为 `~/.zshrc`，Windows 上为 PowerShell 配置文件）。打开一个新的 shell，直接输入 `drako` 即可。
 
-没有 Go？[Releases](https://github.com/lucky7xz/drako/releases) 页面提供适用于 Linux、macOS 和 FreeBSD 的预编译静态二进制文件，以及 Linux 安装包。安装你下载的那个：
-
-| 发行版 | 命令 |
-| --- | --- |
-| Debian、Ubuntu | `sudo apt install ./drako_*.deb` |
-| Fedora、RHEL | `sudo dnf install ./drako_*.rpm` |
-| openSUSE | `sudo zypper install --allow-unsigned-rpm ./drako_*.rpm` |
-| Arch | `sudo pacman -U ./drako_*.pkg.tar.zst` |
-| Alpine | `doas apk add --allow-untrusted ./drako_*.apk` |
-
-**Termux（Android）：** 请关闭 cgo 构建，因为 Termux 默认不带 C 工具链：
-
-```bash
-CGO_ENABLED=0 go install github.com/lucky7xz/drako@latest
-```
-
-Termux 没有 `sudo`，所以首次启动后请运行一次 **🚨 Sudo Switch**（Core profile 的 **Settings** 格子）。推荐使用实体键盘，但不是必需的。
+二进制文件和 Linux 安装包（.deb、.rpm、.apk、Arch）在 [Releases](https://github.com/lucky7xz/drako/releases) 页面。[安装](https://chronyx.xyz/docs/drako/install/)页面（英文）介绍了所有这些方式，包括 Termux。
 
 **Emoji：** profile 用 emoji 作为视觉标记。现代终端（Ghostty、WezTerm 等）开箱即可显示；较旧的终端可能需要 [Nerd Font](https://www.nerdfonts.com/) 或 emoji 字体包，例如 `fonts-noto-color-emoji`。
 
-drako 以 Linux 为先。macOS 和 Windows 在设计上受支持，但测试较少。
+drako 以 Linux 为先。macOS 和 FreeBSD 可以使用，但测试较少。目前不支持 Windows：`go install` 可以构建，但体验还不完善。
 
 ## 可选依赖
 
