@@ -23,16 +23,38 @@ type Env struct {
 	// InTmuxPane: drako's terminal is a tmux pane, so inside both multiplexers
 	// tmux is the nearer one. OSEnv only asks tmux when both are set.
 	InTmuxPane bool
-	LookPath   func(string) (string, error)
+	// InContainer: drako runs in a container (see containerMarkers).
+	InContainer bool
+	LookPath    func(string) (string, error)
+}
+
+// containerMarkers are the files whose presence means drako runs in a
+// container. Capability probes rather than a list of tools: podman writes the
+// first in every container it runs (distrobox and toolbx boxes included),
+// docker the second.
+var containerMarkers = []string{
+	"/run/.containerenv", // podman
+	"/.dockerenv",        // docker
+}
+
+// containerMarked reports whether any container marker exists.
+func containerMarked() bool {
+	for _, marker := range containerMarkers {
+		if _, err := os.Stat(marker); err == nil {
+			return true
+		}
+	}
+	return false
 }
 
 // OSEnv reads what Resolve needs from the process environment. The variable
 // names live here and nowhere else.
 func OSEnv() Env {
 	e := Env{
-		Tmux:     os.Getenv("TMUX"),
-		Herdr:    os.Getenv("HERDR_ENV"),
-		LookPath: proc.LookPath,
+		Tmux:        os.Getenv("TMUX"),
+		Herdr:       os.Getenv("HERDR_ENV"),
+		InContainer: containerMarked(),
+		LookPath:    proc.LookPath,
 	}
 	if e.insideTmux() && e.insideHerdr() {
 		e.InTmuxPane = ttyIsTmuxPane()
@@ -77,6 +99,13 @@ func (e Env) installed(name string) bool {
 //
 // The error is the message the user sees, so it says what to do about it.
 func Resolve(forceTmux bool, env Env) (Backend, error) {
+	// A container may share the host's /tmp, and with it the multiplexer's
+	// socket: the tabs would then run on the host, not where drako runs.
+	// drako cannot tell which, so batch is off; a batch started on the host
+	// can still enter a container from its command.
+	if env.InContainer {
+		return nil, fmt.Errorf("Batch is off inside a container: start it from the host")
+	}
 	if forceTmux {
 		if !env.installed(tmuxMux) {
 			return nil, fmt.Errorf("Batch needs tmux installed")

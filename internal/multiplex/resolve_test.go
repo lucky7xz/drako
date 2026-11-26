@@ -1,7 +1,9 @@
 package multiplex
 
 import (
+	"os"
 	"os/exec"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -19,6 +21,11 @@ func onPath(tmux, herdr string, installed ...string) Env {
 
 func inTmuxPane(e Env) Env {
 	e.InTmuxPane = true
+	return e
+}
+
+func inContainer(e Env) Env {
+	e.InContainer = true
 	return e
 }
 
@@ -55,6 +62,13 @@ func TestResolve(t *testing.T) {
 
 		// HERDR_ENV is 1 inside herdr; anything else is not inside.
 		{"herdr env set to something else", false, onPath("", "0", "tmux", "herdr"), "tmux"},
+
+		// Inside a container the multiplexer may be the host's, so the tabs
+		// would run outside it: batch is off, whatever else is true.
+		{"container, inside tmux", false, inContainer(onPath(in, "", "tmux")), ""},
+		{"container, tmux installed", false, inContainer(onPath("", "", "tmux")), ""},
+		{"container, inside herdr", false, inContainer(onPath("", "1", "tmux", "herdr")), ""},
+		{"container, forced tmux", true, inContainer(onPath("", "1", "tmux", "herdr")), ""},
 	}
 
 	for _, c := range cases {
@@ -104,5 +118,26 @@ func TestResolve_SaysWhyHerdrIsUnreachableFromOutside(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "inside") {
 		t.Errorf("%q should say drako must run inside herdr", err)
+	}
+}
+
+// OSEnv reports a container when one of the marker files exists.
+func TestOSEnvSeesAContainerMarker(t *testing.T) {
+	saved := containerMarkers
+	t.Cleanup(func() { containerMarkers = saved })
+
+	missing := filepath.Join(t.TempDir(), "none")
+	containerMarkers = []string{missing}
+	if OSEnv().InContainer {
+		t.Error("no marker exists, but OSEnv reports a container")
+	}
+
+	marker := filepath.Join(t.TempDir(), ".containerenv")
+	if err := os.WriteFile(marker, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	containerMarkers = []string{missing, marker}
+	if !OSEnv().InContainer {
+		t.Error("a marker exists, but OSEnv does not report a container")
 	}
 }
