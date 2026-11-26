@@ -15,17 +15,20 @@ jobs:
   goreleaser:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0        # full history + tags (changelog & version)
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
-          go-version: stable    # build with the latest stable Go
+          go-version: '1.27.4'  # keep equal to the toolchain line in go.mod
 
       # A tag only ships if the suite passes on it.
       - run: go vet ./...
       - run: go test ./...
+      # ...and if no known vulnerability in Go or a dependency reaches drako's
+      # code. On failure, raise the Go version or the dependency it names.
+      - run: go run golang.org/x/vuln/cmd/govulncheck@v1.10.0 ./...
 
       # Hand-written notes for this tag, if it has any, go above GoReleaser's
       # changelog: .github/release-notes/<tag>.md (e.g. v0.4.3.md). One file
@@ -36,15 +39,15 @@ jobs:
           f=".github/release-notes/${GITHUB_REF_NAME}.md"
           if [ -f "$f" ]; then echo "args=--release-header $f" >> "$GITHUB_OUTPUT"; fi
 
-      - uses: goreleaser/goreleaser-action@v6
+      - uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6.4.0
         with:
-          version: '~> v2'      # matches `version: 2` in .goreleaser.yaml
+          version: 'v2.20.3'    # exact; `version: 2` in .goreleaser.yaml
           args: release --clean ${{ steps.notes.outputs.args }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Lets anyone check a download was built here:
       #   gh attestation verify <file> -R lucky7xz/drako
-      - uses: actions/attest-build-provenance@v4
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-checksums: ./dist/checksums.txt
