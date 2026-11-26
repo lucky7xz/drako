@@ -64,6 +64,9 @@ archives:
 
 checksum:
   name_template: 'checksums.txt'
+  # The installer is summed (and so attested) like the archives.
+  extra_files:
+    - glob: ./install.sh
 
 snapshot:
   version_template: "{{ incpatch .Version }}-next"
@@ -126,6 +129,10 @@ release:
     name: drako
   draft: false
   prerelease: auto
+  # One-command install: .../releases/latest/download/install.sh. Shipped
+  # with the release, so it changes only through a tag that passed the tests.
+  extra_files:
+    - glob: ./install.sh
 
 # Channels that need external repos + secret tokens (Homebrew tap, AUR, Scoop)
 # are intentionally omitted until those repos and secrets exist. Re-add the
