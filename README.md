@@ -6,11 +6,12 @@
 
 Every command you rely on, one keypress away, on a grid in your terminal.
 
+[![Docs](https://img.shields.io/badge/docs-chronyx.xyz-ff5555)](https://chronyx.xyz/docs/drako/)
 [![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/lucky7xz/drako?color=007D9C&label=version)](https://github.com/lucky7xz/drako/tags)
 [![License](https://img.shields.io/github/license/lucky7xz/drako?color=orange)](https://github.com/lucky7xz/drako/blob/main/LICENCE)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/lucky7xz/drako?color=00ADD8&logo=go&logoColor=white)](https://go.dev/)
 
-[English](README.md) · [简体中文](README.zh-CN.md)
+**[Docs](https://chronyx.xyz/docs/drako/)** · [English](README.md) · [简体中文](README.zh-CN.md)
 
 <img width="100%" alt="drako batch launch in tmux" src="https://github.com/user-attachments/assets/274abaed-1cd8-4c35-8b96-4b37b85556e6" />
 
@@ -26,6 +27,8 @@ Every command you rely on, one keypress away, on a grid in your terminal.
 - **No surprises.** One static binary, no telemetry, no update check. drako uses the network only when you summon.
 
 Full docs: **[chronyx.xyz/docs/drako](https://chronyx.xyz/docs/drako/)**
+
+https://github.com/user-attachments/assets/9be2906d-2389-4e4e-98c8-cbded653ff79
 
 ## Install
 
@@ -99,6 +102,10 @@ A profile is one grid you load into drako. A deck is what you share: a folder or
 | **tmux-101** | Sessions, panes and copy mode: the tmux basics, and the engine batch launch runs on |
 | **jukebox** | Terminal radio: SomaFM, world news, hand-picked stations, offline noise (mpv), and your own music (cliamp) |
 | **distrobox** | Boxes running other distros: create, enter, stop, upgrade, export and remove them, or start a throwaway one that is removed on exit. Boxes share your home folder: what you delete inside is gone outside too (!) |
+
+https://github.com/user-attachments/assets/98a52155-cc70-4e47-a6e4-f952f402ce81
+
+*One Core, two distros: the same cells run `pacman` in an Arch box and `dnf` in a Fedora box.*
 
 **Summon more.** `drako summon <repo>`, or from Core's **📦 Install Tools** cell.
 

@@ -6,11 +6,12 @@
 
 把你常用的每一条命令放进终端里的一张网格，按一个键即可运行。
 
+[![Docs](https://img.shields.io/badge/docs-chronyx.xyz-ff5555)](https://chronyx.xyz/docs/drako/)
 [![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/lucky7xz/drako?color=007D9C&label=version)](https://github.com/lucky7xz/drako/tags)
 [![License](https://img.shields.io/github/license/lucky7xz/drako?color=orange)](https://github.com/lucky7xz/drako/blob/main/LICENCE)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/lucky7xz/drako?color=00ADD8&logo=go&logoColor=white)](https://go.dev/)
 
-[English](README.md) · [简体中文](README.zh-CN.md)
+**[文档](https://chronyx.xyz/docs/drako/)** · [English](README.md) · [简体中文](README.zh-CN.md)
 
 <img width="100%" alt="drako 在 tmux 中批量启动" src="https://github.com/user-attachments/assets/274abaed-1cd8-4c35-8b96-4b37b85556e6" />
 
@@ -26,6 +27,8 @@
 - **没有意外。** 单个静态二进制文件，无遥测，无更新检查。只有在 summon 时 drako 才会访问网络。
 
 完整文档（英文）：**[chronyx.xyz/docs/drako](https://chronyx.xyz/docs/drako/)**
+
+https://github.com/user-attachments/assets/9be2906d-2389-4e4e-98c8-cbded653ff79
 
 ## 安装
 
@@ -99,6 +102,10 @@ profile 是你载入 drako 的一张网格。面板（deck）是你分享的东�
 | **tmux-101** | 会话、窗格与复制模式：tmux 基础，也是批量启动所依赖的引擎 |
 | **jukebox** | 终端收音机：SomaFM、世界新闻、精选电台、离线噪音（mpv），以及你自己的音乐（cliamp） |
 | **distrobox** | 运行其他发行版的容器：创建、进入、停止、升级、导出和删除，或启动一个退出即删除的临时容器。容器与你共享主目录：在里面删除的文件，在外面也就没了（!） |
+
+https://github.com/user-attachments/assets/98a52155-cc70-4e47-a6e4-f952f402ce81
+
+*一个 Core，两个发行版：同样的格子在 Arch 容器里运行 `pacman`，在 Fedora 容器里运行 `dnf`。*
 
 **Summon 更多。** 使用 `drako summon <repo>`，或通过 Core 的 **📦 Install Tools** 格子。
 
