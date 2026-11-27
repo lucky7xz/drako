@@ -1,0 +1,33 @@
+name: test
+
+# Vet and test every push to dev and main, or on demand from the Actions tab.
+# The coverage report goes to Coveralls: https://coveralls.io/github/lucky7xz/drako
+on:
+  push:
+    branches: [dev, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read        # the token Coveralls receives can only read the public repo
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version: '1.27.4'  # keep equal to the toolchain line in go.mod
+
+      - run: go vet ./...
+      # -coverpkg: a line counts as covered when any test runs it, not only
+      # the tests of its own package.
+      - run: go test -coverpkg=./... -coverprofile=coverage.out ./...
+
+      # Sends coverage.out (file paths, line ranges, hit counts) to Coveralls.
+      - uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8
+        with:
+          file: coverage.out
+          format: golang
+          coverage-reporter-version: v0.6.22  # exact; the action's default is "latest"
