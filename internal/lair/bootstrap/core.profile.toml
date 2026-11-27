@@ -506,7 +506,7 @@ case "$choice" in
     ;;
 esac
 ''', macos = "echo 'Not applicable on macOS: sudo is always here, and the deck macOS variants use brew, which must never run under sudo.'", windows = "Write-Host 'Not applicable on Windows: the deck windows variants use winget and never call sudo.'" }, auto_close_execution = false },
-    { name = "Add drako to PATH", description = "Might help when plain 'drako' says command not found: adds ~/.local/bin (install script) and ~/go/bin (go install) to your PATH.", command = { linux_generic = '''
+    { name = "Add drako to PATH", description = "Might help when plain 'drako' says command not found. Appends ~/.local/bin (install script), ~/go/bin (go install) and /usr/local/go/bin to PATH in ~/.bashrc, whatever your shell (~/.zshrc on macOS; Go's folders in your PowerShell profile on Windows). Every run appends them again.", command = { linux_generic = '''
 echo 'export PATH=$PATH:~/.local/bin' >> ~/.bashrc
 echo 'export PATH=$PATH:~/go/bin' >> ~/.bashrc
 echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
@@ -522,7 +522,7 @@ Add-Content $PROFILE '$env:PATH += ";$env:USERPROFILE\go\bin"'
 Add-Content $PROFILE '$env:PATH += ";C:\Program Files\Go\bin"'
 Write-Host "Path added to PowerShell Profile. Restart shell to take effect."
 ''' }, auto_close_execution = false },
-    { name = "Alias x=drako (<-- Recommended)", description = "Adds alias x for drako to ~/.bashrc (~/.zshrc on macOS), pointing at the drako it finds. Launch with just 'x'. Quick access to the den.", command = { linux_generic = '''
+    { name = "Alias x=drako (<-- Recommended)", description = "Adds alias x for the drako it finds to ~/.bashrc, whatever your shell (~/.zshrc on macOS; a function in your PowerShell profile on Windows). Every run adds it again. Launch with just 'x'. Quick access to the den.", command = { linux_generic = '''
 d=$(command -v drako)
 for f in ~/.local/bin/drako ~/go/bin/drako; do [ -n "$d" ] || { [ -x "$f" ] && d=$f; }; done
 if [ -n "$d" ]; then
@@ -545,5 +545,5 @@ if (!(Test-Path $PROFILE)) { New-Item -ItemType File -Path $PROFILE -Force | Out
 Add-Content $PROFILE 'Function x { & "$env:USERPROFILE\go\bin\drako.exe" }'
 Write-Host "Function added to PowerShell profile. Restart shell to use 'x'."
 ''' }, auto_close_execution = false },
-    { name = "Set micro as EDITOR (<-- Recommended)", description = "Sets EDITOR environment variable to micro in ~/.bashrc. Your default editor for system commands. Restart shell after.", command = { linux_generic = "echo 'export EDITOR=micro' >> ~/.bashrc && echo \"Alias added to ~/.bashrc. Restart shell.\"", macos = "echo 'export EDITOR=micro' >> ~/.zshrc && echo \"Alias added to ~/.zshrc. Restart shell.\"", windows = "setx EDITOR micro" }, auto_close_execution = false },
+    { name = "Set micro as EDITOR (<-- Recommended)", description = "Appends export EDITOR=micro to ~/.bashrc, whatever your shell (~/.zshrc on macOS; setx on Windows). On Linux and macOS every run appends it again. Your default editor for system commands. Restart shell after.", command = { linux_generic = "echo 'export EDITOR=micro' >> ~/.bashrc && echo \"EDITOR=micro added to ~/.bashrc. Restart shell.\"", macos = "echo 'export EDITOR=micro' >> ~/.zshrc && echo \"EDITOR=micro added to ~/.zshrc. Restart shell.\"", windows = "setx EDITOR micro" }, auto_close_execution = false },
 ]

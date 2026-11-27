@@ -6,7 +6,7 @@
 
 把你常用的每一条命令放进终端里的一张网格，按一个键即可运行。
 
-[![Docs](https://img.shields.io/badge/docs-chronyx.xyz-ff5555)](https://chronyx.xyz/docs/drako/)
+[![Docs](https://img.shields.io/badge/docs-chronyx.xyz-b3261e)](https://chronyx.xyz/docs/drako/)
 [![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/lucky7xz/drako?color=007D9C&label=version)](https://github.com/lucky7xz/drako/tags)
 [![Coverage](https://img.shields.io/coverallsCoverage/github/lucky7xz/drako?branch=dev)](https://coveralls.io/github/lucky7xz/drako?branch=dev)
 [![License](https://img.shields.io/github/license/lucky7xz/drako?color=orange)](https://github.com/lucky7xz/drako/blob/main/LICENCE)
@@ -27,9 +27,8 @@
 - **脚本与 AI 代理。** 通过 `drako ls`、`explain` 和 `run`，脚本或代理可以使用你整理好的命令，而不是自行编造。
 - **没有意外。** 单个静态二进制文件，无遥测，无更新检查。只有在 summon 时 drako 才会访问网络。
 
-完整文档（英文）：**[chronyx.xyz/docs/drako](https://chronyx.xyz/docs/drako/)**
-
-https://github.com/user-attachments/assets/9be2906d-2389-4e4e-98c8-cbded653ff79
+> [!NOTE]
+> **完整文档（英文）见 [chronyx.xyz/docs/drako](https://chronyx.xyz/docs/drako/)**，从第一次运行到编写和分享你自己的 profile。网格与按键、批量启动、profile 格式、安全地 summon、供脚本和代理使用的 CLI、Lua 脚本、Glassroot 模式和 Rescue 模式：每一项都有单独的页面。
 
 ## 安装
 
@@ -59,9 +58,11 @@ go install github.com/lucky7xz/drako@dev
 ~/go/bin/drako
 ```
 
-要一劳永逸地解决，请在 Core profile 的 **🐉 Settings** 格子中运行 **Add drako to PATH**。它会把 `~/.local/bin` 和 `~/go/bin` 加入 `~/.bashrc`（macOS 上为 `~/.zshrc`，Windows 上为 PowerShell 配置文件）。打开一个新的 shell，直接输入 `drako` 即可。
+要一劳永逸地解决，请在 Core profile 的 **🐉 Settings** 格子中运行 **Add drako to PATH**。无论你用哪个 shell，它都会把 `~/.local/bin` 和 `~/go/bin` 追加到 `~/.bashrc`（macOS 上为 `~/.zshrc`，Windows 上为 PowerShell 配置文件），每运行一次就再追加一次。打开一个新的 shell，直接输入 `drako` 即可；如果你用的是其他 shell，请自己把这两个文件夹加入它的 PATH。
 
 二进制文件和 Linux 安装包（.deb、.rpm、.apk、Arch）在 [Releases](https://github.com/lucky7xz/drako/releases) 页面。[安装](https://chronyx.xyz/docs/drako/install/)页面（英文）介绍了所有这些方式，包括 Termux。
+
+https://github.com/user-attachments/assets/9be2906d-2389-4e4e-98c8-cbded653ff79
 
 **Emoji：** profile 用 emoji 作为视觉标记。现代终端（Ghostty、WezTerm 等）开箱即可显示；较旧的终端可能需要 [Nerd Font](https://www.nerdfonts.com/) 或 emoji 字体包，例如 `fonts-noto-color-emoji`。
 

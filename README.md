@@ -6,7 +6,7 @@
 
 Every command you rely on, one keypress away, on a grid in your terminal.
 
-[![Docs](https://img.shields.io/badge/docs-chronyx.xyz-ff5555)](https://chronyx.xyz/docs/drako/)
+[![Docs](https://img.shields.io/badge/docs-chronyx.xyz-b3261e)](https://chronyx.xyz/docs/drako/)
 [![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/lucky7xz/drako?color=007D9C&label=version)](https://github.com/lucky7xz/drako/tags)
 [![Coverage](https://img.shields.io/coverallsCoverage/github/lucky7xz/drako?branch=dev)](https://coveralls.io/github/lucky7xz/drako?branch=dev)
 [![License](https://img.shields.io/github/license/lucky7xz/drako?color=orange)](https://github.com/lucky7xz/drako/blob/main/LICENCE)
@@ -27,9 +27,8 @@ Every command you rely on, one keypress away, on a grid in your terminal.
 - **Scripts and AI agents.** `drako ls`, `explain` and `run` let a script or an agent use the commands you curated instead of making them up.
 - **No surprises.** One static binary, no telemetry, no update check. drako uses the network only when you summon.
 
-Full docs: **[chronyx.xyz/docs/drako](https://chronyx.xyz/docs/drako/)**
-
-https://github.com/user-attachments/assets/9be2906d-2389-4e4e-98c8-cbded653ff79
+> [!NOTE]
+> **The full documentation is at [chronyx.xyz/docs/drako](https://chronyx.xyz/docs/drako/)**, from the first run to writing and sharing your own profiles. The grid and its keys, batch launch, the profile format, summoning safely, the CLI for scripts and agents, Lua scripts, Glassroot and rescue mode: each has its own page.
 
 ## Install
 
@@ -59,9 +58,11 @@ Then start it. The first time, by its full path, since `~/go/bin` is usually not
 ~/go/bin/drako
 ```
 
-To fix that for good, run **Add drako to PATH** from the **🐉 Settings** cell in the Core profile. It adds `~/.local/bin` and `~/go/bin` to `~/.bashrc` (`~/.zshrc` on macOS, your PowerShell profile on Windows). Open a new shell and plain `drako` works.
+To fix that for good, run **Add drako to PATH** from the **🐉 Settings** cell in the Core profile. Whatever shell you use, it appends `~/.local/bin` and `~/go/bin` to `~/.bashrc` (`~/.zshrc` on macOS, your PowerShell profile on Windows), once more on every run. Open a new shell and plain `drako` works; with another shell, add those two folders to its PATH yourself.
 
 Binaries and Linux packages (.deb, .rpm, .apk, Arch) are on the [Releases](https://github.com/lucky7xz/drako/releases) page. [Install](https://chronyx.xyz/docs/drako/install/) covers all of these, Termux included.
+
+https://github.com/user-attachments/assets/9be2906d-2389-4e4e-98c8-cbded653ff79
 
 **Emoji:** profiles use emoji as visual markers. Modern terminals (Ghostty, WezTerm, …) show them out of the box; older ones may need a [Nerd Font](https://www.nerdfonts.com/) or an emoji font package such as `fonts-noto-color-emoji`.
 
