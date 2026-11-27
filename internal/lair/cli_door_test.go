@@ -7,17 +7,20 @@ import (
 	"testing"
 )
 
-// DeleteLogs removes the logs that are there, names them, and removes a
-// linked log's link, never its target.
+// DeleteLogs removes the logs that are there, rotated archives included,
+// names them, and removes a linked log's link, never its target.
 func TestDeleteLogs(t *testing.T) {
 	_, dir := lairAt(t)
-	writeFile(t, filepath.Join(dir, LogFileName), "log")
-	outside := linkOut(t, dir, HistoryFileName, "history", false)
-	deleted, err := DeleteLogs(dir)
-	if err != nil || !slices.Equal(deleted, []string{LogFileName, HistoryFileName}) {
-		t.Fatalf("DeleteLogs = %v, %v", deleted, err)
+	for _, n := range []string{LogFileName, LogArchiveName, HistoryArchiveName} {
+		writeFile(t, filepath.Join(dir, n), "log")
 	}
-	for _, n := range []string{LogFileName, HistoryFileName} {
+	outside := linkOut(t, dir, HistoryFileName, "history", false)
+	all := []string{LogFileName, LogArchiveName, HistoryFileName, HistoryArchiveName}
+	deleted, err := DeleteLogs(dir)
+	if err != nil || !slices.Equal(deleted, all) {
+		t.Fatalf("DeleteLogs = %v, %v; want %v", deleted, err, all)
+	}
+	for _, n := range all {
 		if _, err := os.Lstat(filepath.Join(dir, n)); err == nil {
 			t.Errorf("%s still there", n)
 		}

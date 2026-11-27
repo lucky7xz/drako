@@ -3,7 +3,6 @@ package lair
 import (
 	"path/filepath"
 	"runtime"
-	"slices"
 	"testing"
 )
 
@@ -70,8 +69,8 @@ func TestConfigDir(t *testing.T) {
 	}
 }
 
-// The join helpers are pure string builders; one table covers them all, so a
-// renamed location changes one constant and one line here.
+// One table pins every well-known location, so a renamed one changes one
+// constant and one line here.
 func TestWellKnownLocations(t *testing.T) {
 	const cfg = "/fake/config/drako"
 
@@ -82,15 +81,15 @@ func TestWellKnownLocations(t *testing.T) {
 	}{
 		{"inventory dir", InventoryDir(cfg), cfg + "/inventory"},
 		{"specs dir", SpecsDir(cfg), cfg + "/specs"},
-		{"assets dir", AssetsDir(cfg, "docker"), cfg + "/assets/docker"},
 		{"trash dir", TrashDir(cfg), cfg + "/trash"},
 		{"config file", ConfigFile(cfg), cfg + "/config.toml"},
 		{"pivot file", PivotFile(cfg), cfg + "/pivot.toml"},
 		{"themes file", ThemesFile(cfg), cfg + "/themes.toml"},
 		{"log file", LogFile(cfg), cfg + "/drako.log"},
-		{"log archive", LogArchive(cfg), cfg + "/drako.log.old"},
-		{"history file", HistoryFile(cfg), cfg + "/history.log"},
-		{"history archive", HistoryArchive(cfg), cfg + "/history.log.old"},
+		// Opened by name only (rotation, purge --logs): the name is the location.
+		{"log archive", LogArchiveName, "drako.log.old"},
+		{"history file", HistoryFileName, "history.log"},
+		{"history archive", HistoryArchiveName, "history.log.old"},
 	}
 
 	for _, tc := range cases {
@@ -99,23 +98,5 @@ func TestWellKnownLocations(t *testing.T) {
 				t.Errorf("got %q, want %q", tc.got, tc.want)
 			}
 		})
-	}
-}
-
-// "drako purge --logs" deletes exactly LogFiles, so it must list the rotated
-// backups too; the order doesn't matter.
-func TestLogFilesIncludesArchives(t *testing.T) {
-	const cfg = "/fake/config/drako"
-
-	want := []string{
-		LogFile(cfg),
-		LogArchive(cfg),
-		HistoryFile(cfg),
-		HistoryArchive(cfg),
-	}
-
-	got := slices.Sorted(slices.Values(LogFiles(cfg)))
-	if slices.Sort(want); !slices.Equal(got, want) {
-		t.Errorf("LogFiles() = %v, want %v", got, want)
 	}
 }

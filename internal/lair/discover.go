@@ -44,19 +44,10 @@ func undecodedKeys(meta toml.MetaData) []string {
 	return keys
 }
 
-// DiscoverProfilesWithErrors scans configDir for *.profile.toml files and
+// discoverProfiles scans the config folder for *.profile.toml files and
 // returns the parseable profiles (sorted by name) plus a parse-error entry
 // for every file that could not be loaded or fails validation. Commands are
 // resolved for targets, the platform's variant keys.
-func DiscoverProfilesWithErrors(configDir string, targets []string) ([]ProfileInfo, []ProfileParseError) {
-	l, err := Open(configDir)
-	if err != nil {
-		return []ProfileInfo{}, nil
-	}
-	defer l.Close()
-	return l.discoverProfiles(targets)
-}
-
 func (l *Lair) discoverProfiles(targets []string) ([]ProfileInfo, []ProfileParseError) {
 	configDir := l.dir
 	profiles := []ProfileInfo{}

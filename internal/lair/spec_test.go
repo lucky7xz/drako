@@ -72,7 +72,7 @@ func TestLoadSpec_UnknownKeyIsAnError(t *testing.T) {
 }
 
 // One unreadable spec must not cost the caller every other spec in the
-// directory — the same contract DiscoverProfilesWithErrors keeps.
+// directory.
 func TestDiscoverSpecs_CarriesPerFileErrors(t *testing.T) {
 	dir := t.TempDir()
 	writeSpec(t, dir, "dev.spec.toml", "profiles = [\"git\", \"rust\"]\n")

@@ -59,11 +59,6 @@ func SpecsDir(configDir string) string {
 	return filepath.Join(configDir, SpecsDirName)
 }
 
-// AssetsDir is where the assets bundled with one profile live.
-func AssetsDir(configDir, profileName string) string {
-	return filepath.Join(configDir, assetsDirName, profileName)
-}
-
 // TrashDir is where purged files are moved instead of being deleted.
 func TrashDir(configDir string) string {
 	return filepath.Join(configDir, TrashDirName)
@@ -88,30 +83,4 @@ func ThemesFile(configDir string) string {
 // LogFile is drako's application log.
 func LogFile(configDir string) string {
 	return filepath.Join(configDir, LogFileName)
-}
-
-// HistoryFile records launched commands.
-func HistoryFile(configDir string) string {
-	return filepath.Join(configDir, HistoryFileName)
-}
-
-// LogArchive is the rotated backup of LogFile.
-func LogArchive(configDir string) string {
-	return filepath.Join(configDir, LogArchiveName)
-}
-
-// HistoryArchive is the rotated backup of HistoryFile.
-func HistoryArchive(configDir string) string {
-	return filepath.Join(configDir, HistoryArchiveName)
-}
-
-// LogFiles is every log drako writes, rotated backups included: exactly what
-// "drako purge --logs" deletes.
-func LogFiles(configDir string) []string {
-	return []string{
-		LogFile(configDir),
-		LogArchive(configDir),
-		HistoryFile(configDir),
-		HistoryArchive(configDir),
-	}
 }
