@@ -456,3 +456,40 @@ func TestInteractivePurgeClampsHugeRange(t *testing.T) {
 		t.Errorf("targets = %v, want just alpha", opts.TargetProfiles)
 	}
 }
+
+// The selection line picks exactly what it names: a range either way round,
+// each profile once; out-of-range numbers and garbage pick nothing.
+func TestInteractivePurgeSelection(t *testing.T) {
+	dir := t.TempDir()
+	for _, n := range []string{"p1", "p2", "p3"} {
+		writeFile(t, filepath.Join(dir, n+".profile.toml"), "x")
+	}
+	for _, c := range []struct {
+		input string
+		want  []string
+	}{
+		{"3-1", []string{"p1.profile.toml", "p2.profile.toml", "p3.profile.toml"}},
+		{"2, 2, 2-2", []string{"p2.profile.toml"}},
+		{"0, 4, 9-12", nil},
+		{"x, 1-x, 1-2-3", nil},
+	} {
+		opts := &PurgeOptions{}
+		var out strings.Builder
+		if err := runInteractivePurgeSelection(dir, opts, strings.NewReader(c.input+"\ny\ny\ny\n"), &out); err != nil {
+			t.Fatalf("%q: %v", c.input, err)
+		}
+		if !reflect.DeepEqual(opts.TargetProfiles, c.want) {
+			t.Errorf("%q selected %v, want %v", c.input, opts.TargetProfiles, c.want)
+		}
+	}
+
+	// No input at all cancels; an empty line is an error. Neither selects.
+	for input, wantErr := range map[string]bool{"": false, "\n": true} {
+		opts := &PurgeOptions{}
+		var out strings.Builder
+		err := runInteractivePurgeSelection(dir, opts, strings.NewReader(input), &out)
+		if (err != nil) != wantErr || len(opts.TargetProfiles) != 0 {
+			t.Errorf("input %q: err %v, selected %v", input, err, opts.TargetProfiles)
+		}
+	}
+}

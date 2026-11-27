@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/lair"
@@ -321,5 +322,33 @@ func TestExplainPopup_ClosesOnReload(t *testing.T) {
 	m = m.applyReloadedBundle(lair.ConfigBundle{})
 	if m.mode != gridMode {
 		t.Fatalf("explain should close on a reload, mode=%v", m.mode)
+	}
+}
+
+// The lock check locks the screen once the timeout passes without a key; not
+// before, and never with auto-lock turned off. Either way it checks again.
+func TestAutoLockAfterInactivity(t *testing.T) {
+	off := false
+	for _, c := range []struct {
+		name    string
+		idle    time.Duration
+		enabled *bool
+		want    bool
+	}{
+		{"idle past the timeout", 6 * time.Minute, nil, true},
+		{"idle under the timeout", 4 * time.Minute, nil, false},
+		{"auto-lock off", time.Hour, &off, false},
+	} {
+		m := lockTestModel(t)
+		m.Config.AutoLockEnabled = c.enabled
+		m.lock.timeoutMins = 5
+		m.lock.lastActivity = time.Now().Add(-c.idle)
+		next, cmd := m.Update(lockCheckMsg{})
+		if locked := next.(Model).mode == lockedMode; locked != c.want {
+			t.Errorf("%s: locked = %v, want %v", c.name, locked, c.want)
+		}
+		if cmd == nil {
+			t.Errorf("%s: no next check scheduled", c.name)
+		}
 	}
 }

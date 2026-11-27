@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -110,4 +111,33 @@ func TestSelectedFile(t *testing.T) {
 	if _, _, ok := m.inventory.selectedFile(dir); ok {
 		t.Error("button rows must not resolve to a path")
 	}
+}
+
+// An edit that breaks a profile says so when the editor closes: a stashed one
+// in the inventory's status line, an equipped one on its own error screen.
+func TestAfterEditReportsABrokenProfile(t *testing.T) {
+	t.Run("stashed", func(t *testing.T) {
+		m, dir := openInventory(t)
+		path := filepath.Join(dir, "inventory", "jukebox.profile.toml")
+		if err := os.WriteFile(path, []byte("x = [\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		next, _ := m.afterEdit(editorFinishedMsg{path: path})
+		got := next.(Model)
+		if got.mode != inventoryMode || !strings.Contains(got.inventory.status, "jukebox.profile.toml has errors") {
+			t.Errorf("mode %v, status %q; want the inventory saying jukebox has errors", got.mode, got.inventory.status)
+		}
+	})
+	t.Run("equipped", func(t *testing.T) {
+		m, dir := openInventory(t)
+		path := filepath.Join(dir, "core.profile.toml")
+		if err := os.WriteFile(path, []byte("x = [\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		next, _ := m.afterEdit(editorFinishedMsg{path: path})
+		got := next.(Model)
+		if got.mode != infoMode || got.activeDetail == nil || !strings.Contains(fmt.Sprint(*got.activeDetail), "core") {
+			t.Errorf("mode %v, detail %v; want the error screen for core", got.mode, got.activeDetail)
+		}
+	})
 }

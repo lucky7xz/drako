@@ -65,3 +65,35 @@ func TestLeaderDigitPastLastProfileIsNoop(t *testing.T) {
 		t.Errorf("leader+3 with 2 profiles switched to %q, want to stay on beta", got)
 	}
 }
+
+// o and p cycle through the equipped profiles, wrapping at both ends and
+// skipping a profile whose file is gone.
+func TestProfileCycleWrapsAndSkipsMissing(t *testing.T) {
+	m := switchTestModel(t) // alpha, beta
+	gamma := filepath.Join(t.TempDir(), "gamma.profile.toml")
+	if err := os.WriteFile(gamma, []byte("x = 1\ny = 1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m.profile.profiles = append(m.profile.profiles, lair.ProfileInfo{Name: "gamma", Path: gamma, Profile: profile.File{X: 1, Y: 1}})
+	m.mode = gridMode
+	m.styles = BuildStyles(m.Config, "")
+
+	for _, step := range []struct{ key, want string }{
+		{"p", "beta"}, {"p", "gamma"}, {"p", "alpha"}, // past the last: the first
+		{"o", "gamma"}, // before the first: the last
+	} {
+		m = update(t, m, keyRunes(step.key))
+		if got := m.ActiveProfileName(); got != step.want {
+			t.Fatalf("%s: on %q, want %q", step.key, got, step.want)
+		}
+	}
+
+	if err := os.Remove(m.profile.profiles[1].Path); err != nil { // beta's file
+		t.Fatal(err)
+	}
+	m = update(t, m, keyRunes("p")) // gamma → alpha
+	m = update(t, m, keyRunes("p")) // alpha → gamma: beta is skipped
+	if got := m.ActiveProfileName(); got != "gamma" {
+		t.Errorf("p past a missing profile: on %q, want gamma", got)
+	}
+}

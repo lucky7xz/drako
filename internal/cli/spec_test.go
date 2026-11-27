@@ -1,10 +1,13 @@
 package cli
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/lucky7xz/drako/internal/equip"
 )
 
 func TestListSpecs(t *testing.T) {
@@ -141,6 +144,43 @@ func TestSpecCommandsRefuseABrokenSpec(t *testing.T) {
 		captureStderr(t, func() { code = h([]string{"drako", "x", "bad"}) })
 		if code != 1 {
 			t.Errorf("broken spec: exit %d, want 1", code)
+		}
+	}
+}
+
+// A spec that equips more than the leader chords can reach asks first:
+// declined, nothing moves; confirmed, every profile is equipped.
+func TestSpecOverTheCapAsks(t *testing.T) {
+	for _, c := range []struct {
+		answer   string
+		wantCode int
+		equipped bool
+	}{
+		{"n\n", 1, false},
+		{"y\n", 0, true},
+	} {
+		xdg := t.TempDir()
+		t.Setenv("XDG_CONFIG_HOME", xdg)
+		t.Setenv("HOME", xdg)
+		dir := filepath.Join(xdg, "drako")
+		var names []string
+		for i := range equip.MaxEquipped + 1 {
+			name := fmt.Sprintf("p%d", i)
+			writeProfile(t, filepath.Join(dir, "inventory"), name)
+			names = append(names, `"`+name+`"`)
+		}
+		writeAll(t, dir, map[string]string{"specs/big.spec.toml": "profiles = [" + strings.Join(names, ", ") + "]\n"})
+
+		typeIn(t, c.answer)
+		var code int
+		out := captureStdout(t, func() { code = HandleSpecCommand([]string{"drako", "spec", "big"}) })
+		if code != c.wantCode {
+			t.Errorf("answer %q: exit %d, want %d:\n%s", c.answer, code, c.wantCode, out)
+		}
+		for i := range equip.MaxEquipped + 1 {
+			if got := exists(t, dir, fmt.Sprintf("p%d.profile.toml", i)); got != c.equipped {
+				t.Errorf("answer %q: p%d equipped %v, want %v", c.answer, i, got, c.equipped)
+			}
 		}
 	}
 }

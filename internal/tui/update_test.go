@@ -1,11 +1,16 @@
 package tui
 
 import (
+	"errors"
+	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lucky7xz/drako/internal/equip"
+	"github.com/lucky7xz/drako/internal/host"
 	"github.com/lucky7xz/drako/internal/settings"
+	gopsutil_net "github.com/shirou/gopsutil/v3/net"
 )
 
 // Helper to create a basic model for Grid testing
@@ -117,5 +122,59 @@ func TestUpdateInventoryMode_Navigation(t *testing.T) {
 	m = tm.(Model)
 	if m.inventory.focusedList != 0 {
 		t.Errorf("Expected focusedList 0, got %d", m.inventory.focusedList)
+	}
+}
+
+// A status clears when its own timer fires; an older timer leaves a newer
+// status alone.
+func TestStatusClearsOnlyOnItsOwnTimer(t *testing.T) {
+	m := createTestGridModel()
+	m.setProfileStatus("first", true)
+	first := m.profile.statusClearTimerID
+	m.setProfileStatus("second", true)
+
+	next, _ := m.Update(profileStatusClearMsg{id: first})
+	if got := next.(Model).profile.statusMessage; got != "second" {
+		t.Fatalf("the first status's timer left %q, want second", got)
+	}
+	next, _ = next.Update(profileStatusClearMsg{id: m.profile.statusClearTimerID})
+	if got := next.(Model).profile.statusMessage; got != "" {
+		t.Errorf("its own timer left %q", got)
+	}
+}
+
+// The status line: traffic once two samples span time (averaged over the
+// window), online (active) above 2 KB/s, online (idle) below, offline, and
+// error when the probe fails.
+func TestNetworkStatusLine(t *testing.T) {
+	m := createTestGridModel()
+	m.net.meter = host.TrafficMeter{WindowSeconds: 7.5}
+	t0 := time.Now()
+	sample := func(m Model, msg networkStatusMsg) Model {
+		t.Helper()
+		next, cmd := m.Update(msg)
+		if cmd == nil {
+			t.Error("no next probe scheduled")
+		}
+		return next.(Model)
+	}
+	kb := func(n uint64) gopsutil_net.IOCountersStat { return gopsutil_net.IOCountersStat{BytesRecv: n * 1024} }
+
+	for _, step := range []struct {
+		msg             networkStatusMsg
+		traffic, online string
+	}{
+		{networkStatusMsg{online: true, counters: kb(0), t: t0}, "calculating...", "online (idle)"},
+		{networkStatusMsg{online: true, counters: kb(1), t: t0.Add(time.Second)}, "↓ 1024 B/s", "online (idle)"},
+		{networkStatusMsg{online: true, counters: kb(201), t: t0.Add(2 * time.Second)}, "↓ 100.50 KB/s", "online (active)"},
+		{networkStatusMsg{online: false, counters: kb(201), t: t0.Add(3 * time.Second)}, "↓ 67.00 KB/s", "offline"},
+	} {
+		m = sample(m, step.msg)
+		if !strings.Contains(m.net.traffic, step.traffic) || !strings.Contains(m.net.online, step.online) {
+			t.Errorf("at %v: traffic %q, online %q; want %q, %q", step.msg.t.Sub(t0), m.net.traffic, m.net.online, step.traffic, step.online)
+		}
+	}
+	if m = sample(m, networkStatusMsg{err: errors.New("no interfaces")}); !strings.Contains(m.net.traffic, "error") {
+		t.Errorf("a failed probe shows %q, want error", m.net.traffic)
 	}
 }
