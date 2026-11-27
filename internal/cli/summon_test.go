@@ -302,3 +302,43 @@ func TestSummonGitUsesSummonerConfigDirAndUI(t *testing.T) {
 		t.Errorf("per-file prompts bypassed the summoner's UI; it saw: %s", got)
 	}
 }
+
+// drako summon <folder> equips the deck once confirmed; a bad flag stops it
+// before anything is read.
+func TestHandleSummonCommand(t *testing.T) {
+	xdg := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", xdg)
+	t.Setenv("HOME", xdg)
+	deck := t.TempDir()
+	writeAll(t, deck, map[string]string{"deck.profile.toml": validDeck})
+
+	if code := HandleSummonCommand([]string{"drako", "summon", deck, "--bogus"}); code != 1 {
+		t.Errorf("unknown flag: exit %d, want 1", code)
+	}
+
+	typeIn(t, "y\n")
+	var code int
+	out := captureStdout(t, func() { code = HandleSummonCommand([]string{"drako", "summon", deck}) })
+	if code != 0 || !exists(t, xdg, "drako", "deck.profile.toml") {
+		t.Errorf("summon exit %d, deck equipped %v:\n%s", code, exists(t, xdg, "drako", "deck.profile.toml"), out)
+	}
+}
+
+// A declined summon exits 1 and writes nothing.
+func TestHandleSummonCommandDeclined(t *testing.T) {
+	xdg := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", xdg)
+	t.Setenv("HOME", xdg)
+	deck := t.TempDir()
+	writeAll(t, deck, map[string]string{"deck.profile.toml": validDeck})
+
+	typeIn(t, "n\n")
+	var code int
+	captureStdout(t, func() { code = HandleSummonCommand([]string{"drako", "summon", deck}) })
+	if code != 1 {
+		t.Errorf("declined summon: exit %d, want 1", code)
+	}
+	if exists(t, xdg, "drako", "deck.profile.toml") || exists(t, xdg, "drako", "inventory", "deck.profile.toml") {
+		t.Error("a declined deck was written")
+	}
+}

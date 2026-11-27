@@ -103,3 +103,44 @@ func TestStripRejectsArguments(t *testing.T) {
 		t.Error("strip with an argument stripped profiles anyway")
 	}
 }
+
+// spec list, spec <name> and stash <name>, end to end through the handlers.
+func TestSpecCommandsEndToEnd(t *testing.T) {
+	xdg := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", xdg)
+	t.Setenv("HOME", xdg)
+	dir := filepath.Join(xdg, "drako")
+	writeProfile(t, filepath.Join(dir, "inventory"), "alpha")
+	writeAll(t, dir, map[string]string{"specs/work.spec.toml": "profiles = [\"alpha\"]\n"})
+
+	var code int
+	out := captureStdout(t, func() { code = HandleSpecCommand([]string{"drako", "spec", "list"}) })
+	if code != 0 || !strings.Contains(out, "work") || !strings.Contains(out, "alpha") {
+		t.Fatalf("spec list exit %d:\n%s", code, out)
+	}
+
+	out = captureStdout(t, func() { code = HandleSpecCommand([]string{"drako", "spec", "work"}) })
+	if code != 0 || !exists(t, dir, "alpha.profile.toml") {
+		t.Fatalf("spec work exit %d, alpha equipped %v:\n%s", code, exists(t, dir, "alpha.profile.toml"), out)
+	}
+
+	out = captureStdout(t, func() { code = HandleStashCommand([]string{"drako", "stash", "work"}) })
+	if code != 0 || exists(t, dir, "alpha.profile.toml") || !exists(t, dir, "inventory", "alpha.profile.toml") {
+		t.Fatalf("stash work exit %d:\n%s", code, out)
+	}
+}
+
+// A spec that cannot be parsed is an error, for spec and stash alike.
+func TestSpecCommandsRefuseABrokenSpec(t *testing.T) {
+	xdg := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", xdg)
+	t.Setenv("HOME", xdg)
+	writeAll(t, filepath.Join(xdg, "drako"), map[string]string{"specs/bad.spec.toml": "profiles = [\n"})
+	for _, h := range []func([]string) int{HandleSpecCommand, HandleStashCommand} {
+		var code int
+		captureStderr(t, func() { code = h([]string{"drako", "x", "bad"}) })
+		if code != 1 {
+			t.Errorf("broken spec: exit %d, want 1", code)
+		}
+	}
+}

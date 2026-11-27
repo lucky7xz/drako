@@ -189,6 +189,15 @@ func TestSummonGitRevChecksOutThePinnedCommit(t *testing.T) {
 	if strings.Contains(string(got), "v2") {
 		t.Error("summoned the branch tip instead of the pinned commit")
 	}
+
+	// A pin the repository lacks fails the summon; it never falls back to the tip.
+	s.Rev = strings.Repeat("0", 40)
+	if err := s.Summon(src); err == nil || !strings.Contains(err.Error(), s.Rev) {
+		t.Errorf("summon pinned to a missing commit = %v, want an error naming it", err)
+	}
+	if got, _ := os.ReadFile(filepath.Join(s.ConfigDir, "deck.profile.toml")); strings.Contains(string(got), "v2") {
+		t.Error("a missing pin fell back to the branch tip")
+	}
 }
 
 // An unencrypted address (http://, git://) is refused unless pinned; a pinned

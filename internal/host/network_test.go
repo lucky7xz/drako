@@ -13,3 +13,18 @@ func TestIsVirtualInterface(t *testing.T) {
 		}
 	}
 }
+
+// A unit takes over only above the one below: exactly 1 KB/s still reads in bytes.
+func TestFormatTraffic(t *testing.T) {
+	for bps, want := range map[float64]string{
+		0:               "0 B/s",
+		1024:            "1024 B/s",
+		1536:            "1.50 KB/s",
+		1024 * 1024:     "1024.00 KB/s",
+		5 * 1024 * 1024: "5.00 MB/s",
+	} {
+		if got := FormatTraffic(bps); got != want {
+			t.Errorf("FormatTraffic(%v) = %q, want %q", bps, got, want)
+		}
+	}
+}

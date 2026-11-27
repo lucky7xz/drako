@@ -167,3 +167,18 @@ func TestLsAndExplainNeutralizeEscapes(t *testing.T) {
 		t.Errorf("explain should show escapes visibly:\n%s", ex.String())
 	}
 }
+
+// drako ls lists what is equipped, from the real config folder.
+func TestHandleLsCommandListsTheConfig(t *testing.T) {
+	runFixture(t)
+	var code int
+	out := captureStdout(t, func() { code = HandleLsCommand([]string{"drako", "ls"}) })
+	if code != 0 {
+		t.Fatalf("exit %d", code)
+	}
+	for _, want := range []string{"solo (active)", "A0", "safe", "B0.1", "calm"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in:\n%s", want, out)
+		}
+	}
+}
