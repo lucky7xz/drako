@@ -104,7 +104,7 @@ profile 是你载入 drako 的一张网格。面板（deck）是你分享的东�
 | **jukebox** | 终端收音机：SomaFM、世界新闻、精选电台、离线噪音（mpv），以及你自己的音乐（cliamp） |
 | **distrobox** | 运行其他发行版的容器：创建、进入、停止、升级、导出和删除，或启动一个退出即删除的临时容器。容器与你共享主目录：在里面删除的文件，在外面也就没了（!） |
 
-https://github.com/user-attachments/assets/98a52155-cc70-4e47-a6e4-f952f402ce81
+https://github.com/user-attachments/assets/7fa86d77-3345-4103-be3e-26b545a11e4d
 
 *一个 Core，两个发行版：同样的格子在 Arch 容器里运行 `pacman`，在 Fedora 容器里运行 `dnf`。*
 

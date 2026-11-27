@@ -104,7 +104,7 @@ A profile is one grid you load into drako. A deck is what you share: a folder or
 | **jukebox** | Terminal radio: SomaFM, world news, hand-picked stations, offline noise (mpv), and your own music (cliamp) |
 | **distrobox** | Boxes running other distros: create, enter, stop, upgrade, export and remove them, or start a throwaway one that is removed on exit. Boxes share your home folder: what you delete inside is gone outside too (!) |
 
-https://github.com/user-attachments/assets/98a52155-cc70-4e47-a6e4-f952f402ce81
+https://github.com/user-attachments/assets/7fa86d77-3345-4103-be3e-26b545a11e4d
 
 *One Core, two distros: the same cells run `pacman` in an Arch box and `dnf` in a Fedora box.*
 
