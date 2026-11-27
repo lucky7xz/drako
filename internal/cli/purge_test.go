@@ -12,11 +12,7 @@ import (
 
 func TestPurgeConfig_TargetConfig(t *testing.T) {
 	// Setup temp dir
-	tmpDir, err := os.MkdirTemp("", "drako_purge_test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	// Create config.toml
 	configFile := filepath.Join(tmpDir, "config.toml")
@@ -66,11 +62,7 @@ func TestPurgeConfig_TargetConfig(t *testing.T) {
 }
 
 func TestPurgeConfig_TargetProfile(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "drako_purge_test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	// Create config.toml (should stay)
 	configFile := filepath.Join(tmpDir, "config.toml")
@@ -104,11 +96,7 @@ func TestPurgeConfig_TargetProfile(t *testing.T) {
 }
 
 func TestPurgeConfig_SafetyCheck(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "drako_purge_test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	configFile := filepath.Join(tmpDir, "config.toml")
 	os.WriteFile(configFile, []byte(""), 0644)
@@ -248,11 +236,7 @@ func TestParsePurgeFlags(t *testing.T) {
 
 func TestInteractivePurge_Batch(t *testing.T) {
 	// Setup mock filesystem for scanning
-	tmpDir, err := os.MkdirTemp("", "drako_purge_batch")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	// Create dummy profiles
 	// 1. Core (root)
@@ -286,7 +270,7 @@ func TestInteractivePurge_Batch(t *testing.T) {
 	var output strings.Builder
 
 	opts := &PurgeOptions{}
-	err = runInteractivePurgeSelection(tmpDir, opts, reader, &output)
+	err := runInteractivePurgeSelection(tmpDir, opts, reader, &output)
 	if err != nil {
 		t.Fatalf("Interactive scan failed: %v", err)
 	}
@@ -315,11 +299,7 @@ func TestInteractivePurge_Batch(t *testing.T) {
 
 func TestInteractivePurge_Range(t *testing.T) {
 	// Setup mock filesystem
-	tmpDir, err := os.MkdirTemp("", "drako_purge_range")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	// Create 3 profiles
 	os.WriteFile(filepath.Join(tmpDir, "p1.profile.toml"), []byte{}, 0644)
@@ -333,7 +313,7 @@ func TestInteractivePurge_Range(t *testing.T) {
 	var output strings.Builder
 
 	opts := &PurgeOptions{}
-	err = runInteractivePurgeSelection(tmpDir, opts, reader, &output)
+	err := runInteractivePurgeSelection(tmpDir, opts, reader, &output)
 	if err != nil {
 		t.Fatalf("Interactive scan failed: %v", err)
 	}
@@ -358,10 +338,16 @@ func purgeFixture(t *testing.T, input string) string {
 	for _, f := range []string{"config.toml", "drako.log", "history.log", "alpha.profile.toml"} {
 		writeFile(t, filepath.Join(dir, f), "x")
 	}
+	typeIn(t, input)
+	return dir
+}
+
+// typeIn feeds input to the confirmation prompts as if typed.
+func typeIn(t *testing.T, input string) {
+	t.Helper()
 	orig := confirmReader
 	confirmReader = bufio.NewReader(strings.NewReader(input))
 	t.Cleanup(func() { confirmReader = orig })
-	return dir
 }
 
 func writeFile(t *testing.T, path, body string) {

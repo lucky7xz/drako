@@ -89,11 +89,7 @@ func TestApplyProfileOverlay_PreservesBase(t *testing.T) {
 // 3. Reports the file as Broken
 func TestLoadConfig_HandlesBrokenProfiles(t *testing.T) {
 	// Setup Temp Dir
-	tmpDir, err := os.MkdirTemp("", "drako_rescue_test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	// Mock Environment to force LoadConfig to use our tmpDir
 	t.Setenv("XDG_CONFIG_HOME", tmpDir)
@@ -144,29 +140,39 @@ func TestLoadConfig_HandlesBrokenProfiles(t *testing.T) {
 	}
 }
 
-// TestBootstrap_GeneratesFiles confirms that a fresh boot creates necessary files.
-func TestBootstrap_GeneratesFiles(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "drako_bootstrap_test")
+// A first run writes config.toml (settings, no commands) and the Core
+// profile, and loads them: Core's commands, the base keys, the default theme.
+func TestFirstRunBootstrapsConfigAndCore(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", tmp)
+	t.Setenv("HOME", tmp)
+
+	bundle := mustLoadConfig(t)
+
+	dir := filepath.Join(tmp, "drako")
+	config, err := os.ReadFile(ConfigFile(dir))
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("config.toml not written: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
-
-	t.Setenv("XDG_CONFIG_HOME", tmpDir)
-	t.Setenv("HOME", tmpDir)
-
-	// Run
-	mustLoadConfig(t)
-
-	// Verify
-	expectedConfig := filepath.Join(tmpDir, "drako", "config.toml")
-	if _, err := os.Stat(expectedConfig); os.IsNotExist(err) {
-		t.Error("Bootstrap failed to create config.toml")
+	if strings.Contains(string(config), "[[commands]]") || !strings.Contains(string(config), "theme =") {
+		t.Errorf("config.toml should hold settings (a theme) and no commands:\n%s", config)
+	}
+	core, err := os.ReadFile(filepath.Join(dir, "core.profile.toml"))
+	if err != nil {
+		t.Fatalf("core.profile.toml not written: %v", err)
+	}
+	if !strings.Contains(string(core), "[[commands]]") {
+		t.Error("core.profile.toml has no commands")
 	}
 
-	expectedProfile := filepath.Join(tmpDir, "drako", "core.profile.toml")
-	if _, err := os.Stat(expectedProfile); os.IsNotExist(err) {
-		t.Error("Bootstrap failed to create core.profile.toml")
+	if len(bundle.Config.Commands) == 0 {
+		t.Error("no commands loaded from Core")
+	}
+	if len(bundle.Base.Keys.NavUp) == 0 {
+		t.Error("the base config has no keys; switching profiles starts from it")
+	}
+	if bundle.Config.Theme != "dracula" {
+		t.Errorf("theme %q, want the default dracula", bundle.Config.Theme)
 	}
 }
 
@@ -174,11 +180,7 @@ func TestBootstrap_GeneratesFiles(t *testing.T) {
 // the application does NOT crash and returns a Rescue config with an error.
 func TestLoadConfig_HandlesBrokenConfig(t *testing.T) {
 	// Setup Temp Dir
-	tmpDir, err := os.MkdirTemp("", "drako_broken_config_test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	// Mock Environment
 	t.Setenv("XDG_CONFIG_HOME", tmpDir)
